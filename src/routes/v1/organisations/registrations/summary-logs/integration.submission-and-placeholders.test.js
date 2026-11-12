@@ -395,7 +395,7 @@ describe('Submission and placeholder tests', () => {
           servedTestReadOrganisation({
             wasteProcessingType: 'reprocessor',
             material: 'paper',
-            accreditationNumber: toAccreditationNumber('ACC-2025-001')
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
           })
         ])(),
         logger: mockLogger
@@ -439,7 +439,7 @@ describe('Submission and placeholder tests', () => {
               servedTestReadOrganisation({
                 wasteProcessingType: 'reprocessor',
                 material: 'paper',
-                accreditationNumber: toAccreditationNumber('ACC-2025-001')
+                accreditationNumber: toAccreditationNumber('ACC-2026-001')
               })
             ])(),
           systemLogsRepository: createSystemLogsRepository()

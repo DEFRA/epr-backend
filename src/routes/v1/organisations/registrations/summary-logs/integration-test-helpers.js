@@ -1067,7 +1067,7 @@ const buildComplexTestOrg = ({
 /**
  * The organisation `buildComplexTestOrg` builds, as the read model serves it:
  * its registration under the test keys, approved from `VALID_FROM`, and its
- * accreditation for 2025 when accredited, approved from
+ * accreditation for `UPLOAD_YEAR` when accredited, approved from
  * `accreditationValidFrom`.
  *
  * @param {{
@@ -1107,7 +1107,7 @@ const buildComplexTestReadOrg = ({
       }
     ]
   })
-  const standing2025 = !accredited
+  const standingInUploadYear = !accredited
     ? { [VALID_FROM]: { standing: 'registeredOnly' } }
     : accreditationValidFrom === VALID_FROM
       ? { [VALID_FROM]: { standing: 'accredited' } }
@@ -1124,8 +1124,10 @@ const buildComplexTestReadOrg = ({
     validFrom: VALID_FROM,
     status: approvedFrom(VALID_FROM),
     standingByDate: /** @type {any} */ ({
-      2025: standing2025,
-      2026: { '2026-01-01': { standing: 'registeredOnly' } }
+      [UPLOAD_YEAR]: standingInUploadYear,
+      [UPLOAD_YEAR + 1]: {
+        [`${UPLOAD_YEAR + 1}-01-01`]: { standing: 'registeredOnly' }
+      }
     })
   }
   return buildServedOrganisation({
@@ -1156,7 +1158,7 @@ const buildComplexTestReadOrg = ({
               : {},
             accreditations: accredited
               ? {
-                  2025: {
+                  [UPLOAD_YEAR]: {
                     ...accreditation,
                     overseasSites: {
                       100: { status: 'approved', approvedOn: VALID_FROM },
@@ -1172,7 +1174,7 @@ const buildComplexTestReadOrg = ({
         : buildReadReprocessorRegistration({
             ...common,
             reprocessingType: /** @type {any} */ (reprocessingType),
-            accreditations: accredited ? { 2025: accreditation } : {}
+            accreditations: accredited ? { [UPLOAD_YEAR]: accreditation } : {}
           })
     }
   })
@@ -1180,7 +1182,7 @@ const buildComplexTestReadOrg = ({
 
 /**
  * The organisation `servedTestRegistration` builds, as the read model serves
- * it under the test keys: registered only, or accredited for 2025 from
+ * it under the test keys: registered only, or accredited for `UPLOAD_YEAR` from
  * `VALID_FROM` when given an `accreditationNumber`, as
  * `servedTestAccreditation` builds it.
  *

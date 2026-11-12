@@ -148,7 +148,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    *   year?: number,
    *   material?: string,
    *   reprocessingType?: 'input' | 'output',
-   *   status?: { current: 'approved' | 'suspended' | 'cancelled', timeline: import('#organisation-read-model/domain/model.js').StatusTimeline }
+   *   status?: { current: 'approved' | 'suspended' | 'cancelled', timeline: import('#organisation-read-model/domain/model.js').StatusTimeline },
+   *   tradingName?: string
    * }} [options]
    */
   const useAccreditation = async ({
@@ -156,7 +157,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     year = 2026,
     material = MATERIAL.PLASTIC,
     reprocessingType = REPROCESSING_TYPE.OUTPUT,
-    status
+    status,
+    tradingName
   } = {}) => {
     const validFrom = `${year}-01-01`
     const served = buildReadAccreditation({
@@ -181,6 +183,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     }
     const organisation = buildReadOrganisation({
       organisationNumber,
+      ...(tradingName && { tradingName }),
       registrations: {
         [registration.registrationNumber]: exporting
           ? buildReadExporterRegistration({
@@ -332,6 +335,20 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(stored).toMatchObject({ registration: { registrationNumber } })
       expect(stored).not.toHaveProperty('registrationId')
       expect(stored?.accreditation).not.toHaveProperty('id')
+    })
+
+    it("stores the organisation's trading name when it has one", async () => {
+      await useAccreditation({ tradingName: 'ACME Trading' })
+
+      const response = await createPrn()
+
+      const stored = await packagingRecyclingNotesRepository.findById(
+        JSON.parse(response.payload).id
+      )
+      expect(stored?.organisation).toMatchObject({
+        organisationNumber,
+        tradingName: 'ACME Trading'
+      })
     })
 
     it('sets obligationYear from the accreditation year', async () => {

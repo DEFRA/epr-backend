@@ -202,11 +202,11 @@ const setupSubmit = async ({
           validFrom: VALID_FROM,
           status: approved,
           standingByDate: {
-            2025: { [VALID_FROM]: { standing: 'accredited' } },
-            2026: { '2026-01-01': { standing: 'registeredOnly' } }
+            2026: { [VALID_FROM]: { standing: 'accredited' } },
+            2027: { '2027-01-01': { standing: 'registeredOnly' } }
           },
           accreditations: {
-            2025: buildReadAccreditation({
+            2026: buildReadAccreditation({
               accreditationNumber: toAccreditationNumber('ACC-123'),
               status: approved
             })

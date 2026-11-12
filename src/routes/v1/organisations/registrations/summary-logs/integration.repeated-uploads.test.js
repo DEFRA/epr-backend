@@ -285,7 +285,7 @@ describe('Repeated uploads of identical data', () => {
           servedTestReadOrganisation({
             wasteProcessingType: 'reprocessor',
             material: 'glass_re_melt',
-            accreditationNumber: toAccreditationNumber('ACC-2025-001')
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
           })
         ])(),
         logger: mockLogger
@@ -324,7 +324,7 @@ describe('Repeated uploads of identical data', () => {
               servedTestReadOrganisation({
                 wasteProcessingType: 'reprocessor',
                 material: 'glass_re_melt',
-                accreditationNumber: toAccreditationNumber('ACC-2025-001')
+                accreditationNumber: toAccreditationNumber('ACC-2026-001')
               })
             ])()
         },
