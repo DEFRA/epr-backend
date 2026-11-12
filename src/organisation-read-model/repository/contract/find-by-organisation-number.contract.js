@@ -229,34 +229,45 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       ).toEqual(['2025'])
     })
 
-    it('gives the accreditations of every year when no year is asked for', async ({
-      organisationReadRepositoryWith
-    }) => {
-      config.set('openNextYear', true) // opens 2027
-      const granted2026 = accreditation()
-      const stored = buildOrganisation({
-        registrations: [reprocessor({ accreditationId: granted2026.id })],
-        accreditations: [granted2026]
-      })
-      const repository = await organisationReadRepositoryWith({
-        organisations: [stored],
-        externalAccreditations: [
-          buildExternalAccreditation({
-            registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
-          })
-        ]
+    describe('while next year is open', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-10') })
+        config.set('openNextYear', true) // opens 2027
       })
 
-      const organisation = await findOrganisation(
-        repository,
-        stored.organisationNumber
-      )
+      afterEach(() => {
+        vi.useRealTimers()
+        config.reset('openNextYear')
+      })
 
-      expect(
-        Object.keys(
-          organisation.registrations[REPROCESSOR_NUMBER].accreditations
+      it('gives the accreditations of every year when no year is asked for', async ({
+        organisationReadRepositoryWith
+      }) => {
+        const granted2026 = accreditation()
+        const stored = buildOrganisation({
+          registrations: [reprocessor({ accreditationId: granted2026.id })],
+          accreditations: [granted2026]
+        })
+        const repository = await organisationReadRepositoryWith({
+          organisations: [stored],
+          externalAccreditations: [
+            buildExternalAccreditation({
+              registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+            })
+          ]
+        })
+
+        const organisation = await findOrganisation(
+          repository,
+          stored.organisationNumber
         )
-      ).toEqual(['2026', '2027'])
+
+        expect(
+          Object.keys(
+            organisation.registrations[REPROCESSOR_NUMBER].accreditations
+          )
+        ).toEqual(['2026', '2027'])
+      })
     })
 
     it('gives the site address parts without a town, and as submitted, when ingest could not find its town', async ({

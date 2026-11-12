@@ -334,7 +334,7 @@ export function toRegistrationEntry(
         `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
       )
     )
-  const openYear = latestOpenYear()
+  const openYear = latestOpenYear(new Date(context.today))
   const accreditations = Object.fromEntries(
     Object.entries({
       ...storedAccreditations,
