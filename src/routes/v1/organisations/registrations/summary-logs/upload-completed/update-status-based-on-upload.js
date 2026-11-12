@@ -30,7 +30,7 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
  *   year: Year,
  *   accreditationId: string | null,
  *   numbers: RequiredNumbers
- * }} UploadLocation
+ * }} UploadedFor
  */
 
 /**
@@ -109,7 +109,7 @@ const validatedAgainstSummaryLogIdFor = async (
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
- * @param {UploadLocation} location
+ * @param {UploadedFor} uploadedFor
  */
 const insertNewSummaryLog = async (
   summaryLogsRepository,
@@ -141,7 +141,7 @@ const insertNewSummaryLog = async (
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
- * @param {UploadLocation} location
+ * @param {UploadedFor} uploadedFor
  * @returns {Promise<string>} The new status
  */
 export const updateStatusBasedOnUpload = async (
@@ -149,9 +149,9 @@ export const updateStatusBasedOnUpload = async (
   summaryLogId,
   upload,
   logger,
-  location
+  uploadedFor
 ) => {
-  const { organisationId, registrationId } = location
+  const { organisationId, registrationId } = uploadedFor
   const existing = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
 
@@ -190,7 +190,7 @@ export const updateStatusBasedOnUpload = async (
       summaryLogsRepository,
       summaryLogId,
       upload,
-      location
+      uploadedFor
     )
   }
 
