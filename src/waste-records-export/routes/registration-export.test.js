@@ -1,10 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -13,15 +11,16 @@ import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadExporterRegistration,
+  buildReadOrganisation as buildServedOrganisation
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-
-const { buildReadOrganisation } = createOrganisationBuilders()
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
@@ -40,22 +39,6 @@ const REGISTERED_ONLY_LEDGER = {
   registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
   accreditationNumber: null,
   year: DEFAULT_YEAR
-}
-
-const buildRegistration = () => {
-  const [, exporterRegistration] = buildReadOrganisation().registrations
-  return {
-    ...exporterRegistration,
-    id: REGISTRATION_ID,
-    material: 'plastic',
-    submittedToRegulator: 'ea',
-    registrationNumber: REGISTRATION_NUMBER,
-    accreditation: null,
-    overseasSites: {},
-    status: REGISTRATION_STATUS.APPROVED,
-    statusHistory: granted('approved'),
-    validFrom: '2026-02-01'
-  }
 }
 
 // The export reads the organisation read model alone.
@@ -104,12 +87,14 @@ const createServer = async ({
   ]),
   config = {}
 } = {}) => {
-  const organisation = buildReadOrganisation({
-    id: ORGANISATION_ID,
+  const organisation = buildServedOrganisation({
     organisationNumber: ORGANISATION_NUMBER,
-    companyDetails: { name: 'Acme Ltd' },
-    submittedToRegulator: 'ea',
-    registrations: [/** @type {any} */ (buildRegistration())]
+    name: 'Acme Ltd',
+    registrations: {
+      [REGISTRATION_NUMBER]: buildReadExporterRegistration({
+        material: 'plastic'
+      })
+    }
   })
 
   const summaryLogRowStatesRepository =
@@ -123,7 +108,7 @@ const createServer = async ({
   return createTestServer({
     repositories: {
       organisationAdministrationRepository: () => legacyOrganisationsRepository,
-      organisationReadRepository: await organisationReadRepositoryOf([
+      organisationReadRepository: createInMemoryOrganisationReadRepository([
         organisation
       ]),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,

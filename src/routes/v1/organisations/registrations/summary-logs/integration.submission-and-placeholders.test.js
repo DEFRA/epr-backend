@@ -25,7 +25,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -41,6 +41,7 @@ import {
   createUploadPayload,
   pollForValidation,
   servedTestAccreditation,
+  servedTestReadOrganisation,
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
@@ -390,9 +391,13 @@ describe('Submission and placeholder tests', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: organisationReadRepositoryOver(
-          organisationAdministrationRepository
-        ),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper',
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
+          })
+        ])(),
         logger: mockLogger
       })
 
@@ -430,9 +435,13 @@ describe('Submission and placeholder tests', () => {
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(
-              organisationAdministrationRepository
-            ),
+            createInMemoryOrganisationReadRepository([
+              servedTestReadOrganisation({
+                wasteProcessingType: 'reprocessor',
+                material: 'paper',
+                accreditationNumber: toAccreditationNumber('ACC-2026-001')
+              })
+            ])(),
           systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
@@ -828,7 +837,15 @@ describe('Submission and placeholder tests', () => {
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+            createInMemoryOrganisationReadRepository([
+              servedTestReadOrganisation({
+                wasteProcessingType: 'reprocessor',
+                material: 'paper',
+                accreditationNumber: toAccreditationNumber(
+                  'ACC-PLACEHOLDER-001'
+                )
+              })
+            ])()
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }

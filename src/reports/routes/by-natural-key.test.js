@@ -1,5 +1,12 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -10,9 +17,7 @@ import {
   asServiceMaintainer,
   asServiceMaintainerWrite
 } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
@@ -25,17 +30,12 @@ import {
 } from '#reports/domain/report-status.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import {
+  EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  exporter,
-  exporterAccreditation,
-  reprocessor
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -52,20 +52,40 @@ vi.mock('#reports/application/audit.js', () => ({
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 const YEAR = toYear(2026)
 
-const accredited = accreditation()
-const registeredOnlyRegistration = reprocessor({
+const accredited = buildReadAccreditation()
+const registeredOnlyRegistration = {
   registrationNumber: REGISTERED_ONLY_NUMBER
-})
-const accreditedRegistration = reprocessor({ accreditationId: accredited.id })
-const accreditedExport = exporterAccreditation()
-const accreditedExporter = exporter({ accreditationId: accreditedExport.id })
-const organisation = buildOrganisation({
-  registrations: [
-    registeredOnlyRegistration,
-    accreditedRegistration,
-    accreditedExporter
-  ],
-  accreditations: [accredited, accreditedExport]
+}
+const accreditedRegistration = { registrationNumber: REPROCESSOR_NUMBER }
+const accreditedExporter = { registrationNumber: EXPORTER_NUMBER }
+/** @type {import('#organisation-read-model/domain/model.js').StandingByYear} */
+const accreditedStanding = {
+  [YEAR]: {
+    '2026-02-01': { standing: 'registeredOnly' },
+    '2026-07-01': { standing: 'accredited' }
+  }
+}
+const organisation = buildReadOrganisation({
+  registrations: {
+    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      standingByDate: accreditedStanding,
+      accreditations: { [YEAR]: accredited }
+    }),
+    [EXPORTER_NUMBER]: buildReadExporterRegistration({
+      standingByDate: accreditedStanding,
+      accreditations: {
+        [YEAR]: {
+          ...buildReadAccreditation({
+            accreditationNumber: toAccreditationNumber(
+              EXPORTER_ACCREDITATION_NUMBER
+            )
+          }),
+          overseasSites: {}
+        }
+      }
+    })
+  }
 })
 
 const registrations = `/organisations/${organisation.organisationNumber}/registrations`
@@ -74,10 +94,10 @@ const registrations = `/organisations/${organisation.organisationNumber}/registr
 const numbersOf = (registration) => reportKeyOf(organisation, registration)
 
 const OTHER_ORGANISATION_REGISTRATION_NUMBER = 'R26ER5001180098PL'
-const otherOrganisation = buildOrganisation({
-  registrations: [
-    reprocessor({ registrationNumber: OTHER_ORGANISATION_REGISTRATION_NUMBER })
-  ]
+const otherOrganisation = buildReadOrganisation({
+  registrations: {
+    [OTHER_ORGANISATION_REGISTRATION_NUMBER]: buildReadReprocessorRegistration()
+  }
 })
 
 const streams = [
@@ -161,9 +181,9 @@ describe('report routes by natural key', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation),
-          partialMock(otherOrganisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          organisation,
+          otherOrganisation
         ]),
         reportsRepository: reportsRepositoryFactory
       }

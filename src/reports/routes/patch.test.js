@@ -1,28 +1,29 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import {
-  accreditation,
-  exporter,
-  exporterAccreditation,
-  reprocessor
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { buildUpdatedPrn } from './patch.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 const YEAR = toYear(2026)
 
@@ -65,16 +66,22 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
     report = {}
   } = {}) => {
     const isExporter = wasteProcessingType === 'exporter'
+    const registrationNumber = isExporter ? EXPORTER_NUMBER : REPROCESSOR_NUMBER
+    const registration = { registrationNumber }
+    /** @type {Record<string, any>} */
     const accreditations = accredited
-      ? [isExporter ? exporterAccreditation() : accreditation()]
-      : []
-    const buildRegistration = isExporter ? exporter : reprocessor
-    const registration = buildRegistration(
-      accredited ? { accreditationId: accreditations[0].id } : {}
-    )
-    const org = buildOrganisation({
-      registrations: [registration],
-      accreditations
+      ? {
+          [YEAR]: isExporter
+            ? buildReadExporterAccreditation()
+            : buildReadAccreditation()
+        }
+      : {}
+    const org = buildReadOrganisation({
+      registrations: {
+        [registrationNumber]: isExporter
+          ? buildReadExporterRegistration({ accreditations })
+          : buildReadReprocessorRegistration({ accreditations })
+      }
     })
     const { cadence, period } = accredited
       ? STREAMS.accredited
@@ -96,8 +103,8 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(org)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          org
         ]),
         reportsRepository: reportsRepositoryFactory
       }

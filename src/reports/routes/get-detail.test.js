@@ -1,11 +1,18 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -21,11 +28,13 @@ import {
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import {
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
   accreditation,
-  approvedSite,
+  approvedOverseasSite,
   exporter,
   exporterAccreditation,
-  pendingSite,
+  pendingOverseasSite,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
@@ -92,9 +101,37 @@ const seedRepositories = async (
   }
 }
 
-const registeredOnlyReprocessor = () => ({ registration: reprocessor() })
+/**
+ * A registration approved from `validFrom`, as the read model serves it.
+ * @param {string} validFrom
+ * @param {'registeredOnly' | 'accredited'} standing
+ * @returns {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>}
+ */
+const approvedFrom = (validFrom, standing = 'registeredOnly') => ({
+  validFrom,
+  status: { current: 'approved', timeline: approvedTimelineFrom(validFrom) },
+  standingByDate: { 2026: { [validFrom]: { standing } } }
+})
 
-const registeredOnlyExporter = () => ({ registration: exporter() })
+const accreditedFromJanuary = (accreditationNumber) =>
+  buildReadAccreditation({
+    accreditationNumber: toAccreditationNumber(accreditationNumber),
+    status: {
+      current: 'approved',
+      timeline: approvedTimelineFrom('2026-01-01')
+    }
+  })
+
+/** @param {string} [validFrom] */
+const registeredOnlyReprocessor = (validFrom = '2026-02-01') => ({
+  registration: reprocessor({ validFrom }),
+  readRegistration: buildReadReprocessorRegistration(approvedFrom(validFrom))
+})
+
+const registeredOnlyExporter = () => ({
+  registration: exporter(),
+  readRegistration: buildReadExporterRegistration(approvedFrom('2026-02-01'))
+})
 
 const accreditedReprocessor = () => {
   const accredited = accreditation({ validFrom: '2026-01-01' })
@@ -103,35 +140,58 @@ const accreditedReprocessor = () => {
       accreditationId: accredited.id,
       validFrom: '2026-01-01'
     }),
-    accreditations: [accredited]
+    accreditations: [accredited],
+    readRegistration: buildReadReprocessorRegistration({
+      ...approvedFrom('2026-01-01', 'accredited'),
+      accreditations: { 2026: accreditedFromJanuary(ACCREDITATION_NUMBER) }
+    })
   }
 }
 
-const accreditedExporter = () => {
+/**
+ * @param {{
+ *   overseasSites?: Record<string, object>,
+ *   accreditedSites?: Record<string, object>
+ * }} [sites]
+ */
+const accreditedExporter = ({
+  overseasSites = {},
+  accreditedSites = {}
+} = {}) => {
   const accredited = exporterAccreditation({ validFrom: '2026-01-01' })
   return {
     registration: exporter({
       accreditationId: accredited.id,
       validFrom: '2026-01-01'
     }),
-    accreditations: [accredited]
+    accreditations: [accredited],
+    readRegistration: buildReadExporterRegistration({
+      ...approvedFrom('2026-01-01', 'accredited'),
+      overseasSites: /** @type {any} */ (overseasSites),
+      accreditations: {
+        2026: {
+          ...accreditedFromJanuary(EXPORTER_ACCREDITATION_NUMBER),
+          overseasSites: /** @type {any} */ (accreditedSites)
+        }
+      }
+    })
   }
 }
 
 /**
  * @param {{
  *   registration: Record<string, any>,
+ *   readRegistration: import('#organisation-read-model/domain/model.js').Registration,
  *   accreditations?: object[],
  *   wasteRecords?: { type: string, data: object }[],
- *   overseasSites?: object[],
  *   reportDataValidation?: boolean
  * }} options
  */
 const createServer = async ({
   registration,
+  readRegistration,
   accreditations = [],
   wasteRecords = [],
-  overseasSites = [],
   reportDataValidation = false
 }) => {
   const org = buildOrganisation({
@@ -146,10 +206,14 @@ const createServer = async ({
 
   const server = await createTestServer({
     repositories: {
-      organisationReadRepository: await organisationReadRepositoryOf(
-        [partialMock(org)],
-        { overseasSites }
-      ),
+      organisationReadRepository: createInMemoryOrganisationReadRepository([
+        buildReadOrganisation({
+          organisationNumber: org.organisationNumber,
+          registrations: {
+            [registration.registrationNumber]: readRegistration
+          }
+        })
+      ]),
       ledgerRepository,
       summaryLogRowStatesRepository,
       reportsRepository: reportsRepositoryFactory
@@ -722,11 +786,16 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         }
       })
       const { server, monthly } = await createServer({
-        ...accreditedExporter(),
-        overseasSites: [
-          { ...approvedSite, validFrom: new Date('2026-02-15T00:00:00.000Z') },
-          pendingSite
-        ],
+        ...accreditedExporter({
+          overseasSites: {
+            '001': approvedOverseasSite,
+            '002': pendingOverseasSite
+          },
+          accreditedSites: {
+            '001': { status: 'approved', approvedOn: '2026-02-15' },
+            '002': { status: 'pending' }
+          }
+        }),
         wasteRecords: [
           exportOn('2026-02-15', '001', 5),
           exportOn('2026-02-14', '001', 3),
@@ -837,7 +906,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   describe('a period the registration does not owe', () => {
     it('returns 404 for a quarter that ended before the registration was approved', async () => {
       const { server, quarterly } = await createServer({
-        registration: reprocessor({ validFrom: '2026-04-01' })
+        ...registeredOnlyReprocessor('2026-04-01')
       })
 
       const { response } = await read(server, quarterly(1))
@@ -909,7 +978,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     it('returns a stored report for a period the registration no longer owes', async () => {
       const context = await createServer({
-        registration: reprocessor({ validFrom: '2026-04-01' })
+        ...registeredOnlyReprocessor('2026-04-01')
       })
       await storeReport(context)
 
@@ -920,7 +989,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     it('previews the next submission of a period the registration no longer owes', async () => {
       const context = await createServer({
-        registration: reprocessor({ validFrom: '2026-04-01' })
+        ...registeredOnlyReprocessor('2026-04-01')
       })
       await submitReport(context)
 

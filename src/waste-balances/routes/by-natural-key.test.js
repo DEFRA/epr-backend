@@ -1,10 +1,15 @@
-import { StatusCodes } from 'http-status-codes'
-import {
-  organisationReadRepositoryOf,
-  organisationReadRepositoryFrom
-} from '#vite/helpers/organisation-read-model.js'
-
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
+import { StatusCodes } from 'http-status-codes'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadApprovedOrganisation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
+
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
@@ -35,6 +40,7 @@ import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-help
 import {
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   exporter,
@@ -92,6 +98,72 @@ const sharedNumberOrganisation = buildOrganisation({
     ...sharedNumberAccreditations,
     sharedNumberExportAccreditation
   ]
+})
+
+const accreditedStanding = {
+  2026: {
+    '2026-02-01': { standing: /** @type {const} */ ('registeredOnly') },
+    '2026-07-01': { standing: /** @type {const} */ ('accredited') }
+  }
+}
+
+const servedExporter = () =>
+  buildReadExporterRegistration({
+    standingByDate: accreditedStanding,
+    accreditations: {
+      2026: buildReadExporterAccreditation({
+        accreditationNumber: toAccreditationNumber(
+          EXPORTER_ACCREDITATION_NUMBER
+        )
+      })
+    }
+  })
+
+/**
+ * The organisations as the read model serves them: one registration each
+ * that carries a number held by no other, and in the shared-number
+ * organisation only the exporter.
+ */
+const servedOrganisation = buildReadOrganisation({
+  organisationNumber: organisation.organisationNumber,
+  registrations: {
+    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration({
+      validFrom: '2024-02-01',
+      status: {
+        current: 'approved',
+        timeline: [
+          {
+            status: 'created',
+            at: '2024-01-01T09:00:00.000Z',
+            updatedAt: '2024-01-01T09:00:00.000Z'
+          },
+          {
+            status: 'approved',
+            at: '2024-02-01T00:00:00.000Z',
+            updatedAt: '2024-02-01T09:00:00.000Z'
+          }
+        ]
+      },
+      standingByDate: {
+        2024: { '2024-02-01': { standing: 'registeredOnly' } },
+        2025: { '2025-01-01': { standing: 'registeredOnly' } },
+        2026: { '2026-01-01': { standing: 'registeredOnly' } }
+      }
+    }),
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      standingByDate: accreditedStanding,
+      accreditations: {
+        2026: buildReadAccreditation({
+          accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+        })
+      }
+    }),
+    [EXPORTER_NUMBER]: servedExporter()
+  }
+})
+const servedSharedNumberOrganisation = buildReadOrganisation({
+  organisationNumber: sharedNumberOrganisation.organisationNumber,
+  registrations: { [EXPORTER_NUMBER]: servedExporter() }
 })
 
 const registrations = `/organisations/${organisation.organisationNumber}/registrations`
@@ -157,9 +229,9 @@ describe('ledger and waste balance routes by natural key', () => {
             partialMock(organisation),
             partialMock(sharedNumberOrganisation)
           ]),
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation),
-          partialMock(sharedNumberOrganisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          servedOrganisation,
+          servedSharedNumberOrganisation
         ]),
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository([issuedNote], [])
@@ -568,25 +640,31 @@ const buildAccessServer = async () => {
   /** @param {{ organisationNumber: OrganisationNumber }} org */
   const accreditationOf = ({ organisationNumber }) =>
     `/organisations/${organisationNumber}/registrations/REG${organisationNumber}/accreditations/${new Date().getUTCFullYear()}`
-  const own = accreditationOf(await buildActiveOrg(repository))
-  const other = accreditationOf(
-    await buildActiveOrg(repository, {
-      linkedDefraOrganisation: {
-        orgId: COMPANY_2_ID,
-        orgName: 'Company 2 Name',
-        linkedBy: {
-          email: 'someone.else@example.com',
-          id: '550e8400-e29b-41d4-a716-446655440002'
-        },
-        linkedAt: new Date().toISOString()
-      }
-    })
-  )
+  const ownOrganisation = await buildActiveOrg(repository)
+  const otherOrganisation = await buildActiveOrg(repository, {
+    linkedDefraOrganisation: {
+      orgId: COMPANY_2_ID,
+      orgName: 'Company 2 Name',
+      linkedBy: {
+        email: 'someone.else@example.com',
+        id: '550e8400-e29b-41d4-a716-446655440002'
+      },
+      linkedAt: new Date().toISOString()
+    }
+  })
+  const own = accreditationOf(ownOrganisation)
+  const other = accreditationOf(otherOrganisation)
   const server = await createTestServer({
     repositories: {
       organisationAdministrationRepository: organisationsRepositoryFactory,
-      organisationReadRepository:
-        await organisationReadRepositoryFrom(repository)
+      organisationReadRepository: createInMemoryOrganisationReadRepository(
+        [ownOrganisation, otherOrganisation].map(({ organisationNumber }) =>
+          buildReadApprovedOrganisation({
+            organisationNumber,
+            year: currentUtcYear()
+          })
+        )
+      )
     }
   })
   return { server, own, other }
@@ -760,8 +838,8 @@ describe('GET R/accreditations/{year}/ledger response validation', () => {
       repositories: {
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([partialMock(organisation)]),
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          servedOrganisation
         ]),
         ledgerRepository
       }

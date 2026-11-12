@@ -21,7 +21,6 @@ import {
 } from '#reports/domain/report-status.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
 import { assertPresent } from '#test/type-helpers.js'
 
 import {
@@ -272,12 +271,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     { year, cadence, period },
     submissionNumber = 1
   ) => {
-    const organisationReadRepository = await organisationReadRepositoryFrom(
-      env.organisationAdministrationRepository,
-      { overseasSitesRepository: env.overseasSitesRepository }
-    )
     const organisation =
-      await organisationReadRepository().findByOrganisationNumber(
+      await env.organisationReadRepository.findByOrganisationNumber(
         env.reportKey.organisationNumber
       )
     assertPresent(organisation)

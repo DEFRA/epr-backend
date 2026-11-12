@@ -5,34 +5,31 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { summaryLogUploadsReportPath } from './get.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadApprovedOrganisation,
+  nextReadOrganisationNumber as nextOrganisationNumber
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
-
-const organisationBuilders = createOrganisationBuilders()
-const { nextOrganisationNumber } = organisationBuilders
-const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe(`${summaryLogUploadsReportPath} route`, () => {
   setupAuthContext()
 
   let server
-  let organisationsRepository
+  /** @type {import('#organisation-read-model/domain/model.js').Organisation[]} */
+  const servedOrganisations = []
   let summaryLogsRepository
 
   beforeAll(async () => {
-    organisationsRepository = createInMemoryOrganisationsRepository()()
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     server = await createTestServer({
       repositories: {
         organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationsRepository),
+          createInMemoryOrganisationReadRepository(servedOrganisations)(),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -47,20 +44,18 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   describe('successful requests', () => {
     it('returns 200 with summary log uploads report data', async () => {
       const organisationNumber = nextOrganisationNumber()
-      const org = await buildApprovedOrg(organisationsRepository, {
-        organisationNumber
-      })
-      const registration = org.registrations[0]
+      const org = buildReadApprovedOrganisation({ organisationNumber })
+      servedOrganisations.push(org)
 
       const submittedAt = '2026-01-20T14:30:00.000Z'
 
       await summaryLogsRepository.insert(
         new ObjectId().toString(),
         summaryLogFactory.submitted({
-          organisationId: org.id,
-          registrationId: registration.id,
+          organisationId: new ObjectId().toString(),
+          registrationId: new ObjectId().toString(),
           organisationNumber: org.organisationNumber,
-          registrationNumber: registration.registrationNumber,
+          registrationNumber: `REG${organisationNumber}`,
           submittedAt
         })
       )
