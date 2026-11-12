@@ -9,7 +9,7 @@
  */
 
 /**
- * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers} RequiredNumbers
+ * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
 /**
@@ -28,18 +28,23 @@ export const WASTE_BALANCE_EVENTS_COLLECTION_NAME = 'waste-balance-events'
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
-const INDEX_NAME_SLOT = 'ledger_slot_by_number'
+const INDEX_NAME_SLOT = 'ledger_slot_by_year'
 
 const RETIRED_INDEX_NAMES = [
   'partition_number',
   'partition_kind_latest',
-  'prn_watermark_catchup'
+  'prn_watermark_catchup',
+  'ledger_kind_latest_by_number',
+  'prn_watermark_catchup_by_number'
 ]
 
 /**
  * Ensures the ledger collection exists with the indexes required by the
- * event-sourced ledger design. The number-keyed indexes are built before the
- * id-keyed ones they replace are dropped, so a slot is never unguarded.
+ * event-sourced ledger design. The year-keyed indexes are built before the
+ * ones they replace are dropped, so a slot is never unguarded. A collection
+ * that already holds the slot index without the year keeps it: a ledger
+ * whose events have no year yet then refuses a write that would open its
+ * year from slot 1, rather than holding that year twice.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -51,23 +56,30 @@ export async function ensureLedgerCollection(db) {
   const collection = db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
 
   await collection.createIndex(
-    { registrationNumber: 1, accreditationNumber: 1, number: 1 },
+    { registrationNumber: 1, accreditationNumber: 1, year: 1, number: 1 },
     { name: INDEX_NAME_SLOT, unique: true }
-  )
-
-  await collection.createIndex(
-    { registrationNumber: 1, accreditationNumber: 1, kind: 1, number: -1 },
-    { name: 'ledger_kind_latest_by_number' }
   )
 
   await collection.createIndex(
     {
       registrationNumber: 1,
       accreditationNumber: 1,
+      year: 1,
+      kind: 1,
+      number: -1
+    },
+    { name: 'ledger_kind_latest_by_year' }
+  )
+
+  await collection.createIndex(
+    {
+      registrationNumber: 1,
+      accreditationNumber: 1,
+      year: 1,
       'payload.prnId': 1,
       number: 1
     },
-    { name: 'prn_watermark_catchup_by_number' }
+    { name: 'prn_watermark_catchup_by_year' }
   )
 
   await collection.createIndex(
@@ -87,8 +99,8 @@ const toLedgerEvent = (doc) => validateLedgerEventRead(doc)
 /**
  * Classify a MongoDB E11000 duplicate key error raised by an append.
  *
- * `partition_number` is the only unique index on this collection — the other
- * two are non-unique, and driver-generated `_id`s do not collide — so a
+ * The slot indexes are the only unique indexes on this collection — the
+ * others are non-unique, and driver-generated `_id`s do not collide — so a
  * duplicate key can only mean a competing writer took the slot.
  *
  * @param {unknown} error
@@ -137,21 +149,23 @@ const findDuplicateKeyWriteError = (error) => {
  * builds its filter from this, so no such read can name a ledger by less than
  * its whole id.
  *
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  */
 const ledgerFilter = ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 }) => ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 })
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: RequiredNumbers) => Promise<LedgerEvent | null>}
+ * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>}
  */
 const performFindLatestInLedger = (collection) => async (ledgerId) => {
   const doc = await collection.findOne(ledgerFilter(ledgerId), {
@@ -162,7 +176,7 @@ const performFindLatestInLedger = (collection) => async (ledgerId) => {
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerIds: RequiredNumbers[]) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerIds: WasteBalanceLedgerId[]) => Promise<LedgerEvent[]>}
  */
 const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
   // $or rejects an empty array
@@ -179,7 +193,8 @@ const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
           _id: {
             organisationNumber: '$organisationNumber',
             registrationNumber: '$registrationNumber',
-            accreditationNumber: '$accreditationNumber'
+            accreditationNumber: '$accreditationNumber',
+            year: '$year'
           },
           latest: { $first: '$$ROOT' }
         }
@@ -193,7 +208,7 @@ const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: RequiredNumbers, kind: string) => Promise<LedgerEvent | null>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, kind: string) => Promise<LedgerEvent | null>}
  */
 const performFindLatestInLedgerByKind =
   (collection) => async (ledgerId, kind) => {
@@ -206,7 +221,7 @@ const performFindLatestInLedgerByKind =
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: RequiredNumbers, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>}
  */
 const performFindEventsByPrnIdAfter =
   (collection) => async (ledgerId, prnId, afterNumber) => {
@@ -224,7 +239,7 @@ const performFindEventsByPrnIdAfter =
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: RequiredNumbers) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent[]>}
  */
 const performFindAllInLedger = (collection) => async (ledgerId) => {
   const docs = await collection
@@ -258,7 +273,8 @@ const performFindLatestSubmittedSummaryLogPerLedger =
             _id: {
               organisationNumber: '$organisationNumber',
               registrationNumber: '$registrationNumber',
-              accreditationNumber: '$accreditationNumber'
+              accreditationNumber: '$accreditationNumber',
+              year: '$year'
             },
             summaryLogId: { $first: '$payload.summaryLogId' }
           }
@@ -273,7 +289,7 @@ const performFindLatestSubmittedSummaryLogPerLedger =
 /**
  * @migration PAE-1382 — delete all events for a ledgerId.
  * @param {Collection} collection
- * @returns {(ledgerId: RequiredNumbers) => Promise<number>}
+ * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<number>}
  */
 const performDeleteInLedger = (collection) => async (ledgerId) => {
   const result = await collection.deleteMany(ledgerFilter(ledgerId))

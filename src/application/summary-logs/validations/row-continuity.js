@@ -29,8 +29,9 @@ const rowKey = (wasteRecordType, rowId) => `${wasteRecordType}:${rowId}`
  * - Updated (corrections to existing entries)
  * - Unchanged (carried forward as-is)
  *
- * The rows that must be carried forward are the row states of the registration's
- * latest submitted summary log, and that summary log is the one the FATAL names.
+ * The rows that must be carried forward are the row states of the latest summary
+ * log submitted to the same ledger, which is for the same year, and that summary
+ * log is the one the FATAL names.
  * Only applies to subsequent uploads (not first-time uploads). Missing rows result
  * in FATAL errors that block submission.
  *

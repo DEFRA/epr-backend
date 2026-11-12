@@ -130,9 +130,8 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * A waste balance ledger is keyed by the numbers of the registration or
- * accreditation whose balance it records. A registered-only ledger's
- * accreditation number is `null`. The year is the one each event written to
- * the ledger records.
+ * accreditation whose balance it records, and by the year it records it for.
+ * A registered-only ledger's accreditation number is `null`.
  *
  * @typedef {RequiredNumbers & { year: Year }} WasteBalanceLedgerId
  */
@@ -165,10 +164,9 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
- * written. An event written before ledger events recorded their year has
- * none.
+ * written.
  *
- * @typedef {Omit<LedgerEventFields, 'year'> & { year?: Year }} LedgerEvent
+ * @typedef {LedgerEventFields} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({
@@ -246,7 +244,4 @@ const ledgerEventBaseSchema = Joi.object({
 
 export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys(ledgerIdKeys)
 
-export const ledgerEventReadSchema = ledgerEventBaseSchema.keys({
-  ...ledgerIdKeys,
-  year: yearSchema()
-})
+export const ledgerEventReadSchema = ledgerEventBaseSchema.keys(ledgerIdKeys)

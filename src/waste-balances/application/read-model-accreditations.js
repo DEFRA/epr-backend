@@ -52,20 +52,24 @@ export const indexByLedger = (
           ([number, registration]) => {
             const registrationNumber = toRegistrationNumber(number)
             return Object.entries(registration.accreditations).map(
-              ([year, accreditation]) => [
-                ledgerKey({
-                  organisationNumber: organisation.organisationNumber,
-                  registrationNumber,
-                  accreditationNumber: accreditation.accreditationNumber
-                }),
-                {
-                  organisation,
-                  registrationNumber,
-                  registration,
-                  year: toYear(Number(year)),
-                  accreditation
-                }
-              ]
+              ([key, accreditation]) => {
+                const year = toYear(Number(key))
+                return [
+                  ledgerKey({
+                    organisationNumber: organisation.organisationNumber,
+                    registrationNumber,
+                    accreditationNumber: accreditation.accreditationNumber,
+                    year
+                  }),
+                  {
+                    organisation,
+                    registrationNumber,
+                    registration,
+                    year,
+                    accreditation
+                  }
+                ]
+              }
             )
           }
         )

@@ -28,7 +28,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {RequiredNumbers} from '#domain/organisations/numbers.js' */
+/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
 /** @import {LedgerAccreditation} from '#waste-balances/application/read-model-accreditations.js' */
 
@@ -95,11 +95,12 @@ export const encodeRow = async (cells) => {
 }
 
 // Deterministic partition order within a registration: registered-only
-// (null accreditation) first, then accreditation numbers ascending.
-const sortEntriesByAccreditationNumber = (a, b) =>
+// (null accreditation) first, then accreditation numbers ascending, each
+// accreditation's years in order.
+const sortEntriesByAccreditationNumberAndYear = (a, b) =>
   String(a.ledgerId.accreditationNumber ?? '').localeCompare(
     String(b.ledgerId.accreditationNumber ?? '')
-  )
+  ) || a.ledgerId.year - b.ledgerId.year
 
 /**
  * The export answers a question about the present, so it discards the reading
@@ -123,7 +124,7 @@ const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }
  * accredited but are still exported.
  *
  * @param {Map<string, LedgerAccreditation>} ledgerIndex - by `ledgerKey`
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @returns {{ accreditationNumber: AccreditationNumber | null, context: ReclassificationContext }}
  */
 const heldAccreditation = (ledgerIndex, ledgerId) => {
@@ -154,7 +155,7 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
  * @param {RegistrationNumber} input.registrationNumber
  * @param {Registration} input.registration
  * @param {Map<string, LedgerAccreditation>} input.ledgerIndex
- * @param {RequiredNumbers} input.ledgerId
+ * @param {WasteBalanceLedgerId} input.ledgerId
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
  * @param {string[]} input.dataFieldColumns
@@ -221,7 +222,7 @@ async function* streamLatestSubmissionRows({
   ...context
 }) {
   for (const { ledgerId, summaryLogId } of [...entries].sort(
-    sortEntriesByAccreditationNumber
+    sortEntriesByAccreditationNumberAndYear
   )) {
     yield* streamPartitionRows({
       ...context,

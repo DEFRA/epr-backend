@@ -66,19 +66,19 @@ const accreditationNumbered = (accreditationNumber) => ({
 })
 
 /**
- * The validity the waste balance reads for ACC-1, held for 2023.
+ * The validity the waste balance reads for ACC-1, held for 2026.
  *
  * @type {AccreditationValidity}
  */
 const ACCREDITATION_VALIDITY = {
   statusHistory: [{ status: 'approved', updatedAt: APPROVED_FROM }],
-  validFrom: '2023-01-01',
-  validTo: '2023-12-31'
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31'
 }
 
 /**
  * An organisation as the read model serves it, holding REG-1 and REG-2. REG-1
- * holds ACC-1 for 2023 unless `registration` replaces its accreditations.
+ * holds ACC-1 for 2026 unless `registration` replaces its accreditations.
  *
  * @param {{ registration?: Partial<ReprocessorRegistration | ExporterRegistration> }} [options]
  */
@@ -93,7 +93,7 @@ const organisationWith = ({ registration = {} } = {}) => ({
     },
     'REG-1': {
       wasteProcessingType: 'reprocessor',
-      accreditations: { 2023: accreditationNumbered(ACCREDITATION_NUMBER) },
+      accreditations: { [YEAR]: accreditationNumbered(ACCREDITATION_NUMBER) },
       ...registration
     }
   }
@@ -208,6 +208,13 @@ describe('syncFromSummaryLog', () => {
       exporterInput([
         receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
       ])
+    )
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
+      organisationWith({
+        registration: {
+          accreditations: { 2027: accreditationNumbered(ACCREDITATION_NUMBER) }
+        }
+      })
     )
 
     await makeSync({ extractor })(
@@ -450,7 +457,7 @@ describe('syncFromSummaryLog', () => {
         registration: {
           wasteProcessingType: 'exporter',
           accreditations: {
-            2023: {
+            [YEAR]: {
               ...accreditationNumbered(ACCREDITATION_NUMBER),
               overseasSites: {
                 '001': { status: 'approved', approvedOn: '2024-01-01' },

@@ -25,16 +25,17 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @param {SummaryLogRowState} doc
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  */
 const matchesLedger = (doc, ledgerId) =>
   doc.organisationNumber === ledgerId.organisationNumber &&
   doc.registrationNumber === ledgerId.registrationNumber &&
-  doc.accreditationNumber === ledgerId.accreditationNumber
+  doc.accreditationNumber === ledgerId.accreditationNumber &&
+  doc.year === ledgerId.year
 
 /**
  * @param {SummaryLogRowState} doc
@@ -57,7 +58,7 @@ const matchesCommittedState = (doc, candidate) =>
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogFileId} summaryLogId
  * @returns {SummaryLogRowState[]}
  */
@@ -104,6 +105,7 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
         organisationNumber: doc.organisationNumber,
         registrationNumber: doc.registrationNumber,
         accreditationNumber: doc.accreditationNumber,
+        year: doc.year,
         wasteRecordType: doc.wasteRecordType,
         processingType: doc.processingType,
         data: doc.data
@@ -190,7 +192,7 @@ const repositoryOver = (storage) => ({
     ),
 
   /**
-   * @param {RequiredNumbers} ledgerId
+   * @param {WasteBalanceLedgerId} ledgerId
    * @param {SummaryLogFileId} summaryLogId
    */
   findWasteRecordStatesForSummaryLog: async (ledgerId, summaryLogId) =>

@@ -115,20 +115,69 @@ describe('ensureSummaryLogRowStatesCollection', () => {
   }) => {
     const indexes = await summaryLogRowStatesCollection.indexes()
     expect(
-      indexKeyFor(indexes, 'summary_log_row_state_identity_by_number')
+      indexKeyFor(indexes, 'summary_log_row_state_identity_by_year')
     ).toEqual({
       organisationNumber: 1,
       registrationNumber: 1,
       accreditationNumber: 1,
+      year: 1,
       rowId: 1,
       wasteRecordType: 1,
       contentHash: 1
     })
     expect(
       indexes.find(
-        (idx) => idx.name === 'summary_log_row_state_identity_by_number'
+        (idx) => idx.name === 'summary_log_row_state_identity_by_year'
       )?.unique
     ).toBe(true)
+  })
+
+  it('keeps the identity index without the year, which refuses a copy of a yearless row state for its year', async (/** @type {*} */ {
+    mongoClient,
+    summaryLogRowStatesCollection,
+    summaryLogRowStatesRepository
+  }) => {
+    const repository = summaryLogRowStatesRepository()
+    await summaryLogRowStatesCollection.createIndex(
+      {
+        organisationNumber: 1,
+        registrationNumber: 1,
+        accreditationNumber: 1,
+        rowId: 1,
+        wasteRecordType: 1,
+        contentHash: 1
+      },
+      { name: 'summary_log_row_state_identity_by_number', unique: true }
+    )
+    try {
+      await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
+      const entry = buildSummaryLogRowStateEntry()
+      await repository.upsertSummaryLogRowStates(
+        withNumbers(DEFAULT_LEDGER_ID),
+        [entry],
+        toSummaryLogFileId('log-1')
+      )
+      await summaryLogRowStatesCollection.updateMany(
+        {},
+        { $unset: { year: '' } }
+      )
+
+      await expect(
+        repository.upsertSummaryLogRowStates(
+          withNumbers(DEFAULT_LEDGER_ID),
+          [entry],
+          toSummaryLogFileId('log-2')
+        )
+      ).rejects.toThrow(/duplicate key/)
+      const names = (await summaryLogRowStatesCollection.indexes()).map(
+        ({ name }) => name
+      )
+      expect(names).toContain('summary_log_row_state_identity_by_number')
+    } finally {
+      await summaryLogRowStatesCollection.dropIndex(
+        'summary_log_row_state_identity_by_number'
+      )
+    }
   })
 
   it('drops the id-keyed identity index it replaces', async (/** @type {*} */ {
@@ -169,39 +218,6 @@ describe('summary-log row states repository - mongodb implementation', () => {
     )()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
-  })
-
-  it('adds a summary log to a matching row state stored without a year, and reads it back', async (/** @type {*} */ {
-    summaryLogRowStatesCollection,
-    summaryLogRowStatesRepository
-  }) => {
-    const repository = summaryLogRowStatesRepository()
-    const ledgerId = withNumbers(DEFAULT_LEDGER_ID)
-    const entry = buildSummaryLogRowStateEntry()
-    const [stored] = await repository.upsertSummaryLogRowStates(
-      ledgerId,
-      [entry],
-      toSummaryLogFileId('log-1')
-    )
-    await summaryLogRowStatesCollection.updateMany({}, { $unset: { year: '' } })
-
-    const [matched] = await repository.upsertSummaryLogRowStates(
-      ledgerId,
-      [entry],
-      toSummaryLogFileId('log-2')
-    )
-
-    expect(matched).toMatchObject({
-      id: stored.id,
-      summaryLogIds: ['log-1', 'log-2']
-    })
-    expect(matched.year).toBeUndefined()
-    expect(
-      await repository.findWasteRecordStatesForSummaryLog(
-        ledgerId,
-        toSummaryLogFileId('log-2')
-      )
-    ).toHaveLength(1)
   })
 
   describe('row-state repository contract', () => {
