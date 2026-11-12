@@ -8,10 +8,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -43,7 +39,11 @@ import {
 import { reportsPostFailureMessage } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
-import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import {
+  emptySummaryLogStores,
+  submitSummaryLog
+} from '#vite/helpers/submit-summary-log.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -65,13 +65,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   setupAuthContext()
 
   const SUMMARY_LOG_ID = 'sl-1'
-  const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
+  const SUBMITTED_AT = '2024-01-15T00:00:00.000Z'
 
-  /**
-   * Seeds the summary-log row states and the waste balance ledger so the report
-   * routes resolve one committed row at the latest submitted summary log for the
-   * registration.
-   */
   const DEFAULT_ROWS = [
     buildSummaryLogRowStateEntry({
       rowId: 'row-0',
@@ -92,13 +87,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     accreditationRecord,
     rows = DEFAULT_ROWS
   ) => {
-    const summaryLogRowStatesRepository =
-      createInMemorySummaryLogRowStatesRepository()()
-    const summaryLogsRepository =
-      createInMemorySummaryLogsRepository()(createMockLogger())
+    const stores = emptySummaryLogStores()
     // An accreditation without its number holds no summary log.
     if (accreditationRecord && !accreditationRecord.accreditationNumber) {
-      return { summaryLogsRepository, summaryLogRowStatesRepository }
+      return stores
     }
     const ledgerId = {
       organisationId: org.id,
@@ -107,21 +99,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       ...reportKeyOf(org, registration),
       accreditationNumber: accreditationRecord?.accreditationNumber ?? null
     }
-    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
-      rows,
-      toSummaryLogFileId(SUMMARY_LOG_ID)
-    )
-    await summaryLogsRepository.insert(
-      toSummaryLogId(`log-${SUMMARY_LOG_ID}`),
-      summaryLogFactory.submitted({
-        ...ledgerId,
-        year: YEAR,
-        file: { id: toSummaryLogFileId(SUMMARY_LOG_ID) },
-        submittedAt: SUBMITTED_AT.toISOString()
-      })
-    )
-    return { summaryLogsRepository, summaryLogRowStatesRepository }
+    await submitSummaryLog(stores, ledgerId, {
+      fileId: SUMMARY_LOG_ID,
+      year: YEAR,
+      submittedAt: SUBMITTED_AT,
+      entries: rows
+    })
+    return stores
   }
 
   /**

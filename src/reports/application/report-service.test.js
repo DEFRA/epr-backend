@@ -8,10 +8,6 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createMockLogger } from '#test/mock-logger.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
@@ -32,7 +28,11 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
-import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import {
+  emptySummaryLogStores,
+  submitSummaryLog
+} from '#vite/helpers/submit-summary-log.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 
 const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
@@ -44,7 +44,7 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { RegistrationKey } from '#reports/repository/port.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
- * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogStores } from '#vite/helpers/submit-summary-log.js'
  * @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js'
  */
 
@@ -124,69 +124,17 @@ const reportLedger = ({ key, reportRegistration: { accreditation } }) => ({
 })
 
 /**
- * @typedef {{
- *   summaryLogsRepository: SummaryLogsRepository,
- *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
- * }} Stores
- */
-
-/**
- * @typedef {{
- *   fileId: string,
- *   year: Year,
- *   submittedAt: string,
- *   entries: SummaryLogRowStateEntry[]
- * }} Submission
- */
-
-/** @returns {Stores} */
-const emptyStores = () => ({
-  summaryLogsRepository:
-    createInMemorySummaryLogsRepository()(createMockLogger()),
-  summaryLogRowStatesRepository: createInMemorySummaryLogRowStatesRepository()()
-})
-
-/**
- * Submits a summary log for `year`: its row states, and the submitted summary
- * log the report service resolves as the head.
- *
- * @param {Stores} stores
- * @param {ReturnType<typeof reportLedger>} ledgerId
- * @param {Submission} submission
- */
-const submitLog = async (
-  { summaryLogsRepository, summaryLogRowStatesRepository },
-  ledgerId,
-  { fileId, year, submittedAt, entries }
-) => {
-  await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    ledgerId,
-    entries,
-    toSummaryLogFileId(fileId)
-  )
-  await summaryLogsRepository.insert(
-    toSummaryLogId(`log-${fileId}`),
-    summaryLogFactory.submitted({
-      ...ledgerId,
-      year,
-      file: { id: toSummaryLogFileId(fileId) },
-      submittedAt
-    })
-  )
-}
-
-/**
  * Seeds `entries` as the state at the latest submitted summary log for the
  * report's year. An empty `entries` leaves the year without a submission.
  *
  * @param {ReportStream & { year: Year }} params
  * @param {SummaryLogRowStateEntry[]} entries
- * @returns {Promise<Stores>}
+ * @returns {Promise<SummaryLogStores>}
  */
 const seedState = async (params, entries) => {
-  const stores = emptyStores()
+  const stores = emptySummaryLogStores()
   if (entries.length > 0) {
-    await submitLog(stores, reportLedger(params), {
+    await submitSummaryLog(stores, reportLedger(params), {
       fileId: SUMMARY_LOG_ID,
       year: params.year,
       submittedAt: SUBMITTED_AT,
@@ -262,10 +210,10 @@ describe('report-service', () => {
         period: quarter,
         requiredPeriods: generateAllPeriodsForYear('quarterly', toYear(year))
       })
-      const stores = emptyStores()
+      const stores = emptySummaryLogStores()
       const ledgerId = reportLedger(paramsFor(2025, 4))
 
-      await submitLog(stores, ledgerId, {
+      await submitSummaryLog(stores, ledgerId, {
         fileId: 'sl-2025',
         year: toYear(2025),
         submittedAt: '2026-01-05T00:00:00.000Z',
@@ -276,7 +224,7 @@ describe('report-service', () => {
           })
         ]
       })
-      await submitLog(stores, ledgerId, {
+      await submitSummaryLog(stores, ledgerId, {
         fileId: 'sl-2026',
         year: toYear(2026),
         submittedAt: '2026-02-05T00:00:00.000Z',
@@ -341,11 +289,11 @@ describe('report-service', () => {
         entries: [buildReceivedEntry({ SUPPLIER_NAME: 'Second Supplier' })]
       }
 
-      const beforeCommit = emptyStores()
-      await submitLog(beforeCommit, ledgerId, first)
-      const afterCommit = emptyStores()
-      await submitLog(afterCommit, ledgerId, first)
-      await submitLog(afterCommit, ledgerId, second)
+      const beforeCommit = emptySummaryLogStores()
+      await submitSummaryLog(beforeCommit, ledgerId, first)
+      const afterCommit = emptySummaryLogStores()
+      await submitSummaryLog(afterCommit, ledgerId, first)
+      await submitSummaryLog(afterCommit, ledgerId, second)
 
       let lookups = 0
       /** @type {SummaryLogsRepository} */

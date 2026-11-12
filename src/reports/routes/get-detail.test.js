@@ -8,10 +8,6 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -29,12 +25,16 @@ import {
   pendingSite,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import {
+  emptySummaryLogStores,
+  submitSummaryLog
+} from '#vite/helpers/submit-summary-log.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
 const SUMMARY_LOG_ID = 'sl-1'
-const SUBMITTED_AT = new Date('2026-03-31T09:00:00.000Z')
+const SUBMITTED_AT = '2026-03-31T09:00:00.000Z'
 const YEAR = toYear(2026)
 
 /**
@@ -61,34 +61,22 @@ const seedRepositories = async (
     ...reportKeyOf(org, registration),
     accreditationNumber: accredited?.accreditationNumber ?? null
   }
-  const summaryLogRowStatesRepository =
-    createInMemorySummaryLogRowStatesRepository()()
-  const summaryLogsRepository =
-    createInMemorySummaryLogsRepository()(createMockLogger())
+  const stores = emptySummaryLogStores()
   if (wasteRecords.length > 0) {
-    const entries = wasteRecords.map((record, index) =>
-      buildSummaryLogRowStateEntry({
-        rowId: `row-${index}`,
-        wasteRecordType: record.type,
-        data: record.data
-      })
-    )
-    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
-      entries,
-      toSummaryLogFileId(SUMMARY_LOG_ID)
-    )
-    await summaryLogsRepository.insert(
-      toSummaryLogId(`log-${SUMMARY_LOG_ID}`),
-      summaryLogFactory.submitted({
-        ...ledgerId,
-        year: YEAR,
-        file: { id: toSummaryLogFileId(SUMMARY_LOG_ID) },
-        submittedAt: SUBMITTED_AT.toISOString()
-      })
-    )
+    await submitSummaryLog(stores, ledgerId, {
+      fileId: SUMMARY_LOG_ID,
+      year: YEAR,
+      submittedAt: SUBMITTED_AT,
+      entries: wasteRecords.map((record, index) =>
+        buildSummaryLogRowStateEntry({
+          rowId: `row-${index}`,
+          wasteRecordType: record.type,
+          data: record.data
+        })
+      )
+    })
   }
-  return { summaryLogsRepository, summaryLogRowStatesRepository }
+  return stores
 }
 
 const registeredOnlyReprocessor = () => ({ registration: reprocessor() })
@@ -370,7 +358,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       const { payload } = await read(server, quarterly())
 
-      expect(payload.source.lastUploadedAt).toBe(SUBMITTED_AT.toISOString())
+      expect(payload.source.lastUploadedAt).toBe(SUBMITTED_AT)
     })
 
     it('returns empty sections and no source when no records exist', async () => {
