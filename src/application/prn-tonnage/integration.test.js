@@ -277,7 +277,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -298,7 +298,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -425,7 +425,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -444,7 +444,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -477,7 +477,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 

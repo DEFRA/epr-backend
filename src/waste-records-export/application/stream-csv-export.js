@@ -95,11 +95,12 @@ export const encodeRow = async (cells) => {
 }
 
 // Deterministic partition order within a registration: registered-only
-// (null accreditation) first, then accreditation numbers ascending.
-const sortEntriesByAccreditationNumber = (a, b) =>
+// (null accreditation) first, then accreditation numbers ascending, each
+// accreditation's years in order.
+const sortEntriesByAccreditationNumberAndYear = (a, b) =>
   String(a.ledgerId.accreditationNumber ?? '').localeCompare(
     String(b.ledgerId.accreditationNumber ?? '')
-  )
+  ) || a.ledgerId.year - b.ledgerId.year
 
 /**
  * The export answers a question about the present, so it discards the reading
@@ -221,7 +222,7 @@ async function* streamLatestSubmissionRows({
   ...context
 }) {
   for (const { ledgerId, summaryLogId } of [...entries].sort(
-    sortEntriesByAccreditationNumber
+    sortEntriesByAccreditationNumberAndYear
   )) {
     yield* streamPartitionRows({
       ...context,

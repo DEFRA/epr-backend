@@ -158,7 +158,7 @@ const ledgerAccreditationFor = (index, numbers) => {
   const ledgerAccreditation = index.get(ledgerKey(numbers))
   if (!ledgerAccreditation) {
     throw new Error(
-      `No organisation in the read model holds accreditation ${numbers.accreditationNumber} under registration ${numbers.registrationNumber} of organisation ${numbers.organisationNumber}`
+      `No organisation in the read model holds accreditation ${numbers.accreditationNumber} under registration ${numbers.registrationNumber} of organisation ${numbers.organisationNumber} for ${numbers.year}`
     )
   }
   return ledgerAccreditation

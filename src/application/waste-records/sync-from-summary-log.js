@@ -137,14 +137,6 @@ const prepareRowsForTransformation = (parsedData) => {
  */
 
 /**
- * The numbers a summary log names its registration and accreditation by, and
- * its year. The accreditation number is `null` for a registered-only
- * submission.
- *
- * @typedef {WasteBalanceLedgerId} SubmissionNumbers
- */
-
-/**
  * The accreditation a submit writes to: the one the summary log's
  * accreditation number names, or none for a registered-only submission.
  *
@@ -171,7 +163,7 @@ const findAccreditation = (organisation, accreditationNumber) => {
  * numbers, and the ledger it names.
  *
  * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
- * @param {SubmissionNumbers} summaryLog
+ * @param {WasteBalanceLedgerId} summaryLog
  * @returns {Promise<{ accreditation: Accreditation | null, ledgerId: WasteBalanceLedgerId }>}
  */
 const resolveSubmissionLedger = async (
