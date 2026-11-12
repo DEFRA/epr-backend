@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { http, HttpResponse } from 'msw'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { ObjectId } from 'mongodb'
@@ -84,17 +85,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     fileDataMap[fileId] = { meta, data: uploadData }
 
-    await server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId, { accredited: env.accredited }),
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        'waste-data.xlsx'
+    await server.inject(
+      signedCallbackRequest(
+        buildPostUrl(summaryLogId, { accredited: env.accredited }),
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          'waste-data.xlsx'
+        )
       )
-    })
+    )
 
     await pollForValidation(server, summaryLogId)
   }

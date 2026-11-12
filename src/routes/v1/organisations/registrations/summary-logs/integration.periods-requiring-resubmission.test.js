@@ -1,4 +1,5 @@
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
@@ -202,30 +203,31 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     fileDataMap[fileId] = { meta: uploadMeta, data: uploadData }
 
-    await server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId, { accredited: env.accredited }),
-      payload: {
-        uploadStatus: 'ready',
-        metadata: { organisationId, registrationId },
-        form: {
-          summaryLogUpload: {
-            fileId,
-            filename: 'waste-data.xlsx',
-            fileStatus: UPLOAD_STATUS.COMPLETE,
-            contentType:
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            contentLength: 12345,
-            checksumSha256: 'abc123',
-            detectedContentType:
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            s3Bucket: 're-ex-summary-logs',
-            s3Key: `/organisations/${organisationId}/registrations/${registrationId}/${fileId}/waste-data.xlsx`
-          }
-        },
-        numberOfRejectedFiles: 0
-      }
-    })
+    await server.inject(
+      signedCallbackRequest(
+        buildPostUrl(summaryLogId, { accredited: env.accredited }),
+        {
+          uploadStatus: 'ready',
+          metadata: { organisationId, registrationId },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename: 'waste-data.xlsx',
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket: 're-ex-summary-logs',
+              s3Key: `/organisations/${organisationId}/registrations/${registrationId}/${fileId}/waste-data.xlsx`
+            }
+          },
+          numberOfRejectedFiles: 0
+        }
+      )
+    )
 
     await pollForValidation(server, summaryLogId)
   }

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
@@ -81,17 +82,18 @@ describe('Waste balance arithmetic integration tests', () => {
 
     fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
 
-    await server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId),
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        filename
+    await server.inject(
+      signedCallbackRequest(
+        buildPostUrl(summaryLogId),
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        )
       )
-    })
+    )
 
     await pollForValidation(server, summaryLogId)
 

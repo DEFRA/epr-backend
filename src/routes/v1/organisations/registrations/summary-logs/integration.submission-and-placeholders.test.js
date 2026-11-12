@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs'
 import { http, HttpResponse } from 'msw'
+import { createTestServer } from '#test/create-test-server.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
@@ -43,8 +45,7 @@ import {
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
-  UPLOAD_YEAR,
-  createSigningTestServer
+  UPLOAD_YEAR
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
@@ -423,7 +424,7 @@ describe('Submission and placeholder tests', () => {
         }
       }
 
-      server = await createSigningTestServer({
+      server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -440,17 +441,18 @@ describe('Submission and placeholder tests', () => {
         }
       })
 
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
 
       await pollForValidation(server, summaryLogId)
 
@@ -537,17 +539,18 @@ describe('Submission and placeholder tests', () => {
     })
 
     it('should classify loads as added, adjusted, and unchanged on second upload', async () => {
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(secondSummaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          secondFileId,
-          secondFilename
+      await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(secondSummaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            secondFileId,
+            secondFilename
+          )
         )
-      })
+      )
       await pollForValidation(server, secondSummaryLogId)
 
       const response = await server.inject({
@@ -824,7 +827,7 @@ describe('Submission and placeholder tests', () => {
         ),
         overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
-      server = await createSigningTestServer({
+      server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -838,10 +841,8 @@ describe('Submission and placeholder tests', () => {
         }
       })
 
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: {
+      uploadResponse = await server.inject(
+        signedCallbackRequest(buildPostUrl(summaryLogId), {
           uploadStatus: 'ready',
           metadata: {
             organisationId,
@@ -863,8 +864,8 @@ describe('Submission and placeholder tests', () => {
             }
           },
           numberOfRejectedFiles: 0
-        }
-      })
+        })
+      )
     })
 
     it('should return ACCEPTED', () => {

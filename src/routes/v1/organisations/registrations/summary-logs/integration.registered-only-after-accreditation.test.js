@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -125,17 +126,18 @@ describe('an operator accredited in July uploading their registered-only summary
         { rowId: 1002, month: `${YEAR}-06-01` }
       ])
     }
-    await server.inject({
-      method: 'POST',
-      url: `${registration}/summary-logs/${YEAR}/${summaryLogId}/upload-completed`,
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        'january-to-june.xlsx'
+    await server.inject(
+      signedCallbackRequest(
+        `${registration}/summary-logs/${YEAR}/${summaryLogId}/upload-completed`,
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          'january-to-june.xlsx'
+        )
       )
-    })
+    )
     await pollForValidation(server, summaryLogId)
 
     const { summaryLog: validated } = await waitForVersion(

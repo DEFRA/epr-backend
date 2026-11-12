@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import {
   SUMMARY_LOG_STATUS,
@@ -50,17 +51,18 @@ describe('ORS waste balance validation (VAL014)', () => {
 
     fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
 
-    await server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId),
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        'waste-data.xlsx'
+    await server.inject(
+      signedCallbackRequest(
+        buildPostUrl(summaryLogId),
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          'waste-data.xlsx'
+        )
       )
-    })
+    )
 
     await pollForValidation(server, summaryLogId)
 

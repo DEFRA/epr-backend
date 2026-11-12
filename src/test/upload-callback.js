@@ -4,7 +4,7 @@ import {
   uploadCallbackSignature
 } from '#common/helpers/auth/upload-callback-signature.js'
 
-/** @import { Server, ServerInjectOptions } from '@hapi/hapi' */
+/** @import { ServerInjectOptions } from '@hapi/hapi' */
 
 /**
  * The signature for a callback path, with the key the test setup configures.
@@ -33,42 +33,15 @@ export const signedCallbackPayload = (path, payload) => ({
 })
 
 /**
- * @param {string | ServerInjectOptions} options
- * @returns {options is ServerInjectOptions & { url: string }}
- */
-const isUploadCompletedPost = (options) =>
-  typeof options !== 'string' &&
-  options.method === 'POST' &&
-  typeof options.url === 'string' &&
-  options.url.endsWith('/upload-completed')
-
-/**
- * The server, with the upload-completed callbacks injected into it signed as
- * CDP Uploader would send them, so tests of what a callback does need not
- * build the signature themselves.
+ * A callback to inject, posted to the path as CDP Uploader would send it.
  *
- * @template S
- * @param {S} testServer
- * @returns {S}
+ * @template {object} T
+ * @param {string} path
+ * @param {T} payload
+ * @returns {ServerInjectOptions & { payload: T & { metadata: { signature: string } } }}
  */
-export const signingUploadCompletedCallbacks = (testServer) => {
-  const server = /** @type {Pick<Server, 'inject'>} */ (testServer)
-  const inject = server.inject.bind(server)
-
-  server.inject = /** @type {Server['inject']} */ (
-    (/** @type {string | ServerInjectOptions} */ options) =>
-      inject(
-        isUploadCompletedPost(options)
-          ? {
-              ...options,
-              payload: signedCallbackPayload(
-                options.url,
-                /** @type {object} */ (options.payload)
-              )
-            }
-          : options
-      )
-  )
-
-  return testServer
-}
+export const signedCallbackRequest = (path, payload) => ({
+  method: 'POST',
+  url: path,
+  payload: signedCallbackPayload(path, payload)
+})

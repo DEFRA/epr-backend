@@ -35,7 +35,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
-import { signedCallbackPayload } from '#test/upload-callback.js'
+import {
+  signedCallbackPayload,
+  signedCallbackRequest
+} from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
@@ -221,14 +224,12 @@ describe('summary-log routes by natural key', () => {
       it('stores the summary log for the registration, year and accreditation when the upload completes', async () => {
         const summaryLogId = toSummaryLogId(randomUUID())
 
-        const response = await server.inject({
-          method: 'POST',
-          url: `${uploads}/${summaryLogId}/upload-completed`,
-          payload: signedCallbackPayload(
+        const response = await server.inject(
+          signedCallbackRequest(
             `${uploads}/${summaryLogId}/upload-completed`,
             uploadCompletedFor(registration.id)
           )
-        })
+        )
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
         const stored = await waitForVersion(
@@ -322,14 +323,12 @@ describe('summary-log routes by natural key', () => {
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
     const summaryLogId = toSummaryLogId(randomUUID())
 
-    const response = await server.inject({
-      method: 'POST',
-      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
-      payload: signedCallbackPayload(
+    const response = await server.inject(
+      signedCallbackRequest(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
         uploadCompletedFor(accreditedRegistration.id)
       )
-    })
+    )
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -343,14 +342,12 @@ describe('summary-log routes by natural key', () => {
     await seed(accreditedLog, summaryLogFactory.submitted)
     const summaryLogId = toSummaryLogId(randomUUID())
 
-    await server.inject({
-      method: 'POST',
-      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
-      payload: signedCallbackPayload(
+    await server.inject(
+      signedCallbackRequest(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
         uploadCompletedFor(accreditedRegistration.id)
       )
-    })
+    )
 
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog.validatedAgainstSummaryLogId).toBe(

@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import {
   SUMMARY_LOG_STATUS,
@@ -91,14 +92,15 @@ describe('December waste balance accrual', () => {
   const upload = async (env, meta, summaryLogId, fileId, data) => {
     env.fileDataMap[fileId] = { meta, data }
     await env.server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId),
-      payload: createUploadPayload(
-        env.organisationId,
-        env.registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        `${fileId}.xlsx`
+      ...signedCallbackRequest(
+        buildPostUrl(summaryLogId),
+        createUploadPayload(
+          env.organisationId,
+          env.registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          `${fileId}.xlsx`
+        )
       ),
       ...asOperator()
     })

@@ -17,7 +17,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
-import { signedCallbackPayload } from '#test/upload-callback.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -118,14 +118,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   it('stores the year from the path, no accreditation, and the numbers', async () => {
     const summaryLogId = randomUUID()
 
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(2026, summaryLogId),
-      payload: signedCallbackPayload(
+    const response = await server.inject(
+      signedCallbackRequest(
         uploadCompletedPath(2026, summaryLogId),
         createCompletePayload('file-with-year')
       )
-    })
+    )
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -204,10 +202,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('stores the accreditation the path names, and its number', async () => {
       const summaryLogId = randomUUID()
 
-      const response = await accreditedServer.inject({
-        method: 'POST',
-        url: `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
-        payload: signedCallbackPayload(
+      const response = await accreditedServer.inject(
+        signedCallbackRequest(
           `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
           {
             uploadStatus: 'ready',
@@ -227,7 +223,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
             numberOfRejectedFiles: 0
           }
         )
-      })
+      )
 
       expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
       const stored = await waitForVersion(
@@ -245,14 +241,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('finds no accreditation without a number, and stores nothing', async () => {
       const summaryLogId = randomUUID()
 
-      const response = await accreditedServer.inject({
-        method: 'POST',
-        url: `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
-        payload: signedCallbackPayload(
+      const response = await accreditedServer.inject(
+        signedCallbackRequest(
           `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
           createCompletePayload('file-unnumbered')
         )
-      })
+      )
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       expect(
@@ -264,10 +258,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   it('stores a preprocessing summary log without validating when the file is still pending', async () => {
     const summaryLogId = randomUUID()
 
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(2026, summaryLogId),
-      payload: signedCallbackPayload(uploadCompletedPath(2026, summaryLogId), {
+    const response = await server.inject(
+      signedCallbackRequest(uploadCompletedPath(2026, summaryLogId), {
         uploadStatus: 'ready',
         metadata: { organisationId, registrationId },
         form: {
@@ -280,7 +272,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         },
         numberOfRejectedFiles: 0
       })
-    })
+    )
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -291,10 +283,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   it('updates a preprocessing summary log in place when its upload completes', async () => {
     const summaryLogId = randomUUID()
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(2026, summaryLogId),
-      payload: signedCallbackPayload(uploadCompletedPath(2026, summaryLogId), {
+    await server.inject(
+      signedCallbackRequest(uploadCompletedPath(2026, summaryLogId), {
         uploadStatus: 'ready',
         metadata: { organisationId, registrationId },
         form: {
@@ -307,17 +297,15 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         },
         numberOfRejectedFiles: 0
       })
-    })
+    )
     await waitForVersion(summaryLogsRepository, summaryLogId, 1)
 
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(2026, summaryLogId),
-      payload: signedCallbackPayload(
+    const response = await server.inject(
+      signedCallbackRequest(
         uploadCompletedPath(2026, summaryLogId),
         createCompletePayload('file-pending-then-complete')
       )
-    })
+    )
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
@@ -328,14 +316,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   it('returns 422 for an invalid year', async () => {
     const path = uploadCompletedPath('not-a-year', randomUUID())
 
-    const response = await server.inject({
-      method: 'POST',
-      url: path,
-      payload: signedCallbackPayload(
-        path,
-        createCompletePayload('file-bad-year')
-      )
-    })
+    const response = await server.inject(
+      signedCallbackRequest(path, createCompletePayload('file-bad-year'))
+    )
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
@@ -362,19 +345,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       async ({ s3Bucket, s3Key }) => {
         const summaryLogId = randomUUID()
 
-        const response = await server.inject({
-          method: 'POST',
-          url: uploadCompletedPath(2026, summaryLogId),
-          payload: signedCallbackPayload(
-            uploadCompletedPath(2026, summaryLogId),
-            {
-              ...createCompletePayload(),
-              form: {
-                summaryLogUpload: createFileDetails({ s3Bucket, s3Key })
-              }
+        const response = await server.inject(
+          signedCallbackRequest(uploadCompletedPath(2026, summaryLogId), {
+            ...createCompletePayload(),
+            form: {
+              summaryLogUpload: createFileDetails({ s3Bucket, s3Key })
             }
-          )
-        })
+          })
+        )
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
         const { summaryLog } = await waitForVersion(
@@ -458,22 +436,18 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         }
       }
 
-      const first = await server.inject({
-        method: 'POST',
-        url: uploadCompletedPath(2026, summaryLogId),
-        payload: signedCallbackPayload(
+      const first = await server.inject(
+        signedCallbackRequest(
           uploadCompletedPath(2026, summaryLogId),
           callbackByFileStatus[firstFileStatus]
         )
-      })
-      const second = await server.inject({
-        method: 'POST',
-        url: uploadCompletedPath(2026, summaryLogId),
-        payload: signedCallbackPayload(
+      )
+      const second = await server.inject(
+        signedCallbackRequest(
           uploadCompletedPath(2026, summaryLogId),
           callbackByFileStatus[secondFileStatus]
         )
-      })
+      )
 
       expect(first.statusCode).toBe(StatusCodes.ACCEPTED)
       expect(second.statusCode).toBe(StatusCodes.CONFLICT)
@@ -527,14 +501,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         .spyOn(console, 'error')
         .mockImplementation(() => {})
 
-      const response = await failingServer.inject({
-        method: 'POST',
-        url: uploadCompletedPath(2026, summaryLogId),
-        payload: signedCallbackPayload(
+      const response = await failingServer.inject(
+        signedCallbackRequest(
           uploadCompletedPath(2026, summaryLogId),
           createCompletePayload('file-1')
         )
-      })
+      )
 
       consoleErrorSpy.mockRestore()
 

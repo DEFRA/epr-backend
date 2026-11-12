@@ -1,4 +1,5 @@
 import { createEmptyLoads } from '#application/summary-logs/load-counts.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -78,17 +79,18 @@ describe('Summary logs upload lifecycle', () => {
     let uploadResponse
 
     beforeEach(async () => {
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      uploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
     })
 
     it('should return ACCEPTED', () => {
@@ -187,18 +189,19 @@ describe('Summary logs upload lifecycle', () => {
     let uploadResponse
 
     beforeEach(async () => {
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.REJECTED,
-          fileId,
-          filename,
-          false
+      uploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.REJECTED,
+            fileId,
+            filename,
+            false
+          )
         )
-      })
+      )
     })
 
     it('should return ACCEPTED', () => {
@@ -255,18 +258,19 @@ describe('Summary logs upload lifecycle', () => {
     let uploadResponse
 
     beforeEach(async () => {
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.PENDING,
-          fileId,
-          filename,
-          false
+      uploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.PENDING,
+            fileId,
+            filename,
+            false
+          )
         )
-      })
+      )
     })
 
     it('should return ACCEPTED', () => {

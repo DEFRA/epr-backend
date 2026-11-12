@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { signedCallbackPayload } from '#test/upload-callback.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { orsUploadCompletedPath } from './post-upload-completed.js'
@@ -94,14 +94,9 @@ describe(`${orsUploadCompletedPath} route`, () => {
       files: []
     })
 
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(
-        uploadCompletedPath(importId),
-        createPayload()
-      )
-    })
+    const response = await server.inject(
+      signedCallbackRequest(uploadCompletedPath(importId), createPayload())
+    )
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
   })
@@ -113,14 +108,9 @@ describe(`${orsUploadCompletedPath} route`, () => {
       files: []
     })
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(
-        uploadCompletedPath(importId),
-        createPayload()
-      )
-    })
+    await server.inject(
+      signedCallbackRequest(uploadCompletedPath(importId), createPayload())
+    )
 
     const doc = await orsImportsRepository.findById(importId)
     expect(doc.files).toHaveLength(1)
@@ -138,14 +128,12 @@ describe(`${orsUploadCompletedPath} route`, () => {
       files: []
     })
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(
+    await server.inject(
+      signedCallbackRequest(
         uploadCompletedPath(importId),
         createMultipleFilesPayload()
       )
-    })
+    )
 
     const doc = await orsImportsRepository.findById(importId)
     expect(doc.files).toHaveLength(2)
@@ -167,14 +155,9 @@ describe(`${orsUploadCompletedPath} route`, () => {
       createdBy
     })
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(
-        uploadCompletedPath(importId),
-        createPayload()
-      )
-    })
+    await server.inject(
+      signedCallbackRequest(uploadCompletedPath(importId), createPayload())
+    )
 
     expect(orsImportsWorker.importOverseasSites).toHaveBeenCalledWith(
       importId,
@@ -189,10 +172,8 @@ describe(`${orsUploadCompletedPath} route`, () => {
       files: []
     })
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(
+    await server.inject(
+      signedCallbackRequest(
         uploadCompletedPath(importId),
         createPayload({
           fileStatus: 'rejected',
@@ -200,7 +181,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
           s3Key: undefined
         })
       )
-    })
+    )
 
     expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
   })
@@ -212,10 +193,8 @@ describe(`${orsUploadCompletedPath} route`, () => {
       files: []
     })
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(
+    await server.inject(
+      signedCallbackRequest(
         uploadCompletedPath(importId),
         createPayload({
           fileStatus: 'rejected',
@@ -223,7 +202,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
           s3Key: undefined
         })
       )
-    })
+    )
 
     const doc = await orsImportsRepository.findById(importId)
     expect(doc.status).toBe(ORS_IMPORT_STATUS.FAILED)
@@ -236,10 +215,8 @@ describe(`${orsUploadCompletedPath} route`, () => {
       files: []
     })
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(uploadCompletedPath(importId), {
+    await server.inject(
+      signedCallbackRequest(uploadCompletedPath(importId), {
         form: {
           orsUpload: [
             {
@@ -255,7 +232,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
           ]
         }
       })
-    })
+    )
 
     const doc = await orsImportsRepository.findById(importId)
     expect(doc.status).toBe(ORS_IMPORT_STATUS.FAILED)
@@ -275,10 +252,8 @@ describe(`${orsUploadCompletedPath} route`, () => {
       createdBy
     })
 
-    await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(uploadCompletedPath(importId), {
+    await server.inject(
+      signedCallbackRequest(uploadCompletedPath(importId), {
         form: {
           orsUpload: [
             {
@@ -296,7 +271,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
           ]
         }
       })
-    })
+    )
 
     const doc = await orsImportsRepository.findById(importId)
     expect(doc.status).toBe(ORS_IMPORT_STATUS.PREPROCESSING)
@@ -346,13 +321,11 @@ describe(`${orsUploadCompletedPath} route`, () => {
           files: []
         })
 
-        const response = await server.inject({
-          method: 'POST',
-          url: uploadCompletedPath(importId),
-          payload: signedCallbackPayload(uploadCompletedPath(importId), {
+        const response = await server.inject(
+          signedCallbackRequest(uploadCompletedPath(importId), {
             form: { orsUpload }
           })
-        })
+        )
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
         const doc = await orsImportsRepository.findById(importId)
@@ -394,39 +367,30 @@ describe(`${orsUploadCompletedPath} route`, () => {
   })
 
   it('returns 404 when import does not exist', async () => {
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath('nonexistent'),
-      payload: signedCallbackPayload(
-        uploadCompletedPath('nonexistent'),
-        createPayload()
-      )
-    })
+    const response = await server.inject(
+      signedCallbackRequest(uploadCompletedPath('nonexistent'), createPayload())
+    )
 
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
   it('returns 422 when payload is missing form.orsUpload', async () => {
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(uploadCompletedPath(importId), {
+    const response = await server.inject(
+      signedCallbackRequest(uploadCompletedPath(importId), {
         uploadStatus: 'ready'
       })
-    })
+    )
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
   it('returns 422 when file is complete but missing s3 info', async () => {
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedPath(importId),
-      payload: signedCallbackPayload(
+    const response = await server.inject(
+      signedCallbackRequest(
         uploadCompletedPath(importId),
         createPayload({ s3Bucket: undefined, s3Key: undefined })
       )
-    })
+    )
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
@@ -439,14 +403,9 @@ describe(`${orsUploadCompletedPath} route`, () => {
         files: []
       })
 
-      await server.inject({
-        method: 'POST',
-        url: uploadCompletedPath(importId),
-        payload: signedCallbackPayload(
-          uploadCompletedPath(importId),
-          createPayload()
-        )
-      })
+      await server.inject(
+        signedCallbackRequest(uploadCompletedPath(importId), createPayload())
+      )
 
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -478,14 +437,9 @@ describe(`${orsUploadCompletedPath} route`, () => {
         workers: { orsImportsWorker }
       })
 
-      const response = await failServer.inject({
-        method: 'POST',
-        url: uploadCompletedPath(importId),
-        payload: signedCallbackPayload(
-          uploadCompletedPath(importId),
-          createPayload()
-        )
-      })
+      const response = await failServer.inject(
+        signedCallbackRequest(uploadCompletedPath(importId), createPayload())
+      )
 
       consoleErrorSpy.mockRestore()
       await failServer.stop()

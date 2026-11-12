@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import {
   SUMMARY_LOG_STATUS,
@@ -86,17 +87,18 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
 
       fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
 
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
 
       await pollForValidation(server, summaryLogId)
 

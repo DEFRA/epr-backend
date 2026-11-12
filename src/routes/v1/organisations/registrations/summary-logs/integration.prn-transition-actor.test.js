@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { ObjectId } from 'mongodb'
 import { http, HttpResponse } from 'msw'
@@ -80,17 +81,18 @@ const submitCredit = async (env, tonnage) => {
     }
   }
 
-  await server.inject({
-    method: 'POST',
-    url: buildPostUrl(summaryLogId),
-    payload: createUploadPayload(
-      organisationId,
-      registrationId,
-      UPLOAD_STATUS.COMPLETE,
-      fileId,
-      'waste-actor.xlsx'
+  await server.inject(
+    signedCallbackRequest(
+      buildPostUrl(summaryLogId),
+      createUploadPayload(
+        organisationId,
+        registrationId,
+        UPLOAD_STATUS.COMPLETE,
+        fileId,
+        'waste-actor.xlsx'
+      )
     )
-  })
+  )
 
   await pollForValidation(server, summaryLogId)
 

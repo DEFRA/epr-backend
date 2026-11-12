@@ -14,6 +14,8 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { ObjectId } from 'mongodb'
 
@@ -34,8 +36,7 @@ import {
   createReprocessedRowValues,
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
-  TEST_REGISTRATION_NUMBER,
-  createSigningTestServer
+  TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -119,17 +120,18 @@ describe('Advanced validation scenarios', () => {
           server = result.server
           summaryLogsRepository = result.summaryLogsRepository
 
-          uploadResponse = await server.inject({
-            method: 'POST',
-            url: buildPostUrl(summaryLogId),
-            payload: createUploadPayload(
-              organisationId,
-              registrationId,
-              UPLOAD_STATUS.COMPLETE,
-              fileId,
-              filename
+          uploadResponse = await server.inject(
+            signedCallbackRequest(
+              buildPostUrl(summaryLogId),
+              createUploadPayload(
+                organisationId,
+                registrationId,
+                UPLOAD_STATUS.COMPLETE,
+                fileId,
+                filename
+              )
             )
-          })
+          )
         })
 
         it('should return ACCEPTED', () => {
@@ -225,17 +227,18 @@ describe('Advanced validation scenarios', () => {
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      uploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
     })
 
     it('should return ACCEPTED', () => {
@@ -344,17 +347,18 @@ describe('Advanced validation scenarios', () => {
       )
       server = result.server
 
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
 
       await pollForValidation(server, summaryLogId)
 
@@ -490,7 +494,7 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      server = await createSigningTestServer({
+      server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -504,17 +508,18 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId, { accredited: false }),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      uploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId, { accredited: false }),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
     })
 
     it('should return ACCEPTED', () => {
@@ -674,7 +679,7 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      server = await createSigningTestServer({
+      server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -688,17 +693,18 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId, { accredited: false }),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      uploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId, { accredited: false }),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
     })
 
     it('should return ACCEPTED', () => {
@@ -801,17 +807,18 @@ describe('Advanced validation scenarios', () => {
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      uploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
     })
 
     it('should return ACCEPTED', () => {
@@ -902,7 +909,7 @@ describe('Advanced validation scenarios', () => {
           )
         ])()
 
-      server = await createSigningTestServer({
+      server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           organisationAdministrationRepository: () =>
@@ -979,17 +986,18 @@ describe('Advanced validation scenarios', () => {
           }
         }
 
-        await env.server.inject({
-          method: 'POST',
-          url: buildPostUrl(summaryLogId, { accredited: false }),
-          payload: createUploadPayload(
-            env.organisationId,
-            env.registrationId,
-            UPLOAD_STATUS.COMPLETE,
-            fileId,
-            'registered-only-invalid.xlsx'
+        await env.server.inject(
+          signedCallbackRequest(
+            buildPostUrl(summaryLogId, { accredited: false }),
+            createUploadPayload(
+              env.organisationId,
+              env.registrationId,
+              UPLOAD_STATUS.COMPLETE,
+              fileId,
+              'registered-only-invalid.xlsx'
+            )
           )
-        })
+        )
         await pollForValidation(env.server, summaryLogId)
 
         const checkPage = JSON.parse(
