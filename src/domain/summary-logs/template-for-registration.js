@@ -4,7 +4,8 @@ import {
   PROCESSING_TYPES,
   REGISTERED_ONLY_PROCESSING_TYPES
 } from './meta-fields.js'
-import { getTemplate } from './table-schemas/index.js'
+import { getTemplate, hasTemplate } from './table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from './template-year.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -44,7 +45,8 @@ const processingTypeFor = (registration) => {
 /**
  * The summary log template a registration's operator would fill in for a year:
  * its processing type and the lowest version of that year's template the
- * validator accepts.
+ * validator accepts. A year with no template gets the DEFAULT_TEMPLATE_YEAR
+ * template, which validation then rejects as a template year mismatch.
  *
  * @param {TemplateRegistration} registration
  * @param {Year} year
@@ -58,6 +60,9 @@ export const templateForRegistration = (registration, year) => {
 
   return {
     PROCESSING_TYPE,
-    TEMPLATE_VERSION: getTemplate(year, PROCESSING_TYPE).minVersion
+    TEMPLATE_VERSION: getTemplate(
+      hasTemplate(year, PROCESSING_TYPE) ? year : DEFAULT_TEMPLATE_YEAR,
+      PROCESSING_TYPE
+    ).minVersion
   }
 }

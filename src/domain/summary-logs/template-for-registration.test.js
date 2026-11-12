@@ -80,6 +80,16 @@ describe('templateForRegistration', () => {
   )
 
   it.each(cases)(
+    'names the 2026 template an %s would fill in for a year with none',
+    (_label, registration, processingType, templateVersion) => {
+      expect(templateForRegistration(registration, toYear(2025))).toEqual({
+        PROCESSING_TYPE: processingType,
+        TEMPLATE_VERSION: templateVersion
+      })
+    }
+  )
+
+  it.each(cases)(
     'names the 2027 template an %s would fill in',
     (_label, registration, processingType) => {
       expect(templateForRegistration(registration, toYear(2027))).toEqual({

@@ -178,6 +178,23 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(balance?.amount ?? 0).toBe(0)
   })
 
+  it('answers a year with no template as invalid with a template year mismatch', async () => {
+    const env = await createEnvironment()
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
+      { year: 2025 }
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    expect(body.validation.failures).toContainEqual(
+      expect.objectContaining({ code: 'TEMPLATE_YEAR_MISMATCH' })
+    )
+  })
+
   it('stores the year given in the URL, resolves accreditationId from the payload, and stores the numbers', async () => {
     const env = await createEnvironment()
 
