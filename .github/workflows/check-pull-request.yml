@@ -52,6 +52,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Cache vitest file durations
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .vite-cache/vitest
+          key: vitest-results-${{ github.sha }}-${{ github.run_attempt }}
+          restore-keys: |
+            vitest-results-
+
       - name: Test and Scan
         uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:
