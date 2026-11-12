@@ -1,5 +1,7 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 
+import { isolatedTestFiles, sharedTestFiles } from './.vite/split-test-files.js'
+
 export default defineConfig({
   test: {
     globals: true,
@@ -7,6 +9,17 @@ export default defineConfig({
     clearMocks: true,
     hookTimeout: 60000,
     fileParallelism: true,
+    maxWorkers: process.env.CI ? 4 : undefined,
+    projects: [
+      {
+        extends: true,
+        test: { name: 'isolated', include: isolatedTestFiles }
+      },
+      {
+        extends: true,
+        test: { name: 'shared', isolate: false, include: sharedTestFiles }
+      }
+    ],
     reporters: process.env.CI
       ? ['default', ['json', { outputFile: 'coverage/test-results.json' }]]
       : ['default'],
@@ -48,7 +61,8 @@ export default defineConfig({
     setupFiles: [
       '.vite/setup-auditing.js',
       '.vite/setup-files.js',
-      '.vite/setup-msw.js'
+      '.vite/setup-msw.js',
+      '.vite/setup-real-timers.js'
     ]
   }
 })
