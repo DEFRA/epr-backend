@@ -36,7 +36,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
@@ -296,7 +296,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     await submitSummaryLog(summaryLogId, deps)
 
-    const rowStates = await summaryLogRowStatesForRegistration({
+    const rowStates = await summaryLogRowStatesForLedger({
       ...reportKey,
       accreditationNumber: toAccreditationNumber('ACC-123'),
       year: submitted.year,

@@ -7,7 +7,7 @@ import {
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
 import { decemberRowCountFor } from '#waste-balances/application/december-credit-total.js'
@@ -182,7 +182,9 @@ const resolveSubmissionLedger = async (
     includeTestOrganisations: true
   }).get(ledgerKey(ledgerId))
   if (!ledgerAccreditation) {
-    throw new Error(`Accreditation not found: ${accreditationNumber}`)
+    throw new Error(
+      `Accreditation not found: ${accreditationNumber} for ${ledgerId.year}`
+    )
   }
   return { ledgerAccreditation, ledgerId }
 }
@@ -282,7 +284,7 @@ const countRecordChanges = async ({
   ledgerRepository,
   summaryLogRowStatesRepository
 }) => {
-  const previousRowStates = await summaryLogRowStatesForRegistration({
+  const previousRowStates = await summaryLogRowStatesForLedger({
     ...ledgerId,
     ledgerRepository,
     summaryLogRowStatesRepository
