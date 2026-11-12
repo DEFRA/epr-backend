@@ -22,7 +22,7 @@ import {
 import { devSummaryLogsSubmitPath } from './post.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
-const ACCREDITED_YEAR = toYear(2025)
+const ACCREDITED_YEAR = toYear(2026)
 
 const DEV_ENDPOINTS_ON = { featureFlags: { devEndpoints: true } }
 
@@ -39,7 +39,7 @@ const { ACCREDITATION_NUMBER: _accreditationNumber, ...REGISTERED_ONLY_META } =
 
 // Cell values are the parsed forms, not a sheet's: a row id is a string and a
 // date is a calendar date.
-const DATE_RECEIVED = '2025-01-15'
+const DATE_RECEIVED = '2026-01-15'
 
 /** @param {Parameters<typeof createReprocessorReceivedRowValues>[0][]} rows */
 const payloadWithReceived = (rows) => ({
@@ -98,7 +98,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
         {
           rowId: '1002',
           tonnageReceived: 200,
-          dateReceived: '2025-01-16'
+          dateReceived: '2026-01-16'
         }
       ])
     )
@@ -501,7 +501,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           headers: REPROCESSOR_RECEIVED_HEADERS,
-          rows: [['1001', '2025-01-15']]
+          rows: [['1001', '2026-01-15']]
         }
       }
     })

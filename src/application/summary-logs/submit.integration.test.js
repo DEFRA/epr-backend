@@ -69,8 +69,8 @@ vi.mock(
   }
 )
 
-const VALID_FROM = '2025-01-01'
-const VALID_TO = '2025-12-31'
+const VALID_FROM = '2026-01-01'
+const VALID_TO = '2026-12-31'
 
 const META = createStandardMeta('REPROCESSOR_INPUT')
 
@@ -181,7 +181,7 @@ const setupSubmit = async ({
     externalAccreditations.push(
       buildExternalAccreditation({
         registrationNumber: toRegistrationNumber('REG-123'),
-        year: toYear(2025),
+        year: toYear(2026),
         accreditationNumber: toAccreditationNumber('ACC-123'),
         status: {
           current: 'approved',
@@ -265,12 +265,12 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogsRepository
     } = await setupSubmit({
       reportsRepository,
-      createdAt: '2024-01-01T00:00:00.000Z'
+      createdAt: '2025-01-01T00:00:00.000Z'
     })
 
     // A periodic report of the log's year closes for this registration after
     // the log was created: its SUBMITTED status.history entry is stamped "now",
-    // well after 2024.
+    // well after 2025.
     await createAndSubmitReport(reportsRepository, {
       ...reportKey,
       year
@@ -300,7 +300,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogsRepository
     } = await setupSubmit({
       reportsRepository,
-      createdAt: '2024-01-01T00:00:00.000Z'
+      createdAt: '2025-01-01T00:00:00.000Z'
     })
 
     await createAndSubmitReport(reportsRepository, {
@@ -389,8 +389,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 })
 
 describe('submitSummaryLog resubmission flag source', () => {
-  const january = { year: toYear(2025), cadence: 'monthly', period: 1 }
-  const february = { year: toYear(2025), cadence: 'monthly', period: 2 }
+  const january = { year: toYear(2026), cadence: 'monthly', period: 1 }
+  const february = { year: toYear(2026), cadence: 'monthly', period: 2 }
 
   /**
    * Submits a log over submitted January and February reports, through the
@@ -533,14 +533,14 @@ describe('submitSummaryLog December waste metric', () => {
             rowNumber: 8,
             values: createReprocessorReceivedRowValues({
               rowId: 1001,
-              dateReceived: '2025-12-15T00:00:00.000Z'
+              dateReceived: '2026-12-15T00:00:00.000Z'
             })
           },
           {
             rowNumber: 9,
             values: createReprocessorReceivedRowValues({
               rowId: 1002,
-              dateReceived: '2025-06-15T00:00:00.000Z'
+              dateReceived: '2026-06-15T00:00:00.000Z'
             })
           }
         ]

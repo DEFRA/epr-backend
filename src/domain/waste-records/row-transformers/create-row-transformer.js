@@ -9,7 +9,7 @@
  * @param {import('#domain/waste-records/model.js').WasteRecordType} params.wasteRecordType
  * @param {string} params.processingType
  * @param {string} params.rowIdField
- * @returns {(rowData: Record<string, any>, rowIndex: number) => { wasteRecordType: string, rowId: string, data: Record<string, any> }}
+ * @returns {(rowData: Record<string, any>, rowIndex?: number) => { wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType, rowId: string, data: Record<string, any> }}
  */
 export const createRowTransformer = ({
   wasteRecordType,

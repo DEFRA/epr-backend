@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { TABLE_SCHEMAS } from './index.js'
+import { SENT_ON_LOADS } from './sent-on-loads.js'
 import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-
-const { SENT_ON_LOADS } = TABLE_SCHEMAS
 
 describe('SENT_ON_LOADS (REPROCESSOR_REGISTERED_ONLY)', () => {
   const schema = SENT_ON_LOADS

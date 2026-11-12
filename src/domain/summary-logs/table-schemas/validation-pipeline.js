@@ -91,7 +91,7 @@ export const isFilled = (value, unfilledValues = []) => {
  * Filters a row to only include filled fields
  *
  * @param {Record<string, any>} row - The row data
- * @param {Record<string, string[]>} unfilledValues - Per-field unfilled value definitions
+ * @param {Record<string, readonly string[]>} unfilledValues - Per-field unfilled value definitions
  * @returns {Record<string, any>} Row containing only filled fields
  */
 export const filterToFilled = (row, unfilledValues) => {
@@ -117,7 +117,7 @@ export const filterToFilled = (row, unfilledValues) => {
  * the same coerced shape.
  *
  * @param {Record<string, any>} row - The row data
- * @param {{ unfilledValues: Record<string, string[]>, validationSchema: import('joi').ObjectSchema }} tableSchema
+ * @param {{ unfilledValues: Record<string, readonly string[]>, validationSchema: import('joi').ObjectSchema }} tableSchema
  * @returns {{ data: Record<string, any>, error: import('joi').ValidationError | undefined }} Coerced data merged with original row, plus any Joi error
  */
 export const coerceRowData = (row, { unfilledValues, validationSchema }) => {
@@ -203,9 +203,9 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  *
  * @param {Record<string, any>} row - The row data
  * @param {Object} tableSchema - The table schema
- * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
+ * @param {Record<string, readonly string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
- * @param {ClassifyForWasteBalance | null} tableSchema.classifyForWasteBalance - Waste balance classifier
+ * @param {ClassifyForWasteBalance | null} [tableSchema.classifyForWasteBalance] - Waste balance classifier
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[], data: Record<string, any> }}
  */
 export const classifyRow = (row, tableSchema) => {
