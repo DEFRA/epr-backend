@@ -5,7 +5,7 @@ import { COLLECTION_NAME as SUMMARY_LOGS_COLLECTION_NAME } from '#repositories/s
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 
-/** @import { Db } from 'mongodb' */
+/** @import { Collection, Db } from 'mongodb' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 
@@ -57,6 +57,65 @@ const numbersFilter = ({
 }) => ({ organisationNumber, registrationNumber, accreditationNumber })
 
 /**
+ * @param {Collection<any>[]} collections
+ * @returns {Promise<RequiredNumbers[]>}
+ */
+const findYearless = async (collections) => {
+  const groups = await Promise.all(
+    collections.map((collection) =>
+      collection
+        .aggregate([
+          { $match: YEARLESS },
+          {
+            $group: {
+              _id: {
+                organisationNumber: '$organisationNumber',
+                registrationNumber: '$registrationNumber',
+                accreditationNumber: '$accreditationNumber'
+              }
+            }
+          }
+        ])
+        .toArray()
+    )
+  )
+  const ledgers = new Map(
+    groups.flat().map(({ _id }) => [JSON.stringify(numbersFilter(_id)), _id])
+  )
+  return [...ledgers.values()]
+}
+
+/**
+ * @param {Collection<any>} events
+ * @param {Collection<any>} rowStates
+ * @param {RequiredNumbers} numbers
+ * @returns {Promise<{ events: YearlessEvent[], rowStates: YearlessRowState[] }>}
+ */
+const readYearless = async (events, rowStates, numbers) => {
+  const filter = { ...numbersFilter(numbers), ...YEARLESS }
+  const [eventDocs, rowStateDocs] = await Promise.all([
+    events
+      .find(filter, {
+        projection: { 'payload.summaryLogId': 1, 'payload.prnId': 1 }
+      })
+      .toArray(),
+    rowStates.find(filter, { projection: { summaryLogIds: 1 } }).toArray()
+  ])
+  return {
+    events: eventDocs.map(({ _id, payload }) => ({
+      id: _id,
+      ...(payload.prnId
+        ? { prnId: payload.prnId }
+        : { summaryLogId: payload.summaryLogId })
+    })),
+    rowStates: rowStateDocs.map(({ _id, summaryLogIds }) => ({
+      id: _id,
+      summaryLogIds
+    }))
+  }
+}
+
+/**
  * The records the backfill gives a year, and the summary logs and PRNs it
  * reads their years from, outside their repositories because only this
  * one-off migration needs records without a year.
@@ -65,7 +124,7 @@ const numbersFilter = ({
  * @returns {YearlessLedgers}
  */
 export const createYearlessLedgers = (db) => {
-  /** @type {import('mongodb').Collection<any>[]} */
+  /** @type {Collection<any>[]} */
   const [events, rowStates, summaryLogs, prns] = [
     WASTE_BALANCE_EVENTS_COLLECTION_NAME,
     SUMMARY_LOG_ROW_STATES_COLLECTION_NAME,
@@ -74,56 +133,9 @@ export const createYearlessLedgers = (db) => {
   ].map((name) => db.collection(name))
 
   return {
-    findYearless: async () => {
-      const groups = await Promise.all(
-        [events, rowStates].map((collection) =>
-          collection
-            .aggregate([
-              { $match: YEARLESS },
-              {
-                $group: {
-                  _id: {
-                    organisationNumber: '$organisationNumber',
-                    registrationNumber: '$registrationNumber',
-                    accreditationNumber: '$accreditationNumber'
-                  }
-                }
-              }
-            ])
-            .toArray()
-        )
-      )
-      const ledgers = new Map(
-        groups
-          .flat()
-          .map(({ _id }) => [JSON.stringify(numbersFilter(_id)), _id])
-      )
-      return [...ledgers.values()]
-    },
+    findYearless: () => findYearless([events, rowStates]),
 
-    readYearless: async (numbers) => {
-      const filter = { ...numbersFilter(numbers), ...YEARLESS }
-      const [eventDocs, rowStateDocs] = await Promise.all([
-        events
-          .find(filter, {
-            projection: { 'payload.summaryLogId': 1, 'payload.prnId': 1 }
-          })
-          .toArray(),
-        rowStates.find(filter, { projection: { summaryLogIds: 1 } }).toArray()
-      ])
-      return {
-        events: eventDocs.map(({ _id, payload }) => ({
-          id: _id,
-          ...(payload.prnId
-            ? { prnId: payload.prnId }
-            : { summaryLogId: payload.summaryLogId })
-        })),
-        rowStates: rowStateDocs.map(({ _id, summaryLogIds }) => ({
-          id: _id,
-          summaryLogIds
-        }))
-      }
-    },
+    readYearless: (numbers) => readYearless(events, rowStates, numbers),
 
     yearsOfSummaryLogs: async (fileIds) => {
       const docs = await summaryLogs

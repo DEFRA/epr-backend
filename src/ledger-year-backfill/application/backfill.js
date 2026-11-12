@@ -177,6 +177,28 @@ const backfillLedger = async (
     await ledgers.readYearless(numbers)
   )
 
+  /**
+   * @param {Year} year
+   * @param {LedgerRecordCounts} counts
+   * @returns {Promise<boolean>} whether the audit was recorded
+   */
+  const audit = async (year, counts) => {
+    try {
+      await auditYearAssigned(
+        systemLogsRepository,
+        { ...numbers, year },
+        counts
+      )
+      return true
+    } catch (error) {
+      logger.error({
+        err: error,
+        message: `Year written but audit failed for ledger ${describeLedger(numbers)} year=${year}: events=${counts.events} rowStates=${counts.rowStates}`
+      })
+      return false
+    }
+  }
+
   /** @type {LedgerOutcome} */
   const outcome = { years: new Map(), skipped, auditFailed: 0 }
 
@@ -188,18 +210,8 @@ const backfillLedger = async (
       continue
     }
     outcome.years.set(year, counts)
-    if (isDryRun) {
-      continue
-    }
-
-    const ledgerId = { ...numbers, year }
-    try {
-      await auditYearAssigned(systemLogsRepository, ledgerId, counts) // NOSONAR(javascript:S9382) one year at a time, to spare the database
-    } catch (error) {
-      logger.error({
-        err: error,
-        message: `Year written but audit failed for ledger ${describeLedger(numbers)} year=${year}: events=${counts.events} rowStates=${counts.rowStates}`
-      })
+    const audited = isDryRun || (await audit(year, counts)) // NOSONAR(javascript:S9382) one year at a time, to spare the database
+    if (!audited) {
       outcome.auditFailed++
     }
   }
@@ -228,14 +240,13 @@ export const backfillLedgerYear = async (
     auditFailed: 0
   }
 
+  /** @param {RequiredNumbers} numbers */
+  const backfill = (numbers) =>
+    backfillLedger(repositories, numbers, isDryRun, logger)
+
   for (const numbers of await repositories.ledgers.findYearless()) {
     try {
-      const { years, skipped, auditFailed } = await backfillLedger(
-        repositories,
-        numbers,
-        isDryRun,
-        logger
-      ) // NOSONAR(javascript:S9382) one at a time, to spare the database
+      const { years, skipped, auditFailed } = await backfill(numbers) // NOSONAR(javascript:S9382) one at a time, to spare the database
       for (const [year, counts] of years) {
         const sofar = result.years.get(year) ?? { events: 0, rowStates: 0 }
         result.years.set(year, addCounts(sofar, counts))
