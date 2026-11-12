@@ -302,25 +302,28 @@ describe(`${orsUploadCompletedPath} route`, () => {
     it.for([
       {
         description: 'another bucket',
-        orsUpload: completeFileAt('some-other-bucket', s3Key)
+        orsUpload: completeFileAt('some-other-bucket', s3Key),
+        location: `s3Bucket=some-other-bucket, s3Key=${s3Key}`
       },
       {
         description: 'another import',
         orsUpload: completeFileAt(
           s3Bucket,
           '/overseas-sites/imports/import-999/upload-1/file-456'
-        )
+        ),
+        location: `s3Bucket=${s3Bucket}, s3Key=/overseas-sites/imports/import-999/upload-1/file-456`
       },
       {
         description: 'one file among several',
         orsUpload: [
           completeFileAt(s3Bucket, s3Key),
           completeFileAt('some-other-bucket', s3Key)
-        ]
+        ],
+        location: `s3Bucket=some-other-bucket, s3Key=${s3Key}`
       }
     ])(
       'refuses $description, fails the import without its files, and logs an error',
-      async ({ orsUpload }) => {
+      async ({ orsUpload, location }) => {
         await orsImportsRepository.create({
           _id: importId,
           status: ORS_IMPORT_STATUS.PREPROCESSING,
@@ -342,7 +345,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
         expect(orsImportsWorker.importOverseasSites).not.toHaveBeenCalled()
         expect(server.loggerMocks.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: `Upload is not in the upload location for this import: importId=${importId}`,
+            message: `Upload is not in the upload location for this import: importId=${importId}, ${location}`,
             event: expect.objectContaining({ reference: importId })
           })
         )

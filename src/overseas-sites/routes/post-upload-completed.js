@@ -66,6 +66,13 @@ const isUploadedForImport = (upload, importId) =>
   })
 
 /**
+ * @param {OrsUploadFile} upload
+ * @returns {string}
+ */
+const formatLocation = ({ s3Bucket, s3Key }) =>
+  `, s3Bucket=${s3Bucket}, s3Key=${s3Key}`
+
+/**
  * @param {OrsUploadFile[]} uploads
  * @returns {boolean}
  */
@@ -109,9 +116,13 @@ export const orsUploadCompleted = {
 
       const uploads = normaliseToArray(payload.form.orsUpload)
 
-      if (!uploads.every((upload) => isUploadedForImport(upload, id))) {
+      const outOfLocation = uploads.filter(
+        (upload) => !isUploadedForImport(upload, id)
+      )
+
+      if (outOfLocation.length > 0) {
         logger.error({
-          message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}`,
+          message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}${outOfLocation.map(formatLocation).join('')}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
