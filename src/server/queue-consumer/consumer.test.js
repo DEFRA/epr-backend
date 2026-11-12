@@ -1176,7 +1176,7 @@ describe('createCommandQueueConsumer', () => {
 
         /**
          * @param {string} createdAt
-         * @param {object} [reportOverrides]
+         * @param {Partial<import('#reports/repository/port.js').CreateReportParams>} [reportOverrides]
          */
         const submitLogCreatedAt = async (createdAt, reportOverrides = {}) => {
           await summaryLogsRepository.insert(

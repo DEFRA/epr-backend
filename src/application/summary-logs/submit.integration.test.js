@@ -1,4 +1,5 @@
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { CreateReportParams } from '#reports/repository/port.js' */
 import { toYear } from '#common/helpers/dates/year.js'
 import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -454,7 +455,7 @@ describe('submitSummaryLog stale flagging', () => {
    * Submits a log over one active report, through the real
    * summary-log-uploaded handler, and says whether the report went stale.
    *
-   * @param {(summaryLog: SummaryLog) => object} reportOverrides
+   * @param {(summaryLog: SummaryLog) => Partial<CreateReportParams>} reportOverrides
    */
   const submitOverActiveReport = async (reportOverrides) => {
     const reportsRepository = createInMemoryReportsRepository()()
