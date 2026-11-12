@@ -30,7 +30,6 @@ export default defineConfig({
         '**/types.js',
         'coverage',
         'src/common/hapi-types.js',
-        'src/common/helpers/secure-context.js',
         'src/config.js',
         'src/domain/**/model.js',
         'src/domain/**/port.js',
@@ -48,8 +47,7 @@ export default defineConfig({
     setupFiles: [
       '.vite/setup-auditing.js',
       '.vite/setup-files.js',
-      '.vite/setup-msw.js',
-      '.vite/setup-tls.js'
+      '.vite/setup-msw.js'
     ]
   }
 })

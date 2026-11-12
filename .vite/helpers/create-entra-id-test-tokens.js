@@ -27,7 +27,7 @@ const REGULATOR_APP_ROLE = 'Waste.Regulator.Standard'
 // Generate key pair once at module load time
 // @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format (incomplete fix in PR #63492)
 const keyPair = generateKeyPairSync('rsa', {
-  modulusLength: 4096,
+  modulusLength: 2048,
   publicKeyEncoding: {
     type: 'spki',
     format: 'jwk'
@@ -80,7 +80,7 @@ const generateEntraIdTokenWithWrongSignature = () => {
   // Generate a different key pair to create an invalid signature
   // @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format
   const wrongKeyPair = generateKeyPairSync('rsa', {
-    modulusLength: 4096,
+    modulusLength: 2048,
     publicKeyEncoding: {
       type: 'spki',
       format: 'jwk'
