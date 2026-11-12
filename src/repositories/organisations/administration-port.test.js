@@ -43,10 +43,8 @@ const ADMINISTRATION_PORT_MODULES = [
   // Domain code that still reads the legacy organisation shape. Each leaves
   // this list once it reads through the organisation read repository.
   'src/application/summary-logs/classify-and-persist.js',
-  'src/application/summary-logs/submit.js',
   'src/application/summary-logs/validate.js',
   'src/application/waste-records/resolve-overseas-sites.js',
-  'src/application/waste-records/sync-from-summary-log.js',
   'src/market-insights/application/outstanding-returns.js',
   'src/market-insights/application/read-figures.js',
   'src/market-insights/application/reprocessor-exporter-table.js',
