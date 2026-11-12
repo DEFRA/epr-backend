@@ -52,19 +52,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Test and Scan
-        uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          sonar-token: ${{ secrets.SONAR_TOKEN }}
+      - name: Pull test container images in the background
+        run: nohup docker compose -f .vite/fixtures/compose.yml pull --quiet > /dev/null 2>&1 &
+
+      - name: Read MongoDB binary version
+        id: mongodb
+        run: echo "version=$(jq -r .config.mongodbMemoryServer.version package.json)" >> "$GITHUB_OUTPUT"
 
       - name: Cache MongoDB binaries
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/mongodb-binaries
-          key: mongodb-binaries-${{ runner.os }}-7.0.14
+          key: mongodb-binaries-${{ runner.os }}-${{ steps.mongodb.outputs.version }}
           restore-keys: |
             mongodb-binaries-${{ runner.os }}-
+
+      - name: Test and Scan
+        uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
 
   type-check-prod:
     name: Lint Types - Prod
