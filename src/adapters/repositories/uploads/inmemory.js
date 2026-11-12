@@ -129,13 +129,7 @@ export const createInMemoryUploadsRepository = (config = {}) => {
 
       const /** @type {InitiateSummaryLogUploadOptions} */ options =
           /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
-      const {
-        organisationId,
-        registrationId,
-        summaryLogId,
-        callbackUrl,
-        callbackSignature
-      } = options
+      const { organisationId, registrationId, summaryLogId, callback } = options
       const s3Key = `${summaryLogUploadPath({ organisationId, registrationId })}/${uploadId}.xlsx`
       const s3Uri = `s3://${summaryLogsBucket}/${s3Key}`
 
@@ -143,8 +137,8 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       pendingUploads.delete(uploadId)
 
       await postCompletedCallback(
-        callbackUrl,
-        { summaryLogId, signature: callbackSignature },
+        callback.url,
+        { summaryLogId, signature: callback.signature },
         { s3Bucket: summaryLogsBucket, s3Key }
       )
 

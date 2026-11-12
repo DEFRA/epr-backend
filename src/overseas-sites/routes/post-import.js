@@ -48,7 +48,7 @@ export const orsImportCreate = {
 
     const importId = randomUUID()
     const resolvedRedirectUrl = redirectUrl.replace('{importId}', importId)
-    const { url: callbackUrl, signature: callbackSignature } = uploadCallback(
+    const callback = uploadCallback(
       toUploadCallbackPath(
         `/v1/overseas-sites/imports/${importId}/upload-completed`
       )
@@ -66,8 +66,7 @@ export const orsImportCreate = {
       const cdpResponse = await uploadsRepository.initiateOrsImport({
         importId,
         redirectUrl: resolvedRedirectUrl,
-        callbackUrl,
-        callbackSignature
+        callback
       })
 
       await auditOverseasSiteImport(request, importId)

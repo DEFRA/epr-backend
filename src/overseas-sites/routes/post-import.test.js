@@ -143,8 +143,10 @@ describe(`${orsImportCreatePath} route`, () => {
           {
             importId: id,
             redirectUrl: 'https://admin.test/overseas-sites/upload',
-            callbackUrl: `${config.get('appBaseUrl')}/v1/overseas-sites/imports/${id}/upload-completed`,
-            callbackSignature: expect.stringMatching(/^[0-9a-f]{64}$/)
+            callback: {
+              url: `${config.get('appBaseUrl')}/v1/overseas-sites/imports/${id}/upload-completed`,
+              signature: expect.stringMatching(/^[0-9a-f]{64}$/)
+            }
           }
         ])
       })

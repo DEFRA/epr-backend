@@ -14,6 +14,11 @@ import { config } from '#root/config.js'
  * signature covers.
  *
  * @typedef {Brand<string, 'UploadCallbackPath'>} UploadCallbackPath
+ *
+ * Where CDP Uploader calls back, and the signature it sends back in the
+ * callback's metadata.
+ *
+ * @typedef {{ signature: string, url: string }} UploadCallback
  */
 
 /**
@@ -64,7 +69,7 @@ export const uploadCallbackKey = () =>
  * both log it.
  *
  * @param {UploadCallbackPath} path
- * @returns {{ url: string, signature: string }}
+ * @returns {UploadCallback}
  */
 export const uploadCallback = (path) => ({
   url: `${config.get('appBaseUrl')}${path}`,

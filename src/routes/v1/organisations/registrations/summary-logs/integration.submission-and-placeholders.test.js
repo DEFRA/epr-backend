@@ -795,8 +795,10 @@ describe('Submission and placeholder tests', () => {
         registrationId,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        callbackSignature: 'signature'
+        callback: {
+          url: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+          signature: 'signature'
+        }
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,

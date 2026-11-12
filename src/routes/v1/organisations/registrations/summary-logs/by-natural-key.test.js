@@ -211,8 +211,10 @@ describe('summary-log routes by natural key', () => {
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
           organisationId: organisation.id,
           registrationId: registration.id,
-          callbackUrl: `${config.get('appBaseUrl')}${uploads}/${summaryLogId}/upload-completed`,
-          callbackSignature: expect.stringMatching(/^[0-9a-f]{64}$/)
+          callback: {
+            url: `${config.get('appBaseUrl')}${uploads}/${summaryLogId}/upload-completed`,
+            signature: expect.stringMatching(/^[0-9a-f]{64}$/)
+          }
         })
       })
 

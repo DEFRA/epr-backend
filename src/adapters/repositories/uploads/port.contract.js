@@ -53,8 +53,10 @@ export const testUploadsRepositoryContract = (it) => {
         registrationId: 'reg-456',
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
-        callbackSignature: 'signature-123'
+        callback: {
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
+          signature: 'signature-123'
+        }
       })
 
       expect(result).toMatchObject({
@@ -70,8 +72,10 @@ export const testUploadsRepositoryContract = (it) => {
       const result = await uploadsRepository.initiateOrsImport({
         importId: 'import-123',
         redirectUrl: 'https://admin.test/overseas-sites/upload',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/overseas-sites/imports/import-123/upload-completed`,
-        callbackSignature: 'signature-123'
+        callback: {
+          url: `${callbackReceiver.callbackUrl}/v1/overseas-sites/imports/import-123/upload-completed`,
+          signature: 'signature-123'
+        }
       })
 
       expect(result).toMatchObject({
@@ -94,8 +98,10 @@ export const testUploadsRepositoryContract = (it) => {
         registrationId: 'reg-456',
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
-        callbackSignature: 'signature-123'
+        callback: {
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
+          signature: 'signature-123'
+        }
       })
 
       expect(uploadId).toBeDefined()
@@ -129,8 +135,10 @@ export const testUploadsRepositoryContract = (it) => {
         registrationId: 'reg-loc',
         summaryLogId: 'sl-loc',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-loc/registrations/reg-loc/summary-logs/sl-loc/upload-completed`,
-        callbackSignature: 'signature-123'
+        callback: {
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-loc/registrations/reg-loc/summary-logs/sl-loc/upload-completed`,
+          signature: 'signature-123'
+        }
       })
 
       await performUpload(uploadId, testFileBuffer)
@@ -178,8 +186,10 @@ export const testUploadsRepositoryContract = (it) => {
         registrationId: 'reg-del',
         summaryLogId: 'sl-del',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-del/registrations/reg-del/summary-logs/sl-del/upload-completed`,
-        callbackSignature: 'signature-123'
+        callback: {
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-del/registrations/reg-del/summary-logs/sl-del/upload-completed`,
+          signature: 'signature-123'
+        }
       })
 
       await performUpload(uploadId, testFileBuffer)
@@ -210,8 +220,10 @@ export const testUploadsRepositoryContract = (it) => {
         registrationId: 'reg-456',
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
-        callbackSignature: 'signature-123'
+        callback: {
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
+          signature: 'signature-123'
+        }
       })
 
       // Perform upload

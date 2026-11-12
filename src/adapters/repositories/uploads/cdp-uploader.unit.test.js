@@ -91,8 +91,7 @@ describe('bucket routing', () => {
       registrationId: 'reg-1',
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
-      callbackUrl: 'https://backend.test/callback',
-      callbackSignature: 'abc123'
+      callback: { url: 'https://backend.test/callback', signature: 'abc123' }
     })
 
     expect(parseFetchBody().s3Bucket).toBe('test-summary-logs-bucket')
@@ -109,8 +108,7 @@ describe('bucket routing', () => {
     await repository.initiateOrsImport({
       importId: 'import-1',
       redirectUrl: 'https://admin.test/redirect',
-      callbackUrl: 'https://backend.test/callback',
-      callbackSignature: 'abc123'
+      callback: { url: 'https://backend.test/callback', signature: 'abc123' }
     })
 
     expect(parseFetchBody()).toMatchObject({
@@ -132,8 +130,7 @@ describe('bucket routing', () => {
       registrationId: 'reg-1',
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
-      callbackUrl: 'https://backend.test/callback',
-      callbackSignature: 'abc123'
+      callback: { url: 'https://backend.test/callback', signature: 'abc123' }
     })
 
     expect(parseFetchBody().mimeTypes).toEqual([
@@ -152,8 +149,7 @@ describe('bucket routing', () => {
     await repository.initiateOrsImport({
       importId: 'import-1',
       redirectUrl: 'https://admin.test/redirect',
-      callbackUrl: 'https://backend.test/callback',
-      callbackSignature: 'abc123'
+      callback: { url: 'https://backend.test/callback', signature: 'abc123' }
     })
 
     expect(parseFetchBody().s3Bucket).toBe('test-ors-bucket')
@@ -170,8 +166,7 @@ describe('bucket routing', () => {
     await repository.initiateOrsImport({
       importId: 'import-1',
       redirectUrl: 'https://admin.test/redirect',
-      callbackUrl: 'https://backend.test/callback',
-      callbackSignature: 'abc123'
+      callback: { url: 'https://backend.test/callback', signature: 'abc123' }
     })
 
     expect(parseFetchBody().mimeTypes).toEqual([
