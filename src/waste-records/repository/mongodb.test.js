@@ -171,6 +171,39 @@ describe('summary-log row states repository - mongodb implementation', () => {
     expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
   })
 
+  it('adds a summary log to a matching row state stored without a year, and reads it back', async (/** @type {*} */ {
+    summaryLogRowStatesCollection,
+    summaryLogRowStatesRepository
+  }) => {
+    const repository = summaryLogRowStatesRepository()
+    const ledgerId = withNumbers(DEFAULT_LEDGER_ID)
+    const entry = buildSummaryLogRowStateEntry()
+    const [stored] = await repository.upsertSummaryLogRowStates(
+      ledgerId,
+      [entry],
+      toSummaryLogFileId('log-1')
+    )
+    await summaryLogRowStatesCollection.updateMany({}, { $unset: { year: '' } })
+
+    const [matched] = await repository.upsertSummaryLogRowStates(
+      ledgerId,
+      [entry],
+      toSummaryLogFileId('log-2')
+    )
+
+    expect(matched).toMatchObject({
+      id: stored.id,
+      summaryLogIds: ['log-1', 'log-2']
+    })
+    expect(matched.year).toBeUndefined()
+    expect(
+      await repository.findWasteRecordStatesForSummaryLog(
+        ledgerId,
+        toSummaryLogFileId('log-2')
+      )
+    ).toHaveLength(1)
+  })
+
   describe('row-state repository contract', () => {
     testSummaryLogRowStatesRepositoryContract(it)
   })

@@ -15,6 +15,7 @@ import {
 } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
+  PRN_YEAR,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION,
   buildAccreditationSnapshot
@@ -59,7 +60,8 @@ const EVENT_AT = new Date('2026-02-01T12:00:00.000Z')
 const LEDGER = {
   organisationNumber: TEST_ORGANISATION_NUMBER,
   registrationNumber: TEST_REGISTRATION.registrationNumber,
-  accreditationNumber: toAccreditationNumber('ACC-1')
+  accreditationNumber: toAccreditationNumber('ACC-1'),
+  year: PRN_YEAR
 }
 
 /**
@@ -800,6 +802,7 @@ describe('updatePrnStatus', () => {
           organisationNumber: DEFAULT_ORG_NUMBER,
           registrationNumber: DEFAULT_REG_NUMBER,
           accreditationNumber: LEDGER.accreditationNumber,
+          year: LEDGER.year,
           number: 1,
           kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
           payload: {

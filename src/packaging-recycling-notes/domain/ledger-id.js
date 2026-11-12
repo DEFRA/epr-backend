@@ -5,7 +5,8 @@ import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 /** @import {PackagingRecyclingNote} from './model.js' */
 
 /**
- * The ledger of the accreditation a PRN was raised against.
+ * The ledger of the accreditation a PRN was raised against, for the year of
+ * that accreditation.
  *
  * @param {PackagingRecyclingNote} prn
  * @returns {WasteBalanceLedgerId & { accreditationNumber: AccreditationNumber }}
@@ -15,5 +16,6 @@ export const prnLedgerId = (prn) => ({
   registrationNumber: prn.registration.registrationNumber,
   accreditationNumber: toAccreditationNumber(
     prn.accreditation.accreditationNumber
-  )
+  ),
+  year: prn.accreditation.accreditationYear
 })

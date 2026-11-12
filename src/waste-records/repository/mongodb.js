@@ -19,7 +19,7 @@ import { createHash } from 'node:crypto'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import {
@@ -156,7 +156,7 @@ const identityKey = (fields) =>
  * the read model's query and the write path's read-back. A row state belongs
  * to the ledger that wrote it, so the summary log alone does not identify it.
  *
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  * @param {SummaryLogFileId} summaryLogId
  */
 const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
@@ -178,6 +178,7 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
     // of $setOnInsert to avoid the filter/setOnInsert path conflict.
     update: {
       $setOnInsert: {
+        year: candidate.year,
         processingType: candidate.processingType,
         data: candidate.data,
         classification: candidate.classification
@@ -278,7 +279,7 @@ const toWasteRecordState = ({
  * 40% of the credited tonnage report's read time over 423 summary logs.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<import('./port.js').WasteRecordState[]>}
+ * @returns {(ledgerId: RequiredNumbers, summaryLogId: SummaryLogFileId) => Promise<import('./port.js').WasteRecordState[]>}
  */
 const performFindWasteRecordStatesForSummaryLog =
   (collection) => async (ledgerId, summaryLogId) => {

@@ -18,12 +18,12 @@ import { validateLedgerEventInsert } from './ledger-validation.js'
  */
 
 /**
- * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers} RequiredNumbers
  */
 
 /**
  * @param {LedgerEvent} event
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  */
 const matchesLedger = (event, ledgerId) =>
   event.organisationNumber === ledgerId.organisationNumber &&
@@ -34,7 +34,7 @@ const matchesLedger = (event, ledgerId) =>
  * Migration PAE-1382: delete all events for a ledgerId.
  *
  * @param {LedgerEvent[]} storage
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  * @returns {number}
  */
 const doDeleteInLedger = (storage, ledgerId) => {
@@ -132,7 +132,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
 
   return () => ({
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      */
     findLatestInLedger: async (ledgerId) => {
       const matches = storage.filter((event) => matchesLedger(event, ledgerId))
@@ -145,7 +145,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {WasteBalanceLedgerId[]} ledgerIds
+     * @param {RequiredNumbers[]} ledgerIds
      */
     findLatestInLedgers: async (ledgerIds) =>
       ledgerIds.flatMap((ledgerId) => {
@@ -156,7 +156,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
       }),
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      * @param {import('./ledger-schema.js').LedgerEventKind} kind
      */
     findLatestInLedgerByKind: async (ledgerId, kind) => {
@@ -172,7 +172,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      * @param {string} prnId
      * @param {number} afterNumber
      */
@@ -190,7 +190,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      */
     findAllInLedger: async (ledgerId) => {
       const matches = storage
@@ -204,7 +204,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
       doFindLatestSubmittedSummaryLogPerLedger(storage),
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      */
     deleteAllInLedger: async (ledgerId) => doDeleteInLedger(storage, ledgerId),
 

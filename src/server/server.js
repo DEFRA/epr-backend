@@ -49,6 +49,7 @@ import { runOrganisationValidationSweep } from '#server/run-organisation-validat
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runSummaryLogScopeBackfill } from '#summary-log-scope-backfill/run.js'
+import { runLedgerYearBackfill } from '#ledger-year-backfill/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -229,6 +230,7 @@ async function createServer(options = {}) {
     void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
     void runSummaryLogScopeBackfill(startedServer)
+    void runLedgerYearBackfill(startedServer)
   })
 
   return server

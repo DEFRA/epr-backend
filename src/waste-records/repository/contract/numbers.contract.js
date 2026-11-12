@@ -8,7 +8,8 @@ import {
 const NUMBERS = Object.freeze({
   organisationNumber: '500001',
   registrationNumber: 'REG-1',
-  accreditationNumber: 'ACC-1'
+  accreditationNumber: 'ACC-1',
+  year: 2026
 })
 
 export const testNumbersBehaviour = (it) => {
