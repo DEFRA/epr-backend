@@ -104,8 +104,8 @@ const createTestSchema = (options = {}) => {
 /**
  * Test schema registry matching real structure
  */
-const createTestSchemaRegistry = (tables = {}) => ({
-  TEST_TYPE: tables
+const createTestSchemaRegistry = (tableSchemas = {}) => ({
+  TEST_TYPE: tableSchemas
 })
 
 describe('Parser Workarounds - Integration Characterisation Tests', () => {
@@ -626,7 +626,9 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         })
       })
 
-      const validateDataSyntax = createDataSyntaxValidator(schemaRegistry)
+      const validateDataSyntax = createDataSyntaxValidator(
+        schemaRegistry.TEST_TYPE
+      )
       const { validatedData } = validateDataSyntax({
         ...parsed,
         meta: {

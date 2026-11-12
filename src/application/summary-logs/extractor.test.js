@@ -1,7 +1,9 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSummaryLogExtractor } from './extractor.js'
 import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
 
@@ -47,6 +49,7 @@ describe('SummaryLogExtractor', () => {
     })
 
     summaryLog = {
+      year: DEFAULT_TEMPLATE_YEAR,
       file: {
         status: 'complete',
         uri: 's3://test-bucket/test-key'
@@ -112,6 +115,16 @@ describe('SummaryLogExtractor', () => {
         HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: ['Choose option']
       })
     })
+  })
+
+  it('rejects a summary log whose year has no templates', async () => {
+    uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('x'))
+    summaryLog.year = /** @type {Year} */ (2027)
+
+    await expect(
+      summaryLogExtractor.extract(summaryLog, { logger })
+    ).rejects.toThrow('No summary log templates for 2027')
+    expect(parse).not.toHaveBeenCalled()
   })
 
   it('should return parsed data', async () => {

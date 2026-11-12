@@ -23,14 +23,13 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {LoadsByReportingPeriod, PeriodStatusByRecordChange, RowDetail, RowIdentity} from '#domain/summary-logs/loads-by-period-status-schema.js' */
-/** @import {PROCESSING_TYPE_TABLES} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {RecordChange} from './record-change.js' */
 
-/** @typedef {typeof PROCESSING_TYPE_TABLES[keyof typeof PROCESSING_TYPE_TABLES]} ProcessingTypeSchemas */
+/** @typedef {Record<string, TableSchema>} ProcessingTypeSchemas */
 
 /**
  * @typedef {Object} ClassificationContext

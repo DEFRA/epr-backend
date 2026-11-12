@@ -3,14 +3,12 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
-import {
-  findSchemaByWasteRecordType,
-  PROCESSING_TYPE_TABLES
-} from '#domain/summary-logs/table-schemas/index.js'
+import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/index.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {PreviousSubmission} from '#waste-records/application/read-summary-log-row-states.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * @param {string} wasteRecordType
@@ -38,9 +36,14 @@ const rowKey = (wasteRecordType, rowId) => `${wasteRecordType}:${rowId}`
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
  * @param {PreviousSubmission | null} params.previousSubmission - The latest submitted summary log with its row states, or null when the registration has never submitted
+ * @param {Record<string, Pick<TableSchema, 'wasteRecordType'|'sheetName'>>} params.tableSchemas - The upload's template table schemas, which name the sheet a removed row belongs on
  * @returns {ValidationIssuesCollector} Validation issues object
  */
-export const validateRowContinuity = ({ wasteRecords, previousSubmission }) => {
+export const validateRowContinuity = ({
+  wasteRecords,
+  previousSubmission,
+  tableSchemas
+}) => {
   const issues = createValidationIssues()
 
   if (previousSubmission === null) {
@@ -59,10 +62,7 @@ export const validateRowContinuity = ({ wasteRecords, previousSubmission }) => {
   )
 
   for (const { wasteRecordType, rowId } of removedRowStates) {
-    const match = findSchemaByWasteRecordType(
-      wasteRecordType,
-      PROCESSING_TYPE_TABLES
-    )
+    const match = findSchemaByWasteRecordType(wasteRecordType, tableSchemas)
 
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,

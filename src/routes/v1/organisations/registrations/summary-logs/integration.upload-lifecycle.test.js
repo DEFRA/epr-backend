@@ -166,7 +166,7 @@ describe('Summary logs upload lifecycle', () => {
             kind: 'accredited',
             accreditationNumber: 'ACC-123'
           },
-          year: 2025
+          year: 2026
         })
       })
 

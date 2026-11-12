@@ -46,8 +46,8 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 describe('Repeated uploads of identical data', () => {
   let organisationId
   let registrationId
-  const VALID_FROM = '2025-01-01'
-  const VALID_TO = '2025-12-31'
+  const VALID_FROM = '2026-01-01'
+  const VALID_TO = '2026-12-31'
 
   const { getServer } = setupAuthContext()
 
@@ -103,15 +103,15 @@ describe('Repeated uploads of identical data', () => {
         accreditations: [
           servedTestAccreditation({
             id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-2025-001'),
+            accreditationNumber: toAccreditationNumber('ACC-2026-001'),
             material: 'glass',
             wasteProcessingType: 'reprocessor',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
             submittedToRegulator: 'ea',
             statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+              { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
             ]
           })
         ]
@@ -142,7 +142,7 @@ describe('Repeated uploads of identical data', () => {
           location: { sheet: 'Data', row: 4, column: 'B' }
         },
         ACCREDITATION_NUMBER: {
-          value: 'ACC-2025-001',
+          value: 'ACC-2026-001',
           location: { sheet: 'Data', row: 5, column: 'B' }
         }
       }
@@ -181,7 +181,7 @@ describe('Repeated uploads of identical data', () => {
           rowNumber: 8,
           values: [
             1001,
-            '2025-01-15',
+            '2026-01-15',
             '03 03 08',
             'Glass - pre-sorted',
             'No',
@@ -212,7 +212,7 @@ describe('Repeated uploads of identical data', () => {
           rowNumber: 9,
           values: [
             1002,
-            '2025-01-16',
+            '2026-01-16',
             '03 03 08',
             'Glass - pre-sorted',
             'No',
@@ -401,7 +401,7 @@ describe('Repeated uploads of identical data', () => {
         const ledgerId = {
           organisationNumber: TEST_ORGANISATION_NUMBER,
           registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
-          accreditationNumber: toAccreditationNumber('ACC-2025-001'),
+          accreditationNumber: toAccreditationNumber('ACC-2026-001'),
           year: UPLOAD_YEAR
         }
 

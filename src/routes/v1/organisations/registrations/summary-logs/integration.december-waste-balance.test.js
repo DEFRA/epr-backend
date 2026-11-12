@@ -28,11 +28,11 @@ import {
   EXPORTER_HEADERS
 } from './integration-test-helpers.js'
 
-// The test accreditation window is 2025-01-01 to 2025-12-31 (see
-// integration-test-helpers.js), so the accreditation-year December is 2025-12,
+// The test accreditation window is 2026-01-01 to 2026-12-31 (see
+// integration-test-helpers.js), so the accreditation-year December is 2026-12,
 // and it reaches 31 December, the caveat that lets December rows accrue at all.
-const DEC = '2025-12-15T00:00:00.000Z'
-const JAN = '2025-01-16T00:00:00.000Z'
+const DEC = '2026-12-15T00:00:00.000Z'
+const JAN = '2026-01-16T00:00:00.000Z'
 
 describe('December waste balance accrual', () => {
   const { getServer } = setupAuthContext()
@@ -145,8 +145,8 @@ describe('December waste balance accrual', () => {
           {
             rowId: 1001,
             exportTonnage: 100,
-            dateReceived: '2025-12-01T00:00:00.000Z',
-            exportDate: '2025-12-10T00:00:00.000Z',
+            dateReceived: '2026-12-01T00:00:00.000Z',
+            exportDate: '2026-12-10T00:00:00.000Z',
             dateReceivedByOsr: DEC
           },
           { rowId: 1002, exportTonnage: 250, dateReceivedByOsr: JAN }
@@ -330,7 +330,7 @@ describe('December waste balance accrual', () => {
           {
             rowId: 1001,
             tonnageReceived: 100,
-            dateReceived: '2025-06-01T00:00:00.000Z'
+            dateReceived: '2026-06-01T00:00:00.000Z'
           }
         ])
       )
@@ -357,18 +357,18 @@ describe('December waste balance accrual', () => {
           {
             rowId: 1001,
             tonnageReceived: 100,
-            dateReceived: '2024-12-15T00:00:00.000Z'
+            dateReceived: '2025-12-15T00:00:00.000Z'
           },
           {
             rowId: 1002,
             tonnageReceived: 200,
-            dateReceived: '2025-06-01T00:00:00.000Z'
+            dateReceived: '2026-06-01T00:00:00.000Z'
           }
         ])
       )
 
       const balance = await getWasteBalance(env)
-      // The 2024 December row is outside the window, so it credits nothing.
+      // The 2025 December row is outside the window, so it credits nothing.
       expect(balance.amount).toBe(200)
       expect(balance.decemberAmount).toBeUndefined()
     })

@@ -16,10 +16,7 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import {
-  findSchemaForProcessingType,
-  PROCESSING_TYPE_TABLES
-} from '#domain/summary-logs/table-schemas/index.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
@@ -40,7 +37,7 @@ import { ledgerIdFor } from './ledger-id.js'
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 
-/** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
+/** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
@@ -58,6 +55,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * @param {{
@@ -157,6 +155,7 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {Registration} [registration] - Registration fetched during validation
+ * @property {Record<string, TableSchema>} [tableSchemas] - The template's table schemas, once meta syntax has chosen it
  */
 
 /**
@@ -209,13 +208,10 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
 const markIgnoredByDateRange = (
   /** @type ValidatedWasteRecord[] */ wasteRecords,
   /** @type Registration */ registration,
-  /** @type string */ processingType
+  /** @type Record<string, TableSchema> */ tableSchemas
 ) => {
   for (const wasteRecord of wasteRecords) {
-    const schema = findSchemaForProcessingType(
-      processingType,
-      wasteRecord.record.type
-    )
+    const schema = tableSchemas[wasteRecord.tableName]
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
@@ -261,8 +257,7 @@ const markIgnoredByDateRange = (
  *   summaryLogExtractor: SummaryLogExtractor,
  *   organisationAdministrationRepository: OrganisationAdministrationRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
- *   ledgerRepository: WasteBalanceLedgerRepository,
- *   validateDataSyntax: (parsed: ParsedSummaryLog) => { issues: ValidationIssuesCollector, validatedData: ValidatedSummaryLog }
+ *   ledgerRepository: WasteBalanceLedgerRepository
  * }} params
  * @returns {Promise<ValidationResult>}
  */
@@ -273,8 +268,7 @@ const performValidationChecks = async ({
   summaryLogExtractor,
   organisationAdministrationRepository,
   summaryLogRowStatesRepository,
-  ledgerRepository,
-  validateDataSyntax
+  ledgerRepository
 }) => {
   const issues = createValidationIssues()
   /** @type {ValidatedWasteRecord[] | null} */
@@ -283,6 +277,8 @@ const performValidationChecks = async ({
   let meta
   /** @type {Registration | undefined} */
   let registration
+  /** @type {Record<string, TableSchema> | undefined} */
+  let tableSchemas
 
   try {
     const parsed = await extractSummaryLog({
@@ -294,11 +290,16 @@ const performValidationChecks = async ({
 
     meta = extractMetaValues(parsed.meta)
 
-    issues.merge(validateMetaSyntax({ parsed }))
+    issues.merge(validateMetaSyntax({ parsed, year: summaryLog.year }))
 
     if (issues.isFatal()) {
       return { issues, wasteRecords, meta }
     }
+
+    tableSchemas = getTemplate(
+      summaryLog.year,
+      meta.PROCESSING_TYPE
+    ).tableSchemas
 
     registration = await fetchRegistration({
       organisationAdministrationRepository,
@@ -316,28 +317,29 @@ const performValidationChecks = async ({
     )
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta, registration }
+      return { issues, wasteRecords, meta, registration, tableSchemas }
     }
 
     // Data syntax validation returns validated data with issues attached to rows
     const { issues: dataSyntaxIssues, validatedData } =
-      validateDataSyntax(parsed)
+      createDataSyntaxValidator(tableSchemas)(parsed)
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta, registration }
+      return { issues, wasteRecords, meta, registration, tableSchemas }
     }
 
     const dataResult = await transformAndValidateData({
       summaryLog,
       validatedData,
+      tableSchemas,
       summaryLogRowStatesRepository,
       ledgerRepository
     })
 
     wasteRecords = dataResult.wasteRecords
 
-    markIgnoredByDateRange(wasteRecords, registration, meta.PROCESSING_TYPE)
+    markIgnoredByDateRange(wasteRecords, registration, tableSchemas)
 
     issues.merge(dataResult.issues)
   } catch (error) {
@@ -349,7 +351,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta, registration }
+  return { issues, wasteRecords, meta, registration, tableSchemas }
 }
 
 /**
@@ -552,6 +554,7 @@ const loadSubmittedRowStatesByKey = async ({
 const classifyAndPersistResult = async ({
   issues,
   processingType,
+  tableSchemas,
   status,
   summaryLogId,
   wasteBalanceRecords,
@@ -589,7 +592,7 @@ const classifyAndPersistResult = async ({
   })
 
   const { loads, loadsByReportingPeriod } = classifyLoads({
-    processingType,
+    tableSchemas,
     status,
     wasteBalanceRecords,
     wasteRecords,
@@ -649,8 +652,6 @@ export const createSummaryLogsValidator = ({
   overseasSitesRepository,
   summaryLogExtractor
 }) => {
-  const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
-
   return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
     assertValidatingStatus(result, summaryLogId)
@@ -670,7 +671,7 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta, registration } =
+    const { issues, wasteRecords, meta, registration, tableSchemas } =
       await performValidationChecks({
         summaryLog,
         loggingContext,
@@ -678,8 +679,7 @@ export const createSummaryLogsValidator = ({
         summaryLogExtractor,
         organisationAdministrationRepository,
         summaryLogRowStatesRepository,
-        ledgerRepository,
-        validateDataSyntax
+        ledgerRepository
       })
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
@@ -690,7 +690,7 @@ export const createSummaryLogsValidator = ({
       : SUMMARY_LOG_STATUS.VALIDATED
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
-      processingType
+      tableSchemas
     )
 
     await recordValidationMetrics({
@@ -704,6 +704,7 @@ export const createSummaryLogsValidator = ({
     await classifyAndPersistResult({
       issues,
       processingType,
+      tableSchemas,
       status,
       summaryLogId,
       wasteBalanceRecords,

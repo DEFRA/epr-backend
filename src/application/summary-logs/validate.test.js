@@ -40,7 +40,7 @@ const FIXTURE_LEDGER = {
   organisationNumber: toOrganisationNumber('500123'),
   registrationNumber: toRegistrationNumber('REG12345'),
   accreditationNumber: toAccreditationNumber('ACC12345'),
-  year: toYear(2025)
+  year: toYear(2026)
 }
 
 /**
