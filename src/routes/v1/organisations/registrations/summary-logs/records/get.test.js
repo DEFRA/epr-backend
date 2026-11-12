@@ -108,7 +108,6 @@ const createServer = async ({
     accreditations,
     registrations: [registration]
   })
-  const keyedOrganisation = structuredClone(organisation)
 
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
@@ -138,11 +137,6 @@ const createServer = async ({
 
   const server = await createTestServer({
     repositories: {
-      organisationAdministrationRepository: () => ({
-        findByOrganisationNumber: vi.fn(() =>
-          Promise.resolve(keyedOrganisation)
-        )
-      }),
       organisationReadRepository: () =>
         organisationReadRepositoryOver({
           findByOrganisationNumber: async () => readModelHolds(organisation),
@@ -356,8 +350,6 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       expect.anything(),
       {
         summaryLogId: FILE_ID,
-        organisationId: ORGANISATION_ID,
-        registrationId: REGISTRATION_ID,
         organisationNumber: organisation.organisationNumber,
         registrationNumber: 'R26ER5000000002PA',
         accreditationNumber: 'A26ER5000000002PA'

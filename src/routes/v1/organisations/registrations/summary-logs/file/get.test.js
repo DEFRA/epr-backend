@@ -105,8 +105,6 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         expect.anything(),
         {
           summaryLogId,
-          organisationId,
-          registrationId,
           organisationNumber: organisation.organisationNumber,
           registrationNumber: REPROCESSOR_NUMBER,
           accreditationNumber: ACCREDITATION_NUMBER
