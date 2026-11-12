@@ -20,6 +20,8 @@ import {
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { PRN_YEAR } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -43,6 +45,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 /** @import { MockInstance } from 'vitest' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 const organisationId = new ObjectId().toString()
 const registrationId = new ObjectId().toString()
@@ -50,15 +53,17 @@ const accreditationId = new ObjectId().toString()
 const { organisationNumber } = buildOrganisation()
 
 /**
- * The served accreditation's ledger, under the reprocessor or exporter
- * registration a test serves it under.
+ * The served accreditation's ledger for the year it is accredited, under the
+ * reprocessor or exporter registration a test serves it under.
  *
  * @param {string} registrationNumber
+ * @param {Year} [year]
  */
-const ledgerUnder = (registrationNumber) => ({
+const ledgerUnder = (registrationNumber, year = PRN_YEAR) => ({
   organisationNumber,
   registrationNumber: toRegistrationNumber(registrationNumber),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+  year
 })
 
 const SEED_BALANCE = { amount: 500, availableAmount: 500 }
@@ -70,14 +75,15 @@ const SEED_BALANCE = { amount: 500, availableAmount: 500 }
  * available.
  *
  * @param {{ amount: number, availableAmount: number, decemberAmount?: number, decemberAvailableAmount?: number } | null} [closingBalance]
+ * @param {Year} [year] - the year of the accreditation whose ledger is opened
  */
-const seedStream = (closingBalance = SEED_BALANCE) =>
+const seedStream = (closingBalance = SEED_BALANCE, year = PRN_YEAR) =>
   createInMemoryLedgerRepository(
     closingBalance
       ? [REPROCESSOR_NUMBER, EXPORTER_NUMBER].map((number) =>
           partialMock(
             buildLedgerEvent({
-              ...ledgerUnder(number),
+              ...ledgerUnder(number, year),
               number: 1,
               payload: {
                 summaryLogId: 'log-1',
@@ -311,6 +317,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('sets obligationYear from the accreditation year', async () => {
       vi.setSystemTime(new Date('2027-03-01T12:00:00.000Z'))
+      ledgerRepository = seedStream(SEED_BALANCE, toYear(2027))
       await useAccreditation({ validFrom: '2027-01-01', validTo: '2027-12-31' })
 
       await createPrn()

@@ -9,7 +9,7 @@
  */
 
 /**
- * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers} RequiredNumbers
  */
 
 /**
@@ -137,7 +137,7 @@ const findDuplicateKeyWriteError = (error) => {
  * builds its filter from this, so no such read can name a ledger by less than
  * its whole id.
  *
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  */
 const ledgerFilter = ({
   organisationNumber,
@@ -151,7 +151,7 @@ const ledgerFilter = ({
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>}
+ * @returns {(ledgerId: RequiredNumbers) => Promise<LedgerEvent | null>}
  */
 const performFindLatestInLedger = (collection) => async (ledgerId) => {
   const doc = await collection.findOne(ledgerFilter(ledgerId), {
@@ -162,7 +162,7 @@ const performFindLatestInLedger = (collection) => async (ledgerId) => {
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerIds: WasteBalanceLedgerId[]) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerIds: RequiredNumbers[]) => Promise<LedgerEvent[]>}
  */
 const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
   // $or rejects an empty array
@@ -193,7 +193,7 @@ const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, kind: string) => Promise<LedgerEvent | null>}
+ * @returns {(ledgerId: RequiredNumbers, kind: string) => Promise<LedgerEvent | null>}
  */
 const performFindLatestInLedgerByKind =
   (collection) => async (ledgerId, kind) => {
@@ -206,7 +206,7 @@ const performFindLatestInLedgerByKind =
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerId: RequiredNumbers, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>}
  */
 const performFindEventsByPrnIdAfter =
   (collection) => async (ledgerId, prnId, afterNumber) => {
@@ -224,7 +224,7 @@ const performFindEventsByPrnIdAfter =
 
 /**
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent[]>}
+ * @returns {(ledgerId: RequiredNumbers) => Promise<LedgerEvent[]>}
  */
 const performFindAllInLedger = (collection) => async (ledgerId) => {
   const docs = await collection
@@ -273,7 +273,7 @@ const performFindLatestSubmittedSummaryLogPerLedger =
 /**
  * @migration PAE-1382 — delete all events for a ledgerId.
  * @param {Collection} collection
- * @returns {(ledgerId: WasteBalanceLedgerId) => Promise<number>}
+ * @returns {(ledgerId: RequiredNumbers) => Promise<number>}
  */
 const performDeleteInLedger = (collection) => async (ledgerId) => {
   const result = await collection.deleteMany(ledgerFilter(ledgerId))

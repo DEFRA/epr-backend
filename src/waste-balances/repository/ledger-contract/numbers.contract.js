@@ -5,7 +5,8 @@ import { buildLedgerEvent, buildLedgerId } from '../ledger-test-data.js'
 const NUMBERS = Object.freeze({
   organisationNumber: '500001',
   registrationNumber: 'REG-1',
-  accreditationNumber: 'ACC-1'
+  accreditationNumber: 'ACC-1',
+  year: 2026
 })
 
 const LEDGER_ID = Object.freeze(buildLedgerId())

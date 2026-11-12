@@ -1,6 +1,7 @@
 import {
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION,
+  PRN_YEAR,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
@@ -55,6 +56,8 @@ const PRN_NUMBERS = {
   registrationNumber: TEST_REGISTRATION.registrationNumber,
   accreditationNumber: toAccreditationNumber('ACC-2026-001')
 }
+// The ledger the PRN fixtures' accreditation year names.
+const PRN_LEDGER_ID = { ...PRN_NUMBERS, year: PRN_YEAR }
 
 /**
  * The PRN fixtures' ids are not ObjectIds, which the in-memory organisations
@@ -106,14 +109,14 @@ let reportsRepository
  * @param {Object} [options]
  * @param {Map<string, object>} [options.reports]
  * @param {{ registrationId: string, accreditationId: string, organisationId: string }} [options.ledgerIds]
- * @param {typeof PRN_NUMBERS} [options.ledgerNumbers]
+ * @param {typeof PRN_LEDGER_ID} [options.ledgerNumbers]
  */
 const startServer = async (
   prn,
   {
     reports = new Map(),
     ledgerIds = { registrationId, accreditationId, organisationId },
-    ledgerNumbers = PRN_NUMBERS
+    ledgerNumbers = PRN_LEDGER_ID
   } = {}
 ) => {
   ledgerRepository = createInMemoryLedgerRepository([
@@ -246,7 +249,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     expect(stored?.updatedBy).toEqual(rpd)
     expect(stored?.status.rejected?.by).toEqual(rpd)
 
-    const latestEvent = await ledgerRepository.findLatestInLedger(PRN_NUMBERS)
+    const latestEvent = await ledgerRepository.findLatestInLedger(PRN_LEDGER_ID)
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_REJECTED)
     expect(latestEvent.createdBy).toEqual(rpd)
     // Rejection is balance-neutral: the closing balance matches the opening one.
@@ -305,7 +308,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         organisationId: staleTestOrgId
       },
       ledgerNumbers: {
-        ...PRN_NUMBERS,
+        ...PRN_LEDGER_ID,
         organisationNumber: DEFAULT_ORG_NUMBER,
         registrationNumber: DEFAULT_REG_NUMBER
       }

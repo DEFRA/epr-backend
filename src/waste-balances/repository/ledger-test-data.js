@@ -6,11 +6,15 @@ import { LEDGER_EVENT_KIND } from './ledger-schema.js'
 const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
 
 /**
+ * @typedef {Partial<import('./ledger-schema.js').RegistrationOrAccreditationId & { year: import('#common/helpers/dates/year.js').Year }>} LedgerIdOverrides
+ */
+
+/**
  * Build a waste balance ledger's ids and numbers. Defaults match
  * `buildLedgerEvent`, so a ledger id built with no overrides names the ledger
  * that event belongs to.
  *
- * @param {Partial<import('./ledger-schema.js').RegistrationOrAccreditationId>} [overrides]
+ * @param {LedgerIdOverrides} [overrides]
  * @returns {import('./ledger-schema.js').RegistrationOrAccreditationId & import('./ledger-schema.js').WasteBalanceLedgerId}
  */
 export const buildLedgerId = (overrides = {}) =>
@@ -25,8 +29,8 @@ export const buildLedgerId = (overrides = {}) =>
  * The numbers alone of the ledger `buildLedgerId` builds from the same
  * overrides.
  *
- * @param {Partial<import('./ledger-schema.js').RegistrationOrAccreditationId>} [overrides]
- * @returns {import('./ledger-schema.js').WasteBalanceLedgerId}
+ * @param {LedgerIdOverrides} [overrides]
+ * @returns {import('#domain/organisations/numbers.js').RequiredNumbers}
  */
 export const buildLedgerNumbers = (overrides = {}) => {
   const { organisationNumber, registrationNumber, accreditationNumber } =

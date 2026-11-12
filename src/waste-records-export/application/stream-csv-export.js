@@ -28,7 +28,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository, LatestSubmittedSummaryLogPerLedger} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {RequiredNumbers} from '#domain/organisations/numbers.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
 /** @import {LedgerAccreditation} from '#waste-balances/application/read-model-accreditations.js' */
 
@@ -123,7 +123,7 @@ const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }
  * accredited but are still exported.
  *
  * @param {Map<string, LedgerAccreditation>} ledgerIndex - by `ledgerKey`
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  * @returns {{ accreditationNumber: AccreditationNumber | null, context: ReclassificationContext }}
  */
 const heldAccreditation = (ledgerIndex, ledgerId) => {
@@ -154,7 +154,7 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
  * @param {RegistrationNumber} input.registrationNumber
  * @param {Registration} input.registration
  * @param {Map<string, LedgerAccreditation>} input.ledgerIndex
- * @param {WasteBalanceLedgerId} input.ledgerId
+ * @param {RequiredNumbers} input.ledgerId
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
  * @param {string[]} input.dataFieldColumns

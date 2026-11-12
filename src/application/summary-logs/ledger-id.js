@@ -3,7 +3,7 @@
 
 /**
  * The ledger a summary log's reads pivot on: its organisation, registration
- * and accreditation numbers, `null` meaning registered-only.
+ * and accreditation numbers, `null` meaning registered-only, and its year.
  *
  * @param {SubmittedSummaryLog} summaryLog
  * @returns {WasteBalanceLedgerId}
@@ -11,5 +11,6 @@
 export const ledgerIdFor = ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
-}) => ({ organisationNumber, registrationNumber, accreditationNumber })
+  accreditationNumber,
+  year
+}) => ({ organisationNumber, registrationNumber, accreditationNumber, year })

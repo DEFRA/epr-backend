@@ -1,4 +1,4 @@
-import { toYear } from '#common/helpers/dates/year.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
@@ -126,6 +126,7 @@ const insertAccreditedOperator = async (
   organisationAdministrationRepository
 ) => {
   const accreditationId = new ObjectId().toString()
+  const validFrom = '2026-01-01'
   const registration = buildRegistration({
     accreditationId,
     material: MATERIAL.PLASTIC,
@@ -143,7 +144,7 @@ const insertAccreditedOperator = async (
   const organisation = await buildApprovedOrg(
     organisationAdministrationRepository,
     { registrations: [registration], accreditations: [accreditation] },
-    { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
+    { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
   )
 
   const reportKey = reportKeyOf(organisation, organisation.registrations[0])
@@ -155,6 +156,7 @@ const insertAccreditedOperator = async (
     accreditationNumber: toAccreditationNumber(
       /** @type {string} */ (organisation.accreditations[0].accreditationNumber)
     ),
+    year: utcYearOf(validFrom),
     reportKey
   }
 }

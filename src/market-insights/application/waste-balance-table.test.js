@@ -1,4 +1,4 @@
-import { toYear } from '#common/helpers/dates/year.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -154,7 +154,8 @@ const makeOperator = ({
       accreditationId,
       organisationNumber: toOrganisationNumber(String(orgId)),
       registrationNumber: toRegistrationNumber(`REG-${orgId}`),
-      accreditationNumber: toAccreditationNumber(`ACC-${orgId}`)
+      accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
+      year: utcYearOf(validFrom)
     },
     summaryLogId: `log-${orgId}`
   }
@@ -1304,7 +1305,7 @@ describe('buildWasteBalanceTable', () => {
         externalAccreditations: [
           buildExternalAccreditation({
             registrationNumber: operator.ledgerId.registrationNumber,
-            year: toYear(2026),
+            year: operator.ledgerId.year,
             accreditationNumber,
             status: {
               current: 'approved',
@@ -1398,7 +1399,7 @@ describe('buildWasteBalanceTable', () => {
         externalAccreditations: [
           buildExternalAccreditation({
             registrationNumber: operator.ledgerId.registrationNumber,
-            year: toYear(2026),
+            year: operator.ledgerId.year,
             accreditationNumber,
             status: {
               current: 'approved',

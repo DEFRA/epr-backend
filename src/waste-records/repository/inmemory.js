@@ -25,11 +25,11 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 
 /**
  * @param {SummaryLogRowState} doc
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  */
 const matchesLedger = (doc, ledgerId) =>
   doc.organisationNumber === ledgerId.organisationNumber &&
@@ -57,7 +57,7 @@ const matchesCommittedState = (doc, candidate) =>
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  * @param {SummaryLogFileId} summaryLogId
  * @returns {SummaryLogRowState[]}
  */
@@ -190,7 +190,7 @@ const repositoryOver = (storage) => ({
     ),
 
   /**
-   * @param {WasteBalanceLedgerId} ledgerId
+   * @param {RequiredNumbers} ledgerId
    * @param {SummaryLogFileId} summaryLogId
    */
   findWasteRecordStatesForSummaryLog: async (ledgerId, summaryLogId) =>
