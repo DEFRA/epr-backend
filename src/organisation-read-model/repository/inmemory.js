@@ -37,7 +37,7 @@ export const createInMemoryOrganisationReadRepository = (
   const external = structuredClone(externalAccreditations)
 
   return (dependencies) => ({
-    findByOrganisationNumber: async (organisationNumber) => {
+    findByOrganisationNumber: async (organisationNumber, { year } = {}) => {
       const found = stored.find(
         (candidate) => candidate.organisationNumber === organisationNumber
       )
@@ -47,7 +47,8 @@ export const createInMemoryOrganisationReadRepository = (
       const [organisation] = await toReadModelOrganisations(
         [structuredClone(found)],
         structuredClone(external),
-        dependencies
+        dependencies,
+        year
       )
       return organisation ?? null
     },

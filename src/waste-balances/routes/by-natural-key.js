@@ -97,10 +97,9 @@ const registeredOnlyLedgerGet = {
 
     const { registration } =
       await findOrganisationAndRegistrationReadModels(request)
-    const { status } = registration
 
     if (
-      !approvedYears(status.timeline, lastOpenDay(new Date())).includes(year)
+      !approvedYears(registration.status.timeline, lastOpenDay()).includes(year)
     ) {
       throw Boom.notFound('Year not found')
     }

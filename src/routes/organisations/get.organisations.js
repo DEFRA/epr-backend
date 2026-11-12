@@ -73,7 +73,7 @@ export const organisationListGet = {
         : await organisationReadRepository.find(query)
     // Each item is served as GET /organisations/{organisationNumber} serves it
     const items = page.items.map((organisation) =>
-      organisationFor(organisation, {})
+      organisationFor(organisation)
     )
     return h.response({ ...page, items }).code(StatusCodes.OK)
   }
