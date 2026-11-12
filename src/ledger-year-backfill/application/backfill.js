@@ -21,7 +21,7 @@ const YEAR_OF_A_SUMMARY_LOG_WITHOUT_ONE = utcYearOf('2026-01-01')
  * @property {number} ledgers - ledgers, each of one year, given records (would be, on a dry run)
  * @property {Map<Year, LedgerRecordCounts>} years - records given each year
  * @property {LedgerRecordCounts} skipped - records whose sources give no single year; left without one
- * @property {number} failed - ledgers not written; retried on the next run
+ * @property {number} failed - ledgers not fully written; retried on the next run
  * @property {number} auditFailed - ledgers written but not audited
  */
 
@@ -36,6 +36,7 @@ const YEAR_OF_A_SUMMARY_LOG_WITHOUT_ONE = utcYearOf('2026-01-01')
  * @property {Map<Year, LedgerRecordCounts>} years
  * @property {LedgerRecordCounts} skipped
  * @property {number} auditFailed
+ * @property {boolean} failed
  */
 
 /** @param {RequiredNumbers} numbers */
@@ -123,7 +124,9 @@ const sortByYear = async (ledgers, { events, rowStates }) => {
 
   /** @param {YearlessRowState} rowState */
   const rowStateYear = ({ summaryLogIds }) => {
-    const years = new Set(summaryLogIds.map(summaryLogYear))
+    const years = new Set(
+      summaryLogIds.map(summaryLogYear).filter((year) => year !== undefined)
+    )
     return years.size === 1 ? [...years][0] : undefined
   }
 
@@ -154,6 +157,31 @@ const sortByYear = async (ledgers, { events, rowStates }) => {
   }
 
   return { byYear, skipped }
+}
+
+/**
+ * Gives a ledger's events and then its row states `year`. A write that fails
+ * still returns the count already written, so that it can be audited: the
+ * records it changed hold a year, and no later run finds them again.
+ *
+ * @param {YearlessLedgers} ledgers
+ * @param {LedgerRecordIds} ids
+ * @param {Year} year
+ * @returns {Promise<{ counts: LedgerRecordCounts, error?: Error }>}
+ */
+const assignYear = async (ledgers, ids, year) => {
+  const counts = { events: 0, rowStates: 0 }
+  try {
+    counts.events = await ledgers.assignYear('events', ids.events, year)
+    counts.rowStates = await ledgers.assignYear(
+      'rowStates',
+      ids.rowStates,
+      year
+    )
+    return { counts }
+  } catch (error) {
+    return { counts, error }
+  }
 }
 
 /**
@@ -200,12 +228,22 @@ const backfillLedger = async (
   }
 
   /** @type {LedgerOutcome} */
-  const outcome = { years: new Map(), skipped, auditFailed: 0 }
+  const outcome = { years: new Map(), skipped, auditFailed: 0, failed: false }
 
   for (const [year, ids] of byYear) {
-    const counts = isDryRun
-      ? { events: ids.events.length, rowStates: ids.rowStates.length }
-      : await ledgers.assignYear(ids, year) // NOSONAR(javascript:S9382) one year at a time, to spare the database
+    /** @type {{ counts: LedgerRecordCounts, error?: Error }} */
+    const { counts, error } = isDryRun
+      ? {
+          counts: { events: ids.events.length, rowStates: ids.rowStates.length }
+        }
+      : await assignYear(ledgers, ids, year) // NOSONAR(javascript:S9382) one year at a time, to spare the database
+    if (error) {
+      logger.error({
+        err: error,
+        message: `Failed to backfill the year of ledger ${describeLedger(numbers)} year=${year}`
+      })
+      outcome.failed = true
+    }
     if (!holdsAny(counts)) {
       continue
     }
@@ -246,7 +284,7 @@ export const backfillLedgerYear = async (
 
   for (const numbers of await repositories.ledgers.findYearless()) {
     try {
-      const { years, skipped, auditFailed } = await backfill(numbers) // NOSONAR(javascript:S9382) one at a time, to spare the database
+      const { years, skipped, auditFailed, failed } = await backfill(numbers) // NOSONAR(javascript:S9382) one at a time, to spare the database
       for (const [year, counts] of years) {
         const sofar = result.years.get(year) ?? { events: 0, rowStates: 0 }
         result.years.set(year, addCounts(sofar, counts))
@@ -254,6 +292,9 @@ export const backfillLedgerYear = async (
       result.ledgers += years.size
       result.skipped = addCounts(result.skipped, skipped)
       result.auditFailed += auditFailed
+      if (failed) {
+        result.failed++
+      }
     } catch (error) {
       logger.error({
         err: error,

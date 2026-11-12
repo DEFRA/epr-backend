@@ -220,6 +220,22 @@ describe('backfillLedgerYear', () => {
     expect(backfill.logger.error).not.toHaveBeenCalled()
   })
 
+  it('places a row state by the summary logs still found, past one that has expired', async ({
+    backfill
+  }) => {
+    await backfill.rowStates.insertOne(
+      rowState(ACCREDITED, '1001', [LOG_2026, 'file-expired'])
+    )
+
+    const result = await backfill.run(false)
+
+    expect(result).toMatchObject({
+      years: new Map([[2026, { events: 0, rowStates: 1 }]]),
+      skipped: NOTHING_SKIPPED
+    })
+    expect(await yearsOf(backfill.rowStates)).toEqual([2026])
+  })
+
   it('skips a record whose summary log or PRN is not found', async ({
     backfill
   }) => {
@@ -260,9 +276,9 @@ describe('backfillLedgerYear', () => {
 
     const result = await backfill.run(false, (ledgers) => ({
       ...ledgers,
-      assignYear: async (ids, year) => {
-        await ledgers.assignYear(ids, year)
-        return ledgers.assignYear(ids, year)
+      assignYear: async (kind, ids, year) => {
+        await ledgers.assignYear(kind, ids, year)
+        return ledgers.assignYear(kind, ids, year)
       }
     }))
 
@@ -292,6 +308,42 @@ describe('backfillLedgerYear', () => {
       err: error,
       message:
         'Failed to backfill the year of ledger organisationNumber=500123 registrationNumber=R26SR500123PL accreditationNumber=A26SR500123PL'
+    })
+  })
+
+  it('audits the events it wrote when writing the row states fails, and counts the ledger as failed', async ({
+    backfill
+  }) => {
+    await backfill.events.insertOne(
+      event(ACCREDITED, 1, { summaryLogId: LOG_2026 })
+    )
+    await backfill.rowStates.insertOne(rowState(ACCREDITED, '1001', [LOG_2026]))
+    const error = new Error('write refused')
+
+    const result = await backfill.run(false, (ledgers) => ({
+      ...ledgers,
+      assignYear: (kind, ids, year) =>
+        kind === 'rowStates'
+          ? Promise.reject(error)
+          : ledgers.assignYear(kind, ids, year)
+    }))
+
+    expect(result).toMatchObject({
+      ledgers: 1,
+      years: new Map([[2026, { events: 1, rowStates: 0 }]]),
+      failed: 1
+    })
+    expect(await yearsOf(backfill.events)).toEqual([2026])
+    expect(await yearsOf(backfill.rowStates)).toEqual([undefined])
+    expect(backfill.systemLogsRepository.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: { ...ACCREDITED, year: 2026, events: 1, rowStates: 0 }
+      })
+    )
+    expect(backfill.logger.error).toHaveBeenCalledWith({
+      err: error,
+      message:
+        'Failed to backfill the year of ledger organisationNumber=500123 registrationNumber=R26SR500123PL accreditationNumber=A26SR500123PL year=2026'
     })
   })
 

@@ -38,7 +38,7 @@ import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repositor
  * @property {(numbers: RequiredNumbers) => Promise<{ events: YearlessEvent[], rowStates: YearlessRowState[] }>} readYearless - the ledger's records without a year
  * @property {(fileIds: string[]) => Promise<Map<string, Year | undefined>>} yearsOfSummaryLogs - by file id, the year of each summary log found, `undefined` for one stored without a year
  * @property {(prnIds: string[]) => Promise<Map<string, Year>>} accreditationYearsOfPrns - by id, the accreditation year of each PRN found
- * @property {(ids: LedgerRecordIds, year: Year) => Promise<LedgerRecordCounts>} assignYear - gives each of the records still without a year `year`, counting those it changed
+ * @property {(kind: keyof LedgerRecordIds, ids: ObjectId[], year: Year) => Promise<number>} assignYear - gives each of the records of one kind still without a year `year`, counting those it changed
  */
 
 /**
@@ -164,21 +164,12 @@ export const createYearlessLedgers = (db) => {
       )
     },
 
-    assignYear: async (ids, year) => {
-      const [eventResult, rowStateResult] = await Promise.all([
-        events.updateMany(
-          { _id: { $in: ids.events }, ...YEARLESS },
-          { $set: { year } }
-        ),
-        rowStates.updateMany(
-          { _id: { $in: ids.rowStates }, ...YEARLESS },
-          { $set: { year } }
-        )
-      ])
-      return {
-        events: eventResult.modifiedCount,
-        rowStates: rowStateResult.modifiedCount
-      }
+    assignYear: async (kind, ids, year) => {
+      const { modifiedCount } = await { events, rowStates }[kind].updateMany(
+        { _id: { $in: ids }, ...YEARLESS },
+        { $set: { year } }
+      )
+      return modifiedCount
     }
   }
 }
