@@ -9,8 +9,8 @@ import { utcYearOf } from '#common/helpers/dates/year.js'
 export const YEAR_BACKFILL_ACTION = 'year-backfill-migration'
 
 /**
- * Until ledgers were kept apart by year, 2026 was the only accreditation
- * year, so every ledger event and row state stored without a year is 2026's.
+ * Until ledger events and row states recorded their year, 2026 was the only
+ * accreditation year, so every one stored without a year is 2026's.
  */
 const ONLY_YEAR_BEFORE_YEARS_WERE_KEPT_APART = utcYearOf('2026-01-01')
 
@@ -19,7 +19,6 @@ const ONLY_YEAR_BEFORE_YEARS_WERE_KEPT_APART = utcYearOf('2026-01-01')
  * @property {number} ledgers - ledgers given their year (would be, on a dry run)
  * @property {number} events - ledger events given their year
  * @property {number} rowStates - row states given their year
- * @property {number} unplaced - ledgers left alone because they already hold events for the year
  * @property {number} failed - ledgers not written; retried on the next run
  * @property {number} auditFailed - ledgers written but not audited
  */
@@ -70,11 +69,7 @@ const auditYearAssigned = async (systemLogsRepository, numbers, counts) => {
 
 /**
  * Gives one ledger's yearless records their year and audits the change once
- * for the ledger. A ledger already holding events for that year is left
- * alone: its yearless events can share event numbers with them, which the
- * unique ledger slot would refuse. Row states for the year cannot clash the
- * same way, because the identity index without the year already keeps a
- * yearless row state and its copy for a year from both being stored.
+ * for the ledger.
  *
  * @param {Repositories} repositories
  * @param {RequiredNumbers} numbers
@@ -88,24 +83,10 @@ const backfillLedger = async (
   isDryRun,
   logger
 ) => {
-  const year = ONLY_YEAR_BEFORE_YEARS_WERE_KEPT_APART
-  if (await ledgers.holdsEventsFor(numbers, year)) {
-    logger.error({
-      message: `Ledger year backfill cannot place ledger ${describeLedger(numbers)}: it holds events for ${year} alongside events without a year`
-    })
-    return {
-      ledgers: 0,
-      events: 0,
-      rowStates: 0,
-      unplaced: 1,
-      auditFailed: 0
-    }
-  }
-
   const counts = isDryRun
     ? await ledgers.countYearless(numbers)
-    : await ledgers.assignYear(numbers, year)
-  const outcome = { ledgers: 1, ...counts, unplaced: 0, auditFailed: 0 }
+    : await ledgers.assignYear(numbers, ONLY_YEAR_BEFORE_YEARS_WERE_KEPT_APART)
+  const outcome = { ledgers: 1, ...counts, auditFailed: 0 }
   if (isDryRun) {
     return outcome
   }
@@ -124,9 +105,8 @@ const backfillLedger = async (
 }
 
 /**
- * Gives every ledger event and row state stored before ledgers were kept
- * apart by year the year it belongs to. Logs at error level each ledger it
- * cannot place, naming it.
+ * Gives every ledger event and row state stored before they recorded their
+ * year the year it belongs to.
  *
  * @param {Repositories & { logger: TypedLogger }} deps
  * @param {{ isDryRun: boolean }} options
@@ -141,7 +121,6 @@ export const backfillLedgerYear = async (
     ledgers: 0,
     events: 0,
     rowStates: 0,
-    unplaced: 0,
     failed: 0,
     auditFailed: 0
   }

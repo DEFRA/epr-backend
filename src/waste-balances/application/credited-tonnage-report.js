@@ -154,7 +154,7 @@ export const buildCreditedTonnageReport = async ({
     if (!ledgerAccreditation) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
         logger.warn({
-          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber} for ${ledgerId.year}`,
+          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: 'credited_tonnage_ledger_entry_unmatched',

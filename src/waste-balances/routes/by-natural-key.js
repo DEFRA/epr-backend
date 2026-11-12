@@ -52,8 +52,8 @@ const ledgerOptions = {
 }
 
 /**
- * The ledger the path resolved to for its year: the accreditation's, or the
- * registered-only one when the path names no accreditation.
+ * The ledger the path resolved to: the accreditation's, or the registered-only
+ * one when the path names no accreditation.
  *
  * @param {ResolvedParams & { year: Year }} params
  * @returns {WasteBalanceLedgerId}
@@ -84,8 +84,9 @@ const readLedgerEvents = async (request) => {
 }
 
 /**
- * The registered-only ledger of the year. A year the registration was not
- * approved in is not found.
+ * The registered-only ledger spans a registration's years, so a year narrows
+ * it to the events submitted in that year (UTC). A year the registration was
+ * not approved in is not found.
  */
 const registeredOnlyLedgerGet = {
   method: 'GET',
@@ -106,8 +107,13 @@ const registeredOnlyLedgerGet = {
     ) {
       throw Boom.notFound('Year not found')
     }
+    const events = await readLedgerEvents(request)
     return h
-      .response({ events: await readLedgerEvents(request) })
+      .response({
+        events: events.filter(
+          (event) => event.createdAt.getUTCFullYear() === year
+        )
+      })
       .code(StatusCodes.OK)
   }
 }

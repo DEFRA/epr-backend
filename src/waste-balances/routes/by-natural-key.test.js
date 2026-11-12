@@ -4,7 +4,7 @@ import {
   organisationReadRepositoryFrom
 } from '#vite/helpers/organisation-read-model.js'
 
-import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
@@ -175,22 +175,20 @@ describe('ledger and waste balance routes by natural key', () => {
     beforeEach(async () => {
       await server.app.ledgerRepository.appendEvents([
         registeredOnlyEvent({
-          year: toYear(2025),
           number: 1,
           createdAt: new Date('2025-12-31T23:59:59.999Z')
         })
       ])
       await server.app.ledgerRepository.appendEvents([
         registeredOnlyEvent({
-          year: toYear(2026),
-          number: 1,
+          number: 2,
           createdAt: new Date('2026-01-01T00:00:00.000Z'),
           payload: { summaryLogId: 'file-2026', creditTotal: 5 }
         })
       ])
     })
 
-    it('serves the registered-only ledger of the year, and no ids', async () => {
+    it('serves the registered-only events submitted in the year, and no ids', async () => {
       const response = await get(registeredOnlyLedger(2025))
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -214,31 +212,7 @@ describe('ledger and waste balance routes by natural key', () => {
     it('serves the next year its own events', async () => {
       const response = await get(registeredOnlyLedger(2026))
 
-      expect(body(response).events.map((event) => event.summaryLog.id)).toEqual(
-        ['file-2026']
-      )
-    })
-
-    it('serves a year the events submitted for it after it ended', async () => {
-      await server.app.ledgerRepository.appendEvents([
-        registeredOnlyEvent({
-          year: toYear(2025),
-          number: 2,
-          createdAt: new Date('2026-01-10T09:00:00.000Z'),
-          payload: { summaryLogId: 'file-2025-late', creditTotal: 7 }
-        })
-      ])
-
-      const year = await get(registeredOnlyLedger(2025))
-      const nextYear = await get(registeredOnlyLedger(2026))
-
-      expect(body(year).events.map((event) => event.summaryLog.id)).toEqual([
-        'log-1',
-        'file-2025-late'
-      ])
-      expect(body(nextYear).events.map((event) => event.summaryLog.id)).toEqual(
-        ['file-2026']
-      )
+      expect(body(response).events.map((event) => event.number)).toEqual([2])
     })
 
     it('serves no events for an approved year with none', async () => {

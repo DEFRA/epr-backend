@@ -868,29 +868,6 @@ describe('streamCsvExport', () => {
     ).toEqual(['1001', '2002', '3003'])
   })
 
-  it("orders a registered-only registration's years earliest first", async () => {
-    const deps = await buildDeps({
-      orgs: [readModelOrg()],
-      seeds: [
-        {
-          summaryLogId: 'sl-this-year',
-          rows: [receivedRowState({ rowId: '2002' })]
-        },
-        {
-          year: PREVIOUS_YEAR,
-          summaryLogId: 'sl-previous-year',
-          rows: [receivedRowState({ rowId: '1001' })]
-        }
-      ]
-    })
-
-    const out = await collect(streamCsvExport(deps))
-
-    expect(
-      out.slice(1).map((line) => cellsOf(line)[METADATA_COL_INDEX['Row ID']])
-    ).toEqual(['1001', '2002'])
-  })
-
   it('orders organisations by organisation number and registrations by registration number', async () => {
     const beta = readModelOrg({
       organisationNumber: '500002',

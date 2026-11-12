@@ -73,14 +73,13 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
  */
 
 /**
- * One accreditation's PRN tonnage for one year, totalled by the PRNs' current
- * status. Keyed on numbers and year alone: a PRN carries names as they stood
- * when it was raised, so keying on those would split one accreditation across
- * several totals. A status none of the accreditation's PRNs is in is absent,
- * not zero.
+ * One accreditation's PRN tonnage, totalled by the PRNs' current status. Keyed
+ * on numbers alone: a PRN carries names as they stood when it was raised, so
+ * keying on those would split one accreditation across several totals. A
+ * status none of the accreditation's PRNs is in is absent, not zero.
  *
  * @typedef {Object} AccreditationTonnage
- * @property {AccreditationNumbers & { year: import('#common/helpers/dates/year.js').Year }} numbers
+ * @property {AccreditationNumbers} numbers
  * @property {Partial<Record<import('#packaging-recycling-notes/domain/model.js').PrnStatus, number>>} tonnageByStatus
  */
 

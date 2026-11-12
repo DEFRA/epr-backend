@@ -18,24 +18,23 @@ import { validateLedgerEventInsert } from './ledger-validation.js'
  */
 
 /**
- * @typedef {import('./ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
+ * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers} RequiredNumbers
  */
 
 /**
  * @param {LedgerEvent} event
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  */
 const matchesLedger = (event, ledgerId) =>
   event.organisationNumber === ledgerId.organisationNumber &&
   event.registrationNumber === ledgerId.registrationNumber &&
-  event.accreditationNumber === ledgerId.accreditationNumber &&
-  event.year === ledgerId.year
+  event.accreditationNumber === ledgerId.accreditationNumber
 
 /**
  * Migration PAE-1382: delete all events for a ledgerId.
  *
  * @param {LedgerEvent[]} storage
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  * @returns {number}
  */
 const doDeleteInLedger = (storage, ledgerId) => {
@@ -62,7 +61,7 @@ const doFindLatestSubmittedSummaryLogPerLedger = (storage) => {
       continue
     }
 
-    const key = `${event.organisationNumber}\u0000${event.registrationNumber}\u0000${event.accreditationNumber}\u0000${event.year}`
+    const key = `${event.organisationNumber}\u0000${event.registrationNumber}\u0000${event.accreditationNumber}`
     const latest = latestByPartition.get(key)
     if (!latest || event.number > latest.number) {
       latestByPartition.set(key, event)
@@ -73,8 +72,7 @@ const doFindLatestSubmittedSummaryLogPerLedger = (storage) => {
     ledgerId: {
       organisationNumber: event.organisationNumber,
       registrationNumber: event.registrationNumber,
-      accreditationNumber: event.accreditationNumber,
-      year: event.year
+      accreditationNumber: event.accreditationNumber
     },
     summaryLogId: /** @type {*} */ (event.payload).summaryLogId
   }))
@@ -134,7 +132,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
 
   return () => ({
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      */
     findLatestInLedger: async (ledgerId) => {
       const matches = storage.filter((event) => matchesLedger(event, ledgerId))
@@ -147,7 +145,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {WasteBalanceLedgerId[]} ledgerIds
+     * @param {RequiredNumbers[]} ledgerIds
      */
     findLatestInLedgers: async (ledgerIds) =>
       ledgerIds.flatMap((ledgerId) => {
@@ -158,7 +156,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
       }),
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      * @param {import('./ledger-schema.js').LedgerEventKind} kind
      */
     findLatestInLedgerByKind: async (ledgerId, kind) => {
@@ -174,7 +172,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      * @param {string} prnId
      * @param {number} afterNumber
      */
@@ -192,7 +190,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
     },
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      */
     findAllInLedger: async (ledgerId) => {
       const matches = storage
@@ -206,7 +204,7 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
       doFindLatestSubmittedSummaryLogPerLedger(storage),
 
     /**
-     * @param {WasteBalanceLedgerId} ledgerId
+     * @param {RequiredNumbers} ledgerId
      */
     deleteAllInLedger: async (ledgerId) => doDeleteInLedger(storage, ledgerId),
 

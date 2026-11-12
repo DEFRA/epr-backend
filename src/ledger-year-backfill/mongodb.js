@@ -14,7 +14,6 @@ import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repositor
 /**
  * @typedef {Object} YearlessLedgers
  * @property {() => Promise<RequiredNumbers[]>} findYearless - the ledgers holding a ledger event or row state without a year
- * @property {(numbers: RequiredNumbers, year: Year) => Promise<boolean>} holdsEventsFor - whether the ledger already holds an event for `year`
  * @property {(numbers: RequiredNumbers) => Promise<LedgerRecordCounts>} countYearless
  * @property {(numbers: RequiredNumbers, year: Year) => Promise<LedgerRecordCounts>} assignYear - gives every yearless record of the ledger `year`, counting those it changed
  */
@@ -81,12 +80,6 @@ export const createYearlessLedgers = (db) => {
       )
       return [...ledgers.values()]
     },
-
-    holdsEventsFor: async (numbers, year) =>
-      (await events.countDocuments(
-        { ...numbersFilter(numbers), year },
-        { limit: 1 }
-      )) > 0,
 
     countYearless: (numbers) =>
       countEach((collection) =>

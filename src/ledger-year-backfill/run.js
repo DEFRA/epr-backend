@@ -17,7 +17,7 @@ const runBackfill = async (server) => {
     logger
   )
 
-  const { ledgers, events, rowStates, unplaced, failed, auditFailed } =
+  const { ledgers, events, rowStates, failed, auditFailed } =
     await backfillLedgerYear(
       {
         ledgers: createYearlessLedgers(server.db),
@@ -29,7 +29,7 @@ const runBackfill = async (server) => {
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
   logger.info({
-    message: `Ledger year backfill (${mode}): ledgers=${ledgers} events=${events} rowStates=${rowStates} unplaced=${unplaced} failed=${failed} auditFailed=${auditFailed}`
+    message: `Ledger year backfill (${mode}): ledgers=${ledgers} events=${events} rowStates=${rowStates} failed=${failed} auditFailed=${auditFailed}`
   })
 }
 

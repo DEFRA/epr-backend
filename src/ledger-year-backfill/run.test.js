@@ -34,7 +34,6 @@ describe('runLedgerYearBackfill', () => {
       ledgers: 2,
       events: 5,
       rowStates: 3,
-      unplaced: 1,
       failed: 0,
       auditFailed: 0
     })
@@ -51,7 +50,7 @@ describe('runLedgerYearBackfill', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Ledger year backfill (dry-run): ledgers=2 events=5 rowStates=3 unplaced=1 failed=0 auditFailed=0'
+        'Ledger year backfill (dry-run): ledgers=2 events=5 rowStates=3 failed=0 auditFailed=0'
     })
     expect(lock.free).toHaveBeenCalled()
   })

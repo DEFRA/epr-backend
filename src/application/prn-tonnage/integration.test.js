@@ -15,8 +15,7 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildPrn,
-  buildAccreditationSnapshot,
-  PRN_YEAR
+  buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import {
@@ -56,8 +55,7 @@ const approvedStatusHistory = [
 const ledgerId = {
   organisationNumber: toOrganisationNumber(String(orgId)),
   registrationNumber: toRegistrationNumber('REG-1'),
-  accreditationNumber: toAccreditationNumber('ACC-1'),
-  year: PRN_YEAR
+  accreditationNumber: toAccreditationNumber('ACC-1')
 }
 const otherLedgerId = {
   ...ledgerId,
@@ -277,7 +275,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
     )
   })
 
@@ -298,7 +296,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
     )
   })
 
@@ -425,7 +423,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
     )
   })
 
@@ -444,7 +442,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
     )
   })
 
@@ -477,7 +475,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
     )
   })
 
@@ -648,7 +646,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
         registrationNumber: ledgerId.registrationNumber,
-        year: ledgerId.year,
+        year: toYear(2026),
         accreditationNumber: ledgerId.accreditationNumber,
         prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
         status: {
@@ -689,8 +687,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     onTestFinished(() => config.reset('openNextYear'))
     const laterLedgerId = {
       ...ledgerId,
-      accreditationNumber: toAccreditationNumber('ACC-2027'),
-      year: toYear(2027)
+      accreditationNumber: toAccreditationNumber('ACC-2027')
     }
     await db
       .collection(ORGANISATIONS_COLLECTION)
@@ -698,7 +695,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
         registrationNumber: ledgerId.registrationNumber,
-        year: laterLedgerId.year,
+        year: toYear(2027),
         accreditationNumber: laterLedgerId.accreditationNumber,
         prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_10000 },
         status: {
@@ -720,8 +717,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ...laterPrn,
         accreditation: {
           ...laterPrn.accreditation,
-          accreditationNumber: laterLedgerId.accreditationNumber,
-          accreditationYear: laterLedgerId.year
+          accreditationNumber: laterLedgerId.accreditationNumber
         }
       }
     ])

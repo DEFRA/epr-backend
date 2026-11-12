@@ -17,8 +17,7 @@ import {
 } from '#domain/organisations/model.js'
 import {
   buildAwaitingAcceptancePrn,
-  buildAccreditationSnapshot,
-  PRN_YEAR
+  buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
@@ -48,8 +47,7 @@ const approvedStatusHistory = [
 const ledgerId = {
   organisationNumber: toOrganisationNumber(String(orgId)),
   registrationNumber: toRegistrationNumber('REG-INTEG'),
-  accreditationNumber: toAccreditationNumber('ACC-INTEG'),
-  year: PRN_YEAR
+  accreditationNumber: toAccreditationNumber('ACC-INTEG')
 }
 
 const contact = { email: 'contact@example.com', fullName: 'A Contact' }

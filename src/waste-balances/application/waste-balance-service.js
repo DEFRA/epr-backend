@@ -258,12 +258,11 @@ export const createWasteBalanceService = (
       organisationNumber,
       registrationNumber,
       accreditationNumber,
-      year,
       prnId,
       afterEventNumber
     }) =>
       ledgerRepository.findEventsByPrnIdAfter(
-        { organisationNumber, registrationNumber, accreditationNumber, year },
+        { organisationNumber, registrationNumber, accreditationNumber },
         prnId,
         afterEventNumber
       )

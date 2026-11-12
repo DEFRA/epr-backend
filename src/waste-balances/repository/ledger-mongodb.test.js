@@ -88,100 +88,42 @@ describe('ensureLedgerCollection', () => {
   })
 
   describe('indexes', () => {
-    it('creates the ledger slot unique index on the numbers and year', async (/** @type {*} */ {
+    it('creates the ledger slot unique index on the numbers', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'ledger_slot_by_year')).toEqual({
+      expect(indexKeyFor(indexes, 'ledger_slot_by_number')).toEqual({
         registrationNumber: 1,
         accreditationNumber: 1,
-        year: 1,
         number: 1
       })
-      expect(indexOptionFor(indexes, 'ledger_slot_by_year', 'unique')).toBe(
+      expect(indexOptionFor(indexes, 'ledger_slot_by_number', 'unique')).toBe(
         true
       )
     })
 
-    it('creates the ledger_kind_latest_by_year index for findLatestInLedgerByKind', async (/** @type {*} */ {
+    it('creates the ledger_kind_latest_by_number index for findLatestInLedgerByKind', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'ledger_kind_latest_by_year')).toEqual({
+      expect(indexKeyFor(indexes, 'ledger_kind_latest_by_number')).toEqual({
         registrationNumber: 1,
         accreditationNumber: 1,
-        year: 1,
         kind: 1,
         number: -1
       })
     })
 
-    it('creates the prn_watermark_catchup_by_year index for findEventsByPrnIdAfter', async (/** @type {*} */ {
+    it('creates the prn_watermark_catchup_by_number index for findEventsByPrnIdAfter', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'prn_watermark_catchup_by_year')).toEqual({
+      expect(indexKeyFor(indexes, 'prn_watermark_catchup_by_number')).toEqual({
         registrationNumber: 1,
         accreditationNumber: 1,
-        year: 1,
         'payload.prnId': 1,
         number: 1
       })
-    })
-
-    it('drops the lookup indexes keyed on the numbers without the year', async (/** @type {*} */ {
-      mongoClient
-    }) => {
-      const collection = mongoClient
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-      await collection.createIndex(
-        { registrationNumber: 1, accreditationNumber: 1, kind: 1, number: -1 },
-        { name: 'ledger_kind_latest_by_number' }
-      )
-      await collection.createIndex(
-        {
-          registrationNumber: 1,
-          accreditationNumber: 1,
-          'payload.prnId': 1,
-          number: 1
-        },
-        { name: 'prn_watermark_catchup_by_number' }
-      )
-
-      await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
-
-      const names = (await collection.indexes()).map(({ name }) => name)
-      expect(names).not.toContain('ledger_kind_latest_by_number')
-      expect(names).not.toContain('prn_watermark_catchup_by_number')
-    })
-
-    it('keeps the slot index without the year, which refuses opening a year over a yearless ledger', async (/** @type {*} */ {
-      mongoClient,
-      ledgerRepository
-    }) => {
-      const repository = ledgerRepository()
-      const collection = mongoClient
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-      await collection.createIndex(
-        { registrationNumber: 1, accreditationNumber: 1, number: 1 },
-        { name: 'ledger_slot_by_number', unique: true }
-      )
-      try {
-        await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
-        const opening = buildLedgerEvent({ number: 1 })
-        await repository.appendEvents([opening])
-        await collection.updateMany({}, { $unset: { year: '' } })
-
-        await expect(repository.appendEvents([opening])).rejects.toBeInstanceOf(
-          LedgerSlotConflictError
-        )
-        const names = (await collection.indexes()).map(({ name }) => name)
-        expect(names).toContain('ledger_slot_by_number')
-      } finally {
-        await collection.dropIndex('ledger_slot_by_number')
-      }
     })
 
     it('drops the indexes keyed on the ids', async (/** @type {*} */ {
@@ -256,6 +198,30 @@ describe('MongoDB ledger repository', () => {
 
   describe('ledger repository contract', () => {
     testLedgerRepositoryContract(it)
+  })
+
+  it('reads events stored without a year as part of the ledger, and appends after them', async (/** @type {*} */ {
+    mongoClient,
+    ledgerRepository
+  }) => {
+    const repository = ledgerRepository()
+    const first = buildLedgerEvent({ number: 1 })
+    await repository.appendEvents([first])
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+      .updateMany({}, { $unset: { year: '' } })
+
+    await repository.appendEvents([buildLedgerEvent({ number: 2 })])
+
+    const events = await repository.findAllInLedger(first)
+    expect(events.map(({ number, year }) => ({ number, year }))).toEqual([
+      { number: 1, year: undefined },
+      { number: 2, year: first.year }
+    ])
+    expect(await repository.findLatestInLedger(first)).toMatchObject({
+      number: 2
+    })
   })
 
   describe('appendEvents error translation', () => {

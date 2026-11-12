@@ -100,10 +100,9 @@ export const buildAccreditationKeys = (overrides = {}) => {
 
 /**
  * Places a PRN under an accreditation, so that the numbers the PRN carries
- * agree with the accreditation a reader names it by, and for its year when
- * one is named.
+ * agree with the accreditation a reader names it by.
  *
- * @param {Partial<import('#domain/organisations/numbers.js').Numbers & { year: import('#common/helpers/dates/year.js').Year }>} numbers
+ * @param {Partial<import('#domain/organisations/numbers.js').Numbers>} numbers
  * @param {PrnOverrides} [overrides]
  */
 export const underAccreditation = (numbers, overrides = {}) => ({
@@ -119,8 +118,7 @@ export const underAccreditation = (numbers, overrides = {}) => ({
   accreditation: buildAccreditationSnapshot({
     ...(numbers.accreditationNumber && {
       accreditationNumber: numbers.accreditationNumber
-    }),
-    ...(numbers.year && { accreditationYear: numbers.year })
+    })
   }),
   ...overrides
 })

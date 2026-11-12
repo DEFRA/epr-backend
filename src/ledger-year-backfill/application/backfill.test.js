@@ -27,8 +27,8 @@ const REGISTERED_ONLY = {
 }
 
 /**
- * A ledger event as stored, `year` absent when it was stored before ledgers
- * were kept apart by year.
+ * A ledger event as stored, `year` absent when it was stored before ledger
+ * events recorded their year.
  *
  * @param {object} numbers
  * @param {number} number
@@ -42,8 +42,8 @@ const event = (numbers, number, year) => ({
 })
 
 /**
- * A row state as stored, `year` absent when it was stored before ledgers
- * were kept apart by year.
+ * A row state as stored, `year` absent when it was stored before row states
+ * recorded their year.
  *
  * @param {object} numbers
  * @param {string} rowId
@@ -126,7 +126,6 @@ describe('backfillLedgerYear', () => {
       ledgers: 2,
       events: 3,
       rowStates: 2,
-      unplaced: 0,
       failed: 0,
       auditFailed: 0
     })
@@ -159,7 +158,6 @@ describe('backfillLedgerYear', () => {
       ledgers: 2,
       events: 3,
       rowStates: 2,
-      unplaced: 0,
       failed: 0,
       auditFailed: 0
     })
@@ -205,7 +203,7 @@ describe('backfillLedgerYear', () => {
   it('leaves records of another year as they are', async ({ backfill }) => {
     await backfill.events.insertMany([
       event(ACCREDITED, 1),
-      event(ACCREDITED, 1, 2027)
+      event(ACCREDITED, 2, 2027)
     ])
 
     await backfill.run(false)
@@ -213,34 +211,19 @@ describe('backfillLedgerYear', () => {
     expect(await yearsOf(backfill.events)).toEqual([2026, 2027])
   })
 
-  it.for([
-    { mode: 'a dry run', isDryRun: true },
-    { mode: 'a backfill', isDryRun: false }
-  ])(
-    'on $mode, leaves a ledger that already holds 2026 events unplaced and names it at error level',
-    async ({ isDryRun }, { backfill }) => {
-      await backfill.events.insertMany([
-        event(ACCREDITED, 1),
-        event(ACCREDITED, 1, 2026),
-        event(REGISTERED_ONLY, 1)
-      ])
+  it('places a ledger whose events for 2026 follow yearless ones', async ({
+    backfill
+  }) => {
+    await backfill.events.insertMany([
+      event(ACCREDITED, 1),
+      event(ACCREDITED, 2, 2026)
+    ])
 
-      const result = await backfill.run(isDryRun)
+    const result = await backfill.run(false)
 
-      expect(result).toMatchObject({ ledgers: 1, events: 1, unplaced: 1 })
-      expect(
-        await backfill.events.findOne({
-          number: 1,
-          ...ACCREDITED,
-          year: { $exists: false }
-        })
-      ).not.toBeNull()
-      expect(backfill.logger.error).toHaveBeenCalledWith({
-        message:
-          'Ledger year backfill cannot place ledger organisationNumber=500123 registrationNumber=R26SR500123PL accreditationNumber=A26SR500123PL: it holds events for 2026 alongside events without a year'
-      })
-    }
-  )
+    expect(result).toMatchObject({ ledgers: 1, events: 1, rowStates: 0 })
+    expect(await yearsOf(backfill.events)).toEqual([2026, 2026])
+  })
 
   it('counts a ledger it fails to write and carries on with the rest', async ({
     backfill

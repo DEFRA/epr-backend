@@ -1,5 +1,5 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber, RequiredNumbers} from '#domain/organisations/numbers.js' */
 /**
  * Storage-level port for the waste balance event ledger.
  *
@@ -26,10 +26,9 @@
 const describeLedger = ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber,
-  year
+  accreditationNumber
 }) =>
-  `organisation ${organisationNumber} registration ${registrationNumber} accreditation ${accreditationNumber} year ${year}`
+  `organisation ${organisationNumber} registration ${registrationNumber} accreditation ${accreditationNumber}`
 
 /**
  * Raised by `appendEvents` when the slot a position addresses is already
@@ -111,7 +110,7 @@ export class LedgerSequenceError extends Error {
  * in that partition.
  *
  * @typedef {Object} LatestSubmittedSummaryLogPerLedger
- * @property {WasteBalanceLedgerId} ledgerId
+ * @property {RequiredNumbers} ledgerId
  * @property {SummaryLogFileId} summaryLogId
  */
 
@@ -123,20 +122,20 @@ export class LedgerSequenceError extends Error {
  * reporting query, which scans partitions rather than naming one.
  *
  * @typedef {Object} WasteBalanceLedgerRepository
- * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent | null>} findLatestInLedger
+ * @property {(ledgerId: RequiredNumbers) => Promise<LedgerEvent | null>} findLatestInLedger
  *   Return the highest-numbered event for the ledger, or `null`
  *   if none exist.
- * @property {(ledgerIds: WasteBalanceLedgerId[]) => Promise<LedgerEvent[]>} findLatestInLedgers
+ * @property {(ledgerIds: RequiredNumbers[]) => Promise<LedgerEvent[]>} findLatestInLedgers
  *   Return the highest-numbered event of each named ledger that has events.
  *   Order is unspecified.
- * @property {(ledgerId: WasteBalanceLedgerId, kind: import('./ledger-schema.js').LedgerEventKind) => Promise<LedgerEvent | null>} findLatestInLedgerByKind
+ * @property {(ledgerId: RequiredNumbers, kind: import('./ledger-schema.js').LedgerEventKind) => Promise<LedgerEvent | null>} findLatestInLedgerByKind
  *   Return the highest-numbered event of the given kind for the ledger,
  *   or `null` if none of that kind exist.
- * @property {(ledgerId: WasteBalanceLedgerId, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>} findEventsByPrnIdAfter
+ * @property {(ledgerId: RequiredNumbers, prnId: string, afterNumber: number) => Promise<LedgerEvent[]>} findEventsByPrnIdAfter
  *   Return events referencing the given `prnId` in `payload.prnId` within
  *   the specified ledger, with `number > afterNumber`, ordered by
  *   `number` ascending.
- * @property {(ledgerId: WasteBalanceLedgerId) => Promise<LedgerEvent[]>} findAllInLedger
+ * @property {(ledgerId: RequiredNumbers) => Promise<LedgerEvent[]>} findAllInLedger
  *   Return all events for the given ledger, ordered by `number`
  *   ascending. Returns an empty array if the ledger has no events.
  * @property {() => Promise<LatestSubmittedSummaryLogPerLedger[]>} findLatestSubmittedSummaryLogPerLedger
@@ -145,7 +144,7 @@ export class LedgerSequenceError extends Error {
  *   the highest-numbered such event in that partition. Registered-only
  *   partitions appear with `accreditationNumber: null`; partitions with no
  *   submitted summary log never appear. Order is unspecified.
- * @property {(ledgerId: WasteBalanceLedgerId) => Promise<number>} deleteAllInLedger
+ * @property {(ledgerId: RequiredNumbers) => Promise<number>} deleteAllInLedger
  *   Migration PAE-1382: delete all events for the given ledger.
  *   Returns the number of deleted events. No-op on empty ledger.
  * @property {(events: LedgerEventInsert[]) => Promise<LedgerEvent[]>} appendEvents
