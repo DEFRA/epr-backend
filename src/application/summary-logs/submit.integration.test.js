@@ -461,7 +461,7 @@ describe('submitSummaryLog resubmission flag source', () => {
 describe('submitSummaryLog stale flagging', () => {
   /**
    * Submits a log over one active report, through the real
-   * summary-log-uploaded handler, and says whether the report went stale.
+   * summary-log-uploaded handler, and returns the report and the log.
    *
    * @param {(summaryLog: SummaryLog) => Partial<CreateReportParams>} reportOverrides
    */
@@ -483,30 +483,40 @@ describe('submitSummaryLog stale flagging', () => {
       })
     })
 
-    const report = await reportsRepository.findReportById(reportId)
-    return report.stale !== undefined
+    return {
+      report: await reportsRepository.findReportById(reportId),
+      summaryLog
+    }
   }
 
   it('marks stale an active report for the summary log year', async () => {
-    expect(await submitOverActiveReport(({ year }) => ({ year }))).toBe(true)
+    const { report, summaryLog } = await submitOverActiveReport(({ year }) => ({
+      year
+    }))
+
+    expect(report.stale?.summaryLogChanged?.summaryLogId).toBe(
+      summaryLog.file.id
+    )
   })
 
   it('leaves alone an active report for a different year', async () => {
-    expect(
-      await submitOverActiveReport(({ year }) => ({ year: toYear(year - 1) }))
-    ).toBe(false)
+    const { report } = await submitOverActiveReport(({ year }) => ({
+      year: toYear(year - 1)
+    }))
+
+    expect(report.stale).toBeUndefined()
   })
 
   it('leaves alone an active report already built from the summary log being submitted', async () => {
-    expect(
-      await submitOverActiveReport(({ year, file }) => ({
-        year,
-        source: {
-          summaryLogId: file.id,
-          lastUploadedAt: '2099-01-01T00:00:00.000Z'
-        }
-      }))
-    ).toBe(false)
+    const { report } = await submitOverActiveReport(({ year, file }) => ({
+      year,
+      source: {
+        summaryLogId: file.id,
+        lastUploadedAt: '2099-01-01T00:00:00.000Z'
+      }
+    }))
+
+    expect(report.stale).toBeUndefined()
   })
 })
 

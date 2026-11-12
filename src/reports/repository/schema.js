@@ -246,6 +246,12 @@ export const markActiveReportsStaleSchema = Joi.object({
   uploadedAt: Joi.string().isoDate().required()
 })
 
+export const hasReportSubmittedSinceSchema = Joi.object({
+  ...registrationKeySchema,
+  year: YEAR_SCHEMA,
+  since: Joi.string().isoDate().required()
+})
+
 export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({
   ...registrationKeySchema,
   year: YEAR_SCHEMA,

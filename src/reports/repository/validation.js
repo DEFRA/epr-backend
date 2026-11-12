@@ -8,6 +8,7 @@ import {
   findPeriodicReportsForYearSchema,
   findReportByIdSchema,
   markActiveReportsStaleSchema,
+  hasReportSubmittedSinceSchema,
   markActiveReportsStaleForPrnCancellationSchema,
   markSubmittedReportsRequiringResubmissionSchema,
   markSubmittedReportRequiringResubmissionByOperatorSchema
@@ -134,6 +135,22 @@ export const validateFindReportById = (reportId) => {
  */
 export const validateMarkActiveReportsStale = (params) => {
   const { error, value } = markActiveReportsStaleSchema.validate(params, {
+    abortEarly: false
+  })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {import('./port.js').HasReportSubmittedSinceParams} params
+ * @returns {import('./port.js').HasReportSubmittedSinceParams}
+ */
+export const validateHasReportSubmittedSince = (params) => {
+  const { error, value } = hasReportSubmittedSinceSchema.validate(params, {
     abortEarly: false
   })
 

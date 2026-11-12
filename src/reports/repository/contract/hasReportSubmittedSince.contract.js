@@ -136,5 +136,15 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
         })
       ).toBe(false)
     })
+
+    it('throws validation error without a year', async () => {
+      await expect(
+        repository.hasReportSubmittedSince({
+          organisationNumber,
+          registrationNumber,
+          since: BEFORE
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+    })
   })
 }

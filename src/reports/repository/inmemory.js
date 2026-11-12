@@ -18,6 +18,7 @@ import {
   validateFindPeriodicReports,
   validateFindPeriodicReportsForYear,
   validateFindReportById,
+  validateHasReportSubmittedSince,
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
   validateMarkSubmittedReportsRequiringResubmission,
@@ -608,19 +609,19 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
  * @param {import('./port.js').HasReportSubmittedSinceParams} params
  * @returns {Promise<boolean>}
  */
-const hasReportSubmittedSince = async (
-  reports,
-  { organisationNumber, registrationNumber, year, since }
-) =>
+const hasReportSubmittedSince = async (reports, params) => {
+  const { organisationNumber, registrationNumber, year, since } =
+    validateHasReportSubmittedSince(params)
   // Both `at` and `since` are canonical `new Date().toISOString()` values, so a
   // lexical compare tracks chronological order (the ISO invariant this codebase
   // relies on throughout).
-  [...reports.values()].some(
+  return [...reports.values()].some(
     (report) =>
       isForRegistration(report, { organisationNumber, registrationNumber }) &&
       report.year === year &&
       report.status.submitted?.at > since
   )
+}
 
 /**
  * Create an in-memory reports repository.

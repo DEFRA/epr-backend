@@ -9,6 +9,7 @@ import {
   validateFindPeriodicReports,
   validateFindPeriodicReportsForYear,
   validateFindReportById,
+  validateHasReportSubmittedSince,
   validateUpdateReport,
   validateUpdateReportStatus
 } from './validation.js'
@@ -422,10 +423,9 @@ const performFindPeriodicReportsForYear = async (db, params) => {
  * @param {import('./port.js').HasReportSubmittedSinceParams} params
  * @returns {Promise<boolean>}
  */
-const performHasReportSubmittedSince = async (
-  db,
-  { organisationNumber, registrationNumber, year, since }
-) => {
+const performHasReportSubmittedSince = async (db, params) => {
+  const { organisationNumber, registrationNumber, year, since } =
+    validateHasReportSubmittedSince(params)
   // Both `at` and `since` are canonical `new Date().toISOString()` values, so the
   // `$gt` string compare tracks chronological order (the ISO invariant this
   // codebase relies on throughout).
