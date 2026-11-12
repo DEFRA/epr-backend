@@ -1,12 +1,59 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   config,
+  getConfig,
   isLocalEnvironment,
   isProductionEnvironment
 } from '#root/config.js'
 
+const NEXT_YEAR_IN_PROD_ERROR =
+  'OPEN_NEXT_YEAR must not be true when ENVIRONMENT is prod'
+
 describe('config', () => {
+  describe('opening next year', () => {
+    const loadConfig = ({ environment, openNextYear }) => {
+      vi.stubEnv('ENVIRONMENT', environment)
+      vi.stubEnv('OPEN_NEXT_YEAR', openNextYear)
+      vi.resetModules()
+      return import('#root/config.js')
+    }
+
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
+    it('should refuse to load in prod with next year open', async () => {
+      await expect(
+        loadConfig({ environment: 'prod', openNextYear: 'true' })
+      ).rejects.toThrow(NEXT_YEAR_IN_PROD_ERROR)
+    })
+
+    it('should load in prod with next year closed', async () => {
+      const loaded = await loadConfig({
+        environment: 'prod',
+        openNextYear: 'false'
+      })
+
+      expect(loaded.config.get('openNextYear')).toBe(false)
+    })
+
+    it('should load outside prod with next year open', async () => {
+      const loaded = await loadConfig({
+        environment: 'dev',
+        openNextYear: 'true'
+      })
+
+      expect(loaded.config.get('openNextYear')).toBe(true)
+    })
+
+    it('should refuse to build a prod config with next year open', () => {
+      expect(() =>
+        getConfig({ cdpEnvironment: 'prod', openNextYear: true })
+      ).toThrow(NEXT_YEAR_IN_PROD_ERROR)
+    })
+  })
+
   describe('#isProductionEnvironment', () => {
     afterEach(() => {
       config.reset('cdpEnvironment')
