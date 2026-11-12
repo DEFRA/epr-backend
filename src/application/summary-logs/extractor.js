@@ -2,10 +2,7 @@ import {
   parse,
   PARSE_DEFAULTS
 } from '#adapters/parsers/summary-logs/exceljs-parser.js'
-import {
-  PROCESSING_TYPE_TABLES,
-  aggregateUnfilledValues
-} from '#domain/summary-logs/table-schemas/index.js'
+import { unfilledValuesForYear } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
@@ -19,15 +16,16 @@ import {
 const FILE_PROCESSING_CATEGORY = 'file-processing'
 
 /**
- * Summary log spreadsheet parse options.
- * Uses parser defaults with summary-log-specific worksheet requirement
- * and per-column placeholder normalisation from domain schemas.
+ * Summary log spreadsheet parse options: parser defaults with the Cover
+ * worksheet required and the placeholders of the summary log year's tables.
+ *
+ * @param {SummaryLog} summaryLog
  */
-const SUMMARY_LOG_PARSE_OPTIONS = {
+const parseOptionsFor = ({ year }) => ({
   requiredWorksheet: 'Cover',
   ...PARSE_DEFAULTS,
-  unfilledValues: aggregateUnfilledValues(PROCESSING_TYPE_TABLES)
-}
+  unfilledValues: unfilledValuesForYear(year)
+})
 
 /**
  * @param {TypedLogger} logger
@@ -116,7 +114,7 @@ export const createSummaryLogExtractor = ({ uploadsRepository }) => {
 
       const parsedData = await parse(
         summaryLogBuffer,
-        SUMMARY_LOG_PARSE_OPTIONS
+        parseOptionsFor(summaryLog)
       )
 
       logParsingSummary(logger, parsedData)

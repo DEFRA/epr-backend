@@ -96,7 +96,7 @@ describe('Advanced validation scenarios', () => {
                         rowNumber: 8,
                         values: [
                           3000,
-                          '2025-05-28T00:00:00.000Z',
+                          '2026-05-28T00:00:00.000Z',
                           1001,
                           0.5,
                           500.5,
@@ -216,7 +216,7 @@ describe('Advanced validation scenarios', () => {
                 location: { sheet: 'Received', row: 7, column: 'B' },
                 headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
                 rows: [
-                  { rowNumber: 8, values: [1000, '2025-05-28T00:00:00.000Z'] }
+                  { rowNumber: 8, values: [1000, '2026-05-28T00:00:00.000Z'] }
                 ]
               }
             }
@@ -980,7 +980,7 @@ describe('Advanced validation scenarios', () => {
             [table]: tableOf('Received', [
               {
                 ...createRegisteredOnlyReceivedRow(
-                  { rowId: 1001, month: '30-06-2025' },
+                  { rowId: 1001, month: '30-06-2026' },
                   { monthHeader, tonnageHeader }
                 ),
                 NET_WEIGHT: -1,

@@ -57,8 +57,8 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 describe('Submission and placeholder tests', () => {
   let organisationId
   let registrationId
-  const VALID_FROM = '2025-01-01'
-  const VALID_TO = '2025-12-31'
+  const VALID_FROM = '2026-01-01'
+  const VALID_TO = '2026-12-31'
 
   const { getServer } = setupAuthContext()
 
@@ -111,15 +111,15 @@ describe('Submission and placeholder tests', () => {
         accreditations: [
           servedTestAccreditation({
             id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-2025-001'),
+            accreditationNumber: toAccreditationNumber('ACC-2026-001'),
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             validFrom: VALID_FROM,
             validTo: VALID_TO,
             submittedToRegulator: 'ea',
             statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+              { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+              { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
             ]
           })
         ]
@@ -149,7 +149,7 @@ describe('Submission and placeholder tests', () => {
           location: { sheet: 'Data', row: 4, column: 'B' }
         },
         ACCREDITATION_NUMBER: {
-          value: 'ACC-2025-001',
+          value: 'ACC-2026-001',
           location: { sheet: 'Data', row: 5, column: 'B' }
         }
       }
@@ -193,7 +193,7 @@ describe('Submission and placeholder tests', () => {
               rowNumber: 8,
               values: [
                 1001,
-                '2025-01-15T00:00:00.000Z',
+                '2026-01-15T00:00:00.000Z',
                 '03 03 08',
                 'Glass - pre-sorted',
                 'No',
@@ -224,7 +224,7 @@ describe('Submission and placeholder tests', () => {
               rowNumber: 9,
               values: [
                 1002,
-                '2025-01-16T00:00:00.000Z',
+                '2026-01-16T00:00:00.000Z',
                 '03 03 08',
                 'Glass - pre-sorted',
                 'No',
@@ -264,7 +264,7 @@ describe('Submission and placeholder tests', () => {
               rowNumber: 8,
               values: [
                 1001,
-                '2025-01-15T00:00:00.000Z',
+                '2026-01-15T00:00:00.000Z',
                 '03 03 08',
                 'Glass - pre-sorted',
                 'No',
@@ -295,7 +295,7 @@ describe('Submission and placeholder tests', () => {
               rowNumber: 9,
               values: [
                 1002,
-                '2025-01-16T00:00:00.000Z',
+                '2026-01-16T00:00:00.000Z',
                 '03 03 08',
                 'Glass - pre-sorted',
                 'No',
@@ -326,7 +326,7 @@ describe('Submission and placeholder tests', () => {
               rowNumber: 10,
               values: [
                 1003,
-                '2025-01-17T00:00:00.000Z',
+                '2026-01-17T00:00:00.000Z',
                 '03 03 08',
                 'Glass - pre-sorted',
                 'No',
@@ -498,7 +498,7 @@ describe('Submission and placeholder tests', () => {
       const rowStates = await summaryLogRowStatesForRegistration({
         organisationNumber: TEST_ORGANISATION_NUMBER,
         registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
-        accreditationNumber: toAccreditationNumber('ACC-2025-001'),
+        accreditationNumber: toAccreditationNumber('ACC-2026-001'),
         year: UPLOAD_YEAR,
         ledgerRepository,
         summaryLogRowStatesRepository
@@ -531,7 +531,7 @@ describe('Submission and placeholder tests', () => {
 
       expect(response.statusCode).toBe(200)
       const payload = JSON.parse(response.payload)
-      expect(payload.accreditationNumber).toBe('ACC-2025-001')
+      expect(payload.accreditationNumber).toBe('ACC-2026-001')
     })
 
     it('should allow a service maintainer to download the submitted file', async () => {
@@ -641,7 +641,7 @@ describe('Submission and placeholder tests', () => {
 
       // Row 7: valid row
       worksheet.getCell('B7').value = 10000000001
-      worksheet.getCell('C7').value = new Date('2025-05-28')
+      worksheet.getCell('C7').value = new Date('2026-05-28')
       worksheet.getCell('D7').value = '03 03 08'
       worksheet.getCell('E7').value = 'Glass - pre-sorted'
       worksheet.getCell('F7').value = 'No'
@@ -669,7 +669,7 @@ describe('Submission and placeholder tests', () => {
 
       // Row 8: placeholder row (partially filled with placeholders)
       worksheet.getCell('B8').value = 10000000002
-      worksheet.getCell('C8').value = new Date('2025-05-29')
+      worksheet.getCell('C8').value = new Date('2026-05-29')
       worksheet.getCell('D8').value = 'Choose option'
       worksheet.getCell('E8').value = 'Choose option'
       worksheet.getCell('F8').value = 'Choose option'
@@ -782,8 +782,8 @@ describe('Submission and placeholder tests', () => {
             reprocessingType: 'input',
             submittedToRegulator: 'ea',
             statusHistory: [
-              { status: 'created', updatedAt: '2024-01-01' },
-              { status: 'approved', updatedAt: '2024-02-01' }
+              { status: 'created', updatedAt: '2025-01-01' },
+              { status: 'approved', updatedAt: '2025-02-01' }
             ]
           })
         ]

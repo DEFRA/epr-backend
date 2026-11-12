@@ -8,6 +8,8 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
@@ -15,6 +17,11 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log-id'
 const PREVIOUS_SUBMITTED_AT = new Date('2024-01-15T10:00:00.000Z')
+
+const REPROCESSOR_INPUT_TABLE_SCHEMAS = getTemplate(
+  DEFAULT_TEMPLATE_YEAR,
+  PROCESSING_TYPES.REPROCESSOR_INPUT
+).tableSchemas
 
 describe('validateRowContinuity', () => {
   /**
@@ -82,6 +89,7 @@ describe('validateRowContinuity', () => {
   describe('first-time uploads (no previously submitted summary log)', () => {
     it('returns valid result when the registration has never submitted', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [createValidatedWasteRecord({ rowId: 'row-1' })],
         previousSubmission: null
       })
@@ -95,6 +103,7 @@ describe('validateRowContinuity', () => {
   describe('subsequent uploads with all rows present', () => {
     it('returns valid result when all previously submitted rows are present', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [
           createValidatedWasteRecord({ rowId: 'row-1' }),
           createValidatedWasteRecord({ rowId: 'row-2' })
@@ -112,6 +121,7 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when previously submitted rows are present with updated values', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [createValidatedWasteRecord({ rowId: 'row-1' })],
         previousSubmission: createPreviousSubmission([
           createWasteRecordState('row-1')
@@ -126,6 +136,7 @@ describe('validateRowContinuity', () => {
   describe('subsequent uploads with new rows added', () => {
     it('returns valid result when new rows are added alongside previously submitted rows', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [
           createValidatedWasteRecord({ rowId: 'row-1' }),
           createValidatedWasteRecord({ rowId: 'row-2' }),
@@ -143,6 +154,7 @@ describe('validateRowContinuity', () => {
 
     it('returns valid result when only new rows are added', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [
           createValidatedWasteRecord({ rowId: 'row-1' }),
           createValidatedWasteRecord({ rowId: 'row-3' }),
@@ -161,6 +173,7 @@ describe('validateRowContinuity', () => {
   describe('subsequent uploads with missing rows', () => {
     it('returns fatal business error when a single row is missing', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [createValidatedWasteRecord({ rowId: 'row-2' })],
         previousSubmission: createPreviousSubmission([
           createWasteRecordState('row-1'),
@@ -183,6 +196,7 @@ describe('validateRowContinuity', () => {
 
     it('returns fatal errors for multiple missing rows', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [createValidatedWasteRecord({ rowId: 'row-2' })],
         previousSubmission: createPreviousSubmission([
           createWasteRecordState('row-1'),
@@ -205,6 +219,7 @@ describe('validateRowContinuity', () => {
 
     it('returns fatal error when all previously submitted rows are removed', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [createValidatedWasteRecord({ rowId: 'row-3' })],
         previousSubmission: createPreviousSubmission([
           createWasteRecordState('row-1'),
@@ -223,6 +238,7 @@ describe('validateRowContinuity', () => {
   describe('edge cases', () => {
     it('returns valid result when upload has no data rows and there is no previous submission', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [],
         previousSubmission: null
       })
@@ -233,6 +249,7 @@ describe('validateRowContinuity', () => {
 
     it('returns fatal error when upload has no data rows but a previous submission exists', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [],
         previousSubmission: createPreviousSubmission([
           createWasteRecordState('row-1'),
@@ -249,6 +266,7 @@ describe('validateRowContinuity', () => {
 
     it('names the previous summary log and when it was submitted in the error context', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [],
         previousSubmission: createPreviousSubmission([
           createWasteRecordState('row-1')
@@ -268,6 +286,7 @@ describe('validateRowContinuity', () => {
   describe('different waste record types', () => {
     it('validates rows across different waste record types', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [
           createValidatedWasteRecord({ rowId: 'row-1' }),
           createValidatedWasteRecord({ rowId: 'row-2' })
@@ -290,6 +309,7 @@ describe('validateRowContinuity', () => {
 
     it('treats the same rowId under a different waste record type as a distinct row', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [
           createValidatedWasteRecord({
             rowId: 'row-1',
@@ -310,32 +330,46 @@ describe('validateRowContinuity', () => {
       expect(fatals[0]?.context?.location?.sheet).toBe('Processed')
     })
 
-    it('correctly maps different waste record types to sheets and tables from the schema registry', () => {
+    it('correctly maps different waste record types to sheets and tables from the upload template table schemas', () => {
+      const exporterTableSchemas = getTemplate(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.EXPORTER
+      ).tableSchemas
       const testCases = [
         {
+          tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
           type: WASTE_RECORD_TYPE.RECEIVED,
           expectedSheet: 'Received',
           expectedTable: 'RECEIVED_LOADS_FOR_REPROCESSING'
         },
         {
+          tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
           type: WASTE_RECORD_TYPE.PROCESSED,
           expectedSheet: 'Processed',
           expectedTable: 'REPROCESSED_LOADS'
         },
         {
+          tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
           type: WASTE_RECORD_TYPE.SENT_ON,
           expectedSheet: 'Sent on',
           expectedTable: 'SENT_ON_LOADS'
         },
         {
+          tableSchemas: exporterTableSchemas,
           type: WASTE_RECORD_TYPE.EXPORTED,
           expectedSheet: 'Exported',
           expectedTable: 'RECEIVED_LOADS_FOR_EXPORT'
         }
       ]
 
-      for (const { type, expectedSheet, expectedTable } of testCases) {
+      for (const {
+        tableSchemas,
+        type,
+        expectedSheet,
+        expectedTable
+      } of testCases) {
         const result = validateRowContinuity({
+          tableSchemas,
           wasteRecords: [],
           previousSubmission: createPreviousSubmission([
             createWasteRecordState('row-1', type)
@@ -352,6 +386,7 @@ describe('validateRowContinuity', () => {
   describe('idempotent uploads (same file uploaded twice)', () => {
     it('returns valid result when exact same data is uploaded again', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [
           createValidatedWasteRecord({ rowId: 'row-1' }),
           createValidatedWasteRecord({ rowId: 'row-2' })
@@ -370,6 +405,7 @@ describe('validateRowContinuity', () => {
   describe('unknown waste record types', () => {
     it('handles unknown waste record type with fallback sheet and table names', () => {
       const result = validateRowContinuity({
+        tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,
         wasteRecords: [],
         previousSubmission: createPreviousSubmission([
           createWasteRecordState(

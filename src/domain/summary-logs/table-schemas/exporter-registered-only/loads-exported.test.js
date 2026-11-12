@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TABLE_SCHEMAS } from './index.js'
-
-const { LOADS_EXPORTED } = TABLE_SCHEMAS
+import { LOADS_EXPORTED } from './loads-exported.js'
 
 describe('LOADS_EXPORTED (EXPORTER_REGISTERED_ONLY)', () => {
   const schema = LOADS_EXPORTED

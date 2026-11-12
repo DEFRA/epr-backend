@@ -140,28 +140,28 @@ describe('loadsByReportingPeriod population at validate time', () => {
     })
   }
 
-  // Submits a January 2025 monthly report so loads dated in January fall into a
+  // Submits a January 2026 monthly report so loads dated in January fall into a
   // closed reporting period. The org is accredited, so its cadence is monthly.
-  const closeJanuary2025 = (env) =>
+  const closeJanuary2026 = (env) =>
     createAndSubmitReport(env.reportsRepository, {
       ...env.reportKey,
-      year: toYear(2025),
+      year: toYear(2026),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.January,
-      startDate: calendarDate('2025-01-01'),
-      endDate: calendarDate('2025-01-31'),
-      dueDate: calendarDate('2025-02-20')
+      startDate: calendarDate('2026-01-01'),
+      endDate: calendarDate('2026-01-31'),
+      dueDate: calendarDate('2026-02-20')
     })
 
-  const closeFebruary2025 = (env) =>
+  const closeFebruary2026 = (env) =>
     createAndSubmitReport(env.reportsRepository, {
       ...env.reportKey,
-      year: toYear(2025),
+      year: toYear(2026),
       cadence: 'monthly',
       period: MONTHLY_PERIODS.February,
-      startDate: calendarDate('2025-02-01'),
-      endDate: calendarDate('2025-02-28'),
-      dueDate: calendarDate('2025-03-20')
+      startDate: calendarDate('2026-02-01'),
+      endDate: calendarDate('2026-02-28'),
+      dueDate: calendarDate('2026-03-20')
     })
 
   const emptyChange = () => ({
@@ -174,8 +174,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
       processingType: 'exporter'
     })
 
-    // All loads export on 2025-01-20 (an open period, since no reports are
-    // submitted). Row 100t uses OSR_ID 100, which is approved from 2025-01-01,
+    // All loads export on 2026-01-20 (an open period, since no reports are
+    // submitted). Row 100t uses OSR_ID 100, which is approved from 2026-01-01,
     // so it counts toward the predicted waste-balance delta. Row 200t uses
     // OSR_ID 999, which is not in the registration's overseas sites at all, so
     // it is excluded as ORS_NOT_FOUND. Row 300t uses OSR_ID 200, a registered
@@ -353,9 +353,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
       organisationId,
       registrationId
     })
-    await closeJanuary2025(env)
+    await closeJanuary2026(env)
 
-    // The load's export dates are all in January 2025, which is now closed.
+    // The load's export dates are all in January 2026, which is now closed.
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-closed',
@@ -390,7 +390,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       organisationId,
       registrationId
     })
-    await closeJanuary2025(env)
+    await closeJanuary2026(env)
 
     // The flag is off (default) at validate time, but closedPeriods must still
     // be persisted so it survives to submit time when the flag flips on.
@@ -402,7 +402,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     )
 
     expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
+      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January }
     ])
   })
 
@@ -410,7 +410,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'
     })
-    await closeJanuary2025(env)
+    await closeJanuary2026(env)
 
     await upload(
       env,
@@ -421,9 +421,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1001,
           osrId: 100,
           exportTonnage: 100,
-          dateReceived: '2025-01-15T00:00:00.000Z',
-          dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
-          exportDate: '2025-01-20T00:00:00.000Z'
+          dateReceived: '2026-01-15T00:00:00.000Z',
+          dateReceivedByOsr: '2026-01-18T00:00:00.000Z',
+          exportDate: '2026-01-20T00:00:00.000Z'
         }
       ])
     )
@@ -438,15 +438,15 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1001,
           osrId: 100,
           exportTonnage: 100,
-          dateReceived: '2024-12-15T00:00:00.000Z',
-          dateReceivedByOsr: '2024-12-18T00:00:00.000Z',
-          exportDate: '2024-12-20T00:00:00.000Z'
+          dateReceived: '2025-12-15T00:00:00.000Z',
+          dateReceivedByOsr: '2025-12-18T00:00:00.000Z',
+          exportDate: '2025-12-20T00:00:00.000Z'
         }
       ])
     )
 
     expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
+      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January }
     ])
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting
@@ -472,9 +472,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
   it('lists a load added to a closed period from before the accreditation window', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
-      accreditationValidFrom: '2025-01-10'
+      accreditationValidFrom: '2026-01-10'
     })
-    await closeJanuary2025(env)
+    await closeJanuary2026(env)
 
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
@@ -485,9 +485,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1002,
           osrId: 100,
           exportTonnage: 50,
-          dateReceived: '2025-01-05T00:00:00.000Z',
-          dateReceivedByOsr: '2025-01-06T00:00:00.000Z',
-          exportDate: '2025-01-07T00:00:00.000Z'
+          dateReceived: '2026-01-05T00:00:00.000Z',
+          dateReceivedByOsr: '2026-01-06T00:00:00.000Z',
+          exportDate: '2026-01-07T00:00:00.000Z'
         }
       ])
     )
@@ -509,7 +509,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     })
     expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
     expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January }
+      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January }
     ])
   })
 
@@ -527,9 +527,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1003,
           osrId: 100,
           exportTonnage: 80,
-          dateReceived: '2025-02-15T00:00:00.000Z',
-          dateReceivedByOsr: '2025-02-18T00:00:00.000Z',
-          exportDate: '2025-02-20T00:00:00.000Z'
+          dateReceived: '2026-02-15T00:00:00.000Z',
+          dateReceivedByOsr: '2026-02-18T00:00:00.000Z',
+          exportDate: '2026-02-20T00:00:00.000Z'
         }
       ])
     )
@@ -544,9 +544,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1003,
           osrId: 100,
           exportTonnage: 80,
-          dateReceived: '2024-12-15T00:00:00.000Z',
-          dateReceivedByOsr: '2024-12-18T00:00:00.000Z',
-          exportDate: '2024-12-20T00:00:00.000Z'
+          dateReceived: '2025-12-15T00:00:00.000Z',
+          dateReceivedByOsr: '2025-12-18T00:00:00.000Z',
+          exportDate: '2025-12-20T00:00:00.000Z'
         }
       ])
     )
@@ -580,7 +580,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       organisationId,
       registrationId
     })
-    await closeJanuary2025(env)
+    await closeJanuary2026(env)
 
     // DATE_RECEIVED_FOR_EXPORT is in closed January; DATE_OF_EXPORT is in open
     // February. Either date in a closed period forces the load closed.
@@ -593,9 +593,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1001,
           osrId: 100,
           exportTonnage: 100,
-          dateReceived: '2025-01-15T00:00:00.000Z',
-          dateReceivedByOsr: '2025-02-08T00:00:00.000Z',
-          exportDate: '2025-02-10T00:00:00.000Z'
+          dateReceived: '2026-01-15T00:00:00.000Z',
+          dateReceivedByOsr: '2026-02-08T00:00:00.000Z',
+          exportDate: '2026-02-10T00:00:00.000Z'
         }
       ])
     )
@@ -612,9 +612,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
     rowId: 1001,
     osrId: 100,
     exportTonnage: 8,
-    dateReceived: '2025-01-15T00:00:00.000Z',
-    dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
-    exportDate: '2025-01-26T00:00:00.000Z',
+    dateReceived: '2026-01-15T00:00:00.000Z',
+    dateReceivedByOsr: '2026-01-18T00:00:00.000Z',
+    exportDate: '2026-01-26T00:00:00.000Z',
     wasteRefused: 'Yes'
   }
 
@@ -622,8 +622,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'
     })
-    await closeJanuary2025(env)
-    await closeFebruary2025(env)
+    await closeJanuary2026(env)
+    await closeFebruary2026(env)
 
     await upload(
       env,
@@ -638,13 +638,13 @@ describe('loadsByReportingPeriod population at validate time', () => {
       'sl-repatriation-reupload',
       'file-repatriation-reupload',
       createUploadData([
-        { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+        { ...refusedJanuaryExport, dateRepatriated: '2026-02-10' }
       ])
     )
 
     expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.January },
-      { year: 2025, cadence: 'monthly', period: MONTHLY_PERIODS.February }
+      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January },
+      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.February }
     ])
   })
 
@@ -652,14 +652,14 @@ describe('loadsByReportingPeriod population at validate time', () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'
     })
-    await closeFebruary2025(env)
+    await closeFebruary2026(env)
 
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-repatriation-closed-wins',
       'file-repatriation-closed-wins',
       createUploadData([
-        { ...refusedJanuaryExport, dateRepatriated: '2025-02-10' }
+        { ...refusedJanuaryExport, dateRepatriated: '2026-02-10' }
       ])
     )
 
@@ -765,7 +765,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter'
     })
-    await closeJanuary2025(env)
+    await closeJanuary2026(env)
 
     // Establish the load wholly within closed January.
     await upload(
@@ -777,9 +777,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1001,
           osrId: 100,
           exportTonnage: 100,
-          dateReceived: '2025-01-15T00:00:00.000Z',
-          dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
-          exportDate: '2025-01-20T00:00:00.000Z'
+          dateReceived: '2026-01-15T00:00:00.000Z',
+          dateReceivedByOsr: '2026-01-18T00:00:00.000Z',
+          exportDate: '2026-01-20T00:00:00.000Z'
         }
       ])
     )
@@ -795,9 +795,9 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1001,
           osrId: 100,
           exportTonnage: 100,
-          dateReceived: '2025-02-15T00:00:00.000Z',
-          dateReceivedByOsr: '2025-02-18T00:00:00.000Z',
-          exportDate: '2025-02-20T00:00:00.000Z'
+          dateReceived: '2026-02-15T00:00:00.000Z',
+          dateReceivedByOsr: '2026-02-18T00:00:00.000Z',
+          exportDate: '2026-02-20T00:00:00.000Z'
         }
       ])
     )
@@ -848,7 +848,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1001,
           osrId: 100,
           exportTonnage: 100,
-          dateReceived: '2025-01-15T00:00:00.000Z'
+          dateReceived: '2026-01-15T00:00:00.000Z'
         }
       ])
     )
@@ -866,7 +866,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1001,
           osrId: 100,
           exportTonnage: 100,
-          dateReceived: '2025-01-16T00:00:00.000Z'
+          dateReceived: '2026-01-16T00:00:00.000Z'
         }
       ])
     )
@@ -955,16 +955,16 @@ describe('loadsByReportingPeriod population at validate time', () => {
       registrationId
     })
 
-    // Submit Q1 2025 so a load received in January is closed, while a load
+    // Submit Q1 2026 so a load received in January is closed, while a load
     // received in April (Q2) stays open.
     await createAndSubmitReport(env.reportsRepository, {
       ...env.reportKey,
-      year: toYear(2025),
+      year: toYear(2026),
       cadence: 'quarterly',
       period: QUARTERLY_PERIODS.Q1,
-      startDate: calendarDate('2025-01-01'),
-      endDate: calendarDate('2025-03-31'),
-      dueDate: calendarDate('2025-05-20')
+      startDate: calendarDate('2026-01-01'),
+      endDate: calendarDate('2026-03-31'),
+      dueDate: calendarDate('2026-05-20')
     })
 
     const loadsByReportingPeriod = await uploadAndValidate(
@@ -972,8 +972,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
       'sl-quarterly',
       'file-quarterly',
       createRegisteredOnlyUploadData([
-        { rowId: 1001, month: '2025-01-01' },
-        { rowId: 1002, month: '2025-04-01' }
+        { rowId: 1001, month: '2026-01-01' },
+        { rowId: 1002, month: '2026-04-01' }
       ]),
       registeredOnlyMeta
     )
@@ -1007,7 +1007,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       {
         RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
           createRegisteredOnlyReceivedRow(
-            { rowId: 1001, month: '2025-01-01' },
+            { rowId: 1001, month: '2026-01-01' },
             {
               monthHeader: 'MONTH_RECEIVED_FOR_EXPORT',
               tonnageHeader: 'TONNAGE_RECEIVED_FOR_EXPORT'
@@ -1018,7 +1018,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
           {
             ROW_ID: 2001,
             TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9.975,
-            DATE_OF_EXPORT: '2025-01-20T00:00:00.000Z',
+            DATE_OF_EXPORT: '2026-01-20T00:00:00.000Z',
             OSR_ID: 100,
             BASEL_EXPORT_CODE: 'B3020',
             WAS_THE_WASTE_REFUSED: 'No',
@@ -1066,8 +1066,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
     })
 
     const registeredOnlyRows = createRegisteredOnlyUploadData([
-      { rowId: 1001, month: '2025-01-01' },
-      { rowId: 1002, month: '2025-04-01' }
+      { rowId: 1001, month: '2026-01-01' },
+      { rowId: 1002, month: '2026-04-01' }
     ])
 
     await upload(
