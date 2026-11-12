@@ -13,8 +13,10 @@ import {
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
+import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
+import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { orsImportCreatePath } from './post-import.js'
 
@@ -127,7 +129,7 @@ describe(`${orsImportCreatePath} route`, () => {
       })
 
       it('initiates upload via CDP Uploader', async () => {
-        await server.inject({
+        const response = await server.inject({
           method: 'POST',
           url: '/v1/overseas-sites/imports',
           ...asServiceMaintainer(),
@@ -136,13 +138,15 @@ describe(`${orsImportCreatePath} route`, () => {
           }
         })
 
-        expect(uploadsRepository.orsInitiateCalls).toHaveLength(1)
-        const call = uploadsRepository.orsInitiateCalls[0]
-        expect(call.redirectUrl).toBe(
-          'https://admin.test/overseas-sites/upload'
-        )
-        expect(call.callbackUrl).toContain('/v1/overseas-sites/imports/')
-        expect(call.callbackUrl).toContain('/upload-completed')
+        const { id } = JSON.parse(response.payload)
+
+        expect(uploadsRepository.orsInitiateCalls).toStrictEqual([
+          {
+            importId: id,
+            redirectUrl: 'https://admin.test/overseas-sites/upload',
+            callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`/v1/overseas-sites/imports/${id}/upload-completed`)}`
+          }
+        ])
       })
 
       it('resolves the redirectUrl {importId} placeholder before initiating upload', async () => {

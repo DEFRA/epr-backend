@@ -116,13 +116,53 @@ export const testUploadsRepositoryContract = (it) => {
       expect(retrievedFile.length).toBe(testFileBuffer.length)
     })
 
+    it('delivers the file under the registration upload path in the summary-log bucket', async () => {
+      const testFileBuffer = await fs.readFile(TEST_FILE_PATH)
+
+      callbackReceiver.clear()
+
+      const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
+        organisationId: 'org-loc',
+        registrationId: 'reg-loc',
+        summaryLogId: 'sl-loc',
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-loc/registrations/reg-loc/summary-logs/sl-loc/upload-completed`
+      })
+
+      await performUpload(uploadId, testFileBuffer)
+
+      const callback = await waitForCallback(callbackReceiver)
+      const { s3Bucket, s3Key } = /** @type {CallbackPayload} */ (
+        callback.payload
+      ).form.file
+
+      expect(s3Bucket).toBe('re-ex-summary-logs')
+      expect(s3Key).toMatch(
+        /^\/organisations\/org-loc\/registrations\/reg-loc\//
+      )
+    })
+
     it('returns null when file does not exist', async () => {
       const result = await uploadsRepository.findByLocation(
-        's3://non-existent-bucket/non-existent-key'
+        's3://re-ex-summary-logs/non-existent-key'
       )
 
       expect(result).toBeNull()
     })
+
+    it.for([
+      { operation: 'findByLocation' },
+      { operation: 'deleteByLocation' }
+    ])(
+      'refuses $operation outside the upload buckets',
+      async ({ operation }) => {
+        await expect(
+          uploadsRepository[operation]('s3://some-other-bucket/some-key')
+        ).rejects.toThrow(
+          'Not an upload bucket: s3://some-other-bucket/some-key'
+        )
+      }
+    )
 
     it('deletes file so subsequent retrieval returns null', async () => {
       const testFileBuffer = await fs.readFile(TEST_FILE_PATH)

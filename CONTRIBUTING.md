@@ -174,6 +174,12 @@ To run the application in `development` mode run:
 npm run dev
 ```
 
+Outside compose, the app will not start without `CDP_UPLOADER_CALLBACK_HMAC_KEY`. Locally any 64 lowercase hex characters will do:
+
+```bash
+export CDP_UPLOADER_CALLBACK_HMAC_KEY=$(openssl rand -hex 32)
+```
+
 ### Testing
 
 To test the application run:
@@ -358,7 +364,7 @@ docker build --target development --no-cache --tag epr-backend:development .
 Run:
 
 ```bash
-docker run -e PORT=3001 -p 3001:3001 epr-backend:development
+docker run -e PORT=3001 -e CDP_UPLOADER_CALLBACK_HMAC_KEY -p 3001:3001 epr-backend:development
 ```
 
 ### Production image
@@ -372,7 +378,7 @@ docker build --no-cache --tag epr-backend .
 Run:
 
 ```bash
-docker run -e PORT=3001 -p 3001:3001 epr-backend
+docker run -e PORT=3001 -e CDP_UPLOADER_CALLBACK_HMAC_KEY -p 3001:3001 epr-backend
 ```
 
 ### Docker Compose
@@ -616,6 +622,8 @@ Deployments are conducted automatically for lower environments and manually for 
 ### Secrets and Environment Variables
 
 Both secrets and environment variables are managed by CDP, speak with the engineering team to be briefed on this.
+
+`CDP_UPLOADER_CALLBACK_HMAC_KEY` is a CDP secret, set separately in each environment from `openssl rand -hex 32`. Never reuse a key across environments, or use the dev key from the compose files. Changing it rejects the callbacks of uploads already in progress.
 
 ## Demo applications
 

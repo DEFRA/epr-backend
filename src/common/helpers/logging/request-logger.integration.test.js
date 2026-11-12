@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import pino from 'pino'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -152,6 +153,44 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
     'exposes %s on the singleton logger import',
     (method) => {
       expect(logger[method]).toBeTypeOf('function')
+    }
+  )
+
+  it.for([
+    { description: 'succeeds', handler: () => 'ok' },
+    {
+      description: 'logs from its handler',
+      handler: (request) => {
+        request.logger.info({ message: 'handler entered' })
+        return 'ok'
+      }
+    },
+    {
+      description: 'is unauthorised',
+      handler: () => {
+        throw Boom.unauthorized()
+      }
+    },
+    {
+      description: 'fails',
+      handler: () => {
+        throw new Error('boom')
+      }
+    }
+  ])(
+    'should not log the query string of a request that $description',
+    async ({ handler }) => {
+      config.set('cdpEnvironment', 'dev')
+      const { server, lines } = await createLogCaptureServer()
+      server.route({ method: 'POST', path: '/test', handler })
+
+      await server.inject({
+        method: 'POST',
+        url: '/test?signature=5ec7e75160a7d0e5'
+      })
+
+      expect(lines).not.toHaveLength(0)
+      expect(lines.join('\n')).not.toContain('5ec7e75160a7d0e5')
     }
   )
 

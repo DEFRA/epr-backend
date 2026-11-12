@@ -64,7 +64,7 @@ export const testGetDownloadUrlBehaviour = (it) => {
         code: 'summary_log_uri_corrupt',
         event: {
           action: 'get_download_url',
-          reason: `summaryLogId=${id} type=TypeError code=ERR_INVALID_URL`
+          reason: `summaryLogId=${id} type=Error code=unknown`
         }
       })
     })

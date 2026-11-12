@@ -6,12 +6,17 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
-import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
-
 import {
-  orsUploadCompletedPayloadSchema,
+  formatS3Info,
+  isInUploadLocation,
+  orsImportUploadPath,
   UPLOAD_FILE_STATUS
-} from './post-upload-completed.schema.js'
+} from '#domain/uploads/upload-locations.js'
+import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
+import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
+import { config } from '#root/config.js'
+
+import { orsUploadCompletedPayloadSchema } from './post-upload-completed.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
@@ -51,11 +56,25 @@ const toFileRecord = (upload) => ({
 })
 
 /**
+ * @param {OrsUploadFile} upload
+ * @param {string} importId
+ * @returns {boolean}
+ */
+const isUploadedForImport = (upload, importId) =>
+  isInUploadLocation(upload, {
+    bucket: config.get('cdpUploader.orsBucket'),
+    path: orsImportUploadPath(importId)
+  })
+
+/**
  * @param {OrsUploadFile[]} uploads
  * @returns {boolean}
  */
 const hasCompletedFiles = (uploads) =>
   uploads.some((u) => u.fileStatus === UPLOAD_FILE_STATUS.COMPLETE)
+
+const OUT_OF_LOCATION_MESSAGE =
+  'Upload is not in the upload location for this import'
 
 export const orsUploadCompletedPath =
   '/v1/overseas-sites/imports/{id}/upload-completed'
@@ -64,7 +83,7 @@ export const orsUploadCompleted = {
   method: 'POST',
   path: orsUploadCompletedPath,
   options: {
-    auth: false,
+    auth: { strategies: [UPLOAD_CALLBACK] },
     validate: {
       payload: orsUploadCompletedPayloadSchema
     }
@@ -90,6 +109,24 @@ export const orsUploadCompleted = {
       }
 
       const uploads = normaliseToArray(payload.form.orsUpload)
+
+      const outOfLocation = uploads.filter(
+        (upload) => !isUploadedForImport(upload, id)
+      )
+
+      if (outOfLocation.length > 0) {
+        logger.error({
+          message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}${outOfLocation.map(formatS3Info).join('')}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
+            reference: id
+          }
+        })
+        await orsImportsRepository.updateStatus(id, ORS_IMPORT_STATUS.FAILED)
+        throw Boom.badData(OUT_OF_LOCATION_MESSAGE)
+      }
+
       const completedFiles = uploads
         .filter((u) => u.fileStatus === UPLOAD_FILE_STATUS.COMPLETE)
         .map(toFileRecord)
