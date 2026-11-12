@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 
 /** @import { NumberSchema } from 'joi' */
 
@@ -21,3 +22,14 @@ export const MAX_YEAR = 2100
  */
 export const yearSchema = () =>
   Joi.number().integer().min(MIN_YEAR).max(MAX_YEAR)
+
+/**
+ * A calendar year the service serves: a `yearSchema` year no later than
+ * `latestOpenYear`. Checked when validated, so it follows the clock and the
+ * `openNextYear` setting.
+ * @returns {NumberSchema}
+ */
+export const openYearSchema = () =>
+  yearSchema().custom((year, helpers) =>
+    year > latestOpenYear() ? helpers.error('any.invalid') : year
+  )

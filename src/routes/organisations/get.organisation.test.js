@@ -537,15 +537,44 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     it('serves next year accredited from an accreditation approved early, while that year is open', async () => {
       config.set('openNextYear', true)
-
       expect(await standingOf(accreditedEarlyForNextYear())).toEqual({
         2027: { '2027-01-10': { standing: 'registeredOnly' } },
         2028: { '2028-01-01': { standing: 'accredited' } }
       })
     })
 
-    it('leaves out next year while it is closed, even with an accreditation approved early', async () => {
-      expect(await standingOf(accreditedEarlyForNextYear())).toEqual({
+    it('serves next year accredited from an accreditation approved early, while that year is open and request specifies that year', async () => {
+      config.set('openNextYear', true)
+
+      expect(
+        await standingOf(accreditedEarlyForNextYear(), '?year=2028')
+      ).toEqual({
+        2028: { '2028-01-01': { standing: 'accredited' } }
+      })
+    })
+
+    it('serves approved years only up to the current year when request does not specify years', async () => {
+      const organisation = buildOrganisation({
+        registrations: [
+          reprocessor({
+            validFrom: '2026-02-01',
+            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
+          })
+        ]
+      })
+
+      expect(await standingOf(organisation)).toEqual({
+        2026: { '2026-02-01': { standing: 'registeredOnly' } },
+        2027: { '2027-01-01': { standing: 'registeredOnly' } }
+      })
+    })
+
+    it('leaves out next year when request specifies year, even when next year is open and accreditation approved early', async () => {
+      config.set('openNextYear', true)
+
+      expect(
+        await standingOf(accreditedEarlyForNextYear(), '?year=2027')
+      ).toEqual({
         2027: { '2027-01-10': { standing: 'registeredOnly' } }
       })
     })
@@ -719,7 +748,6 @@ describe('GET /organisations/{organisationNumber}', () => {
 
       const in2025 = body(await get(urlFor(organisation, 2025)))
       const in2026 = body(await get(urlFor(organisation, 2026)))
-
       expect(in2025.registrations[REPROCESSOR_NUMBER].status.current).toBe(
         'approved'
       )
@@ -754,13 +782,13 @@ describe('GET /organisations/{organisationNumber}', () => {
         expect(registration.status.current).toBe('approved')
       })
 
-      it('returns 404 while it is closed', async () => {
+      it('rejects the year while it is closed', async () => {
         const organisation = withNextYearAccreditation()
         await serve(organisation)
 
         const response = await get(urlFor(organisation, 2028))
 
-        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
     })
 

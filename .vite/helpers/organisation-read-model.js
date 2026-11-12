@@ -73,14 +73,14 @@ export const organisationReadRepositoryOver = (
   organisationAdministrationRepository,
   options
 ) => ({
-  findByOrganisationNumber: async (organisationNumber) => {
+  findByOrganisationNumber: async (organisationNumber, findOptions) => {
     const stored =
       await organisationAdministrationRepository.findByOrganisationNumber(
         organisationNumber
       )
     return createInMemoryOrganisationReadRepository(stored ? [stored] : [])(
       dependenciesFor(options)
-    ).findByOrganisationNumber(organisationNumber)
+    ).findByOrganisationNumber(organisationNumber, findOptions)
   },
   find: async (params) =>
     (
