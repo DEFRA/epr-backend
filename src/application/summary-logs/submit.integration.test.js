@@ -5,10 +5,16 @@ import { ObjectId } from 'mongodb'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  ACCREDITATION_STATUS,
+  ORGANISATION_STATUS,
+  REGISTRATION_STATUS
+} from '#domain/organisations/model.js'
+import {
+  buildAccreditation,
+  buildRegistration,
+  createOrganisationBuilders
+} from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
@@ -32,6 +38,8 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
+import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
@@ -88,26 +96,38 @@ const SUBMIT_USER = {
   role: null
 }
 
+const CREATED_AT = '2024-12-01T00:00:00.000Z'
+const APPROVED_AT = '2024-12-15T00:00:00.000Z'
+
 const buildTestOrg = (organisationId, registrationId) => {
   const accreditationId = 'acc-123'
   const testOrg = buildReadOrganisation({
     registrations: [
-      partialMock({
-        id: registrationId,
-        registrationNumber: toRegistrationNumber('REG-123'),
-        status: 'approved',
-        material: 'paper',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'input',
-        submittedToRegulator: 'ea',
-        validFrom: VALID_FROM,
-        accreditationId
-      })
+      partialMock(
+        buildRegistration({
+          id: registrationId,
+          registrationNumber: toRegistrationNumber('REG-123'),
+          statusHistory: [
+            { status: REGISTRATION_STATUS.CREATED, updatedAt: CREATED_AT },
+            { status: REGISTRATION_STATUS.APPROVED, updatedAt: APPROVED_AT }
+          ],
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          reprocessingType: 'input',
+          submittedToRegulator: 'ea',
+          validFrom: VALID_FROM,
+          accreditationId
+        })
+      )
     ],
     accreditations: [
-      partialMock({
+      buildAccreditation({
         id: accreditationId,
         accreditationNumber: toAccreditationNumber('ACC-123'),
+        statusHistory: [
+          { status: ACCREDITATION_STATUS.CREATED, updatedAt: CREATED_AT },
+          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: APPROVED_AT }
+        ],
         material: 'paper',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
@@ -132,7 +152,7 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
  * @param {string | null} [options.accreditationId] - the accreditation the log submits to, `null` for registered-only
  * @param {import('#domain/organisations/numbers.js').AccreditationNumber | null} [options.accreditationNumber] - that accreditation's number
- * @param {boolean} [options.accreditationStoredByNumberOnly] - store the accreditation with its number and no database id, as one from 2027 is
+ * @param {boolean} [options.accreditationHeldExternally] - hold the accreditation outside epr-backend, with no database id, as one from 2027 is
  */
 const setupSubmit = async ({
   reportsRepository,
@@ -141,7 +161,7 @@ const setupSubmit = async ({
   loadsByReportingPeriod,
   accreditationId = 'acc-123',
   accreditationNumber = toAccreditationNumber('ACC-123'),
-  accreditationStoredByNumberOnly = false
+  accreditationHeldExternally = false
 }) => {
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
@@ -149,17 +169,37 @@ const setupSubmit = async ({
 
   const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   const organisation = buildTestOrg(organisationId, registrationId)
-  if (accreditationStoredByNumberOnly) {
-    delete (
-      /** @type {Record<string, unknown>} */ (organisation.accreditations[0]).id
-    )
+  const externalAccreditations = []
+  if (accreditationHeldExternally) {
+    organisation.accreditations = []
     delete (
       /** @type {Record<string, unknown>} */ (organisation.registrations[0])
         .accreditationId
     )
+    externalAccreditations.push(
+      buildExternalAccreditation({
+        registrationNumber: toRegistrationNumber('REG-123'),
+        year: toYear(2025),
+        accreditationNumber: toAccreditationNumber('ACC-123'),
+        status: {
+          current: 'approved',
+          timeline: [
+            { status: 'created', at: CREATED_AT, updatedAt: CREATED_AT },
+            {
+              status: 'approved',
+              at: `${VALID_FROM}T00:00:00.000Z`,
+              updatedAt: APPROVED_AT
+            }
+          ]
+        }
+      })
+    )
   }
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository([organisation])()
+  const organisationReadRepository = (
+    await organisationReadRepositoryOf([organisation], {
+      externalAccreditations
+    })
+  )()
   const reportKey = reportKeyOf(organisation, organisation.registrations[0])
 
   const summaryLog = summaryLogFactory.submitting({
@@ -191,13 +231,12 @@ const setupSubmit = async ({
   const deps = {
     logger,
     summaryLogsRepository,
-    organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     ledgerRepository,
     wasteBalanceService: createWasteBalanceService(ledgerRepository),
     summaryLogExtractor,
-    overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
     reportsService: createReportsService(reportsRepository),
     user: SUBMIT_USER,
     onSummaryLogUploaded: vi.fn().mockResolvedValue(undefined)
@@ -474,12 +513,12 @@ describe('submitSummaryLog row-state numbers', () => {
   )
 })
 
-describe('submitSummaryLog for an accreditation stored by number only', () => {
-  /** @param {boolean} accreditationStoredByNumberOnly */
-  const submitAndRead = async (accreditationStoredByNumberOnly) => {
+describe('submitSummaryLog for an accreditation held outside epr-backend', () => {
+  /** @param {boolean} accreditationHeldExternally */
+  const submitAndRead = async (accreditationHeldExternally) => {
     const { deps, summaryLogId, summaryLog, reportKey } = await setupSubmit({
       reportsRepository: createInMemoryReportsRepository()(),
-      accreditationStoredByNumberOnly
+      accreditationHeldExternally
     })
 
     await submitSummaryLog(summaryLogId, deps)
@@ -498,19 +537,19 @@ describe('submitSummaryLog for an accreditation stored by number only', () => {
     return { balance, rowStates, reportKey }
   }
 
-  it('credits its ledger and classifies its rows as it would with an id', async () => {
-    const withId = await submitAndRead(false)
-    const byNumberOnly = await submitAndRead(true)
+  it('credits its ledger and classifies its rows as it would a stored one', async () => {
+    const stored = await submitAndRead(false)
+    const external = await submitAndRead(true)
 
-    expect(byNumberOnly.balance?.amount).toBeGreaterThan(0)
-    expect(byNumberOnly.balance?.amount).toBe(withId.balance?.amount)
+    expect(external.balance?.amount).toBeGreaterThan(0)
+    expect(external.balance?.amount).toBe(stored.balance?.amount)
     expect(
-      byNumberOnly.rowStates.map(({ rowId, classification }) => ({
+      external.rowStates.map(({ rowId, classification }) => ({
         rowId,
         classification
       }))
     ).toEqual(
-      withId.rowStates.map(({ rowId, classification }) => ({
+      stored.rowStates.map(({ rowId, classification }) => ({
         rowId,
         classification
       }))
