@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
 
+import { summaryLogUploadPath } from '#domain/uploads/upload-locations.js'
+import { parseUploadUri } from './s3-uri.js'
+
 /**
  * @typedef {import('#domain/uploads/repository/port.js').InitiateSummaryLogUploadOptions} InitiateSummaryLogUploadOptions
  */
@@ -15,9 +18,35 @@ import { randomUUID } from 'node:crypto'
  */
 
 /**
+ * Calls back the way CDP Uploader does once a file is scanned and stored.
+ *
+ * @param {string} callbackUrl
+ * @param {{ s3Bucket: string, s3Key: string }} location
+ */
+const postCompletedCallback = async (callbackUrl, { s3Bucket, s3Key }) => {
+  await fetch(callbackUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      form: {
+        file: {
+          fileId: randomUUID(),
+          filename: 'summary-log.xlsx',
+          fileStatus: 'complete',
+          s3Bucket,
+          s3Key
+        }
+      }
+    })
+  })
+}
+
+/**
  * Creates an in-memory uploads repository for testing.
  *
- * @param {{ summaryLogsBucket?: string }} [config] - Optional configuration
+ * @param {{ orsBucket?: string, summaryLogsBucket?: string }} [config] - Optional configuration
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
  *   completeUpload: (uploadId: string, buffer: Buffer) => Promise<{ s3Uri: string }>,
  *   initiateCalls: InitiateSummaryLogUploadOptions[],
@@ -25,7 +54,11 @@ import { randomUUID } from 'node:crypto'
  * }}
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
-  const summaryLogsBucket = config.summaryLogsBucket ?? 'test-bucket'
+  const summaryLogsBucket = config.summaryLogsBucket ?? 're-ex-summary-logs'
+  const uploadBuckets = [
+    summaryLogsBucket,
+    config.orsBucket ?? 're-ex-overseas-sites'
+  ]
 
   /** @type {Map<string, Buffer>} */
   const storage = new Map()
@@ -44,10 +77,12 @@ export const createInMemoryUploadsRepository = (config = {}) => {
     orsInitiateCalls,
 
     async findByLocation(uri) {
+      parseUploadUri(uri, uploadBuckets)
       return storage.get(uri) ?? null
     },
 
     async deleteByLocation(uri) {
+      parseUploadUri(uri, uploadBuckets)
       storage.delete(uri)
     },
 
@@ -92,30 +127,15 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       const /** @type {InitiateSummaryLogUploadOptions} */ options =
           /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
       const { organisationId, registrationId, callbackUrl } = options
-      const s3Key = `organisations/${organisationId}/registrations/${registrationId}/${uploadId}.xlsx`
+      const s3Key = `${summaryLogUploadPath({ organisationId, registrationId })}/${uploadId}.xlsx`
       const s3Uri = `s3://${summaryLogsBucket}/${s3Key}`
 
       storage.set(s3Uri, buffer)
       pendingUploads.delete(uploadId)
 
-      const payload = {
-        form: {
-          file: {
-            fileId: randomUUID(),
-            filename: 'summary-log.xlsx',
-            fileStatus: 'complete',
-            s3Bucket: summaryLogsBucket,
-            s3Key
-          }
-        }
-      }
-
-      await fetch(callbackUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+      await postCompletedCallback(callbackUrl, {
+        s3Bucket: summaryLogsBucket,
+        s3Key
       })
 
       return { s3Uri }
