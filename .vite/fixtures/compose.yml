@@ -1,0 +1,11 @@
+# Images the test fixtures start with testcontainers. Kept here so Renovate
+# updates them, and so CI can pull them before the tests need them.
+services:
+  floci:
+    image: hectorvent/floci:1.5.5@sha256:c969cb48fcfae0eff3f4a4647b7772cd975e633cae7468e45abaf2d2eae18558
+  aws-cli:
+    image: amazon/aws-cli:2.37.11@sha256:d55d5b391f1cc0d428a05eb07408bb1a730d7df9f656008f1117ed5e13b0c083
+  redis:
+    image: redis:8.0.6-alpine3.21@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4
+  cdp-uploader:
+    image: defradigital/cdp-uploader:1.28.0@sha256:c2ad7db7c7141a02d1dfd621ace5bf628bd71d156bbe6bd7dbd976f0468f9845

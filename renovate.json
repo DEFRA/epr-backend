@@ -4,5 +4,31 @@
     "github>DEFRA/epr-re-ex-service//renovate-presets/default",
     "github>DEFRA/epr-re-ex-service//renovate-presets/defra-node"
   ],
-  "enabledManagers": ["dockerfile", "nvm", "custom.regex", "mise"]
+  "enabledManagers": [
+    "docker-compose",
+    "dockerfile",
+    "nvm",
+    "custom.regex",
+    "mise"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The mongod binary the tests run, kept on the same version as the mongo image",
+      "managerFilePatterns": ["/(^|/)package\\.json$/"],
+      "matchStrings": [
+        "\"mongodbMemoryServer\":\\s*\\{\\s*\"version\":\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "mongo",
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Hold the test mongod binary below 8, as the preset does for the compose mongo image",
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["mongo"],
+      "allowedVersions": "<8"
+    }
+  ]
 }
