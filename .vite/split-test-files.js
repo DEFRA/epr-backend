@@ -11,7 +11,11 @@ const leaksStateUndetected = new Set([
   'src/waste-records/application/project-summary-log-row-state.test.js'
 ])
 
-const testSupport = /\.contract\.js$|test-helpers/
+const testSupport =
+  /\.contract\.js$|test-helpers|^\.vite\/(fixtures|helpers)\/|^src\/test\//
+
+/** Sets `MONGO_URI` before every use, so a stale value cannot leak. */
+const trustedTestSupport = new Set(['.vite/fixtures/mongo.js'])
 
 const aliases = Object.entries(
   JSON.parse(readFileSync('package.json', 'utf8')).imports
@@ -35,7 +39,11 @@ const testSupportImportsOf = (file) =>
   ]
     .map(([, from, dynamic]) => resolveImport(file, from ?? dynamic))
     .filter(
-      (target) => target && testSupport.test(target) && existsSync(target)
+      (target) =>
+        target &&
+        testSupport.test(target) &&
+        !trustedTestSupport.has(target) &&
+        existsSync(target)
     )
 
 const reachesLeak = (file, seen = new Set()) => {
