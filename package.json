@@ -38,11 +38,6 @@
   "engines": {
     "node": "^26.13.0"
   },
-  "config": {
-    "mongodbMemoryServer": {
-      "version": "7.0.28"
-    }
-  },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
     "dev": "NODE_ENV=development npm run server:watch",
