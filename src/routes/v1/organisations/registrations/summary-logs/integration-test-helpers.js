@@ -30,7 +30,14 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation as buildServedOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { signedCallback } from '#test/upload-callback.js'
@@ -696,6 +703,13 @@ export const createTestInfrastructure = async (
     material: 'paper'
   })
   testOrg.id = organisationId
+  const organisationReadRepository = createInMemoryOrganisationReadRepository([
+    buildComplexTestReadOrg({
+      processingType: 'reprocessor',
+      reprocessingType,
+      material: 'paper'
+    })
+  ])()
 
   const organisationAdministrationRepository =
     createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
@@ -723,10 +737,7 @@ export const createTestInfrastructure = async (
       summaryLogsRepository: summaryLogsRepositoryFactory,
       organisationAdministrationRepository: () =>
         organisationAdministrationRepository,
-      organisationReadRepository: () =>
-        organisationReadRepositoryOver(organisationAdministrationRepository, {
-          overseasSitesRepository
-        }),
+      organisationReadRepository: () => organisationReadRepository,
       uploadsRepository
     },
     workers: {
@@ -779,6 +790,15 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     accreditationValidFrom
   })
   testOrg.id = organisationId
+  const organisationReadRepository = createInMemoryOrganisationReadRepository([
+    buildComplexTestReadOrg({
+      processingType,
+      reprocessingType,
+      material,
+      accredited,
+      accreditationValidFrom
+    })
+  ])()
 
   const organisationAdministrationRepository =
     createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
@@ -858,10 +878,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
     wasteBalanceService,
-    organisationReadRepository: organisationReadRepositoryOver(
-      organisationAdministrationRepository,
-      { overseasSitesRepository }
-    ),
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     logger: mockLogger
@@ -878,10 +895,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         packagingRecyclingNotesRepository,
       organisationAdministrationRepository: () =>
         organisationAdministrationRepository,
-      organisationReadRepository: () =>
-        organisationReadRepositoryOver(organisationAdministrationRepository, {
-          overseasSitesRepository
-        })
+      organisationReadRepository: () => organisationReadRepository
     },
     workers: {
       summaryLogsWorker: createTestSubmitterWorker({
@@ -898,6 +912,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteBalanceService,
     packagingRecyclingNotesRepository,
     organisationAdministrationRepository,
+    organisationReadRepository,
     overseasSitesRepository,
     organisationId,
     registrationId,
@@ -1049,3 +1064,147 @@ const buildComplexTestOrg = ({
       : []
   })
 }
+
+/**
+ * The organisation `buildComplexTestOrg` builds, as the read model serves it:
+ * its registration under the test keys, approved from `VALID_FROM`, and its
+ * accreditation for `UPLOAD_YEAR` when accredited, approved from
+ * `accreditationValidFrom`.
+ *
+ * @param {{
+ *   processingType: string,
+ *   reprocessingType: string,
+ *   material: string,
+ *   accredited?: boolean,
+ *   accreditationValidFrom?: string,
+ *   withOverseasSites?: boolean,
+ *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
+ * }} options
+ * @returns {import('#organisation-read-model/domain/model.js').Organisation}
+ */
+const buildComplexTestReadOrg = ({
+  processingType,
+  reprocessingType,
+  material,
+  accredited = true,
+  accreditationValidFrom = VALID_FROM,
+  withOverseasSites = true,
+  accreditationNumber = TEST_ACCREDITATION_NUMBER
+}) => {
+  const isExporter = processingType === 'exporter'
+  /** @param {string} approvedAt */
+  const approvedFrom = (approvedAt) => ({
+    current: /** @type {const} */ ('approved'),
+    timeline: [
+      {
+        status: 'created',
+        at: '2023-12-01T00:00:00.000Z',
+        updatedAt: '2023-12-01T00:00:00.000Z'
+      },
+      {
+        status: 'approved',
+        at: `${approvedAt}T00:00:00.000Z`,
+        updatedAt: '2023-12-15T00:00:00.000Z'
+      }
+    ]
+  })
+  const standingInUploadYear = !accredited
+    ? { [VALID_FROM]: { standing: 'registeredOnly' } }
+    : accreditationValidFrom === VALID_FROM
+      ? { [VALID_FROM]: { standing: 'accredited' } }
+      : {
+          [VALID_FROM]: { standing: 'registeredOnly' },
+          [accreditationValidFrom]: { standing: 'accredited' }
+        }
+  const accreditation = buildReadAccreditation({
+    accreditationNumber,
+    status: approvedFrom(accreditationValidFrom)
+  })
+  const common = {
+    material: /** @type {any} */ (material),
+    validFrom: VALID_FROM,
+    status: approvedFrom(VALID_FROM),
+    standingByDate: /** @type {any} */ ({
+      [UPLOAD_YEAR]: standingInUploadYear,
+      [UPLOAD_YEAR + 1]: {
+        [`${UPLOAD_YEAR + 1}-01-01`]: { standing: 'registeredOnly' }
+      }
+    })
+  }
+  return buildServedOrganisation({
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    registrations: {
+      [TEST_REGISTRATION_NUMBER]: isExporter
+        ? buildReadExporterRegistration({
+            ...common,
+            overseasSites: withOverseasSites
+              ? {
+                  100: {
+                    name: 'Test Overseas Site',
+                    address: {
+                      line1: '1 Test Road',
+                      townOrCity: 'Berlin',
+                      country: 'Germany'
+                    }
+                  },
+                  200: {
+                    name: 'Test Unapproved Overseas Site',
+                    address: {
+                      line1: '2 Test Road',
+                      townOrCity: 'Hamburg',
+                      country: 'Germany'
+                    }
+                  }
+                }
+              : {},
+            accreditations: accredited
+              ? {
+                  [UPLOAD_YEAR]: buildReadExporterAccreditation({
+                    ...accreditation,
+                    overseasSites: {
+                      100: { status: 'approved', approvedOn: VALID_FROM },
+                      200: {
+                        status: 'approved',
+                        approvedOn: UNAPPROVED_VALID_FROM
+                      }
+                    }
+                  })
+                }
+              : {}
+          })
+        : buildReadReprocessorRegistration({
+            ...common,
+            reprocessingType: /** @type {any} */ (reprocessingType),
+            accreditations: accredited ? { [UPLOAD_YEAR]: accreditation } : {}
+          })
+    }
+  })
+}
+
+/**
+ * The organisation `servedTestRegistration` builds, as the read model serves
+ * it under the test keys: registered only, or accredited for `UPLOAD_YEAR` from
+ * `VALID_FROM` when given an `accreditationNumber`, as
+ * `servedTestAccreditation` builds it.
+ *
+ * @param {{
+ *   wasteProcessingType: string,
+ *   material?: string,
+ *   reprocessingType?: string,
+ *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
+ * }} options
+ */
+export const servedTestReadOrganisation = ({
+  wasteProcessingType,
+  material = wasteProcessingType === 'exporter' ? 'plastic' : 'glass_re_melt',
+  reprocessingType = 'input',
+  accreditationNumber
+}) =>
+  buildComplexTestReadOrg({
+    processingType: wasteProcessingType,
+    reprocessingType,
+    material,
+    accredited: accreditationNumber !== undefined,
+    accreditationNumber,
+    withOverseasSites: false
+  })

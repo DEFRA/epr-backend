@@ -2,81 +2,48 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  organisationReadRepositoryOf,
-  organisationReadRepositoryOver
-} from '#vite/helpers/organisation-read-model.js'
-import {
-  ORGANISATION_STATUS,
-  REGISTRATION_STATUS,
-  REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
-import {
-  prepareOrgUpdate,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import {
-  REPROCESSOR_NUMBER,
-  accreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  registrationOf,
+  servedOrganisations
+} from '#organisation-read-model/repository/read-model-test-data.js'
+import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { config } from '#root/config.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
-
-const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation } = organisationBuilders
-const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Builds an org where the registration is approved but the accreditation
- * remains in 'created' status — i.e. a registered-only (quarterly) operator.
+ * An organisation the read model serves with one registration, `REG1`, an
+ * input reprocessor approved from January and registered only, as its
+ * accreditation was never approved.
  */
-async function buildRegisteredOnlyOrg(orgRepo) {
-  const org = buildOrganisation()
-  const INITIAL_VERSION = 1
-
-  await orgRepo.insert(org)
-
-  const approvedRegistrations = [
-    {
-      ...org.registrations[0],
-      status: REGISTRATION_STATUS.APPROVED,
-      registrationNumber: 'REG1',
-      reprocessingType: REPROCESSING_TYPE.INPUT,
-      validFrom: '2026-01-01'
+const registeredOnlyOrg = () =>
+  buildReadOrganisation({
+    registrations: {
+      REG1: buildReadReprocessorRegistration({
+        validFrom: '2026-01-01',
+        status: {
+          current: 'approved',
+          timeline: approvedTimelineFrom('2026-01-01')
+        },
+        standingByDate: {
+          2026: { '2026-01-01': { standing: 'registeredOnly' } }
+        }
+      })
     }
-  ]
-
-  await orgRepo.replace(
-    org.id,
-    INITIAL_VERSION,
-    prepareOrgUpdate(org, {
-      status: ORGANISATION_STATUS.APPROVED,
-      registrations: approvedRegistrations,
-      accreditations: [
-        { ...org.accreditations[0], reprocessingType: REPROCESSING_TYPE.INPUT }
-      ]
-    })
-  )
-
-  return waitForVersion(orgRepo, org.id, INITIAL_VERSION + 1)
-}
+  })
 
 // ---------------------------------------------------------------------------
 // Integration tests
@@ -84,10 +51,6 @@ async function buildRegisteredOnlyOrg(orgRepo) {
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 const SUBMITTED_DATE = '2026-04-17'
-
-// Accredited from the start of the reporting year, so every period of the year
-// is within the accreditation window (no validFrom trim).
-const FULL_YEAR_RANGE = { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
 
 // All ended reporting periods for the current year (2026) at FIXED_DATE 2026-04-17:
 // Jan, Feb, Mar, Q1 — Apr has not yet ended.
@@ -152,14 +115,14 @@ describe('generateReportCompliance', () => {
   })
 
   it('returns an ordered periods list covering both cadences', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
-    const reg = org.registrations[0]
+    const org = orgs.approved()
+    const reg = registrationOf(org)
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -177,14 +140,14 @@ describe('generateReportCompliance', () => {
   })
 
   it('places monthly March before quarterly Q1 in the periods list', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
-    const reg = org.registrations[0]
+    const org = orgs.approved()
+    const reg = registrationOf(org)
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -203,11 +166,11 @@ describe('generateReportCompliance', () => {
   })
 
   it('records submitted date for an accredited (monthly) operator', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
-    const reg = org.registrations[0]
+    const org = orgs.approved()
+    const reg = registrationOf(org)
 
     await buildSubmittedReport(reportsRepo, {
       ...reportKeyOf(org, reg),
@@ -217,7 +180,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -239,11 +202,11 @@ describe('generateReportCompliance', () => {
   })
 
   it('records submitted date for a registered-only (quarterly) operator', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildRegisteredOnlyOrg(orgRepo)
-    const reg = org.registrations[0]
+    const org = orgs.add(registeredOnlyOrg())
+    const reg = registrationOf(org)
 
     await buildSubmittedReport(reportsRepo, {
       ...reportKeyOf(org, reg),
@@ -253,7 +216,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -271,14 +234,14 @@ describe('generateReportCompliance', () => {
   })
 
   it('has null values in submittedDates for applicable but unsubmitted periods', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
-    const reg = org.registrations[0]
+    const org = orgs.approved()
+    const reg = registrationOf(org)
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -296,14 +259,14 @@ describe('generateReportCompliance', () => {
   })
 
   it('produces one entry per registration across multiple orgs', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org1 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
-    const org2 = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
+    const org1 = orgs.approved()
+    const org2 = orgs.approved()
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -311,13 +274,13 @@ describe('generateReportCompliance', () => {
       periods: EXPECTED_PERIODS,
       entries: new Map([
         [
-          registrationKey(reportKeyOf(org1, org1.registrations[0])),
+          registrationKey(reportKeyOf(org1, registrationOf(org1))),
           {
             submittedDates: MONTHLY_EMPTY_DATES
           }
         ],
         [
-          registrationKey(reportKeyOf(org2, org2.registrations[0])),
+          registrationKey(reportKeyOf(org2, registrationOf(org2))),
           {
             submittedDates: MONTHLY_EMPTY_DATES
           }
@@ -327,24 +290,16 @@ describe('generateReportCompliance', () => {
   })
 
   it('excludes test organisations from entries', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
     // 999999 is a test organisation (see parse-test-organisations config)
-    await buildApprovedOrg(
-      orgRepo,
-      { organisationNumber: toOrganisationNumber('999999') },
-      FULL_YEAR_RANGE
-    )
-    const normalOrg = await buildApprovedOrg(
-      orgRepo,
-      undefined,
-      FULL_YEAR_RANGE
-    )
-    const normalReg = normalOrg.registrations[0]
+    orgs.approved({ organisationNumber: toOrganisationNumber('999999') })
+    const normalOrg = orgs.approved()
+    const normalReg = registrationOf(normalOrg)
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -362,11 +317,11 @@ describe('generateReportCompliance', () => {
   })
 
   it('includes submissions from earlier months within the current year', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
-    const reg = org.registrations[0]
+    const org = orgs.approved()
+    const reg = registrationOf(org)
 
     await buildSubmittedReport(reportsRepo, {
       ...reportKeyOf(org, reg),
@@ -376,7 +331,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -434,11 +389,11 @@ describe('generateReportCompliance', () => {
       seed: (reportsRepo, ids) => buildUnsubmittedReport(reportsRepo, ids)
     }
   ])('shows the original submitted date given $state', async ({ seed }) => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
-    const org = await buildApprovedOrg(orgRepo, undefined, FULL_YEAR_RANGE)
-    const reg = org.registrations[0]
+    const org = orgs.approved()
+    const reg = registrationOf(org)
 
     await seed(reportsRepo, {
       ...reportKeyOf(org, reg),
@@ -448,7 +403,7 @@ describe('generateReportCompliance', () => {
     })
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -470,19 +425,16 @@ describe('generateReportCompliance', () => {
   })
 
   it('bounds monthly obligations to the accreditation validFrom (PAE-1737)', async () => {
-    const orgRepo = createInMemoryOrganisationsRepository()()
+    const orgs = servedOrganisations()
     const reportsRepo = createInMemoryReportsRepository()()
 
     // Accredited from mid-February: January is before validFrom, so it is not
     // an obligation and must not appear in submittedDates.
-    const org = await buildApprovedOrg(orgRepo, undefined, {
-      VALID_FROM: '2026-02-15',
-      VALID_TO: '2026-12-31'
-    })
-    const reg = org.registrations[0]
+    const org = orgs.approved({ validFrom: '2026-02-15' })
+    const reg = registrationOf(org)
 
     const result = await generateReportCompliance(
-      await organisationReadRepositoryOver(orgRepo).findAll(),
+      await orgs.repository().findAll(),
       reportsRepo
     )
 
@@ -503,56 +455,54 @@ describe('generateReportCompliance', () => {
   })
 
   describe('read model registrations', () => {
-    const accredited = {
-      ...accreditation({
-        validFrom: '2026-02-15',
-        statusHistory: [{ status: 'approved', updatedAt: '2026-02-15' }]
-      }),
-      status: 'approved'
-    }
-
     /**
-     * @param {object} [overrides]
+     * An organisation the read model serves with one reprocessor approved
+     * from January and accredited from `accreditedFrom`.
+     *
+     * @param {string} accreditedFrom
      */
-    const organisationWith = (overrides = {}) =>
-      buildOrganisation({
-        registrations: [
-          {
-            ...reprocessor({
-              validFrom: '2026-01-01',
-              statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }],
-              accreditationId: accredited.id
-            }),
-            status: 'approved',
-            ...overrides
-          }
-        ],
-        accreditations: [accredited]
+    const accreditedFrom = (accreditedFrom) =>
+      buildReadOrganisation({
+        registrations: {
+          [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+            validFrom: '2026-01-01',
+            status: {
+              current: 'approved',
+              timeline: approvedTimelineFrom('2026-01-01')
+            },
+            standingByDate: {
+              2026:
+                accreditedFrom === '2026-01-01'
+                  ? { '2026-01-01': { standing: 'accredited' } }
+                  : {
+                      '2026-01-01': { standing: 'registeredOnly' },
+                      [accreditedFrom]: { standing: 'accredited' }
+                    }
+            },
+            accreditations: {
+              2026: buildReadAccreditation({
+                status: {
+                  current: 'approved',
+                  timeline: approvedTimelineFrom(accreditedFrom)
+                }
+              })
+            }
+          })
+        }
       })
 
-    /**
-     * @param {object} organisation
-     * @param {{ warn: (...args: any[]) => void }} [logger]
-     * @param {ExternalAccreditation[]} [externalAccreditations]
-     */
-    const complianceFor = async (
-      organisation,
-      logger,
-      externalAccreditations
-    ) =>
+    /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
+    const complianceFor = async (organisation) =>
       generateReportCompliance(
-        await (
-          await organisationReadRepositoryOf([organisation], {
-            logger,
-            externalAccreditations
-          })
-        )().findAll(),
+        await createInMemoryOrganisationReadRepository([
+          organisation
+        ])().findAll(),
         createInMemoryReportsRepository()()
       )
 
-    /** @param {any} organisation */
+    /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
     const entryKeyOf = (organisation) =>
-      registrationKey(reportKeyOf(organisation, organisation.registrations[0]))
+      registrationKey(reportKeyOf(organisation, registrationOf(organisation)))
 
     afterEach(() => {
       config.reset('featureFlags.midYearStatusTransition')
@@ -560,7 +510,7 @@ describe('generateReportCompliance', () => {
 
     it('lists both kinds, split at the accreditation date, with mid-year status transition on', async () => {
       config.set('featureFlags.midYearStatusTransition', true)
-      const organisation = organisationWith()
+      const organisation = accreditedFrom('2026-02-15')
 
       const result = await complianceFor(organisation)
 
@@ -575,54 +525,14 @@ describe('generateReportCompliance', () => {
       )
     })
 
-    it('owes monthly reports for an accreditation held outside re-ex', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          {
-            ...reprocessor({
-              validFrom: '2026-01-01',
-              statusHistory: [{ status: 'approved', updatedAt: '2026-01-01' }]
-            }),
-            status: 'approved'
-          }
-        ],
-        accreditations: []
-      })
+    it('owes monthly reports for a registration accredited all year', async () => {
+      const organisation = accreditedFrom('2026-01-01')
 
-      const result = await complianceFor(organisation, undefined, [
-        buildExternalAccreditation({
-          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          year: toYear(2026),
-          status: {
-            current: 'approved',
-            timeline: [
-              {
-                status: 'approved',
-                at: '2026-01-01T00:00:00.000Z',
-                updatedAt: '2026-01-01T00:00:00.000Z'
-              }
-            ]
-          }
-        })
-      ])
+      const result = await complianceFor(organisation)
 
       expect(
         result.entries.get(entryKeyOf(organisation))?.submittedDates
       ).toEqual(MONTHLY_EMPTY_DATES)
-    })
-
-    it('has no entry for a registration the read model does not serve, logging why', async () => {
-      const logger = { warn: vi.fn() }
-
-      const result = await complianceFor(
-        organisationWith({ validFrom: undefined }),
-        logger
-      )
-
-      expect(result.entries).toEqual(new Map())
-      expect(logger.warn).toHaveBeenCalledWith({
-        message: `Registration ${REPROCESSOR_NUMBER} has no validFrom`
-      })
     })
   })
 })

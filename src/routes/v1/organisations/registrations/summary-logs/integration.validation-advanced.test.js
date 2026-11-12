@@ -8,7 +8,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -33,6 +33,7 @@ import {
   tableOf,
   REPROCESSED_LOADS_HEADERS,
   createReprocessedRowValues,
+  servedTestReadOrganisation,
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER
@@ -497,7 +498,12 @@ describe('Advanced validation scenarios', () => {
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+            createInMemoryOrganisationReadRepository([
+              servedTestReadOrganisation({
+                wasteProcessingType: 'reprocessor',
+                material: 'paper'
+              })
+            ])()
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -681,7 +687,12 @@ describe('Advanced validation scenarios', () => {
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+            createInMemoryOrganisationReadRepository([
+              servedTestReadOrganisation({
+                wasteProcessingType: 'reprocessor',
+                material: 'aluminium'
+              })
+            ])()
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -908,7 +919,9 @@ describe('Advanced validation scenarios', () => {
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+            createInMemoryOrganisationReadRepository([
+              servedTestReadOrganisation({ wasteProcessingType: 'exporter' })
+            ])()
         }
       })
     })

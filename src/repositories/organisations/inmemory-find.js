@@ -11,9 +11,11 @@ import {
 
 /**
  * How organisations are searched in memory. The in-memory organisations
- * repository and the in-memory organisation read repository both search
- * organisations as the repository returns them, and share this search so
- * they find the same ones.
+ * repository and the in-memory organisation read repository share this
+ * search, so both match criteria the same way. Each searches the shape it
+ * returns: the organisations repository its stored organisations, the read
+ * repository the read model's. So the two can find different organisations
+ * for the same criteria.
  */
 
 /**

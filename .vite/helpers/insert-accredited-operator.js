@@ -13,6 +13,7 @@ import {
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
+import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
@@ -63,7 +64,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
-   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId }>}
+   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/domain/model.js').Organisation }>}
    */
   return async (
     organisationAdministrationRepository,
@@ -92,7 +93,33 @@ export const createAccreditedOperatorInserter = (builders) => {
     )
 
     const reportKey = reportKeyOf(organisation, organisation.registrations[0])
+    const served = buildReadApprovedOrganisation({
+      organisationNumber: organisation.organisationNumber,
+      year: 2026,
+      validFrom
+    })
+    const servedRegistration =
+      /** @type {import('#organisation-read-model/domain/model.js').ReprocessorRegistration} */ (
+        served.registrations[reportKey.registrationNumber]
+      )
+    const servedOrganisation = {
+      ...served,
+      registrations: {
+        [reportKey.registrationNumber]: {
+          ...servedRegistration,
+          material,
+          submittedToRegulator: { code: regulator },
+          accreditations: {
+            2026: {
+              ...servedRegistration.accreditations[2026],
+              ...(tonnageBand && { prnIssuance: { tonnageBand } })
+            }
+          }
+        }
+      }
+    }
     return {
+      servedOrganisation,
       organisationId: organisation.id,
       registrationId: registration.id,
       reportKey,

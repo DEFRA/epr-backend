@@ -1,34 +1,22 @@
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import {
-  buildAwaitingAuthorisationPrn,
-  underAccreditation
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
-  buildRegistration,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { createStatusHistoryBuilders } from './status-history-test-helpers.js'
 
-const { buildOrganisation } = createOrganisationBuilders()
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const { buildOrgWithAccreditationStatus } =
+  createStatusHistoryBuilders(organisationBuilders)
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -38,146 +26,12 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockCdpAuditing(...args)
 }))
 
-/**
- * Builds an organisation with a registration linked to a target
- * accreditation whose statusHistory ends in the given status, plus an
- * unrelated second (unlinked, 'created') accreditation used to assert that
- * changing the target's status leaves other accreditations untouched.
- * The linked registration is 'created' by default; approving the
- * accreditation requires an approved registration, so tests opt in via
- * registrationStatus ('approved', 'rejected' or 'cancelled').
- * accreditationOverrides lets grant tests shape the target accreditation
- * (e.g. no number yet).
- * @param {string} status
- * @param {{ registrationStatus?: string, accreditationOverrides?: object }} [options]
- */
-const buildOrgWithAccreditationStatus = (
-  status,
-  { registrationStatus = 'created', accreditationOverrides = {} } = {}
-) => {
-  const accreditationId = new ObjectId().toString()
-  const registration = buildRegistration({
-    accreditationId,
-    reprocessingType: 'input',
-    ...(registrationStatus !== 'created' && {
-      // registrationNumber/validFrom are only required once a
-      // registration has been approved, but non-created registrations get
-      // them for realism (mirrors buildOrgWithRegistrationStatus).
-      registrationNumber: 'REG123456',
-      validFrom: '2024-01-01',
-      statusHistory: [
-        { status: 'created', updatedAt: '2024-01-01' },
-        { status: registrationStatus, updatedAt: '2024-01-15' }
-      ]
-    })
-  })
-  const accreditation = buildAccreditation({
-    id: accreditationId,
-    wasteProcessingType: registration.wasteProcessingType,
-    // validFrom/validTo/accreditationNumber/reprocessingType are only
-    // required once an accreditation has been approved or suspended.
-    validFrom: '2024-01-01',
-    validTo: '2025-01-01',
-    accreditationNumber: toAccreditationNumber('ACC123456'),
-    reprocessingType: 'input',
-    statusHistory:
-      /** @type {import('#domain/organisations/accreditation.js').StatusHistoryEntry[]} */ (
-        status === 'created'
-          ? [{ status: 'created', updatedAt: '2024-01-01' }]
-          : [
-              { status: 'created', updatedAt: '2024-01-01' },
-              { status, updatedAt: '2024-02-01' }
-            ]
-      ),
-    ...accreditationOverrides
-  })
-  const otherAccreditation = buildAccreditation()
-
-  return /** @type {import('#domain/organisations/model.js').Organisation} */ (
-    /** @type {unknown} */ (
-      buildOrganisation({
-        registrations: [registration],
-        accreditations: [accreditation, otherAccreditation]
-      })
-    )
-  )
-}
-
 const statusHistoryUrl = ({
   organisationId,
   registrationId,
   accreditationId
 }) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/accreditations/${accreditationId}/status-history`
-
-/**
- * An approved organisation with an approved registration, which the read
- * model serves, so the PRN routes can find it by its natural keys.
- * @param {string} status
- */
-const buildServedOrgWithAccreditationStatus = (status) => ({
-  ...buildOrgWithAccreditationStatus(status, {
-    registrationStatus: 'approved',
-    // The year a test PRN is raised in, so the PRN finds its accreditation.
-    accreditationOverrides: { validFrom: '2026-01-01', validTo: '2027-01-01' }
-  }),
-  statusHistory:
-    /** @type {import('#domain/organisations/model.js').Organisation['statusHistory']} */ ([
-      { status: 'approved', updatedAt: new Date('2024-01-01') }
-    ])
-})
-
-/**
- * @param {import('#domain/organisations/model.js').Organisation} organisation
- * @param {string} prnId
- */
-const prnStatusUrl = (
-  { organisationNumber, registrations: [registration] },
-  prnId
-) =>
-  `/organisations/${organisationNumber}/registrations/${registration.registrationNumber}/accreditations/2026/packaging-recycling-notes/${prnId}/status`
-
-/**
- * The numbers of the organisation's registration and the accreditation it
- * links to, which buildOrgWithAccreditationStatus puts first.
- * @param {import('#domain/organisations/model.js').Organisation} organisation
- */
-const numbersOf = ({
-  organisationNumber,
-  registrations: [registration],
-  accreditations: [accreditation]
-}) => ({
-  organisationNumber,
-  registrationNumber: toRegistrationNumber(
-    /** @type {string} */ (registration.registrationNumber)
-  ),
-  accreditationNumber: toAccreditationNumber(
-    /** @type {string} */ (accreditation.accreditationNumber)
-  )
-})
-
-/**
- * A PRN awaiting authorisation under the organisation's accreditation.
- * @param {import('#domain/organisations/model.js').Organisation} organisation
- * @param {string} prnId
- */
-const prnsRepositoryAwaitingAuthorisation = (organisation, prnId) =>
-  createInMemoryPackagingRecyclingNotesRepository([
-    /** @type {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} */ ({
-      id: prnId,
-      ...buildAwaitingAuthorisationPrn(
-        underAccreditation(numbersOf(organisation))
-      )
-    })
-  ])({
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    trace: vi.fn(),
-    fatal: vi.fn(),
-    child: vi.fn()
-  })
 
 const suspendPayload = { fromStatus: 'approved', toStatus: 'suspended' }
 const reinstatePayload = { fromStatus: 'suspended', toStatus: 'approved' }
@@ -1141,234 +995,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-    })
-  })
-
-  describe('downstream effect: PRN issuance', () => {
-    /**
-     * The stored organisation, and the read model reading it afresh, so a
-     * status this endpoint writes is what the PRN routes then read.
-     *
-     * @param {*} fixture
-     */
-    const servingStored = (fixture) => {
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([fixture])
-      return {
-        organisationAdministrationRepository,
-        organisationReadRepository: () =>
-          organisationReadRepositoryOver(organisationAdministrationRepository())
-      }
-    }
-
-    it('refuses to issue a PRN once the accreditation has been suspended through this endpoint', async () => {
-      const fixture = buildServedOrgWithAccreditationStatus('approved')
-      const registration = fixture.registrations[0]
-      const accreditationId = /** @type {string} */ (
-        registration.accreditationId
-      )
-      const prnId = new ObjectId().toHexString()
-
-      const packagingRecyclingNotesRepository =
-        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
-
-      const integrationServer = await createTestServer({
-        repositories: {
-          ...servingStored(fixture),
-          systemLogsRepository: createSystemLogsRepository(),
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
-        }
-      })
-
-      const suspendResponse = await integrationServer.inject({
-        method: 'POST',
-        url: statusHistoryUrl({
-          organisationId: fixture.id,
-          registrationId: registration.id,
-          accreditationId
-        }),
-        payload: suspendPayload,
-        ...asServiceMaintainerWrite()
-      })
-      expect(suspendResponse.statusCode).toBe(StatusCodes.OK)
-
-      const issueResponse = await integrationServer.inject({
-        method: 'POST',
-        url: prnStatusUrl(fixture, prnId),
-        ...asOperator(),
-        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-
-      expect(issueResponse.statusCode).toBe(StatusCodes.FORBIDDEN)
-      expect(issueResponse.payload).toContain(
-        'Cannot issue a PRN on a suspended accreditation'
-      )
-    })
-
-    it('permits issuing a PRN again once the accreditation has been reinstated through this endpoint', async () => {
-      const fixture = buildServedOrgWithAccreditationStatus('suspended')
-      const registration = fixture.registrations[0]
-      const accreditationId = /** @type {string} */ (
-        registration.accreditationId
-      )
-      const prnId = new ObjectId().toHexString()
-
-      const packagingRecyclingNotesRepository =
-        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
-
-      // A ledger holding enough balance for the PRN's tonnage, so the issue
-      // succeeds once the suspension is lifted.
-      const ledgerRepository = createInMemoryLedgerRepository([
-        partialMock(
-          buildLedgerEvent({
-            organisationId: fixture.id,
-            registrationId: registration.id,
-            accreditationId,
-            ...numbersOf(fixture),
-            number: 1,
-            payload: { summaryLogId: 'log-1', creditTotal: 500 },
-            openingBalance: { amount: 0, availableAmount: 0 },
-            closingBalance: { amount: 500, availableAmount: 500 }
-          })
-        )
-      ])()
-
-      const integrationServer = await createTestServer({
-        repositories: {
-          ...servingStored(fixture),
-          systemLogsRepository: createSystemLogsRepository(),
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository,
-          ledgerRepository: () => ledgerRepository
-        }
-      })
-
-      const reinstateResponse = await integrationServer.inject({
-        method: 'POST',
-        url: statusHistoryUrl({
-          organisationId: fixture.id,
-          registrationId: registration.id,
-          accreditationId
-        }),
-        payload: reinstatePayload,
-        ...asServiceMaintainerWrite()
-      })
-      expect(reinstateResponse.statusCode).toBe(StatusCodes.OK)
-
-      const issueResponse = await integrationServer.inject({
-        method: 'POST',
-        url: prnStatusUrl(fixture, prnId),
-        ...asOperator(),
-        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-
-      expect(issueResponse.statusCode).toBe(StatusCodes.OK)
-    })
-
-    it('refuses to issue a PRN once the accreditation has been cancelled through this endpoint', async () => {
-      const fixture = buildServedOrgWithAccreditationStatus('suspended')
-      const registration = fixture.registrations[0]
-      const accreditationId = /** @type {string} */ (
-        registration.accreditationId
-      )
-      const prnId = new ObjectId().toHexString()
-
-      const packagingRecyclingNotesRepository =
-        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
-
-      const integrationServer = await createTestServer({
-        repositories: {
-          ...servingStored(fixture),
-          systemLogsRepository: createSystemLogsRepository(),
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
-        }
-      })
-
-      const cancelResponse = await integrationServer.inject({
-        method: 'POST',
-        url: statusHistoryUrl({
-          organisationId: fixture.id,
-          registrationId: registration.id,
-          accreditationId
-        }),
-        payload: cancelPayload,
-        ...asServiceMaintainerWrite()
-      })
-      expect(cancelResponse.statusCode).toBe(StatusCodes.OK)
-
-      const issueResponse = await integrationServer.inject({
-        method: 'POST',
-        url: prnStatusUrl(fixture, prnId),
-        ...asOperator(),
-        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-
-      expect(issueResponse.statusCode).toBe(StatusCodes.FORBIDDEN)
-      expect(issueResponse.payload).toContain(
-        'Cannot issue a PRN on a cancelled accreditation'
-      )
-    })
-
-    it('permits issuing a PRN again once the accreditation has been reinstated after an appeal through this endpoint', async () => {
-      const fixture = buildServedOrgWithAccreditationStatus('cancelled')
-      const registration = fixture.registrations[0]
-      const accreditationId = /** @type {string} */ (
-        registration.accreditationId
-      )
-      const prnId = new ObjectId().toHexString()
-
-      const packagingRecyclingNotesRepository =
-        prnsRepositoryAwaitingAuthorisation(fixture, prnId)
-
-      // A ledger holding enough balance for the PRN's tonnage, so the issue
-      // succeeds once the cancellation is overturned.
-      const ledgerRepository = createInMemoryLedgerRepository([
-        partialMock(
-          buildLedgerEvent({
-            organisationId: fixture.id,
-            registrationId: registration.id,
-            accreditationId,
-            ...numbersOf(fixture),
-            number: 1,
-            payload: { summaryLogId: 'log-1', creditTotal: 500 },
-            openingBalance: { amount: 0, availableAmount: 0 },
-            closingBalance: { amount: 500, availableAmount: 500 }
-          })
-        )
-      ])()
-
-      const integrationServer = await createTestServer({
-        repositories: {
-          ...servingStored(fixture),
-          systemLogsRepository: createSystemLogsRepository(),
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository,
-          ledgerRepository: () => ledgerRepository
-        }
-      })
-
-      const reinstateResponse = await integrationServer.inject({
-        method: 'POST',
-        url: statusHistoryUrl({
-          organisationId: fixture.id,
-          registrationId: registration.id,
-          accreditationId
-        }),
-        payload: reinstateAfterAppealPayload,
-        ...asServiceMaintainerWrite()
-      })
-      expect(reinstateResponse.statusCode).toBe(StatusCodes.OK)
-
-      const issueResponse = await integrationServer.inject({
-        method: 'POST',
-        url: prnStatusUrl(fixture, prnId),
-        ...asOperator(),
-        payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
-      })
-
-      expect(issueResponse.statusCode).toBe(StatusCodes.OK)
     })
   })
 

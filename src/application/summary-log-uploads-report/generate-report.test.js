@@ -1,37 +1,22 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { generateSummaryLogUploadsReport } from './generate-report.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import {
-  createOrganisationBuilders,
-  getValidDateRange,
-  prepareOrgUpdate
-} from '#repositories/organisations/contract/test-data.js'
-import {
-  ORGANISATION_STATUS,
-  REGISTRATION_STATUS,
-  REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import {
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  nextReadOrganisationNumber as nextOrganisationNumber,
+  registrationOf,
+  servedOrganisations
+} from '#organisation-read-model/repository/read-model-test-data.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /**
- * @import { Organisation } from '#domain/organisations/model.js'
- * @import { Registration } from '#domain/organisations/registration.js'
- */
-
-const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation, nextOrganisationNumber } = organisationBuilders
-const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
-
-/**
- * @param {Pick<Organisation, 'organisationNumber'>} organisation
- * @param {Pick<Registration, 'registrationNumber'>} registration
+ * @param {{ organisationNumber: string }} organisation
+ * @param {{ registrationNumber: string }} registration
  */
 const numbersOf = (organisation, registration) => ({
   organisationNumber: organisation.organisationNumber,
@@ -39,25 +24,29 @@ const numbersOf = (organisation, registration) => ({
 })
 
 describe('generateSummaryLogUploadsReport', () => {
-  let organisationRepo
+  let served
   let summaryLogsRepo
   let org
   let registration
   let accreditation
+  const orgId = new ObjectId().toString()
+  const registrationId = new ObjectId().toString()
 
   beforeEach(async () => {
-    organisationRepo = createInMemoryOrganisationsRepository()()
+    served = servedOrganisations()
     summaryLogsRepo = createInMemorySummaryLogsRepository()(logger)
 
-    const organisationNumber = nextOrganisationNumber()
-    org = await buildApprovedOrg(organisationRepo, { organisationNumber })
-    registration = org.registrations[0]
-    accreditation = org.accreditations[0]
+    org = served.approved({
+      organisationNumber: nextOrganisationNumber(),
+      year: currentUtcYear()
+    })
+    registration = registrationOf(org)
+    accreditation = { accreditationNumber: `ACC${org.organisationNumber}` }
   })
 
   it('generates empty report when no SL uploads exist', async () => {
     const result = await generateSummaryLogUploadsReport(
-      organisationReadRepositoryOver(organisationRepo),
+      served.repository(),
       summaryLogsRepo
     )
 
@@ -72,23 +61,23 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: org.id,
-        registrationId: registration.id,
+        organisationId: orgId,
+        registrationId,
         ...numbersOf(org, registration),
         submittedAt
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationReadRepositoryOver(organisationRepo),
+      served.repository(),
       summaryLogsRepo
     )
 
     expect(result.summaryLogUploads).toEqual([
       expect.objectContaining({
-        appropriateAgency: registration.submittedToRegulator.toUpperCase(),
+        appropriateAgency: 'EA',
         type: 'Reprocessor',
-        businessName: org.companyDetails.name,
+        businessName: org.name,
         organisationNumber: org.organisationNumber,
         registrationNumber: registration.registrationNumber,
         reprocessingSite: expect.any(String),
@@ -108,15 +97,15 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: org.id,
-        registrationId: registration.id,
+        organisationId: orgId,
+        registrationId,
         ...numbersOf(org, registration),
         submittedAt
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationReadRepositoryOver(organisationRepo),
+      served.repository(),
       summaryLogsRepo
     )
 
@@ -136,17 +125,20 @@ describe('generateSummaryLogUploadsReport', () => {
     const latestFailedAt = '2026-02-05T09:00:00.000Z'
 
     // Create second org
-    const org2 = await buildApprovedOrg(organisationRepo, {
-      organisationNumber: nextOrganisationNumber()
+    const org2 = served.approved({
+      organisationNumber: nextOrganisationNumber(),
+      year: currentUtcYear()
     })
-    const registration2 = org2.registrations[0]
+    const registration2 = registrationOf(org2)
+    const org2Id = new ObjectId().toString()
+    const registration2Id = new ObjectId().toString()
 
     // Org 1 uploads
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: org.id,
-        registrationId: registration.id,
+        organisationId: orgId,
+        registrationId,
         ...numbersOf(org, registration),
         submittedAt: firstSuccessfulAt
       })
@@ -155,8 +147,8 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: org.id,
-        registrationId: registration.id,
+        organisationId: orgId,
+        registrationId,
         ...numbersOf(org, registration),
         submittedAt: latestSuccessfulAt
       })
@@ -165,8 +157,8 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submissionFailed({
-        organisationId: org.id,
-        registrationId: registration.id,
+        organisationId: orgId,
+        registrationId,
         ...numbersOf(org, registration),
         createdAt: firstFailedAt
       })
@@ -175,8 +167,8 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submissionFailed({
-        organisationId: org.id,
-        registrationId: registration.id,
+        organisationId: orgId,
+        registrationId,
         ...numbersOf(org, registration),
         createdAt: latestFailedAt
       })
@@ -186,8 +178,8 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: org2.id,
-        registrationId: registration2.id,
+        organisationId: org2Id,
+        registrationId: registration2Id,
         ...numbersOf(org2, registration2),
         submittedAt: firstSuccessfulAt
       })
@@ -196,8 +188,8 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: org2.id,
-        registrationId: registration2.id,
+        organisationId: org2Id,
+        registrationId: registration2Id,
         ...numbersOf(org2, registration2),
         submittedAt: latestSuccessfulAt
       })
@@ -206,8 +198,8 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submissionFailed({
-        organisationId: org2.id,
-        registrationId: registration2.id,
+        organisationId: org2Id,
+        registrationId: registration2Id,
         ...numbersOf(org2, registration2),
         createdAt: firstFailedAt
       })
@@ -216,15 +208,15 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submissionFailed({
-        organisationId: org2.id,
-        registrationId: registration2.id,
+        organisationId: org2Id,
+        registrationId: registration2Id,
         ...numbersOf(org2, registration2),
         createdAt: latestFailedAt
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationReadRepositoryOver(organisationRepo),
+      served.repository(),
       summaryLogsRepo
     )
 
@@ -258,8 +250,8 @@ describe('generateSummaryLogUploadsReport', () => {
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: org.id,
-        registrationId: registration.id,
+        organisationId: orgId,
+        registrationId,
         ...numbersOf(org, registration),
         createdAt
       })
@@ -278,7 +270,7 @@ describe('generateSummaryLogUploadsReport', () => {
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationReadRepositoryOver(organisationRepo),
+      served.repository(),
       summaryLogsRepo
     )
 
@@ -291,22 +283,20 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('leaves out a registration that carries no number', async () => {
-    const unapprovedOrg = buildOrganisation({
-      organisationNumber: nextOrganisationNumber()
-    })
-    await organisationRepo.insert(unapprovedOrg)
+    // The read model serves no registration for this organisation.
+    const unapprovedOrg = { organisationNumber: nextOrganisationNumber() }
 
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: unapprovedOrg.id,
-        registrationId: unapprovedOrg.registrations[0].id,
+        organisationId: new ObjectId().toString(),
+        registrationId: new ObjectId().toString(),
         organisationNumber: unapprovedOrg.organisationNumber
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationReadRepositoryOver(organisationRepo),
+      served.repository(),
       summaryLogsRepo
     )
 
@@ -314,46 +304,28 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   it('gives an empty accreditation number for a registration with no accreditation', async () => {
-    const { VALID_FROM, VALID_TO } = getValidDateRange()
-    const registeredOnlyOrg = buildOrganisation({
-      organisationNumber: nextOrganisationNumber()
-    })
-    const { accreditationId: _unlinked, ...registeredOnly } =
-      registeredOnlyOrg.registrations[0]
     const registrationNumber = toRegistrationNumber('R26ER5000000001PA')
-    await organisationRepo.insert(registeredOnlyOrg)
-    await organisationRepo.replace(
-      registeredOnlyOrg.id,
-      1,
-      prepareOrgUpdate(registeredOnlyOrg, {
-        status: ORGANISATION_STATUS.APPROVED,
-        registrations: [
-          {
-            ...registeredOnly,
-            status: REGISTRATION_STATUS.APPROVED,
-            registrationNumber,
-            reprocessingType: REPROCESSING_TYPE.INPUT,
-            cbduNumber: 'CBDU123456',
-            validFrom: VALID_FROM,
-            validTo: VALID_TO
-          }
-        ]
+    const registeredOnlyOrg = served.add(
+      buildReadOrganisation({
+        organisationNumber: nextOrganisationNumber(),
+        registrations: {
+          [registrationNumber]: buildReadReprocessorRegistration()
+        }
       })
     )
-    await waitForVersion(organisationRepo, registeredOnlyOrg.id, 2)
 
     await summaryLogsRepo.insert(
       new ObjectId().toString(),
       summaryLogFactory.submitted({
-        organisationId: registeredOnlyOrg.id,
-        registrationId: registeredOnly.id,
+        organisationId: new ObjectId().toString(),
+        registrationId: new ObjectId().toString(),
         organisationNumber: registeredOnlyOrg.organisationNumber,
         registrationNumber
       })
     )
 
     const result = await generateSummaryLogUploadsReport(
-      organisationReadRepositoryOver(organisationRepo),
+      served.repository(),
       summaryLogsRepo
     )
 
