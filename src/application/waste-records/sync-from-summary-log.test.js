@@ -212,7 +212,7 @@ describe('syncFromSummaryLog', () => {
     organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
       organisationWith({
         registration: {
-          accreditations: { 2027: accreditationNumbered(ACCREDITATION_NUMBER) }
+          accreditations: { 2026: accreditationNumbered(ACCREDITATION_NUMBER) }
         }
       })
     )
@@ -452,15 +452,19 @@ describe('syncFromSummaryLog', () => {
       ])
     )
     organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
-      organisationWith()
+      organisationWith({
+        registration: {
+          accreditations: { 2027: accreditationNumbered(ACCREDITATION_NUMBER) }
+        }
+      })
     )
 
     await expect(
       makeSync({ extractor })(
-        summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2027)),
+        summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2026)),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-1 for 2027')
+    ).rejects.toThrow('Accreditation not found: ACC-1 for 2026')
   })
 
   it('resolves overseas sites for exporter waste balance validation', async () => {

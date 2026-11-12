@@ -206,7 +206,7 @@ const setupSubmit = async ({
     organisationId,
     registrationId,
     ...reportKey,
-    year: toYear(2025),
+    year: toYear(2026),
     accreditationId,
     accreditationNumber,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
