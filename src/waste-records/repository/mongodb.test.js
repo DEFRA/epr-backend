@@ -132,10 +132,12 @@ describe('ensureSummaryLogRowStatesCollection', () => {
     ).toBe(true)
   })
 
-  it('drops the identity index without the year', async (/** @type {*} */ {
+  it('keeps the identity index without the year, which refuses a copy of a yearless row state for its year', async (/** @type {*} */ {
     mongoClient,
-    summaryLogRowStatesCollection
+    summaryLogRowStatesCollection,
+    summaryLogRowStatesRepository
   }) => {
+    const repository = summaryLogRowStatesRepository()
     await summaryLogRowStatesCollection.createIndex(
       {
         organisationNumber: 1,
@@ -147,13 +149,35 @@ describe('ensureSummaryLogRowStatesCollection', () => {
       },
       { name: 'summary_log_row_state_identity_by_number', unique: true }
     )
+    try {
+      await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
+      const entry = buildSummaryLogRowStateEntry()
+      await repository.upsertSummaryLogRowStates(
+        withNumbers(DEFAULT_LEDGER_ID),
+        [entry],
+        toSummaryLogFileId('log-1')
+      )
+      await summaryLogRowStatesCollection.updateMany(
+        {},
+        { $unset: { year: '' } }
+      )
 
-    await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
-
-    const names = (await summaryLogRowStatesCollection.indexes()).map(
-      ({ name }) => name
-    )
-    expect(names).not.toContain('summary_log_row_state_identity_by_number')
+      await expect(
+        repository.upsertSummaryLogRowStates(
+          withNumbers(DEFAULT_LEDGER_ID),
+          [entry],
+          toSummaryLogFileId('log-2')
+        )
+      ).rejects.toThrow(/duplicate key/)
+      const names = (await summaryLogRowStatesCollection.indexes()).map(
+        ({ name }) => name
+      )
+      expect(names).toContain('summary_log_row_state_identity_by_number')
+    } finally {
+      await summaryLogRowStatesCollection.dropIndex(
+        'summary_log_row_state_identity_by_number'
+      )
+    }
   })
 
   it('drops the id-keyed identity index it replaces', async (/** @type {*} */ {

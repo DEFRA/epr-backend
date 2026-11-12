@@ -129,16 +129,12 @@ describe('ensureLedgerCollection', () => {
       })
     })
 
-    it('drops the indexes keyed on the numbers without the year', async (/** @type {*} */ {
+    it('drops the lookup indexes keyed on the numbers without the year', async (/** @type {*} */ {
       mongoClient
     }) => {
       const collection = mongoClient
         .db(DATABASE_NAME)
         .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
-      await collection.createIndex(
-        { registrationNumber: 1, accreditationNumber: 1, number: 1 },
-        { name: 'ledger_slot_by_number', unique: true }
-      )
       await collection.createIndex(
         { registrationNumber: 1, accreditationNumber: 1, kind: 1, number: -1 },
         { name: 'ledger_kind_latest_by_number' }
@@ -156,9 +152,36 @@ describe('ensureLedgerCollection', () => {
       await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
 
       const names = (await collection.indexes()).map(({ name }) => name)
-      expect(names).not.toContain('ledger_slot_by_number')
       expect(names).not.toContain('ledger_kind_latest_by_number')
       expect(names).not.toContain('prn_watermark_catchup_by_number')
+    })
+
+    it('keeps the slot index without the year, which refuses opening a year over a yearless ledger', async (/** @type {*} */ {
+      mongoClient,
+      ledgerRepository
+    }) => {
+      const repository = ledgerRepository()
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+      await collection.createIndex(
+        { registrationNumber: 1, accreditationNumber: 1, number: 1 },
+        { name: 'ledger_slot_by_number', unique: true }
+      )
+      try {
+        await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
+        const opening = buildLedgerEvent({ number: 1 })
+        await repository.appendEvents([opening])
+        await collection.updateMany({}, { $unset: { year: '' } })
+
+        await expect(repository.appendEvents([opening])).rejects.toBeInstanceOf(
+          LedgerSlotConflictError
+        )
+        const names = (await collection.indexes()).map(({ name }) => name)
+        expect(names).toContain('ledger_slot_by_number')
+      } finally {
+        await collection.dropIndex('ledger_slot_by_number')
+      }
     })
 
     it('drops the indexes keyed on the ids', async (/** @type {*} */ {

@@ -19,7 +19,7 @@ const ONLY_YEAR_BEFORE_YEARS_WERE_KEPT_APART = utcYearOf('2026-01-01')
  * @property {number} ledgers - ledgers given their year (would be, on a dry run)
  * @property {number} events - ledger events given their year
  * @property {number} rowStates - row states given their year
- * @property {number} unplaced - ledgers left alone because they already hold records for the year
+ * @property {number} unplaced - ledgers left alone because they already hold events for the year
  * @property {number} failed - ledgers not written; retried on the next run
  * @property {number} auditFailed - ledgers written but not audited
  */
@@ -70,9 +70,11 @@ const auditYearAssigned = async (systemLogsRepository, numbers, counts) => {
 
 /**
  * Gives one ledger's yearless records their year and audits the change once
- * for the ledger. A ledger already holding records for that year is left
+ * for the ledger. A ledger already holding events for that year is left
  * alone: its yearless events can share event numbers with them, which the
- * unique ledger slot would refuse.
+ * unique ledger slot would refuse. Row states for the year cannot clash the
+ * same way, because the identity index without the year already keeps a
+ * yearless row state and its copy for a year from both being stored.
  *
  * @param {Repositories} repositories
  * @param {RequiredNumbers} numbers
@@ -87,9 +89,9 @@ const backfillLedger = async (
   logger
 ) => {
   const year = ONLY_YEAR_BEFORE_YEARS_WERE_KEPT_APART
-  if (await ledgers.holdsYear(numbers, year)) {
+  if (await ledgers.holdsEventsFor(numbers, year)) {
     logger.error({
-      message: `Ledger year backfill cannot place ledger ${describeLedger(numbers)}: it holds records for ${year} alongside records without a year`
+      message: `Ledger year backfill cannot place ledger ${describeLedger(numbers)}: it holds events for ${year} alongside events without a year`
     })
     return {
       ledgers: 0,

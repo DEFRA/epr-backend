@@ -187,6 +187,21 @@ describe('backfillLedgerYear', () => {
     expect(await yearsOf(backfill.rowStates)).toEqual([2026])
   })
 
+  it('places a ledger whose row states for 2026 sit beside yearless ones', async ({
+    backfill
+  }) => {
+    await backfill.events.insertOne(event(ACCREDITED, 1))
+    await backfill.rowStates.insertMany([
+      rowState(ACCREDITED, '1001'),
+      rowState(ACCREDITED, '1002', 2026)
+    ])
+
+    const result = await backfill.run(false)
+
+    expect(result).toMatchObject({ ledgers: 1, events: 1, rowStates: 1 })
+    expect(await yearsOf(backfill.rowStates)).toEqual([2026, 2026])
+  })
+
   it('leaves records of another year as they are', async ({ backfill }) => {
     await backfill.events.insertMany([
       event(ACCREDITED, 1),
@@ -202,7 +217,7 @@ describe('backfillLedgerYear', () => {
     { mode: 'a dry run', isDryRun: true },
     { mode: 'a backfill', isDryRun: false }
   ])(
-    'on $mode, leaves a ledger that already holds 2026 records unplaced and names it at error level',
+    'on $mode, leaves a ledger that already holds 2026 events unplaced and names it at error level',
     async ({ isDryRun }, { backfill }) => {
       await backfill.events.insertMany([
         event(ACCREDITED, 1),
@@ -222,7 +237,7 @@ describe('backfillLedgerYear', () => {
       ).not.toBeNull()
       expect(backfill.logger.error).toHaveBeenCalledWith({
         message:
-          'Ledger year backfill cannot place ledger organisationNumber=500123 registrationNumber=R26SR500123PL accreditationNumber=A26SR500123PL: it holds records for 2026 alongside records without a year'
+          'Ledger year backfill cannot place ledger organisationNumber=500123 registrationNumber=R26SR500123PL accreditationNumber=A26SR500123PL: it holds events for 2026 alongside events without a year'
       })
     }
   )
