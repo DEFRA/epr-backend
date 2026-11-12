@@ -19,16 +19,22 @@ let organisationSequence = 600000
 let accreditationSequence = 9000000000
 
 /** @returns {Organisation['organisationNumber']} */
-export const nextReadOrganisationNumber = () =>
-  toOrganisationNumber(String(organisationSequence++))
+export const nextReadOrganisationNumber = () => {
+  const number = organisationSequence
+  organisationSequence += 1
+  return toOrganisationNumber(String(number))
+}
 
 /**
  * A number no other default accreditation holds.
  *
  * @returns {ReprocessorAccreditation['accreditationNumber']}
  */
-export const nextReadAccreditationNumber = () =>
-  toAccreditationNumber(`A26ER${accreditationSequence++}PL`)
+export const nextReadAccreditationNumber = () => {
+  const number = accreditationSequence
+  accreditationSequence += 1
+  return toAccreditationNumber(`A26ER${number}PL`)
+}
 
 /**
  * A created then approved timeline, both recorded and taking effect at the

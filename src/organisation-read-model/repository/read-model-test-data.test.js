@@ -93,7 +93,9 @@ describe('read-model-test-data', () => {
 
     it('keeps a standingByDate it is given', () => {
       const standingByDate = {
-        2026: { '2026-01-01': { standing: /** @type {const} */ ('accredited') } }
+        2026: {
+          '2026-01-01': { standing: /** @type {const} */ ('accredited') }
+        }
       }
 
       expect(build({ standingByDate }).standingByDate).toBe(standingByDate)

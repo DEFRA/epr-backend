@@ -162,7 +162,8 @@ describe('in-memory organisation read repository', () => {
             R26ER5001180041PL: buildReadReprocessorRegistration({
               accreditations: {
                 2026: buildReadAccreditation({
-                  accreditationNumber: toAccreditationNumber('A26ER5001180114PL')
+                  accreditationNumber:
+                    toAccreditationNumber('A26ER5001180114PL')
                 })
               }
             })

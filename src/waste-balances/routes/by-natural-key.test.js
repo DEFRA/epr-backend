@@ -112,9 +112,9 @@ const servedExporter = () =>
     standingByDate: accreditedStanding,
     accreditations: {
       2026: buildReadExporterAccreditation({
-          accreditationNumber: toAccreditationNumber(
-            EXPORTER_ACCREDITATION_NUMBER
-          )
+        accreditationNumber: toAccreditationNumber(
+          EXPORTER_ACCREDITATION_NUMBER
+        )
       })
     }
   })
