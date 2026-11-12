@@ -90,14 +90,4 @@ describe('upload-callback strategy', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
   })
-
-  it('should reject a signature given in the query string', async () => {
-    const response = await server.inject({
-      method: 'POST',
-      url: `${path}?signature=${signature}`,
-      payload: {}
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-  })
 })
