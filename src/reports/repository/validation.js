@@ -1,4 +1,3 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 import {
   createReportSchema,
@@ -15,7 +14,7 @@ import {
 } from './schema.js'
 
 /**
- * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, RegistrationKey } from './port.js'
+ * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, MarkActiveReportsStaleForSummaryLogParams } from './port.js'
  */
 
 /**
@@ -130,8 +129,8 @@ export const validateFindReportById = (reportId) => {
 }
 
 /**
- * @param {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }} params
- * @returns {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }}
+ * @param {MarkActiveReportsStaleForSummaryLogParams} params
+ * @returns {MarkActiveReportsStaleForSummaryLogParams}
  */
 export const validateMarkActiveReportsStale = (params) => {
   const { error, value } = markActiveReportsStaleSchema.validate(params, {

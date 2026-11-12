@@ -2,6 +2,8 @@ import { beforeEach, describe, expect } from 'vitest'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
+  DEFAULT_REPORT_YEAR,
+  NEXT_YEAR_REPORT,
   uniqueOrganisationNumber,
   uniqueRegistrationNumber
 } from './test-data.js'
@@ -39,20 +41,22 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
 
       // Well before the submission.
       expect(
-        await repository.hasReportSubmittedSince(
+        await repository.hasReportSubmittedSince({
           organisationNumber,
           registrationNumber,
-          BEFORE
-        )
+          year: DEFAULT_REPORT_YEAR,
+          since: BEFORE
+        })
       ).toBe(true)
 
       // One millisecond before: still strictly after -> matches (lower boundary).
       expect(
-        await repository.hasReportSubmittedSince(
+        await repository.hasReportSubmittedSince({
           organisationNumber,
           registrationNumber,
-          oneMsBefore
-        )
+          year: DEFAULT_REPORT_YEAR,
+          since: oneMsBefore
+        })
       ).toBe(true)
     })
 
@@ -66,20 +70,22 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
 
       // Exactly at the submission instant: not strictly after (strict >).
       expect(
-        await repository.hasReportSubmittedSince(
+        await repository.hasReportSubmittedSince({
           organisationNumber,
           registrationNumber,
-          submittedAt
-        )
+          year: DEFAULT_REPORT_YEAR,
+          since: submittedAt
+        })
       ).toBe(false)
 
       // Well after the submission.
       expect(
-        await repository.hasReportSubmittedSince(
+        await repository.hasReportSubmittedSince({
           organisationNumber,
           registrationNumber,
-          AFTER
-        )
+          year: DEFAULT_REPORT_YEAR,
+          since: AFTER
+        })
       ).toBe(false)
     })
 
@@ -89,11 +95,12 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       )
 
       expect(
-        await repository.hasReportSubmittedSince(
+        await repository.hasReportSubmittedSince({
           organisationNumber,
           registrationNumber,
-          BEFORE
-        )
+          year: DEFAULT_REPORT_YEAR,
+          since: BEFORE
+        })
       ).toBe(false)
     })
 
@@ -104,11 +111,29 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       })
 
       expect(
-        await repository.hasReportSubmittedSince(
+        await repository.hasReportSubmittedSince({
           organisationNumber,
           registrationNumber,
-          BEFORE
-        )
+          year: DEFAULT_REPORT_YEAR,
+          since: BEFORE
+        })
+      ).toBe(false)
+    })
+
+    it('ignores submitted reports belonging to a different year', async () => {
+      await createAndSubmitReport(repository, {
+        ...NEXT_YEAR_REPORT,
+        organisationNumber,
+        registrationNumber
+      })
+
+      expect(
+        await repository.hasReportSubmittedSince({
+          organisationNumber,
+          registrationNumber,
+          year: DEFAULT_REPORT_YEAR,
+          since: BEFORE
+        })
       ).toBe(false)
     })
   })

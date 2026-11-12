@@ -990,16 +990,16 @@ describe('createReportsService', () => {
     })
     const service = createReportsService(reportsRepository)
 
-    const result = await service.hasReportSubmittedSince(
-      toOrganisationNumber('500123'),
-      toRegistrationNumber('R25SR500010912PL'),
-      '2026-07-01T00:00:00.000Z'
-    )
+    const params = {
+      organisationNumber: toOrganisationNumber('500123'),
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+      year: toYear(2026),
+      since: '2026-07-01T00:00:00.000Z'
+    }
+    const result = await service.hasReportSubmittedSince(params)
 
     expect(reportsRepository.hasReportSubmittedSince).toHaveBeenCalledWith(
-      '500123',
-      'R25SR500010912PL',
-      '2026-07-01T00:00:00.000Z'
+      params
     )
     expect(result).toBe(true)
   })

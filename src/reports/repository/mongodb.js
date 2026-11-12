@@ -38,7 +38,6 @@ import {
  *   UpdateReportStatusParams
  * } from './port.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -414,22 +413,18 @@ const performFindPeriodicReportsForYear = async (db, params) => {
 }
 
 /**
- * Returns true when any report for the org/reg was submitted strictly after
- * `since`. SUBMITTED is terminal and each submission is a distinct document, so
- * the denormalised `status.submitted` slot is the single submission instant and
- * is directly indexable.
+ * Returns true when any report for the org/reg/year was submitted strictly
+ * after `since`. SUBMITTED is terminal and each submission is a distinct
+ * document, so the denormalised `status.submitted` slot is the single
+ * submission instant and is directly indexable.
  *
  * @param {Db} db
- * @param {OrganisationNumber} organisationNumber
- * @param {RegistrationNumber} registrationNumber
- * @param {string} since - ISO timestamp
+ * @param {import('./port.js').HasReportSubmittedSinceParams} params
  * @returns {Promise<boolean>}
  */
 const performHasReportSubmittedSince = async (
   db,
-  organisationNumber,
-  registrationNumber,
-  since
+  { organisationNumber, registrationNumber, year, since }
 ) => {
   // Both `at` and `since` are canonical `new Date().toISOString()` values, so the
   // `$gt` string compare tracks chronological order (the ISO invariant this
@@ -438,6 +433,7 @@ const performHasReportSubmittedSince = async (
     {
       organisationNumber,
       registrationNumber,
+      year,
       'status.submitted.at': { $gt: since }
     },
     { projection: { _id: 1 } }
@@ -464,31 +460,15 @@ export const createReportsRepository = async (db) => {
     findPeriodicReportsForYear: (params) =>
       performFindPeriodicReportsForYear(db, params),
     findReportById: (reportId) => performFindReportById(db, reportId),
-    markActiveReportsStaleForSummaryLog: (
-      organisationNumber,
-      registrationNumber,
-      summaryLogId,
-      uploadedAt
-    ) =>
-      performMarkActiveReportsStaleForSummaryLog(
-        db,
-        organisationNumber,
-        registrationNumber,
-        summaryLogId,
-        uploadedAt
-      ),
+    markActiveReportsStaleForSummaryLog: (params) =>
+      performMarkActiveReportsStaleForSummaryLog(db, params),
     markActiveReportsStaleForPrnCancellation: (params) =>
       performMarkActiveReportsStaleForPrnCancellation(db, params),
     markSubmittedReportsRequiringResubmission: (params) =>
       performMarkSubmittedReportsRequiringResubmission(db, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       performMarkSubmittedReportRequiringResubmissionByOperator(db, params),
-    hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
-      performHasReportSubmittedSince(
-        db,
-        organisationNumber,
-        registrationNumber,
-        since
-      )
+    hasReportSubmittedSince: (params) =>
+      performHasReportSubmittedSince(db, params)
   })
 }

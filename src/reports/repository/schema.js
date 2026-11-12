@@ -241,6 +241,7 @@ export const findReportByIdSchema = Joi.string()
 
 export const markActiveReportsStaleSchema = Joi.object({
   ...registrationKeySchema,
+  year: YEAR_SCHEMA,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required()
 })

@@ -1,5 +1,3 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
-import { toYear } from '#common/helpers/dates/year.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
@@ -14,11 +12,10 @@ import {
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_START_DATE,
   DEFAULT_REPORT_YEAR,
+  NEXT_YEAR_REPORT,
   uniqueOrganisationNumber,
   uniqueRegistrationNumber
 } from './test-data.js'
-
-const NEXT_YEAR = toYear(DEFAULT_REPORT_YEAR + 1)
 
 const TONNAGE_OVERRIDES = {
   recyclingActivity: {
@@ -53,13 +50,7 @@ const TONNAGE_OVERRIDES = {
 }
 
 const nextYearReport = (overrides = {}) =>
-  buildCreateReportParams({
-    year: NEXT_YEAR,
-    startDate: calendarDate(`${NEXT_YEAR}-01-01`),
-    endDate: calendarDate(`${NEXT_YEAR}-01-31`),
-    dueDate: calendarDate(`${NEXT_YEAR}-02-15`),
-    ...overrides
-  })
+  buildCreateReportParams({ ...NEXT_YEAR_REPORT, ...overrides })
 
 export const testFindPeriodicReportsForYearBehaviour = (it) => {
   describe('findPeriodicReportsForYear', () => {

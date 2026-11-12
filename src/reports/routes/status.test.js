@@ -535,12 +535,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         registrationNumber
       } = await createServer()
 
-      await reportsRepository.markActiveReportsStaleForSummaryLog(
+      await reportsRepository.markActiveReportsStaleForSummaryLog({
         organisationNumber,
         registrationNumber,
-        toSummaryLogFileId('sl-new'),
-        new Date().toISOString()
-      )
+        year: YEAR,
+        summaryLogId: toSummaryLogFileId('sl-new'),
+        uploadedAt: new Date().toISOString()
+      })
 
       const response = await postStatus({
         status: 'ready_to_submit',

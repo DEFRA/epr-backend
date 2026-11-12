@@ -1,3 +1,4 @@
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 import { toYear } from '#common/helpers/dates/year.js'
 import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -255,15 +256,24 @@ const setupSubmit = async ({
 describe('submitSummaryLog staleness guard (period closure)', () => {
   it('rejects when a report was submitted after the summary log was created', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
-      await setupSubmit({
-        reportsRepository,
-        createdAt: '2024-01-01T00:00:00.000Z'
-      })
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: { year },
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({
+      reportsRepository,
+      createdAt: '2024-01-01T00:00:00.000Z'
+    })
 
-    // A periodic report closes for this registration after the log was created:
-    // its SUBMITTED status.history entry is stamped "now", well after 2024.
-    await createAndSubmitReport(reportsRepository, reportKey)
+    // A periodic report of the log's year closes for this registration after
+    // the log was created: its SUBMITTED status.history entry is stamped "now",
+    // well after 2024.
+    await createAndSubmitReport(reportsRepository, {
+      ...reportKey,
+      year
+    })
 
     await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
       PermanentError
@@ -277,6 +287,34 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTING)
     expect(version).toBe(1)
+  })
+
+  it('proceeds when a report for a different year was submitted after the summary log was created', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: { year },
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({
+      reportsRepository,
+      createdAt: '2024-01-01T00:00:00.000Z'
+    })
+
+    await createAndSubmitReport(reportsRepository, {
+      ...reportKey,
+      year: toYear(year - 1)
+    })
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    const { summaryLog } = await waitForVersion(
+      summaryLogsRepository,
+      summaryLogId,
+      2
+    )
+    expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
   })
 
   it('proceeds and writes records when no report has been submitted since creation', async () => {
@@ -313,13 +351,21 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const reportsRepository = createInMemoryReportsRepository()()
     // The log is created far in the future, after any real submission, so the
     // seeded closure predates it and the guard must not fire.
-    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
-      await setupSubmit({
-        reportsRepository,
-        createdAt: '2099-01-01T00:00:00.000Z'
-      })
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: { year },
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({
+      reportsRepository,
+      createdAt: '2099-01-01T00:00:00.000Z'
+    })
 
-    await createAndSubmitReport(reportsRepository, reportKey)
+    await createAndSubmitReport(reportsRepository, {
+      ...reportKey,
+      year
+    })
 
     await submitSummaryLog(summaryLogId, deps)
 
@@ -404,20 +450,20 @@ describe('submitSummaryLog resubmission flag source', () => {
 })
 
 describe('submitSummaryLog stale flagging', () => {
-  it('leaves alone an active report already built from the summary log being submitted', async () => {
+  /**
+   * Submits a log over one active report, through the real
+   * summary-log-uploaded handler, and says whether the report went stale.
+   *
+   * @param {(summaryLog: SummaryLog) => object} reportOverrides
+   */
+  const submitOverActiveReport = async (reportOverrides) => {
     const reportsRepository = createInMemoryReportsRepository()()
     const { deps, summaryLogId, summaryLog, reportKey } = await setupSubmit({
       reportsRepository,
       createdAt: '2099-01-01T00:00:00.000Z'
     })
     const { id: reportId } = await reportsRepository.createReport(
-      buildCreateReportParams({
-        ...reportKey,
-        source: {
-          summaryLogId: summaryLog.file.id,
-          lastUploadedAt: '2099-01-01T00:00:00.000Z'
-        }
-      })
+      buildCreateReportParams({ ...reportKey, ...reportOverrides(summaryLog) })
     )
 
     await submitSummaryLog(summaryLogId, {
@@ -429,7 +475,29 @@ describe('submitSummaryLog stale flagging', () => {
     })
 
     const report = await reportsRepository.findReportById(reportId)
-    expect(report.stale).toBeUndefined()
+    return report.stale !== undefined
+  }
+
+  it('marks stale an active report for the summary log year', async () => {
+    expect(await submitOverActiveReport(({ year }) => ({ year }))).toBe(true)
+  })
+
+  it('leaves alone an active report for a different year', async () => {
+    expect(
+      await submitOverActiveReport(({ year }) => ({ year: toYear(year - 1) }))
+    ).toBe(false)
+  })
+
+  it('leaves alone an active report already built from the summary log being submitted', async () => {
+    expect(
+      await submitOverActiveReport(({ year, file }) => ({
+        year,
+        source: {
+          summaryLogId: file.id,
+          lastUploadedAt: '2099-01-01T00:00:00.000Z'
+        }
+      }))
+    ).toBe(false)
   })
 })
 

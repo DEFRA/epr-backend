@@ -1,4 +1,3 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   ACTIVE_REPORT_STATUSES,
@@ -305,25 +304,17 @@ const findPeriodicReportsForYear = async (reports, params) => {
 
 /**
  * @param {Map<string, Object>} reports
- * @param {OrganisationNumber} organisationNumber
- * @param {RegistrationNumber} registrationNumber
- * @param {SummaryLogFileId} summaryLogId
- * @param {string} uploadedAt
+ * @param {import('./port.js').MarkActiveReportsStaleForSummaryLogParams} params
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
-const markActiveReportsStaleForSummaryLog = async (
-  reports,
-  organisationNumber,
-  registrationNumber,
-  summaryLogId,
-  uploadedAt
-) => {
-  validateMarkActiveReportsStale({
+const markActiveReportsStaleForSummaryLog = async (reports, params) => {
+  const {
     organisationNumber,
     registrationNumber,
+    year,
     summaryLogId,
     uploadedAt
-  })
+  } = validateMarkActiveReportsStale(params)
 
   const key = { organisationNumber, registrationNumber }
   const summaryLogChanged = { uploadedAt, summaryLogId }
@@ -333,6 +324,7 @@ const markActiveReportsStaleForSummaryLog = async (
   for (const [id, report] of reports) {
     if (
       isForRegistration(report, key) &&
+      report.year === year &&
       ACTIVE_REPORT_STATUSES.has(report.status.currentStatus) &&
       !report.stale?.summaryLogChanged &&
       report.source?.summaryLogId !== summaryLogId
@@ -607,21 +599,18 @@ const markSubmittedReportRequiringResubmissionByOperator = async (
 }
 
 /**
- * Returns true when any report for the org/reg was submitted strictly after
- * `since`. SUBMITTED is terminal and each submission is a distinct document, so
- * the denormalised `status.submitted` slot is the single submission instant.
+ * Returns true when any report for the org/reg/year was submitted strictly
+ * after `since`. SUBMITTED is terminal and each submission is a distinct
+ * document, so the denormalised `status.submitted` slot is the single
+ * submission instant.
  *
  * @param {Map<string, Object>} reports
- * @param {OrganisationNumber} organisationNumber
- * @param {RegistrationNumber} registrationNumber
- * @param {string} since - ISO timestamp
+ * @param {import('./port.js').HasReportSubmittedSinceParams} params
  * @returns {Promise<boolean>}
  */
 const hasReportSubmittedSince = async (
   reports,
-  organisationNumber,
-  registrationNumber,
-  since
+  { organisationNumber, registrationNumber, year, since }
 ) =>
   // Both `at` and `since` are canonical `new Date().toISOString()` values, so a
   // lexical compare tracks chronological order (the ISO invariant this codebase
@@ -629,6 +618,7 @@ const hasReportSubmittedSince = async (
   [...reports.values()].some(
     (report) =>
       isForRegistration(report, { organisationNumber, registrationNumber }) &&
+      report.year === year &&
       report.status.submitted?.at > since
   )
 
@@ -653,31 +643,15 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     findAllPeriodicReports: () => findAllPeriodicReports(reports),
     findPeriodicReportsForYear: (params) =>
       findPeriodicReportsForYear(reports, params),
-    markActiveReportsStaleForSummaryLog: (
-      organisationNumber,
-      registrationNumber,
-      summaryLogId,
-      uploadedAt
-    ) =>
-      markActiveReportsStaleForSummaryLog(
-        reports,
-        organisationNumber,
-        registrationNumber,
-        summaryLogId,
-        uploadedAt
-      ),
+    markActiveReportsStaleForSummaryLog: (params) =>
+      markActiveReportsStaleForSummaryLog(reports, params),
     markActiveReportsStaleForPrnCancellation: (params) =>
       markActiveReportsStaleForPrnCancellation(reports, params),
     markSubmittedReportsRequiringResubmission: (params) =>
       markSubmittedReportsRequiringResubmission(reports, params),
     markSubmittedReportRequiringResubmissionByOperator: (params) =>
       markSubmittedReportRequiringResubmissionByOperator(reports, params),
-    hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
-      hasReportSubmittedSince(
-        reports,
-        organisationNumber,
-        registrationNumber,
-        since
-      )
+    hasReportSubmittedSince: (params) =>
+      hasReportSubmittedSince(reports, params)
   })
 }

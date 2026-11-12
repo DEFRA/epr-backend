@@ -20,6 +20,8 @@ import {
   DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
+  DEFAULT_REPORT_YEAR,
+  NEXT_YEAR_REPORT,
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -1172,8 +1174,11 @@ describe('createCommandQueueConsumer', () => {
           )
         })
 
-        /** @param {string} createdAt */
-        const submitLogCreatedAt = async (createdAt) => {
+        /**
+         * @param {string} createdAt
+         * @param {object} [reportOverrides]
+         */
+        const submitLogCreatedAt = async (createdAt, reportOverrides = {}) => {
           await summaryLogsRepository.insert(
             'log-123',
             summaryLogFactory.submitting({
@@ -1181,11 +1186,12 @@ describe('createCommandQueueConsumer', () => {
               registrationId: DEFAULT_REG_ID,
               organisationNumber: DEFAULT_ORG_NUMBER,
               registrationNumber: DEFAULT_REG_NUMBER,
+              year: DEFAULT_REPORT_YEAR,
               createdAt,
               meta: {}
             })
           )
-          await createAndSubmitReport(reportsRepository)
+          await createAndSubmitReport(reportsRepository, reportOverrides)
 
           await handleMessage({
             MessageId: 'msg-123',
@@ -1214,7 +1220,7 @@ describe('createCommandQueueConsumer', () => {
             expect.objectContaining({
               err: expect.objectContaining({
                 message:
-                  'Summary log log-123 is stale: a report was submitted for this registration after the summary log was created'
+                  'Summary log log-123 is stale: a report was submitted for this registration and year after the summary log was created'
               })
             })
           )
@@ -1225,6 +1231,15 @@ describe('createCommandQueueConsumer', () => {
 
           const summaryLog = await submitLogCreatedAt(
             anHourFromNow.toISOString()
+          )
+
+          expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+        })
+
+        it('submits when the report submitted after the log was created is for a different year', async () => {
+          const summaryLog = await submitLogCreatedAt(
+            '2024-01-01T00:00:00.000Z',
+            NEXT_YEAR_REPORT
           )
 
           expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)

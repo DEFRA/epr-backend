@@ -423,7 +423,10 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   it('answers 500 and leaves the log submission-failed when the submit step throws', async () => {
     const env = await createEnvironment()
     const minted = beforeTransitionToSubmitting(env, () =>
-      createAndSubmitReport(env.server.app.reportsRepository, env.reportKey)
+      createAndSubmitReport(env.server.app.reportsRepository, {
+        ...env.reportKey,
+        year: ACCREDITED_YEAR
+      })
     )
 
     const response = await submit(
