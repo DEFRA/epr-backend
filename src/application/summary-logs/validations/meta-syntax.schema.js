@@ -1,6 +1,9 @@
 import Joi from 'joi'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { customJoi } from '#common/validation/custom-joi.js'
+import { checkTemplateVersion } from '#domain/summary-logs/table-schemas/index.js'
+
+/** @import {Year} from '#common/helpers/dates/year.js' */
 
 const VALID_PROCESSING_TYPES = [
   PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -13,13 +16,13 @@ const VALID_PROCESSING_TYPES = [
 const IS_REQUIRED = 'is required'
 
 /**
- * Creates a Joi schema for meta section fields
+ * Creates a Joi schema for meta section fields (ADR 0055 for TEMPLATE_VERSION)
  *
- * @param {Object} [options]
- * @param {Record<string, number>} [options.minTemplateVersions] - Minimum template version per processing type
+ * @param {Object} options
+ * @param {Year} options.year - The summary log's year
  * @returns {Joi.ObjectSchema}
  */
-export const createMetaSchema = ({ minTemplateVersions = {} } = {}) => {
+export const createMetaSchema = ({ year }) => {
   return Joi.object({
     PROCESSING_TYPE: customJoi
       .coercedString()
@@ -31,19 +34,20 @@ export const createMetaSchema = ({ minTemplateVersions = {} } = {}) => {
       }),
     TEMPLATE_VERSION: Joi.number()
       .required()
-      .when('PROCESSING_TYPE', {
-        switch: Object.entries(minTemplateVersions).map(([type, min]) => ({
-          is: type,
-          then: Joi.number()
-            .min(min)
-            .messages({ 'number.min': `must be at least ${min}` })
-        })),
-        otherwise: Joi.number()
-          .min(Math.max(...Object.values(minTemplateVersions), 1))
-          .messages({ 'number.min': 'must be a supported template version' })
+      .custom((version, helpers) => {
+        const processingType = helpers.state.ancestors[0].PROCESSING_TYPE
+        if (!VALID_PROCESSING_TYPES.includes(processingType)) {
+          return version
+        }
+
+        const failure = checkTemplateVersion({ year, processingType, version })
+        return failure ? helpers.error(failure.error, failure.context) : version
       })
       .messages({
-        'any.required': IS_REQUIRED
+        'any.required': IS_REQUIRED,
+        'number.min': 'must be at least {#limit}',
+        'templateVersion.year': 'must be a template for a supported year',
+        'templateVersion.yearMismatch': 'must be a template for {#year}'
       }),
     REGISTRATION_NUMBER: customJoi.coercedString().required().messages({
       'any.required': IS_REQUIRED
