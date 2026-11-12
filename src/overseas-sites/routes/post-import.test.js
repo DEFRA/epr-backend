@@ -16,7 +16,6 @@ import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
-import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { orsImportCreatePath } from './post-import.js'
 
@@ -144,7 +143,10 @@ describe(`${orsImportCreatePath} route`, () => {
           {
             importId: id,
             redirectUrl: 'https://admin.test/overseas-sites/upload',
-            callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`/v1/overseas-sites/imports/${id}/upload-completed`)}`
+            callback: {
+              url: `${config.get('appBaseUrl')}/v1/overseas-sites/imports/${id}/upload-completed`,
+              signature: expect.stringMatching(/^[0-9a-f]{64}$/)
+            }
           }
         ])
       })

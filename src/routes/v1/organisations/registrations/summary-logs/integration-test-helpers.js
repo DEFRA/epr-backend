@@ -30,10 +30,10 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { signingUploadCompletedCallbacks } from '#test/upload-callback.js'
 import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
-import { signedCallback } from '#test/upload-callback.js'
 
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
@@ -507,6 +507,14 @@ export const UPLOAD_YEAR = toYear(2026)
 export const registrationUrl = `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}`
 export const accreditationUrl = `${registrationUrl}/accreditations/${UPLOAD_YEAR}`
 
+/**
+ * A test server that signs the upload-completed callbacks injected into it.
+ *
+ * @param {Parameters<typeof createTestServer>[0]} [options]
+ */
+export const createSigningTestServer = async (options) =>
+  signingUploadCompletedCallbacks(await createTestServer(options))
+
 /** @param {string} summaryLogId */
 export const buildGetUrl = (summaryLogId) =>
   `${registrationUrl}/summary-logs/${summaryLogId}`
@@ -516,15 +524,13 @@ export const buildGetUrl = (summaryLogId) =>
  * @param {{ accredited?: boolean }} [options]
  */
 export const buildPostUrl = (summaryLogId, { accredited = true } = {}) =>
-  signedCallback(
-    uploadCompletedPath({
-      organisationNumber: TEST_ORGANISATION_NUMBER,
-      registrationNumber: TEST_REGISTRATION_NUMBER,
-      year: UPLOAD_YEAR,
-      accredited,
-      summaryLogId
-    })
-  )
+  uploadCompletedPath({
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    registrationNumber: TEST_REGISTRATION_NUMBER,
+    year: UPLOAD_YEAR,
+    accredited,
+    summaryLogId
+  })
 
 /** @param {string} summaryLogId */
 export const buildSubmitUrl = (summaryLogId) =>
@@ -718,7 +724,7 @@ export const createTestInfrastructure = async (
     logger: mockLogger
   })
 
-  const server = await createTestServer({
+  const server = await createSigningTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
       organisationAdministrationRepository: () =>
@@ -867,7 +873,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     logger: mockLogger
   })
 
-  const server = await createTestServer({
+  const server = await createSigningTestServer({
     config,
     repositories: {
       summaryLogsRepository: () => summaryLogsRepository,

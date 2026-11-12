@@ -10,7 +10,6 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { QUARTERLY_PERIODS } from '#reports/domain/period-labels.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { signedCallback } from '#test/upload-callback.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -128,9 +127,7 @@ describe('an operator accredited in July uploading their registered-only summary
     }
     await server.inject({
       method: 'POST',
-      url: signedCallback(
-        `${registration}/summary-logs/${YEAR}/${summaryLogId}/upload-completed`
-      ),
+      url: `${registration}/summary-logs/${YEAR}/${summaryLogId}/upload-completed`,
       payload: createUploadPayload(
         organisationId,
         registrationId,

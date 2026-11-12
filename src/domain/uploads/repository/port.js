@@ -1,10 +1,12 @@
+/** @import { UploadCallback } from '#common/helpers/auth/upload-callback-signature.js' */
+
 /**
  * @typedef {Object} InitiateSummaryLogUploadOptions
  * @property {string} organisationId - Organisation ID
  * @property {string} registrationId - Registration ID
  * @property {string} summaryLogId - Summary log ID (for metadata)
  * @property {string} redirectUrl - URL to redirect user after upload completes
- * @property {string} callbackUrl - URL for CDP Uploader to call when upload completes
+ * @property {UploadCallback} callback - Where CDP Uploader calls back when the upload completes
  */
 
 /**
@@ -18,7 +20,7 @@
  * @typedef {Object} InitiateOrsImportOptions
  * @property {string} importId - ORS import ID
  * @property {string} redirectUrl - URL to redirect user after upload completes
- * @property {string} callbackUrl - URL for CDP Uploader to call when upload completes
+ * @property {UploadCallback} callback - Where CDP Uploader calls back when the upload completes
  */
 
 /**

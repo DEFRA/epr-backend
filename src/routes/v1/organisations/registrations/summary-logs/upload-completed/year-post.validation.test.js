@@ -7,7 +7,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { partialMock } from '#test/type-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { signedCallback } from '#test/upload-callback.js'
+import { signedCallbackPayload } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -19,9 +19,7 @@ const organisationId = organisation.id
 const uploadedKey = `/organisations/${organisationId}/registrations/reg-456/upload-1/file-1`
 
 const buildPostUrl = (summaryLogId) =>
-  signedCallback(
-    `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
-  )
+  `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
 
 describe('POST upload-completed validation', () => {
   // Mock OIDC servers needed for server startup, but we inject credentials directly
@@ -46,9 +44,9 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         metadata: { organisationId }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -59,11 +57,11 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           notFile: 'wrong'
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -76,7 +74,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           summaryLogUpload: {
             filename: 'test.xlsx',
@@ -85,7 +83,7 @@ describe('POST upload-completed validation', () => {
             s3Key: uploadedKey
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -98,7 +96,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-123',
@@ -107,7 +105,7 @@ describe('POST upload-completed validation', () => {
             s3Key: uploadedKey
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -120,7 +118,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-123',
@@ -129,7 +127,7 @@ describe('POST upload-completed validation', () => {
             s3Key: uploadedKey
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -142,7 +140,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-123',
@@ -152,7 +150,7 @@ describe('POST upload-completed validation', () => {
             s3Key: uploadedKey
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -165,7 +163,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-123',
@@ -174,7 +172,7 @@ describe('POST upload-completed validation', () => {
             s3Key: uploadedKey
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -187,7 +185,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-123',
@@ -196,7 +194,7 @@ describe('POST upload-completed validation', () => {
             s3Bucket: 're-ex-summary-logs'
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -209,7 +207,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-789'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-789'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-123',
@@ -219,7 +217,7 @@ describe('POST upload-completed validation', () => {
             s3Key: uploadedKey
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -229,7 +227,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-999'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-999'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-999',
@@ -239,7 +237,7 @@ describe('POST upload-completed validation', () => {
             s3Key: uploadedKey
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -249,7 +247,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-888'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-888'), {
         form: {
           summaryLogUpload: {
             fileId: 'file-888',
@@ -262,7 +260,7 @@ describe('POST upload-completed validation', () => {
             checksumSha256: 'abc123'
           }
         }
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -272,7 +270,7 @@ describe('POST upload-completed validation', () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('sum-777'),
-      payload: {
+      payload: signedCallbackPayload(buildPostUrl('sum-777'), {
         uploadStatus: 'ready',
         metadata: {
           organisationId,
@@ -288,7 +286,7 @@ describe('POST upload-completed validation', () => {
           }
         },
         numberOfRejectedFiles: 0
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)

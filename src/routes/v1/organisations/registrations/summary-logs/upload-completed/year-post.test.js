@@ -17,7 +17,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
-import { signedCallback } from '#test/upload-callback.js'
+import { signedCallbackPayload } from '#test/upload-callback.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -59,9 +59,6 @@ const createCompletePayload = (fileId = 'file-complete-123') => ({
 
 const uploadCompletedPath = (year, summaryLogId) =>
   `/organisations/${organisationNumber}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
-
-const uploadCompletedUrl = (year, summaryLogId) =>
-  signedCallback(uploadCompletedPath(year, summaryLogId))
 
 const createTestOrganisationsRepository = () =>
   createInMemoryOrganisationsRepository([
@@ -123,8 +120,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const response = await server.inject({
       method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: createCompletePayload('file-with-year')
+      url: uploadCompletedPath(2026, summaryLogId),
+      payload: signedCallbackPayload(
+        uploadCompletedPath(2026, summaryLogId),
+        createCompletePayload('file-with-year')
+      )
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -206,26 +206,27 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: signedCallback(
-          `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
-        ),
-        payload: {
-          uploadStatus: 'ready',
-          metadata: {
-            organisationId: accreditedOrganisationId,
-            registrationId: accreditedRegistrationId
-          },
-          form: {
-            summaryLogUpload: createFileDetails({
-              fileId: 'file-accredited',
-              s3Key: uploadedKeyFor(
-                accreditedOrganisationId,
-                accreditedRegistrationId
-              )
-            })
-          },
-          numberOfRejectedFiles: 0
-        }
+        url: `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        payload: signedCallbackPayload(
+          `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+          {
+            uploadStatus: 'ready',
+            metadata: {
+              organisationId: accreditedOrganisationId,
+              registrationId: accreditedRegistrationId
+            },
+            form: {
+              summaryLogUpload: createFileDetails({
+                fileId: 'file-accredited',
+                s3Key: uploadedKeyFor(
+                  accreditedOrganisationId,
+                  accreditedRegistrationId
+                )
+              })
+            },
+            numberOfRejectedFiles: 0
+          }
+        )
       })
 
       expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -246,10 +247,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: signedCallback(
-          `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
-        ),
-        payload: createCompletePayload('file-unnumbered')
+        url: `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        payload: signedCallbackPayload(
+          `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+          createCompletePayload('file-unnumbered')
+        )
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -264,8 +266,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const response = await server.inject({
       method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: {
+      url: uploadCompletedPath(2026, summaryLogId),
+      payload: signedCallbackPayload(uploadCompletedPath(2026, summaryLogId), {
         uploadStatus: 'ready',
         metadata: { organisationId, registrationId },
         form: {
@@ -277,7 +279,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           })
         },
         numberOfRejectedFiles: 0
-      }
+      })
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -291,8 +293,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     await server.inject({
       method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: {
+      url: uploadCompletedPath(2026, summaryLogId),
+      payload: signedCallbackPayload(uploadCompletedPath(2026, summaryLogId), {
         uploadStatus: 'ready',
         metadata: { organisationId, registrationId },
         form: {
@@ -304,14 +306,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           })
         },
         numberOfRejectedFiles: 0
-      }
+      })
     })
     await waitForVersion(summaryLogsRepository, summaryLogId, 1)
 
     const response = await server.inject({
       method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: createCompletePayload('file-pending-then-complete')
+      url: uploadCompletedPath(2026, summaryLogId),
+      payload: signedCallbackPayload(
+        uploadCompletedPath(2026, summaryLogId),
+        createCompletePayload('file-pending-then-complete')
+      )
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -321,10 +326,15 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('returns 422 for an invalid year', async () => {
+    const path = uploadCompletedPath('not-a-year', randomUUID())
+
     const response = await server.inject({
       method: 'POST',
-      url: uploadCompletedUrl('not-a-year', randomUUID()),
-      payload: createCompletePayload('file-bad-year')
+      url: path,
+      payload: signedCallbackPayload(
+        path,
+        createCompletePayload('file-bad-year')
+      )
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -354,13 +364,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
         const response = await server.inject({
           method: 'POST',
-          url: uploadCompletedUrl(2026, summaryLogId),
-          payload: {
-            ...createCompletePayload(),
-            form: {
-              summaryLogUpload: createFileDetails({ s3Bucket, s3Key })
+          url: uploadCompletedPath(2026, summaryLogId),
+          payload: signedCallbackPayload(
+            uploadCompletedPath(2026, summaryLogId),
+            {
+              ...createCompletePayload(),
+              form: {
+                summaryLogUpload: createFileDetails({ s3Bucket, s3Key })
+              }
             }
-          }
+          )
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -447,13 +460,19 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const first = await server.inject({
         method: 'POST',
-        url: uploadCompletedUrl(2026, summaryLogId),
-        payload: callbackByFileStatus[firstFileStatus]
+        url: uploadCompletedPath(2026, summaryLogId),
+        payload: signedCallbackPayload(
+          uploadCompletedPath(2026, summaryLogId),
+          callbackByFileStatus[firstFileStatus]
+        )
       })
       const second = await server.inject({
         method: 'POST',
-        url: uploadCompletedUrl(2026, summaryLogId),
-        payload: callbackByFileStatus[secondFileStatus]
+        url: uploadCompletedPath(2026, summaryLogId),
+        payload: signedCallbackPayload(
+          uploadCompletedPath(2026, summaryLogId),
+          callbackByFileStatus[secondFileStatus]
+        )
       })
 
       expect(first.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -510,8 +529,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await failingServer.inject({
         method: 'POST',
-        url: uploadCompletedUrl(2026, summaryLogId),
-        payload: createCompletePayload('file-1')
+        url: uploadCompletedPath(2026, summaryLogId),
+        payload: signedCallbackPayload(
+          uploadCompletedPath(2026, summaryLogId),
+          createCompletePayload('file-1')
+        )
       })
 
       consoleErrorSpy.mockRestore()

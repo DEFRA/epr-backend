@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto'
 import { summaryLogUploadPath } from '#domain/uploads/upload-locations.js'
 import { parseUploadUri } from './s3-uri.js'
 
+/** @import { UploadCallback } from '#common/helpers/auth/upload-callback-signature.js' */
+
 /**
  * @typedef {import('#domain/uploads/repository/port.js').InitiateSummaryLogUploadOptions} InitiateSummaryLogUploadOptions
  */
@@ -18,18 +20,23 @@ import { parseUploadUri } from './s3-uri.js'
  */
 
 /**
- * Calls back the way CDP Uploader does once a file is scanned and stored.
+ * Calls back the way CDP Uploader does once a file is scanned and stored,
+ * returning the metadata the upload was initiated with.
  *
- * @param {string} callbackUrl
+ * @param {{ callback: UploadCallback, summaryLogId: string }} upload
  * @param {{ s3Bucket: string, s3Key: string }} location
  */
-const postCompletedCallback = async (callbackUrl, { s3Bucket, s3Key }) => {
-  await fetch(callbackUrl, {
+const postCompletedCallback = async (
+  { callback, summaryLogId },
+  { s3Bucket, s3Key }
+) => {
+  await fetch(callback.url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
+      metadata: { summaryLogId, signature: callback.signature },
       form: {
         file: {
           fileId: randomUUID(),
@@ -100,15 +107,12 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       }
     },
 
-    async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
-      orsInitiateCalls.push({ importId, redirectUrl, callbackUrl })
+    async initiateOrsImport(options) {
+      orsInitiateCalls.push(options)
 
       const uploadId = randomUUID()
 
-      pendingUploads.set(uploadId, {
-        uploadId,
-        options: { importId, redirectUrl, callbackUrl }
-      })
+      pendingUploads.set(uploadId, { uploadId, options })
 
       return {
         uploadId,
@@ -126,14 +130,13 @@ export const createInMemoryUploadsRepository = (config = {}) => {
 
       const /** @type {InitiateSummaryLogUploadOptions} */ options =
           /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
-      const { organisationId, registrationId, callbackUrl } = options
-      const s3Key = `${summaryLogUploadPath({ organisationId, registrationId })}/${uploadId}.xlsx`
+      const s3Key = `${summaryLogUploadPath(options)}/${uploadId}.xlsx`
       const s3Uri = `s3://${summaryLogsBucket}/${s3Key}`
 
       storage.set(s3Uri, buffer)
       pendingUploads.delete(uploadId)
 
-      await postCompletedCallback(callbackUrl, {
+      await postCompletedCallback(options, {
         s3Bucket: summaryLogsBucket,
         s3Key
       })

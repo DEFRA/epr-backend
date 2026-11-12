@@ -2,9 +2,9 @@ import { StatusCodes } from 'http-status-codes'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  signedUploadCallbackPath,
   toUploadCallbackKey,
-  toUploadCallbackPath
+  toUploadCallbackPath,
+  uploadCallbackSignature
 } from '#common/helpers/auth/upload-callback-signature.js'
 import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -15,6 +15,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 const key = toUploadCallbackKey('0'.repeat(64))
 const otherKey = toUploadCallbackKey('f'.repeat(64))
 const path = toUploadCallbackPath('/test-upload-callback/abc/upload-completed')
+const signature = uploadCallbackSignature(key, path)
 
 describe('upload-callback strategy', () => {
   setupAuthContext()
@@ -33,47 +34,59 @@ describe('upload-callback strategy', () => {
     })
   })
 
-  it('should accept a callback to the path it was signed for', async () => {
+  it('should accept a callback whose metadata carries the signature for its path', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: signedUploadCallbackPath(key, path)
+      url: path,
+      payload: { metadata: { signature } }
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it.for([
-    { description: 'no signature', url: path },
-    { description: 'an empty signature', url: `${path}?signature=` },
-    { description: 'a signature that is not hex', url: `${path}?signature=zz` },
+    { description: 'no body', payload: undefined },
+    { description: 'no metadata', payload: {} },
+    { description: 'no signature', payload: { metadata: {} } },
+    {
+      description: 'an empty signature',
+      payload: { metadata: { signature: '' } }
+    },
+    {
+      description: 'a signature that is not hex',
+      payload: { metadata: { signature: 'zz' } }
+    },
+    {
+      description: 'a signature that is not a string',
+      payload: { metadata: { signature: [signature] } }
+    },
     {
       description: 'a signature for another path',
-      url: signedUploadCallbackPath(
-        key,
-        toUploadCallbackPath('/test-upload-callback/xyz/upload-completed')
-      ).replace('xyz', 'abc')
+      payload: {
+        metadata: {
+          signature: uploadCallbackSignature(
+            key,
+            toUploadCallbackPath('/test-upload-callback/xyz/upload-completed')
+          )
+        }
+      }
     },
     {
       description: 'a signature from another key',
-      url: signedUploadCallbackPath(otherKey, path)
+      payload: {
+        metadata: { signature: uploadCallbackSignature(otherKey, path) }
+      }
     },
     {
       description: 'a valid signature followed by non-hex characters',
-      url: `${signedUploadCallbackPath(key, path)}zzzz`
+      payload: { metadata: { signature: `${signature}zzzz` } }
     },
     {
       description: 'a valid signature in upper case',
-      url: signedUploadCallbackPath(key, path).replace(
-        /signature=(.*)$/,
-        (_, signature) => `signature=${signature.toUpperCase()}`
-      )
-    },
-    {
-      description: 'two signatures',
-      url: `${signedUploadCallbackPath(key, path)}&signature=00`
+      payload: { metadata: { signature: signature.toUpperCase() } }
     }
-  ])('should reject a callback with $description', async ({ url }) => {
-    const response = await server.inject({ method: 'POST', url })
+  ])('should reject a callback with $description', async ({ payload }) => {
+    const response = await server.inject({ method: 'POST', url: path, payload })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
   })

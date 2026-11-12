@@ -18,7 +18,6 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -34,7 +33,8 @@ import {
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
-  UPLOAD_YEAR
+  UPLOAD_YEAR,
+  createSigningTestServer
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
@@ -308,7 +308,7 @@ describe('Repeated uploads of identical data', () => {
         }
       }
 
-      server = await createTestServer({
+      server = await createSigningTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
