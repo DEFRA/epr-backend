@@ -59,7 +59,7 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * submitted since the log's createdAt, closing the validate-to-submit race
  * where a period closes after the operator confirmed the preview. Deliberately
  * blunt within the year: it fires on any submission, not only periods this log
- * touches. See PAE-1686.
+ * touches.
  *
  * @param {SubmittableSummaryLog} summaryLog
  * @param {SummaryLogId} summaryLogId
