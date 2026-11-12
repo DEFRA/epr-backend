@@ -29,8 +29,10 @@ describe('CDP Uploader error handling', () => {
       ...testConfig
     })
 
-    await expect(repository.findByLocation('s3://test/test')).rejects.toThrow(
-      'S3 GetObject returned no body for s3://test/test'
+    await expect(
+      repository.findByLocation('s3://test-summary-logs-bucket/test')
+    ).rejects.toThrow(
+      'S3 GetObject returned no body for s3://test-summary-logs-bucket/test'
     )
   })
 
@@ -44,9 +46,9 @@ describe('CDP Uploader error handling', () => {
       ...testConfig
     })
 
-    await expect(repository.findByLocation('s3://test/test')).rejects.toThrow(
-      'Network error'
-    )
+    await expect(
+      repository.findByLocation('s3://test-summary-logs-bucket/test')
+    ).rejects.toThrow('Network error')
   })
 })
 
@@ -170,11 +172,13 @@ describe('deleteByLocation', () => {
       ...testConfig
     })
 
-    await repository.deleteByLocation('s3://my-bucket/path/to/file.xlsx')
+    await repository.deleteByLocation(
+      's3://test-summary-logs-bucket/path/to/file.xlsx'
+    )
 
     expect(mockS3Client.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        Bucket: 'my-bucket',
+        Bucket: 'test-summary-logs-bucket',
         Key: 'path/to/file.xlsx'
       })
     )

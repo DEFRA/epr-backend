@@ -63,7 +63,7 @@ const it = baseIt.extend({
 
 // Enable callback receiver for contract tests. needsCallbackReceiver is
 // file-scoped, so the override must be declared at the top level of the file.
-it.scoped({ needsCallbackReceiver: true })
+it.override('needsCallbackReceiver', true)
 
 describe('CDP Uploader uploads repository', () => {
   testUploadsRepositoryContract(it)

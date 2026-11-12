@@ -1,3 +1,4 @@
+import { UPLOAD_FILE_STATUS } from '#domain/uploads/upload-locations.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 
 export const SUMMARY_LOG_STATUS = Object.freeze({
@@ -112,11 +113,7 @@ export const SUBMISSION_PROCESSING_STATUSES = Object.freeze([
  * @typedef {typeof SUMMARY_LOG_STATUS[keyof typeof SUMMARY_LOG_STATUS]} SummaryLogStatus
  */
 
-export const UPLOAD_STATUS = Object.freeze({
-  COMPLETE: 'complete',
-  REJECTED: 'rejected',
-  PENDING: 'pending'
-})
+export const UPLOAD_STATUS = UPLOAD_FILE_STATUS
 
 /**
  * @typedef {typeof UPLOAD_STATUS[keyof typeof UPLOAD_STATUS]} UploadStatus

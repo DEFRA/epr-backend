@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { describe, test, expect, vi } from 'vitest'
 
 import { validateConfig } from './validate-config.js'
@@ -8,9 +9,16 @@ const ROLE_KEYS = [
   'roles.support'
 ]
 
+const RANDOM_KEY = randomBytes(32).toString('hex')
+
 function mockConfigForKeys(values) {
+  const withDefaults = {
+    cdpEnvironment: 'prod',
+    'cdpUploader.callbackHmacKey': RANDOM_KEY,
+    ...values
+  }
   return {
-    get: vi.fn((key) => values[key])
+    get: vi.fn((key) => withDefaults[key])
   }
 }
 
@@ -57,7 +65,6 @@ describe('#validateConfig', () => {
       for (const key of ROLE_KEYS) {
         expect(mockConfig.get).toHaveBeenCalledWith(key)
       }
-      expect(mockConfig.get).toHaveBeenCalledTimes(ROLE_KEYS.length)
     })
   })
 
@@ -144,6 +151,51 @@ describe('#validateConfig', () => {
         `,
         'roles.serviceMaintainersWrite': '[]',
         'roles.support': '[]'
+      })
+
+      expect(() => validateConfig(mockConfig)).not.toThrow()
+    })
+  })
+
+  describe('the upload callback key', () => {
+    const validRoles = {
+      'roles.serviceMaintainers': '[]',
+      'roles.serviceMaintainersWrite': '[]',
+      'roles.support': '[]'
+    }
+
+    test.each([
+      ['the dev key', '0'.repeat(64)],
+      ['a repeated pair', 'ab'.repeat(32)],
+      ['a repeated sequence', '0123456789abcdef'.repeat(4)],
+      ['a repeated half', RANDOM_KEY.slice(0, 32).repeat(2)]
+    ])('throws outside local when it is %s', (_, key) => {
+      const mockConfig = mockConfigForKeys({
+        ...validRoles,
+        cdpEnvironment: 'dev',
+        'cdpUploader.callbackHmacKey': key
+      })
+
+      expect(() => validateConfig(mockConfig)).toThrow(
+        'Invalid cdpUploader.callbackHmacKey configuration: a repeated pattern, not a random key'
+      )
+    })
+
+    test('accepts the dev key locally', () => {
+      const mockConfig = mockConfigForKeys({
+        ...validRoles,
+        cdpEnvironment: 'local',
+        'cdpUploader.callbackHmacKey': '0'.repeat(64)
+      })
+
+      expect(() => validateConfig(mockConfig)).not.toThrow()
+    })
+
+    test('accepts a random key outside local', () => {
+      const mockConfig = mockConfigForKeys({
+        ...validRoles,
+        cdpEnvironment: 'prod',
+        'cdpUploader.callbackHmacKey': RANDOM_KEY
       })
 
       expect(() => validateConfig(mockConfig)).not.toThrow()

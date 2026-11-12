@@ -66,7 +66,7 @@ const toAccreditationCommon = ({
  * @param {ExternalAccreditation[]} externalAccreditations
  * @returns {ExternalAccreditationsByRegistration}
  */
-export const byRegistrationAndYear = (externalAccreditations) =>
+const byRegistrationAndYear = (externalAccreditations) =>
   new Map(
     [...Map.groupBy(externalAccreditations, (a) => a.registrationNumber)].map(
       ([registrationNumber, held]) => [
