@@ -10,7 +10,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { toYear } from '#common/helpers/dates/year.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -193,7 +193,8 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       accreditationId: linkedAccreditation.id,
       organisationNumber: org.organisationNumber,
       registrationNumber: toRegistrationNumber('REG500123'),
-      accreditationNumber: linkedAccreditation.accreditationNumber
+      accreditationNumber: linkedAccreditation.accreditationNumber,
+      year: utcYearOf(linkedAccreditation.validFrom)
     }
 
     const server = await serverWithFebruarySubmission({
@@ -235,6 +236,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
   it('returns rows for an accreditation held outside re-ex and known only by its number', async () => {
     const registrationNumber = toRegistrationNumber('REG500124')
     const accreditationNumber = toAccreditationNumber('ACC-EXT-500124')
+    const year = toYear(2026)
     const registration = buildRegistration({
       registrationNumber,
       wasteProcessingType: 'reprocessor',
@@ -247,7 +249,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
 
     const externalAccreditation = buildExternalAccreditation({
       registrationNumber,
-      year: toYear(2026),
+      year,
       accreditationNumber,
       status: {
         current: 'approved',
@@ -267,7 +269,8 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
       ledgerId: {
         organisationNumber: org.organisationNumber,
         registrationNumber,
-        accreditationNumber
+        accreditationNumber,
+        year
       }
     })
 

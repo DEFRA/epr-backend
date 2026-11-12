@@ -39,7 +39,7 @@ const YEAR = toYear(2026)
 /**
  * Seeds the summary-log row states and the waste balance ledger so the report
  * routes resolve `wasteRecords` (each `{ type, data }`) as the state at the
- * latest submitted summary log. No records leaves the ledger without a
+ * latest submitted summary log of the report year. No records leaves the ledger without a
  * submission, so the report has no source.
  *
  * @param {{ id: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} org
@@ -58,7 +58,8 @@ const seedRepositories = async (
     registrationId: registration.id,
     accreditationId: accredited?.id ?? null,
     ...reportKeyOf(org, registration),
-    accreditationNumber: accredited?.accreditationNumber ?? null
+    accreditationNumber: accredited?.accreditationNumber ?? null,
+    year: YEAR
   }
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()

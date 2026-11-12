@@ -15,6 +15,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import {
+  PRN_YEAR,
   buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
@@ -35,7 +36,8 @@ const PRNS_COLLECTION = 'packaging-recycling-notes'
 const LEDGER = {
   organisationNumber: toOrganisationNumber('500789'),
   registrationNumber: toRegistrationNumber('R26ER5007890001PA'),
-  accreditationNumber: toAccreditationNumber('A26ER5007890001PA')
+  accreditationNumber: toAccreditationNumber('A26ER5007890001PA'),
+  year: PRN_YEAR
 }
 const TONNAGE = 5
 const OPENING = 386.62

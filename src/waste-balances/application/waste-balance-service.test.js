@@ -462,6 +462,7 @@ describe('createWasteBalanceService', () => {
       organisationNumber: ledgerId.organisationNumber,
       registrationNumber: ledgerId.registrationNumber,
       accreditationNumber: toAccreditationNumber('ACC-acc-1'),
+      year: ledgerId.year,
       prnId: 'prn-1'
     }
 

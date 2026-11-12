@@ -340,6 +340,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const rowStates = await summaryLogRowStatesForRegistration({
       ...reportKey,
       accreditationNumber: toAccreditationNumber('ACC-123'),
+      year,
       ledgerRepository: deps.ledgerRepository,
       summaryLogRowStatesRepository: deps.summaryLogRowStatesRepository
     })
@@ -613,7 +614,8 @@ describe('submitSummaryLog for an accreditation held outside epr-backend', () =>
     const balance = await deps.wasteBalanceService.currentBalance({
       organisationNumber: reportKey.organisationNumber,
       registrationNumber: reportKey.registrationNumber,
-      accreditationNumber: toAccreditationNumber('ACC-123')
+      accreditationNumber: toAccreditationNumber('ACC-123'),
+      year: summaryLog.year
     })
     const rowStates =
       await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(

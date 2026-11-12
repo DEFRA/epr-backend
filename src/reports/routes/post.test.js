@@ -69,7 +69,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   /**
    * Seeds the summary-log row states and the waste balance ledger so the report
    * routes resolve one committed row at the latest submitted summary log for the
-   * registration.
+   * registration in the report year.
    */
   const DEFAULT_ROWS = [
     buildSummaryLogRowStateEntry({
@@ -105,7 +105,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId: registration.id,
       accreditationId: accreditationRecord?.id ?? null,
       ...reportKeyOf(org, registration),
-      accreditationNumber: accreditationRecord?.accreditationNumber ?? null
+      accreditationNumber: accreditationRecord?.accreditationNumber ?? null,
+      year: YEAR
     }
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       ledgerId,

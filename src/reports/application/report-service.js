@@ -260,7 +260,8 @@ export async function fetchOrGenerateReportForPeriod({
       ledgerRepository,
       summaryLogRowStatesRepository,
       key: { organisationNumber, registrationNumber },
-      accreditation: reportRegistration.accreditation
+      accreditation: reportRegistration.accreditation,
+      year
     }
   )
 
@@ -318,17 +319,20 @@ function toSource(latestSubmission) {
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {RegistrationKey} params.key
  * @param {ReportRegistration['accreditation']} params.accreditation
+ * @param {Year} params.year
  */
 async function readSubmissionRowStates({
   ledgerRepository,
   summaryLogRowStatesRepository,
   key: { organisationNumber, registrationNumber },
-  accreditation
+  accreditation,
+  year
 }) {
   const ledgerId = {
     organisationNumber,
     registrationNumber,
-    accreditationNumber: accreditation?.accreditationNumber ?? null
+    accreditationNumber: accreditation?.accreditationNumber ?? null,
+    year
   }
 
   const latestSubmission = await latestSubmittedSummaryLog(
@@ -538,7 +542,8 @@ export async function createReportForPeriod({
       ledgerRepository,
       summaryLogRowStatesRepository,
       key: numbers,
-      accreditation: reportRegistration.accreditation
+      accreditation: reportRegistration.accreditation,
+      year
     }
   )
 

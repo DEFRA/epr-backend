@@ -107,14 +107,19 @@ const buildReceivedEntry = (overrides = {}) =>
  * summary log. An empty `entries` leaves the ledger without a submission.
  */
 /**
- * The ledger report creation reads: the report key's numbers and the
- * registration's current accreditation.
+ * The ledger report creation reads: the report key's numbers, the
+ * registration's current accreditation and the report's year.
  */
-const reportLedger = ({ key, reportRegistration: { accreditation } }) => ({
+const reportLedger = ({
+  key,
+  reportRegistration: { accreditation },
+  year
+}) => ({
   ...LEDGER_IDS,
   accreditationId: accreditation === null ? null : LEDGER_IDS.accreditationId,
   ...key,
-  accreditationNumber: accreditation?.accreditationNumber ?? null
+  accreditationNumber: accreditation?.accreditationNumber ?? null,
+  year
 })
 
 const seedState = async (params, entries) => {
