@@ -309,7 +309,9 @@ const EMPTY_COUNTS = {
   'external-accreditations': 0
 }
 
-describe('non-prod data reset (mongo)', () => {
+// The first test creates every collection and index on a fresh mongod, which
+// can pass the default 5s on a loaded machine.
+describe('non-prod data reset (mongo)', { timeout: 15_000 }, () => {
   describe('deleteByOrganisationNumber', () => {
     it('cascades through every collection seeded via real repository adapters', async ({
       database,
