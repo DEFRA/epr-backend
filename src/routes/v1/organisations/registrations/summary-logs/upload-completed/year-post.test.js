@@ -1,5 +1,12 @@
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { randomUUID } from 'node:crypto'
-import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadOrganisationWithNumbersOf,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 
 import { StatusCodes } from 'http-status-codes'
 
@@ -63,16 +70,20 @@ const uploadCompletedPath = (year, summaryLogId) =>
 const uploadCompletedUrl = (year, summaryLogId) =>
   signedCallback(uploadCompletedPath(year, summaryLogId))
 
+const testOrganisation = buildOrganisation({
+  id: organisationId,
+  organisationNumber,
+  registrations: [reprocessor({ id: registrationId })]
+})
+
 const createTestOrganisationsRepository = () =>
-  createInMemoryOrganisationsRepository([
-    partialMock(
-      buildOrganisation({
-        id: organisationId,
-        organisationNumber,
-        registrations: [reprocessor({ id: registrationId })]
-      })
-    )
-  ])()
+  createInMemoryOrganisationsRepository([partialMock(testOrganisation)])()
+
+/** The organisation the read model serves for `testOrganisation`. */
+const testReadOrganisationRepository = () =>
+  createInMemoryOrganisationReadRepository([
+    buildReadOrganisationWithNumbersOf(testOrganisation)
+  ])
 
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{year}/{summaryLogId}/upload-completed', () => {
   // Mock OIDC servers are needed for server startup (auth plugin fetches configs)
@@ -98,9 +109,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         summaryLogsRepository: summaryLogsRepositoryFactory,
         organisationAdministrationRepository: () =>
           organisationAdministrationRepository,
-        organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationAdministrationRepository
-        )
+        organisationReadRepository: testReadOrganisationRepository()
       },
       workers: {
         summaryLogsWorker
@@ -187,9 +196,22 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           summaryLogsRepository: accreditedSummaryLogsRepositoryFactory,
           organisationAdministrationRepository: () =>
             accreditedOrganisationsRepository,
-          organisationReadRepository: await organisationReadRepositoryFrom(
-            accreditedOrganisationsRepository
-          )
+          organisationReadRepository: createInMemoryOrganisationReadRepository([
+            buildReadOrganisation({
+              organisationNumber: accreditedOrganisation.organisationNumber,
+              registrations: {
+                [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+                  accreditations: {
+                    2026: buildReadAccreditation({
+                      accreditationNumber:
+                        toAccreditationNumber(ACCREDITATION_NUMBER)
+                    })
+                  }
+                })
+              }
+            }),
+            buildReadOrganisationWithNumbersOf(unnumberedOrganisation)
+          ])
         },
         workers: {
           summaryLogsWorker: { validate: vi.fn() }
@@ -483,9 +505,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           }),
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: await organisationReadRepositoryFrom(
-            organisationAdministrationRepository
-          )
+          organisationReadRepository: testReadOrganisationRepository()
         },
         workers: {
           summaryLogsWorker: { validate: vi.fn() }
