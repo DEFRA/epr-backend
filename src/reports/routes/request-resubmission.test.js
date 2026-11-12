@@ -1,21 +1,21 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { partialMock } from '#test/type-helpers.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
   createAndSubmitReport,
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
-import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -44,8 +44,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {(reportsRepository: ReportsRepository, period: Period) => Promise<unknown>} seed
    */
   const createServer = async (seed) => {
-    const registration = reprocessor()
-    const org = buildOrganisation({ registrations: [registration] })
+    const registration = { registrationNumber: REPROCESSOR_NUMBER }
+    const org = buildReadOrganisation({
+      registrations: {
+        [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration()
+      }
+    })
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
@@ -59,8 +63,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(org)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          org
         ]),
         reportsRepository: reportsRepositoryFactory
       }

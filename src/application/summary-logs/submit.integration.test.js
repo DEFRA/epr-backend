@@ -40,8 +40,12 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadOrganisation as buildServedOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
@@ -171,37 +175,48 @@ const setupSubmit = async ({
 
   const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   const organisation = buildTestOrg(organisationId, registrationId)
-  const externalAccreditations = []
   if (accreditationHeldExternally) {
     organisation.accreditations = []
     delete (
       /** @type {Record<string, unknown>} */ (organisation.registrations[0])
         .accreditationId
     )
-    externalAccreditations.push(
-      buildExternalAccreditation({
-        registrationNumber: toRegistrationNumber('REG-123'),
-        year: toYear(2026),
-        accreditationNumber: toAccreditationNumber('ACC-123'),
-        status: {
-          current: 'approved',
-          timeline: [
-            { status: 'created', at: CREATED_AT, updatedAt: CREATED_AT },
-            {
-              status: 'approved',
-              at: `${VALID_FROM}T00:00:00.000Z`,
-              updatedAt: APPROVED_AT
-            }
-          ]
-        }
-      })
-    )
   }
-  const organisationReadRepository = (
-    await organisationReadRepositoryOf([organisation], {
-      externalAccreditations
+  // Held in epr-backend or outside it, the read model serves the accreditation
+  // the same way.
+  const approved = {
+    current: /** @type {const} */ ('approved'),
+    timeline: [
+      { status: 'created', at: CREATED_AT, updatedAt: CREATED_AT },
+      {
+        status: 'approved',
+        at: `${VALID_FROM}T00:00:00.000Z`,
+        updatedAt: APPROVED_AT
+      }
+    ]
+  }
+  const organisationReadRepository = createInMemoryOrganisationReadRepository([
+    buildServedOrganisation({
+      organisationNumber: organisation.organisationNumber,
+      registrations: {
+        'REG-123': buildReadReprocessorRegistration({
+          material: 'paper',
+          validFrom: VALID_FROM,
+          status: approved,
+          standingByDate: {
+            2026: { [VALID_FROM]: { standing: 'accredited' } },
+            2027: { '2027-01-01': { standing: 'registeredOnly' } }
+          },
+          accreditations: {
+            2026: buildReadAccreditation({
+              accreditationNumber: toAccreditationNumber('ACC-123'),
+              status: approved
+            })
+          }
+        })
+      }
     })
-  )()
+  ])()
   const reportKey = reportKeyOf(organisation, organisation.registrations[0])
 
   const summaryLog = summaryLogFactory.submitting({

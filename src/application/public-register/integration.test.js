@@ -1,33 +1,73 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generatePublicRegister } from './generate-public-register.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'
 import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-
-const organisationBuilders = createOrganisationBuilders()
-const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 
 // Accredited from the start of the reporting year, so every ended period of the
 // year is within the accreditation window (no validFrom trim) — the register
 // then shows monthly obligations as due ('') rather than N/A.
-const FULL_YEAR_RANGE = { VALID_FROM: '2026-01-01', VALID_TO: '2026-12-31' }
+/**
+ * The organisation the read model serves: accredited from 1 January 2026,
+ * with its approvals recorded on `FIXED_DATE`.
+ */
+const servedOrganisation = () => {
+  const approved = {
+    current: /** @type {const} */ ('approved'),
+    timeline: [
+      {
+        status: 'created',
+        at: '2026-01-01T00:00:00.000Z',
+        updatedAt: FIXED_DATE.toISOString()
+      },
+      {
+        status: 'approved',
+        at: '2026-01-01T00:00:00.000Z',
+        updatedAt: FIXED_DATE.toISOString()
+      }
+    ]
+  }
+  const organisation = buildReadApprovedOrganisation({
+    organisationNumber: toOrganisationNumber('200001'),
+    year: 2026
+  })
+  const registration =
+    /** @type {import('#organisation-read-model/domain/model.js').ReprocessorRegistration} */ (
+      organisation.registrations.REG200001
+    )
+  return {
+    ...organisation,
+    tradingName: 'ACME ltd',
+    companiesHouseNumber: 'AC012345',
+    registeredAddress: {
+      line1: 'Palace of Westminster',
+      town: 'London',
+      postcode: 'SW1A 0AA'
+    },
+    registrations: {
+      REG200001: {
+        ...registration,
+        status: approved,
+        accreditations: {
+          2026: { ...registration.accreditations[2026], status: approved }
+        }
+      }
+    }
+  }
+}
 
 describe('generatePublicRegister', () => {
-  let organisationRepo
   let publicRegisterRepo
   let reportsRepo
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(FIXED_DATE)
-    organisationRepo = createInMemoryOrganisationsRepository()()
     publicRegisterRepo = createInMemoryPublicRegisterRepository()
     reportsRepo = createInMemoryReportsRepository()()
   })
@@ -37,14 +77,8 @@ describe('generatePublicRegister', () => {
   })
 
   it('generates public register with approved registration and accreditation', async () => {
-    await buildApprovedOrg(
-      organisationRepo,
-      { organisationNumber: toOrganisationNumber('200001') },
-      FULL_YEAR_RANGE
-    )
-
     const result = await generatePublicRegister(
-      organisationReadRepositoryOver(organisationRepo),
+      createInMemoryOrganisationReadRepository([servedOrganisation()])(),
       publicRegisterRepo,
       reportsRepo
     )
