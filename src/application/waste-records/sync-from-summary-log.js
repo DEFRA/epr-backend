@@ -139,17 +139,7 @@ const prepareRowsForTransformation = (parsedData) => {
  * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  * @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
- */
-
-/**
- * The numbers a summary log names its registration and accreditation by. The
- * accreditation number is `null` for a registered-only submission.
- *
- * @typedef {{
- *   organisationNumber: OrganisationNumber,
- *   registrationNumber: RegistrationNumber,
- *   accreditationNumber: AccreditationNumber | null
- * }} SubmissionNumbers
+ * @import { Year } from '#common/helpers/dates/year.js'
  */
 
 /**
@@ -158,19 +148,20 @@ const prepareRowsForTransformation = (parsedData) => {
  * accreditation.
  *
  * @param {OrganisationReadRepository} organisationReadRepository
- * @param {SubmissionNumbers} summaryLog
+ * @param {WasteBalanceLedgerId} summaryLog
  * @returns {Promise<{ ledgerAccreditation: LedgerAccreditation | null, ledgerId: WasteBalanceLedgerId }>}
  */
 const resolveSubmissionLedger = async (
   organisationReadRepository,
   summaryLog
 ) => {
-  const { organisationNumber, registrationNumber, accreditationNumber } =
+  const { organisationNumber, registrationNumber, accreditationNumber, year } =
     summaryLog
   const ledgerId = {
     organisationNumber,
     registrationNumber,
-    accreditationNumber
+    accreditationNumber,
+    year
   }
 
   const organisation =
@@ -437,6 +428,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {OrganisationNumber} summaryLog.organisationNumber
    * @param {RegistrationNumber} summaryLog.registrationNumber
    * @param {AccreditationNumber | null} summaryLog.accreditationNumber - `null` for a registered-only submission
+   * @param {Year} summaryLog.year
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
    * @returns {Promise<{created: number, updated: number, decemberWasteRowCount: number}>} Counts of created and updated waste records, and how many changed rows carry December-attributable tonnage
    */

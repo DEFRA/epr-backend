@@ -1,4 +1,7 @@
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  PRN_YEAR,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
@@ -60,7 +63,8 @@ const LEDGER = {
   accreditationId,
   organisationNumber: DEFAULT_ORG_NUMBER,
   registrationNumber: DEFAULT_REG_NUMBER,
-  accreditationNumber: toAccreditationNumber('ACC-2026-001')
+  accreditationNumber: toAccreditationNumber('ACC-2026-001'),
+  year: PRN_YEAR
 }
 
 const organisationAdministrationRepository =
@@ -92,7 +96,7 @@ const openingBalanceEvent = (closingBalance = SEED_BALANCE) =>
  */
 const buildAcceptedPrn = ({
   currentStatus = PRN_STATUS.ACCEPTED,
-  accreditationYear = toYear(2026),
+  accreditationYear = LEDGER.year,
   tonnage = 500,
   issuedAt = ISSUED_AT
 } = {}) => ({
@@ -509,7 +513,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
   describe('cancelling from awaiting_acceptance (PAE-1859)', () => {
     /** @param {Object} [options] */
     const buildAwaitingAcceptancePrn = ({
-      accreditationYear = toYear(2026),
+      accreditationYear = LEDGER.year,
       tonnage = 500,
       issuedAt = ISSUED_AT
     } = {}) => {

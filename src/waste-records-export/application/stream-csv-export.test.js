@@ -16,6 +16,8 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
@@ -82,12 +84,18 @@ const overseasSite = (name, country) => ({
   address: { line1: '1 Rue', townOrCity: 'Town', country }
 })
 
-/** A reprocessor registration holding `accreditations` by year. */
+// The year `accredited` holds its second accreditation under.
+const PREVIOUS_YEAR = toYear(DEFAULT_YEAR - 1)
+
+/**
+ * A reprocessor registration holding `accreditations` by year, the first under
+ * `DEFAULT_YEAR` and each after it a year earlier.
+ */
 const accredited = (...accreditations) =>
   reprocessorRegistration({
     accreditations: Object.fromEntries(
       accreditations.map((accreditation, i) => [
-        String(2026 - i),
+        String(DEFAULT_YEAR - i),
         accreditation
       ])
     )
@@ -183,7 +191,7 @@ const exporterWithSite = (approvedOn) =>
   exporterRegistration({
     overseasSites: { '001': overseasSite('Acme Recycling', 'Germany') },
     accreditations: {
-      2026: readModelAccreditation({
+      [DEFAULT_YEAR]: readModelAccreditation({
         overseasSites: { '001': { status: 'approved', approvedOn } }
       })
     }
@@ -230,7 +238,8 @@ const buildDeps = async ({
   const ledgerIdOf = (seed) => ({
     organisationNumber: seed.organisationNumber ?? ORGANISATION_NUMBER,
     registrationNumber: seed.registrationNumber ?? REGISTRATION_NUMBER,
-    accreditationNumber: seed.accreditationNumber ?? null
+    accreditationNumber: seed.accreditationNumber ?? null,
+    year: seed.year ?? DEFAULT_YEAR
   })
 
   const ledgerEvents = seeds.map((seed) =>
@@ -336,7 +345,7 @@ describe('streamCsvExport', () => {
           registrations: {
             'REG-555': reprocessorRegistration({
               material: 'glass_re_melt',
-              accreditations: { 2026: readModelAccreditation() }
+              accreditations: { [DEFAULT_YEAR]: readModelAccreditation() }
             })
           }
         })
@@ -760,6 +769,7 @@ describe('streamCsvExport', () => {
       seeds: [
         {
           accreditationNumber: 'ACC-OLD',
+          year: PREVIOUS_YEAR,
           summaryLogId: 'sl-old',
           rows: [receivedRowState({ rowId: '1001' })]
         },
@@ -843,6 +853,7 @@ describe('streamCsvExport', () => {
         },
         {
           accreditationNumber: 'ACC-A',
+          year: PREVIOUS_YEAR,
           summaryLogId: 'sl-a',
           rows: [receivedRowState({ rowId: '2002' })]
         }

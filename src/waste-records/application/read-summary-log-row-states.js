@@ -73,12 +73,14 @@ export const latestSubmittedSummaryLogRowStates = async ({
   summaryLogRowStatesRepository,
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 }) => {
   const ledgerId = {
     organisationNumber,
     registrationNumber,
-    accreditationNumber
+    accreditationNumber,
+    year
   }
 
   const summaryLog = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)

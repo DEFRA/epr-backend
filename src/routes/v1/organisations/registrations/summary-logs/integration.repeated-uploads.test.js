@@ -33,7 +33,8 @@ import {
   servedTestAccreditation,
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
-  TEST_REGISTRATION_NUMBER
+  TEST_REGISTRATION_NUMBER,
+  UPLOAD_YEAR
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
@@ -400,7 +401,8 @@ describe('Repeated uploads of identical data', () => {
         const ledgerId = {
           organisationNumber: TEST_ORGANISATION_NUMBER,
           registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
-          accreditationNumber: toAccreditationNumber('ACC-2025-001')
+          accreditationNumber: toAccreditationNumber('ACC-2025-001'),
+          year: UPLOAD_YEAR
         }
 
         const committedBefore = await summaryLogRowStatesForRegistration({
