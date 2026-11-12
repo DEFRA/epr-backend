@@ -7,6 +7,7 @@ import {
 } from '#common/enums/index.js'
 
 import {
+  formatS3Info,
   isInUploadLocation,
   orsImportUploadPath,
   UPLOAD_FILE_STATUS
@@ -66,13 +67,6 @@ const isUploadedForImport = (upload, importId) =>
   })
 
 /**
- * @param {OrsUploadFile} upload
- * @returns {string}
- */
-const formatLocation = ({ s3Bucket, s3Key }) =>
-  `, s3Bucket=${s3Bucket}, s3Key=${s3Key}`
-
-/**
  * @param {OrsUploadFile[]} uploads
  * @returns {boolean}
  */
@@ -122,7 +116,7 @@ export const orsUploadCompleted = {
 
       if (outOfLocation.length > 0) {
         logger.error({
-          message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}${outOfLocation.map(formatLocation).join('')}`,
+          message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}${outOfLocation.map(formatS3Info).join('')}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,

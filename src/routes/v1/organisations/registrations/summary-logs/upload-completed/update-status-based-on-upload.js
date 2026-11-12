@@ -196,14 +196,3 @@ export const updateStatusBasedOnUpload = async (
 
   return newStatus
 }
-
-/**
- * @param {SummaryLogUpload} upload
- * @returns {string}
- */
-export const formatS3Info = (upload) =>
-  upload.fileStatus === UPLOAD_STATUS.COMPLETE &&
-  upload.s3Bucket &&
-  upload.s3Key
-    ? `, s3Bucket=${upload.s3Bucket}, s3Key=${upload.s3Key}`
-    : ''

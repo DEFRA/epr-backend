@@ -11,16 +11,14 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import {
+  formatS3Info,
   isInUploadLocation,
   summaryLogUploadPath
 } from '#domain/uploads/upload-locations.js'
 import { config } from '#root/config.js'
 import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
-import {
-  formatS3Info,
-  updateStatusBasedOnUpload
-} from './update-status-based-on-upload.js'
+import { updateStatusBasedOnUpload } from './update-status-based-on-upload.js'
 import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js' */

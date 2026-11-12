@@ -55,3 +55,14 @@ export const isInUploadLocation = (
 ) =>
   fileStatus !== UPLOAD_FILE_STATUS.COMPLETE ||
   (s3Bucket === bucket && Boolean(s3Key?.startsWith(`${path}/`)))
+
+/**
+ * Where a completed file is, for a log message; any other file names nowhere.
+ *
+ * @param {UploadedFile} file
+ * @returns {string}
+ */
+export const formatS3Info = ({ fileStatus, s3Bucket, s3Key }) =>
+  fileStatus === UPLOAD_FILE_STATUS.COMPLETE && s3Bucket && s3Key
+    ? `, s3Bucket=${s3Bucket}, s3Key=${s3Key}`
+    : ''
