@@ -307,7 +307,7 @@ describe('createDataSyntaxValidator', () => {
       data: dataSections
     })
 
-  const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS)
+  const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS.TEST)
 
   /**
    * Validates from row-object fixtures (headers auto-computed from keys).
@@ -1343,7 +1343,7 @@ describe('createDataSyntaxValidator with high issue volume', () => {
       }
     })
 
-    const validate = createDataSyntaxValidator(registry)
+    const validate = createDataSyntaxValidator(registry.TEST)
 
     const result = validate(parsed)
 
@@ -1385,22 +1385,20 @@ describe('error codes for the shared field schemas', () => {
     'reports a $joiType failure as $code with $errorCode',
     ({ fieldSchema, value, code, errorCode }) => {
       const validateDataSyntax = createDataSyntaxValidator({
-        TEST: {
-          FIELD_TABLE: {
-            requiredHeaders: ['ROW_ID', 'FIELD'],
-            rowIdField: 'ROW_ID',
-            unfilledValues: {},
-            validationSchema: Joi.object({
-              ROW_ID: Joi.number().min(1000).optional(),
-              FIELD: fieldSchema
-            })
-              .unknown(true)
-              .prefs({ abortEarly: false }),
-            classifyForWasteBalance: buildClassifyForWasteBalance(
-              ['ROW_ID', 'FIELD'],
-              {}
-            )
-          }
+        FIELD_TABLE: {
+          requiredHeaders: ['ROW_ID', 'FIELD'],
+          rowIdField: 'ROW_ID',
+          unfilledValues: {},
+          validationSchema: Joi.object({
+            ROW_ID: Joi.number().min(1000).optional(),
+            FIELD: fieldSchema
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          classifyForWasteBalance: buildClassifyForWasteBalance(
+            ['ROW_ID', 'FIELD'],
+            {}
+          )
         }
       })
 

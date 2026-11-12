@@ -93,8 +93,8 @@ describe('ORS waste balance validation (VAL014)', () => {
     })
 
     // OSR_ID 100 is in the test org's overseas sites map and the overseas
-    // sites repository has it with validFrom=2025-01-01. The default export
-    // date is 2025-01-20 which is after validFrom, so the ORS is approved.
+    // sites repository has it with validFrom=2026-01-01. The default export
+    // date is 2026-01-20 which is after validFrom, so the ORS is approved.
     const uploadData = createUploadData([{ rowId: 1001, exportTonnage: 100 }])
 
     await uploadAndSubmit(env, 'sl-ors-approved', 'file-ors-1', uploadData)
@@ -116,8 +116,8 @@ describe('ORS waste balance validation (VAL014)', () => {
       {
         rowId: 2002,
         exportTonnage: 150,
-        dateReceived: '2025-01-16T00:00:00.000Z',
-        exportDate: '2025-01-21T00:00:00.000Z'
+        dateReceived: '2026-01-16T00:00:00.000Z',
+        exportDate: '2026-01-21T00:00:00.000Z'
       }
     ])
 

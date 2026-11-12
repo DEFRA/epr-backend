@@ -3,9 +3,9 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
-import { MIN_TEMPLATE_VERSIONS } from '#domain/summary-logs/table-schemas/index.js'
 import { createMetaSchema } from './meta-syntax.schema.js'
 
+/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 
 /**
@@ -30,6 +30,12 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
     'number.min': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
     },
+    'templateVersion.year': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_YEAR_INVALID
+    },
+    'templateVersion.yearMismatch': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_YEAR_MISMATCH
+    },
     'number.base': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
     }
@@ -46,11 +52,12 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure from the parser
+ * @param {Year} params.year - The summary log's year
  * @param {Object} [params.registration] - Unused, for signature compatibility
  * @param {string} [params.loggingContext] - Unused, for signature compatibility
  * @returns {ValidationIssuesCollector} validation issues with any issues found
  */
-export const validateMetaSyntax = ({ parsed }) => {
+export const validateMetaSyntax = ({ parsed, year }) => {
   const issues = createValidationIssues()
 
   const metaValues = {}
@@ -61,9 +68,7 @@ export const validateMetaSyntax = ({ parsed }) => {
     metaLocations[fieldName] = fieldData?.location
   }
 
-  const schema = createMetaSchema({
-    minTemplateVersions: MIN_TEMPLATE_VERSIONS
-  })
+  const schema = createMetaSchema({ year })
 
   const { error } = schema.validate(metaValues, { abortEarly: false })
 

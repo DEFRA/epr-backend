@@ -161,7 +161,7 @@ describe('PRN transition actor on the waste-balance stream', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
-    vi.setSystemTime(new Date('2025-10-01T12:00:00.000Z'))
+    vi.setSystemTime(new Date('2026-10-01T12:00:00.000Z'))
     getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',

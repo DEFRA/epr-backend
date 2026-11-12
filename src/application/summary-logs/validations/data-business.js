@@ -4,6 +4,7 @@ import { validateRowContinuity } from './row-continuity.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {PreviousSubmission} from '#waste-records/application/read-summary-log-row-states.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * Validates data business rules
@@ -23,9 +24,14 @@ import { validateRowContinuity } from './row-continuity.js'
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
  * @param {PreviousSubmission | null} params.previousSubmission - The latest submitted summary log with its row states, or null when the registration has never submitted
+ * @param {Record<string, Pick<TableSchema, 'wasteRecordType'|'sheetName'>>} params.tableSchemas - The upload's template table schemas
  * @returns {ValidationIssuesCollector} Validation issues object
  */
-export const validateDataBusiness = ({ wasteRecords, previousSubmission }) => {
+export const validateDataBusiness = ({
+  wasteRecords,
+  previousSubmission,
+  tableSchemas
+}) => {
   const issues = createValidationIssues()
 
   for (const validate of [
@@ -35,7 +41,7 @@ export const validateDataBusiness = ({ wasteRecords, previousSubmission }) => {
     // validateTonnageAccuracy,
     // etc.
   ]) {
-    issues.merge(validate({ wasteRecords, previousSubmission }))
+    issues.merge(validate({ wasteRecords, previousSubmission, tableSchemas }))
   }
 
   return issues
