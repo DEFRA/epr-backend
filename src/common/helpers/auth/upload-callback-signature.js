@@ -15,10 +15,14 @@ import { config } from '#root/config.js'
  *
  * @typedef {Brand<string, 'UploadCallbackPath'>} UploadCallbackPath
  *
+ * The signature for a callback path: 64 hex characters.
+ *
+ * @typedef {Brand<string, 'UploadCallbackSignature'>} UploadCallbackSignature
+ *
  * Where CDP Uploader calls back, and the signature it sends back in the
  * callback's metadata.
  *
- * @typedef {{ signature: string, url: string }} UploadCallback
+ * @typedef {{ signature: UploadCallbackSignature, url: string }} UploadCallback
  */
 
 /**
@@ -36,6 +40,13 @@ export const toUploadCallbackPath = (value) =>
   /** @type {UploadCallbackPath} */ (value)
 
 /**
+ * @param {string} value
+ * @returns {UploadCallbackSignature}
+ */
+export const toUploadCallbackSignature = (value) =>
+  /** @type {UploadCallbackSignature} */ (value)
+
+/**
  * @param {UploadCallbackKey} key
  * @param {UploadCallbackPath} path
  * @returns {Buffer}
@@ -49,10 +60,10 @@ const signatureFor = (key, path) =>
  *
  * @param {UploadCallbackKey} key
  * @param {UploadCallbackPath} path
- * @returns {string}
+ * @returns {UploadCallbackSignature}
  */
 export const uploadCallbackSignature = (key, path) =>
-  signatureFor(key, path).toString('hex')
+  toUploadCallbackSignature(signatureFor(key, path).toString('hex'))
 
 /**
  * The key this service signs and checks upload callbacks with.

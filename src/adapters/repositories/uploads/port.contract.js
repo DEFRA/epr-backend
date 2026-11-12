@@ -2,6 +2,8 @@ import { beforeEach, describe } from 'vitest'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { toUploadCallbackSignature } from '#common/helpers/auth/upload-callback-signature.js'
 import { waitForCallback } from './test-helpers/callback-receiver.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -55,7 +57,7 @@ export const testUploadsRepositoryContract = (it) => {
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
           url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
-          signature: 'signature-123'
+          signature: toUploadCallbackSignature('signature-123')
         }
       })
 
@@ -74,7 +76,7 @@ export const testUploadsRepositoryContract = (it) => {
         redirectUrl: 'https://admin.test/overseas-sites/upload',
         callback: {
           url: `${callbackReceiver.callbackUrl}/v1/overseas-sites/imports/import-123/upload-completed`,
-          signature: 'signature-123'
+          signature: toUploadCallbackSignature('signature-123')
         }
       })
 
@@ -100,7 +102,7 @@ export const testUploadsRepositoryContract = (it) => {
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
           url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
-          signature: 'signature-123'
+          signature: toUploadCallbackSignature('signature-123')
         }
       })
 
@@ -137,7 +139,7 @@ export const testUploadsRepositoryContract = (it) => {
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
           url: `${callbackReceiver.callbackUrl}/v1/organisations/org-loc/registrations/reg-loc/summary-logs/sl-loc/upload-completed`,
-          signature: 'signature-123'
+          signature: toUploadCallbackSignature('signature-123')
         }
       })
 
@@ -188,7 +190,7 @@ export const testUploadsRepositoryContract = (it) => {
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
           url: `${callbackReceiver.callbackUrl}/v1/organisations/org-del/registrations/reg-del/summary-logs/sl-del/upload-completed`,
-          signature: 'signature-123'
+          signature: toUploadCallbackSignature('signature-123')
         }
       })
 
@@ -222,7 +224,7 @@ export const testUploadsRepositoryContract = (it) => {
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
           url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
-          signature: 'signature-123'
+          signature: toUploadCallbackSignature('signature-123')
         }
       })
 
