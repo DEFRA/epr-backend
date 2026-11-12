@@ -5,8 +5,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
-import { yearSchema } from '#common/validation/year-schema.js'
-import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
+import { openYearSchema } from '#common/validation/year-schema.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import {
@@ -200,10 +199,6 @@ export const organisationListResponseSchema = Joi.object({
   totalPages: Joi.number().required()
 })
 
-const servedYear = yearSchema().custom((year, helpers) =>
-  year > latestOpenYear(new Date()) ? helpers.error('any.invalid') : year
-)
-
 export const organisationYearsResponseSchema = Joi.object({
-  years: Joi.array().items(servedYear).unique().required()
+  years: Joi.array().items(openYearSchema()).unique().required()
 })
