@@ -1,6 +1,6 @@
 /**
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { KeyedSummaryLogWithId, SubmittedSummaryLogWithId, SummaryLogWithId } from './port.js'
+ * @import { KeyedSummaryLogWithId, KeyedSubmittedSummaryLogWithId, SummaryLogWithId } from './port.js'
  */
 
 /**
@@ -31,7 +31,7 @@ export const keyedBy =
  * stored schema admits a submitted summary log only with its `submittedAt`.
  *
  * @param {SummaryLogKey} key
- * @returns {(found: SummaryLogWithId) => SubmittedSummaryLogWithId}
+ * @returns {(found: SummaryLogWithId) => KeyedSubmittedSummaryLogWithId}
  */
 export const submittedKeyedBy = (key) => (found) =>
-  /** @type {SubmittedSummaryLogWithId} */ (keyedBy(key)(found))
+  /** @type {KeyedSubmittedSummaryLogWithId} */ (keyedBy(key)(found))

@@ -1,5 +1,5 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-/** @import {SubmittedSummaryLog, SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
+/** @import {KeyedSubmittedSummaryLog, SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
@@ -300,7 +300,7 @@ export async function fetchOrGenerateReportForPeriod({
  * The report source — which submission produced the current state, and when
  * it was submitted. A year with no submission yet has a null source.
  *
- * @param {SubmittedSummaryLog | null} latestSubmission
+ * @param {KeyedSubmittedSummaryLog | null} latestSubmission
  * @returns {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }}
  */
 function toSource(latestSubmission) {
@@ -366,7 +366,7 @@ async function readSubmissionRowStates({
  * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteRecordStates
- * @param {SubmittedSummaryLog | null} params.latestSubmission
+ * @param {KeyedSubmittedSummaryLog | null} params.latestSubmission
  * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
 async function getAggregatedReportDetail({
