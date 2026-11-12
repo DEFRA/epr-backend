@@ -248,20 +248,21 @@ describe('report-service', () => {
       expect(report).not.toHaveProperty('id')
     })
 
-    it("reads the summary log of the report's own year after a later year's log is submitted", async () => {
+    it("reads each report's summary log from its own year when one accreditation spans two years", async () => {
       const accreditation = readModelAccreditation()
       const registration = readModelRegistration({
         accreditations: { 2025: accreditation, 2026: accreditation }
       })
-      const params = {
+      /** @param {number} year @param {number} period */
+      const paramsFor = (year, period) => ({
         ...defaultParams(),
         reportRegistration: { registration, accreditation },
-        year: toYear(2025),
-        period: 12,
-        requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2025))
-      }
-      const ledgerId = reportLedger(params)
+        year: toYear(year),
+        period,
+        requiredPeriods: generateAllPeriodsForYear('monthly', toYear(year))
+      })
       const stores = emptyStores()
+      const ledgerId = reportLedger(paramsFor(2025, 12))
 
       await submitLog(stores, ledgerId, {
         fileId: 'sl-2025',
@@ -286,25 +287,39 @@ describe('report-service', () => {
         ]
       })
 
-      const report =
-        /** @type {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail} */ (
-          await fetchOrGenerateReportForPeriod({
-            reportsRepository: createInMemoryReportsRepository()(),
-            packagingRecyclingNotesRepository: createPrnRepo(),
-            ...stores,
-            ...params
-          })
-        )
+      /** @param {number} year @param {number} period */
+      const generate = async (year, period) => {
+        const { source, recyclingActivity } =
+          /** @type {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail} */ (
+            await fetchOrGenerateReportForPeriod({
+              reportsRepository: createInMemoryReportsRepository()(),
+              packagingRecyclingNotesRepository: createPrnRepo(),
+              ...stores,
+              ...paramsFor(year, period)
+            })
+          )
+        return {
+          source,
+          suppliers: recyclingActivity.suppliers.map(
+            ({ supplierName }) => supplierName
+          )
+        }
+      }
 
-      expect(report.source).toEqual({
-        summaryLogId: 'sl-2025',
-        lastUploadedAt: '2026-01-05T00:00:00.000Z'
+      expect(await generate(2025, 12)).toEqual({
+        source: {
+          summaryLogId: 'sl-2025',
+          lastUploadedAt: '2026-01-05T00:00:00.000Z'
+        },
+        suppliers: ['December Supplier']
       })
-      expect(
-        report.recyclingActivity.suppliers.map(
-          ({ supplierName }) => supplierName
-        )
-      ).toEqual(['December Supplier'])
+      expect(await generate(2026, 1)).toEqual({
+        source: {
+          summaryLogId: 'sl-2026',
+          lastUploadedAt: '2026-02-05T00:00:00.000Z'
+        },
+        suppliers: ['January Supplier']
+      })
     })
 
     it('derives rows and source from the same submission when a new submission commits mid-read', async () => {
