@@ -34,6 +34,7 @@ const RETIRED_INDEX_NAMES = [
   'partition_number',
   'partition_kind_latest',
   'prn_watermark_catchup',
+  'ledger_slot_by_number',
   'ledger_kind_latest_by_number',
   'prn_watermark_catchup_by_number'
 ]
@@ -41,10 +42,7 @@ const RETIRED_INDEX_NAMES = [
 /**
  * Ensures the ledger collection exists with the indexes required by the
  * event-sourced ledger design. The year-keyed indexes are built before the
- * ones they replace are dropped, so a slot is never unguarded. A collection
- * that already holds the slot index without the year keeps it: a ledger
- * whose events have no year yet then refuses a write that would open its
- * year from slot 1, rather than holding that year twice.
+ * ones they replace are dropped, so a slot is never unguarded.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -99,7 +97,7 @@ const toLedgerEvent = (doc) => validateLedgerEventRead(doc)
 /**
  * Classify a MongoDB E11000 duplicate key error raised by an append.
  *
- * The slot indexes are the only unique indexes on this collection — the
+ * The slot index is the only unique index on this collection — the
  * others are non-unique, and driver-generated `_id`s do not collide — so a
  * duplicate key can only mean a competing writer took the slot.
  *

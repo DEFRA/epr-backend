@@ -7,6 +7,7 @@ import {
   ensureLedgerCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from './ledger-mongodb.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { LedgerSlotConflictError } from './ledger-port.js'
 import { buildLedgerEvent } from './ledger-test-data.js'
 import { testLedgerRepositoryContract } from './ledger-port.contract.js'
@@ -156,7 +157,7 @@ describe('ensureLedgerCollection', () => {
       expect(names).not.toContain('prn_watermark_catchup_by_number')
     })
 
-    it('keeps the slot index without the year, which refuses opening a year over a yearless ledger', async (/** @type {*} */ {
+    it('drops the slot index without the year, so a registered-only ledger opens its next year at slot 1', async (/** @type {*} */ {
       mongoClient,
       ledgerRepository
     }) => {
@@ -168,20 +169,17 @@ describe('ensureLedgerCollection', () => {
         { registrationNumber: 1, accreditationNumber: 1, number: 1 },
         { name: 'ledger_slot_by_number', unique: true }
       )
-      try {
-        await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
-        const opening = buildLedgerEvent({ number: 1 })
-        await repository.appendEvents([opening])
-        await collection.updateMany({}, { $unset: { year: '' } })
 
-        await expect(repository.appendEvents([opening])).rejects.toBeInstanceOf(
-          LedgerSlotConflictError
-        )
-        const names = (await collection.indexes()).map(({ name }) => name)
-        expect(names).toContain('ledger_slot_by_number')
-      } finally {
-        await collection.dropIndex('ledger_slot_by_number')
-      }
+      await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
+      await repository.appendEvents([
+        buildLedgerEvent({ accreditationId: null, year: toYear(2026) })
+      ])
+      await repository.appendEvents([
+        buildLedgerEvent({ accreditationId: null, year: toYear(2027) })
+      ])
+
+      const names = (await collection.indexes()).map(({ name }) => name)
+      expect(names).not.toContain('ledger_slot_by_number')
     })
 
     it('drops the indexes keyed on the ids', async (/** @type {*} */ {

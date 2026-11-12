@@ -23,6 +23,7 @@ import {
   withNumbers
 } from './test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -132,7 +133,7 @@ describe('ensureSummaryLogRowStatesCollection', () => {
     ).toBe(true)
   })
 
-  it('keeps the identity index without the year, which refuses a copy of a yearless row state for its year', async (/** @type {*} */ {
+  it('drops the identity index without the year, so identical rows of two years are both stored', async (/** @type {*} */ {
     mongoClient,
     summaryLogRowStatesCollection,
     summaryLogRowStatesRepository
@@ -149,35 +150,30 @@ describe('ensureSummaryLogRowStatesCollection', () => {
       },
       { name: 'summary_log_row_state_identity_by_number', unique: true }
     )
-    try {
-      await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
-      const entry = buildSummaryLogRowStateEntry()
-      await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
-        [entry],
-        toSummaryLogFileId('log-1')
-      )
-      await summaryLogRowStatesCollection.updateMany(
-        {},
-        { $unset: { year: '' } }
-      )
 
-      await expect(
-        repository.upsertSummaryLogRowStates(
-          withNumbers(DEFAULT_LEDGER_ID),
-          [entry],
-          toSummaryLogFileId('log-2')
-        )
-      ).rejects.toThrow(/duplicate key/)
-      const names = (await summaryLogRowStatesCollection.indexes()).map(
-        ({ name }) => name
-      )
-      expect(names).toContain('summary_log_row_state_identity_by_number')
-    } finally {
-      await summaryLogRowStatesCollection.dropIndex(
-        'summary_log_row_state_identity_by_number'
-      )
-    }
+    await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
+    const entry = buildSummaryLogRowStateEntry()
+    const ledger2026 = withNumbers({
+      ...DEFAULT_LEDGER_ID,
+      accreditationId: null,
+      year: toYear(2026)
+    })
+    await repository.upsertSummaryLogRowStates(
+      ledger2026,
+      [entry],
+      toSummaryLogFileId('log-2026')
+    )
+    await repository.upsertSummaryLogRowStates(
+      { ...ledger2026, year: toYear(2027) },
+      [entry],
+      toSummaryLogFileId('log-2027')
+    )
+
+    const names = (await summaryLogRowStatesCollection.indexes()).map(
+      ({ name }) => name
+    )
+    expect(names).not.toContain('summary_log_row_state_identity_by_number')
+    expect(await summaryLogRowStatesCollection.countDocuments()).toBe(2)
   })
 
   it('drops the id-keyed identity index it replaces', async (/** @type {*} */ {
