@@ -117,6 +117,7 @@ export default [
       '**/*test-helpers.js',
       // These read a year out of a date or string, so mint it.
       'src/common/helpers/dates/year-month.js',
+      'src/domain/summary-logs/template-year.js',
       'src/reports/domain/period-for-date.js',
       'src/routes/organisations/get.organisation.js',
       'src/waste-balances/application/read-model-accreditations.js'

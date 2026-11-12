@@ -4,7 +4,8 @@ import {
   PROCESSING_TYPES,
   REGISTERED_ONLY_PROCESSING_TYPES
 } from './meta-fields.js'
-import { MIN_TEMPLATE_VERSIONS } from './table-schemas/index.js'
+import { getTemplate } from './table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from './template-year.js'
 
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
@@ -56,6 +57,7 @@ export const templateForRegistration = (registration) => {
 
   return {
     PROCESSING_TYPE,
-    TEMPLATE_VERSION: MIN_TEMPLATE_VERSIONS[PROCESSING_TYPE]
+    TEMPLATE_VERSION: getTemplate(DEFAULT_TEMPLATE_YEAR, PROCESSING_TYPE)
+      .minVersion
   }
 }
