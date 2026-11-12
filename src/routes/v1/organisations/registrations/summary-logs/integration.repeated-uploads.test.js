@@ -279,10 +279,9 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationAdministrationRepository,
-        overseasSitesRepository: createMockOverseasSitesRepository({
-          findByIds: vi.fn().mockResolvedValue([])
-        }),
+        organisationReadRepository: organisationReadRepositoryOver(
+          organisationAdministrationRepository
+        ),
         logger: mockLogger
       })
 

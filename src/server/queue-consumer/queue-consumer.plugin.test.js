@@ -43,6 +43,7 @@ describe('commandQueueConsumerPlugin', () => {
       app: {
         summaryLogsRepository: {},
         organisationAdministrationRepository: {},
+        organisationReadRepository: {},
         wasteBalanceService: {},
         uploadsRepository: {},
         reportsRepository: {},
@@ -85,6 +86,9 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain(
       'uploadsRepository'
     )
+    expect(commandQueueConsumerPlugin.dependencies).toContain(
+      'organisationReadRepository'
+    )
   })
 
   describe('startup without a row-state repository', () => {
@@ -102,6 +106,7 @@ describe('commandQueueConsumerPlugin', () => {
         [
           'summaryLogsRepository',
           'organisationsRepository',
+          'organisationReadRepository',
           'wasteBalanceService',
           'uploadsRepository',
           'reportsRepository',
@@ -174,6 +179,7 @@ describe('commandQueueConsumerPlugin', () => {
           summaryLogsRepository: server.app.summaryLogsRepository,
           organisationAdministrationRepository:
             server.app.organisationAdministrationRepository,
+          organisationReadRepository: server.app.organisationReadRepository,
           wasteBalanceService: server.app.wasteBalanceService,
           reportsService: expect.objectContaining({
             hasReportSubmittedSince: expect.any(Function),

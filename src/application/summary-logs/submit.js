@@ -18,10 +18,9 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * @import { SummaryLogExtractor } from '#domain/summary-logs/extractor/port.js'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
- * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { ReportsService } from '#reports/application/report-service.js'
  * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
- * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
+ * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -32,13 +31,12 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * @typedef {object} SubmitDependencies
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
- * @property {OrganisationAdministrationRepository} organisationAdministrationRepository
+ * @property {OrganisationReadRepository} organisationReadRepository
  * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {ReturnType<typeof createWasteBalanceService>} wasteBalanceService
  * @property {ReportsService} reportsService
  * @property {SummaryLogExtractor} summaryLogExtractor
- * @property {OverseasSitesRepository} overseasSitesRepository
  * @property {SubmitUser} user
  * @property {OnSummaryLogUploaded} onSummaryLogUploaded
  */
@@ -100,12 +98,11 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   const {
     logger,
     summaryLogsRepository,
-    organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     wasteBalanceService,
     summaryLogExtractor,
-    overseasSitesRepository,
     user,
     onSummaryLogUploaded
   } = deps
@@ -130,8 +127,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   const sync = syncFromSummaryLog({
     extractor: summaryLogExtractor,
     wasteBalanceService,
-    organisationAdministrationRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     logger
