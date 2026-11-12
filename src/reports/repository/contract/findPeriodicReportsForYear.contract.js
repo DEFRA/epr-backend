@@ -49,6 +49,7 @@ const TONNAGE_OVERRIDES = {
   supportingInformation: 'Test note'
 }
 
+/** @param {Partial<import('../port.js').CreateReportParams>} [overrides] */
 const nextYearReport = (overrides = {}) =>
   buildCreateReportParams({ ...NEXT_YEAR_REPORT, ...overrides })
 

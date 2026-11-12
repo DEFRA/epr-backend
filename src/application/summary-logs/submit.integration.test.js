@@ -320,12 +320,20 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
   it('proceeds and writes records when no report has been submitted since creation', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
-      await setupSubmit({ reportsRepository })
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: { year },
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({ reportsRepository })
 
-    // An open (never-submitted) report exists for the registration: the guard
-    // reacts only to SUBMITTED closures, so submission must still proceed.
-    await reportsRepository.createReport(buildCreateReportParams(reportKey))
+    // An open (never-submitted) report of the log's year exists for the
+    // registration: the guard reacts only to SUBMITTED closures, so submission
+    // must still proceed.
+    await reportsRepository.createReport(
+      buildCreateReportParams({ ...reportKey, year })
+    )
 
     await submitSummaryLog(summaryLogId, deps)
 

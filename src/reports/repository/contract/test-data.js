@@ -143,7 +143,10 @@ export const buildCreateReportParams = (overrides = {}) =>
     ...overrides
   })
 
-/** Overrides that place a report in the year after the default, with dates to match. */
+/**
+ * Overrides that place a report in the year after the default, with dates to match.
+ * @type {Pick<import('../port.js').CreateReportParams, 'year' | 'startDate' | 'endDate' | 'dueDate'>}
+ */
 export const NEXT_YEAR_REPORT = {
   year: NEXT_REPORT_YEAR,
   startDate: calendarDate(`${NEXT_REPORT_YEAR}-01-01`),

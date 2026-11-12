@@ -990,6 +990,7 @@ describe('createReportsService', () => {
     })
     const service = createReportsService(reportsRepository)
 
+    /** @type {import('#reports/repository/port.js').HasReportSubmittedSinceParams} */
     const params = {
       organisationNumber: toOrganisationNumber('500123'),
       registrationNumber: toRegistrationNumber('R25SR500010912PL'),
