@@ -16,6 +16,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { toYear } from '#common/helpers/dates/year.js'
@@ -264,6 +265,7 @@ describe('SummaryLogsValidator', () => {
     summaryLogId = 'summary-log-123'
 
     summaryLog = {
+      year: DEFAULT_TEMPLATE_YEAR,
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',

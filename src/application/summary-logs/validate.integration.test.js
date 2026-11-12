@@ -1206,6 +1206,7 @@ describe('SummaryLogsValidator integration', () => {
     })
 
     it('should capture cell errors from every sheet, not just the first', async () => {
+      const { tables } = EXPORTER_TEMPLATES[2026]
       const { updated } = await runValidation({
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
@@ -1214,26 +1215,19 @@ describe('SummaryLogsValidator integration', () => {
         data: {
           RECEIVED_LOADS_FOR_EXPORT: {
             location: { sheet: 'Exported', row: 7, column: 'A' },
-            headers:
-              EXPORTER_TEMPLATES[2026].tables.RECEIVED_LOADS_FOR_EXPORT
-                .requiredHeaders,
+            headers: tables.RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
             rows: [
-              rowForTable(
-                EXPORTER_TEMPLATES[2026].tables.RECEIVED_LOADS_FOR_EXPORT,
-                8,
-                {
-                  ROW_ID: 1000,
-                  DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
-                }
-              )
+              rowForTable(tables.RECEIVED_LOADS_FOR_EXPORT, 8, {
+                ROW_ID: 1000,
+                DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
+              })
             ]
           },
           SENT_ON_LOADS: {
             location: { sheet: 'Sent on', row: 7, column: 'A' },
-            headers:
-              EXPORTER_TEMPLATES[2026].tables.SENT_ON_LOADS.requiredHeaders,
+            headers: tables.SENT_ON_LOADS.requiredHeaders,
             rows: [
-              rowForTable(EXPORTER_TEMPLATES[2026].tables.SENT_ON_LOADS, 8, {
+              rowForTable(tables.SENT_ON_LOADS, 8, {
                 ROW_ID: 5000,
                 DATE_LOAD_LEFT_SITE: 'not-a-date'
               })

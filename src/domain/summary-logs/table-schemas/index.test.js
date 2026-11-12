@@ -5,11 +5,16 @@ import {
   aggregateUnfilledValues,
   getTemplate,
   findSchemaByWasteRecordType,
-  findSchemaForProcessingType
+  findSchemaForProcessingType,
+  unfilledValuesForYear
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { DEFAULT_TEMPLATE_YEAR } from '../template-year.js'
+
+/** @import {Year} from '#common/helpers/dates/year.js' */
+
+const YEAR_2027 = /** @type {Year} */ (2027)
 
 describe('table-schemas', () => {
   describe('PROCESSING_TYPE_TABLES', () => {
@@ -386,6 +391,18 @@ describe('table-schemas', () => {
     })
   })
 
+  describe('unfilledValuesForYear', () => {
+    it('gathers the placeholders of every table in the year', () => {
+      expect(unfilledValuesForYear(DEFAULT_TEMPLATE_YEAR)).toEqual(
+        aggregateUnfilledValues(PROCESSING_TYPE_TABLES)
+      )
+    })
+
+    it('has no placeholders for a year with no templates', () => {
+      expect(unfilledValuesForYear(YEAR_2027)).toEqual({})
+    })
+  })
+
   describe('TEMPLATES', () => {
     it('has templates for 2026 only', () => {
       expect(Object.keys(TEMPLATES)).toEqual(['2026'])
@@ -416,12 +433,9 @@ describe('table-schemas', () => {
     })
 
     it('throws for a year with no templates', () => {
-      expect(() =>
-        getTemplate(
-          /** @type {import('#common/helpers/dates/year.js').Year} */ (2027),
-          PROCESSING_TYPES.EXPORTER
-        )
-      ).toThrow('No EXPORTER summary log template for 2027')
+      expect(() => getTemplate(YEAR_2027, PROCESSING_TYPES.EXPORTER)).toThrow(
+        'No EXPORTER summary log template for 2027'
+      )
     })
 
     it('throws for an unknown processing type', () => {

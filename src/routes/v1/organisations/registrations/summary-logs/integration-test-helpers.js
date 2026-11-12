@@ -214,16 +214,16 @@ export const EXPORTER_HEADERS = [
 ]
 
 const TARE_PLUS_PALLET_WEIGHT = 150
-const DEFAULT_DATE = '2025-01-15T00:00:00.000Z'
-const VALID_FROM = '2025-01-01'
-const VALID_TO = '2025-12-31'
+const DEFAULT_DATE = '2026-01-15T00:00:00.000Z'
+const VALID_FROM = '2026-01-01'
+const VALID_TO = '2026-12-31'
 // A registered overseas site whose approval starts after the default export
 // date, so OSR_ID 200 resolves to found-but-unapproved (ORS_NOT_APPROVED).
-const UNAPPROVED_VALID_FROM = '2025-06-01'
+const UNAPPROVED_VALID_FROM = '2026-06-01'
 /** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */
 const APPROVED_HISTORY = [
-  { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-  { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
+  { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+  { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
 ]
 
 export const createReprocessorReceivedRowValues = (overrides = {}) => {
@@ -288,7 +288,7 @@ export const createReprocessorReceivedRowValues = (overrides = {}) => {
 export const createReprocessorSentOnRowValues = (overrides = {}) => {
   const d = {
     rowId: 5001,
-    dateLeft: '2025-01-20T00:00:00.000Z',
+    dateLeft: '2026-01-20T00:00:00.000Z',
     tonnageSent: 100,
     destinationType: 'Reprocessor',
     destinationName: 'Dest A',
@@ -322,7 +322,7 @@ export const createReprocessorSentOnRowValues = (overrides = {}) => {
 export const createReprocessedRowValues = (overrides = {}) => {
   const defaults = {
     rowId: 3001,
-    dateLeft: '2025-01-15T00:00:00.000Z',
+    dateLeft: '2026-01-15T00:00:00.000Z',
     productTonnage: 100,
     ukPackagingWeightPercentage: 1,
     productUkPackagingWeightProportion: 100,
@@ -356,7 +356,7 @@ export const createReprocessedRowValues = (overrides = {}) => {
 
 const EXPORTER_ROW_DEFAULTS = {
   rowId: 1001,
-  dateReceived: '2025-01-15T00:00:00.000Z',
+  dateReceived: '2026-01-15T00:00:00.000Z',
   ewcCode: '03 03 08',
   wasteDescription: 'Glass - pre-sorted',
   prnIssued: 'No',
@@ -372,10 +372,10 @@ const EXPORTER_ROW_DEFAULTS = {
   interimSite: 'No',
   interimSiteId: 100,
   interimTonnage: 0,
-  dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+  dateReceivedByOsr: '2026-01-18T00:00:00.000Z',
   osrId: 100,
   exportTonnage: 100,
-  exportDate: '2025-01-20T00:00:00.000Z',
+  exportDate: '2026-01-20T00:00:00.000Z',
   exportControls: 'Article 18 (Green list)',
   baselCode: 'B3020',
   customsCode: '123456',
@@ -500,7 +500,7 @@ export const createUploadPayload = (
 /** The natural keys every organisation these helpers build is served under. */
 export const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500999')
 export const TEST_REGISTRATION_NUMBER = 'REG-123'
-export const UPLOAD_YEAR = toYear(2025)
+export const UPLOAD_YEAR = toYear(2026)
 
 export const registrationUrl = `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}`
 export const accreditationUrl = `${registrationUrl}/accreditations/${UPLOAD_YEAR}`

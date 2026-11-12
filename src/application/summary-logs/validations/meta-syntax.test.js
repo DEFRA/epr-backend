@@ -1,7 +1,8 @@
+/** @import {Year} from '#common/helpers/dates/year.js' */
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { validateMetaSyntax } from './meta-syntax.js'
 import {
   VALIDATION_CATEGORY,
-  VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
@@ -19,7 +20,7 @@ describe('validateMetaSyntax', () => {
       meta: createValidMeta()
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(true)
     expect(result.isFatal()).toBe(false)
@@ -36,7 +37,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(true)
     expect(result.isFatal()).toBe(false)
@@ -50,7 +51,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(true)
     expect(result.isFatal()).toBe(false)
@@ -65,7 +66,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -85,7 +86,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -105,7 +106,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -124,7 +125,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -146,7 +147,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({ parsed })
+      const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
       expect(result.isValid()).toBe(true)
     }
@@ -160,7 +161,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -179,7 +180,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -197,7 +198,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -218,7 +219,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals[0]?.context?.actual).toBe(0)
@@ -227,7 +228,7 @@ describe('validateMetaSyntax', () => {
   it('handles missing parsed.meta gracefully', () => {
     const parsed = {}
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -246,7 +247,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -265,7 +266,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isFatal()).toBe(true)
     const issues = result.getAllIssues()
@@ -288,7 +289,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
@@ -312,7 +313,7 @@ describe('validateMetaSyntax', () => {
       }
     }
 
-    const result = validateMetaSyntax({ parsed })
+    const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
     expect(result.isValid()).toBe(false)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
@@ -335,7 +336,10 @@ describe('validateMetaSyntax', () => {
           }
         }
 
-        const result = validateMetaSyntax({ parsed })
+        const result = validateMetaSyntax({
+          parsed,
+          year: DEFAULT_TEMPLATE_YEAR
+        })
 
         expect(result.isValid()).toBe(true)
       }
@@ -355,7 +359,10 @@ describe('validateMetaSyntax', () => {
           }
         }
 
-        const result = validateMetaSyntax({ parsed })
+        const result = validateMetaSyntax({
+          parsed,
+          year: DEFAULT_TEMPLATE_YEAR
+        })
 
         expect(result.isValid()).toBe(false)
         expect(result.isFatal()).toBe(true)
@@ -380,7 +387,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({ parsed })
+      const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
       expect(result.isValid()).toBe(true)
       expect(result.isFatal()).toBe(false)
@@ -398,7 +405,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({ parsed })
+      const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
       expect(result.isValid()).toBe(true)
       expect(result.isFatal()).toBe(false)
@@ -415,7 +422,7 @@ describe('validateMetaSyntax', () => {
         }
       }
 
-      const result = validateMetaSyntax({ parsed })
+      const result = validateMetaSyntax({ parsed, year: DEFAULT_TEMPLATE_YEAR })
 
       expect(result.isValid()).toBe(true)
       expect(result.isFatal()).toBe(false)
@@ -423,7 +430,15 @@ describe('validateMetaSyntax', () => {
   })
 
   describe('template year', () => {
-    const validateVersion = (version, processingType = 'REPROCESSOR_INPUT') =>
+    const YEAR_2027 = /** @type {Year} */ (2027)
+
+    const validateVersion = (
+      version,
+      {
+        processingType = 'REPROCESSOR_INPUT',
+        year = DEFAULT_TEMPLATE_YEAR
+      } = {}
+    ) =>
       validateMetaSyntax({
         parsed: {
           meta: {
@@ -434,68 +449,104 @@ describe('validateMetaSyntax', () => {
               location: { sheet: 'Cover', row: 3, column: 'C' }
             }
           }
-        }
+        },
+        year
       })
+
+    const fatalsFor = (version, options) =>
+      validateVersion(version, options).getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
 
     it.each([
       [5, 'REPROCESSOR_INPUT'],
       [2.1, 'REPROCESSOR_REGISTERED_ONLY']
-    ])('accepts the 2026 template version %s for %s', (version, type) => {
-      expect(validateVersion(version, type).isValid()).toBe(true)
-    })
+    ])(
+      'accepts the 2026 template version %s for %s in a 2026 summary log',
+      (version, processingType) => {
+        expect(validateVersion(version, { processingType }).isValid()).toBe(
+          true
+        )
+      }
+    )
 
-    it('rejects 2027.01, a year with no template yet, as TEMPLATE_YEAR_INVALID', () => {
-      const fatals = validateVersion(2027.01).getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
-      )
+    it.each([
+      [DEFAULT_TEMPLATE_YEAR, 2026],
+      [YEAR_2027, 2027]
+    ])(
+      'rejects 2027.01, a year with no template yet, in a %s summary log as TEMPLATE_YEAR_INVALID',
+      (year) => {
+        const fatals = fatalsFor(2027.01, { year })
 
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0]).toMatchObject({
-        category: VALIDATION_CATEGORY.TECHNICAL,
-        code: VALIDATION_CODE.TEMPLATE_YEAR_INVALID,
-        message:
-          "Invalid meta field 'TEMPLATE_VERSION': must be a template for a supported year",
-        context: {
-          actual: 2027.01,
-          location: {
-            sheet: 'Cover',
-            row: 3,
-            column: 'C',
-            field: 'TEMPLATE_VERSION'
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0]).toMatchObject({
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          code: 'TEMPLATE_YEAR_INVALID',
+          message:
+            "Invalid meta field 'TEMPLATE_VERSION': must be a template for a supported year",
+          context: {
+            actual: 2027.01,
+            location: {
+              sheet: 'Cover',
+              row: 3,
+              column: 'C',
+              field: 'TEMPLATE_VERSION'
+            }
           }
-        }
-      })
-    })
+        })
+      }
+    )
+
+    it.each([
+      [5, 'REPROCESSOR_INPUT'],
+      [2.1, 'REPROCESSOR_REGISTERED_ONLY']
+    ])(
+      'rejects the 2026 template version %s for %s in a 2027 summary log as TEMPLATE_YEAR_MISMATCH',
+      (version, processingType) => {
+        const fatals = fatalsFor(version, { processingType, year: YEAR_2027 })
+
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0]).toMatchObject({
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          code: 'TEMPLATE_YEAR_MISMATCH',
+          message:
+            "Invalid meta field 'TEMPLATE_VERSION': must be a template for 2027",
+          context: {
+            actual: version,
+            location: {
+              sheet: 'Cover',
+              row: 3,
+              column: 'C',
+              field: 'TEMPLATE_VERSION'
+            }
+          }
+        })
+      }
+    )
 
     it('rejects a version below the minimum for its processing type as TEMPLATE_VERSION_INVALID', () => {
-      const fatals = validateVersion(4).getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
-      )
+      const fatals = fatalsFor(4)
 
       expect(fatals).toHaveLength(1)
       expect(fatals[0]).toMatchObject({
-        code: VALIDATION_CODE.TEMPLATE_VERSION_INVALID,
+        code: 'TEMPLATE_VERSION_INVALID',
         message: "Invalid meta field 'TEMPLATE_VERSION': must be at least 5"
       })
     })
 
     it('rejects only the processing type when it is unknown and the version meets every minimum', () => {
-      const fatals = validateVersion(5, 'UNKNOWN').getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
-      )
+      const fatals = fatalsFor(5, { processingType: 'UNKNOWN' })
 
       expect(fatals).toHaveLength(1)
-      expect(fatals[0].code).toBe(VALIDATION_CODE.PROCESSING_TYPE_INVALID)
+      expect(fatals[0].code).toBe('PROCESSING_TYPE_INVALID')
     })
 
     it('rejects a version below the highest minimum when the processing type is unknown', () => {
-      const fatals = validateVersion(4, 'UNKNOWN').getIssuesBySeverity(
-        VALIDATION_SEVERITY.FATAL
-      )
+      const fatals = fatalsFor(4, { processingType: 'UNKNOWN' })
 
       expect(fatals.map((f) => f.code)).toEqual([
-        VALIDATION_CODE.PROCESSING_TYPE_INVALID,
-        VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+        'PROCESSING_TYPE_INVALID',
+        'TEMPLATE_VERSION_INVALID'
       ])
       expect(fatals[1].message).toBe(
         "Invalid meta field 'TEMPLATE_VERSION': must be a supported template version"

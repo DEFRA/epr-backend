@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
 const FIRST_ROW_ID = 'row-123'
 const FIRST_DATE = '2025-01-15'
@@ -28,6 +30,14 @@ const RECEIVED_LOADS_HEADERS = [
   'DATE_RECEIVED_FOR_REPROCESSING',
   'GROSS_WEIGHT'
 ]
+
+/** @param {any} parsedData */
+const transformWithItsTemplate = (parsedData) =>
+  transformFromSummaryLog(
+    parsedData,
+    getTemplate(DEFAULT_TEMPLATE_YEAR, parsedData.meta.PROCESSING_TYPE.value)
+      .tables
+  )
 
 describe('transformFromSummaryLog', () => {
   it('transforms parsed RECEIVED_LOADS data into waste records', () => {
@@ -57,7 +67,7 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const result = transformFromSummaryLog(parsedData)
+    const result = transformWithItsTemplate(parsedData)
 
     expect(result).toHaveLength(2)
     expectValidWasteRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
@@ -74,7 +84,7 @@ describe('transformFromSummaryLog', () => {
       data: {}
     }
 
-    const result = transformFromSummaryLog(parsedData)
+    const result = transformWithItsTemplate(parsedData)
 
     expect(result).toEqual([])
   })
@@ -101,27 +111,12 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const result = transformFromSummaryLog(parsedData)
+    const result = transformWithItsTemplate(parsedData)
 
     expect(Object.keys(result[0].record)).toEqual(['rowId', 'type', 'data'])
   })
 
-  it('throws error for unknown processing type', () => {
-    /** @type {any} */ const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'UNKNOWN_TYPE'
-        }
-      },
-      data: {}
-    }
-
-    expect(() => transformFromSummaryLog(parsedData)).toThrow(
-      'Unknown PROCESSING_TYPE: UNKNOWN_TYPE'
-    )
-  })
-
-  it('returns empty array when no processing type is specified', () => {
+  it('transforms only the tables of the template it is given', () => {
     /** @type {any} */ const parsedData = {
       meta: {},
       data: {
@@ -139,9 +134,7 @@ describe('transformFromSummaryLog', () => {
       }
     }
 
-    const result = transformFromSummaryLog(parsedData)
-
-    expect(result).toEqual([])
+    expect(transformFromSummaryLog(parsedData, {})).toEqual([])
   })
 
   describe('REPROCESSOR_INPUT.REPROCESSED_LOADS', () => {
@@ -174,7 +167,7 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const result = transformFromSummaryLog(parsedData)
+      const result = transformWithItsTemplate(parsedData)
 
       expect(result).toHaveLength(1)
       const { record } = result[0]
@@ -221,7 +214,7 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const result = transformFromSummaryLog(parsedData)
+      const result = transformWithItsTemplate(parsedData)
 
       expect(result[0].record.data.MONTH_RECEIVED_FOR_EXPORT).toBe('2026-03')
     })
@@ -257,7 +250,7 @@ describe('transformFromSummaryLog', () => {
         }
       }
 
-      const result = transformFromSummaryLog(parsedData)
+      const result = transformWithItsTemplate(parsedData)
 
       expect(result).toHaveLength(1)
       const { record } = result[0]

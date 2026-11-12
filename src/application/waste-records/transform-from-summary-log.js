@@ -1,4 +1,4 @@
-import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -46,8 +46,6 @@ import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index
  * @property {string} tableName - The table schema key (e.g. RECEIVED_LOADS_FOR_EXPORT)
  * @property {string} wasteRecordType - The waste record type (e.g. received, exported, sentOn)
  */
-
-const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPE_TABLES)
 
 /**
  * Generic table transformation function.
@@ -100,20 +98,11 @@ const transformTable = (
  * flow through to the output.
  *
  * @param {ValidatedSummaryLog} parsedData - Validated summary log with TransformableRow[] in each table
+ * @param {Record<string, TableSchema>} tables - The template's table schemas by table name
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
-export const transformFromSummaryLog = (parsedData) => {
-  // Check for unknown processing type
-  const processingType = parsedData.meta.PROCESSING_TYPE?.value
-  if (processingType && !KNOWN_PROCESSING_TYPES.includes(processingType)) {
-    throw new Error(`Unknown PROCESSING_TYPE: ${processingType}`)
-  }
-
-  // Look up table schemas for this processing type
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType] || {}
-
-  // Transform each table that exists in the parsed data
-  const results = Object.entries(tableSchemas).map(([tableName, schema]) => {
+export const transformFromSummaryLog = (parsedData, tables) => {
+  const results = Object.entries(tables).map(([tableName, schema]) => {
     const tableData = parsedData.data[tableName]
 
     // Skip tables that don't exist in this summary log or have no transformer

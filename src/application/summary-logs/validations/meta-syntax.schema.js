@@ -3,6 +3,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 import { templateYear } from '#domain/summary-logs/template-year.js'
 
+/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {Template} from '#domain/summary-logs/table-schemas/index.js' */
 
 const VALID_PROCESSING_TYPES = [
@@ -16,17 +17,14 @@ const VALID_PROCESSING_TYPES = [
 const IS_REQUIRED = 'is required'
 
 /**
- * Creates a Joi schema for meta section fields
- *
- * TEMPLATE_VERSION must belong to a year with templates, and be at least the
- * minimum version of that year's template for the processing type. When the
- * processing type is not one of the year's, the highest minimum applies.
+ * Creates a Joi schema for meta section fields (ADR 0055 for TEMPLATE_VERSION)
  *
  * @param {Object} options
  * @param {Record<number, Record<string, Template>>} options.templates - Templates by year, then processing type
+ * @param {Year} options.year - The summary log's year
  * @returns {Joi.ObjectSchema}
  */
-export const createMetaSchema = ({ templates }) => {
+export const createMetaSchema = ({ templates, year }) => {
   return Joi.object({
     PROCESSING_TYPE: customJoi
       .coercedString()
@@ -39,9 +37,13 @@ export const createMetaSchema = ({ templates }) => {
     TEMPLATE_VERSION: Joi.number()
       .required()
       .custom((version, helpers) => {
-        const templatesForYear = templates[templateYear(version)]
+        const versionYear = templateYear(version)
+        const templatesForYear = templates[versionYear]
         if (!templatesForYear) {
           return helpers.error('templateVersion.year')
+        }
+        if (versionYear !== year) {
+          return helpers.error('templateVersion.yearMismatch', { year })
         }
 
         const template =
@@ -63,7 +65,8 @@ export const createMetaSchema = ({ templates }) => {
         'any.required': IS_REQUIRED,
         'number.min': 'must be at least {#limit}',
         'templateVersion.unsupported': 'must be a supported template version',
-        'templateVersion.year': 'must be a template for a supported year'
+        'templateVersion.year': 'must be a template for a supported year',
+        'templateVersion.yearMismatch': 'must be a template for {#year}'
       }),
     REGISTRATION_NUMBER: customJoi.coercedString().required().messages({
       'any.required': IS_REQUIRED

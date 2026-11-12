@@ -626,7 +626,9 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         })
       })
 
-      const validateDataSyntax = createDataSyntaxValidator(schemaRegistry)
+      const validateDataSyntax = createDataSyntaxValidator(
+        schemaRegistry.TEST_TYPE
+      )
       const { validatedData } = validateDataSyntax({
         ...parsed,
         meta: {

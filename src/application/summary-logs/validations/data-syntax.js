@@ -10,7 +10,6 @@ import {
   SKIP_HEADER_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
-import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/index.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
@@ -24,6 +23,7 @@ import {
 /** @import {ValidationIssue, ValidationIssueLocation, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @typedef {Pick<TableSchema, 'rowIdField' | 'requiredHeaders' | 'unfilledValues' | 'validationSchema' | 'classifyForWasteBalance'>} DataSyntaxTableSchema */
 /** @import {RowClassificationIssue, RowOutcome} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
@@ -327,7 +327,7 @@ const isTemplateRow = (rowObject, rowIdField) => {
  *   tableName: string,
  *   headerToIndexMap: Map<string, number>,
  *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
- *   domainSchema: TableSchema,
+ *   domainSchema: DataSyntaxTableSchema,
  *   location: CellLocation
  * }} params
  * @returns {{ issues: ValidationIssue[], rows: ValidatedRow[] }}
@@ -388,7 +388,7 @@ const validateRows = ({
  * @param {{
  *   tableName: string,
  *   tableData: DataSection,
- *   domainSchema: TableSchema
+ *   domainSchema: DataSyntaxTableSchema
  * }} params
  * @returns {{ issues: ValidationIssue[], table: ValidatedTableSection }} Validated table data (rows as ValidatedRow[]) and the issues it produced
  */
@@ -432,9 +432,9 @@ const validateTable = ({ tableName, tableData, domainSchema }) => {
  */
 
 /**
- * Creates a data syntax validator bound to a specific schema registry
+ * Creates a data syntax validator bound to a template's tables
  *
- * Validates each table in parsed.data that has a defined schema for the processing type:
+ * Validates each table in parsed.data that has a defined schema in the template:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
  * - Validates each row as a complete object using pre-compiled Joi schemas
  * - Reports precise error locations for all validation failures
@@ -446,16 +446,14 @@ const validateTable = ({ tableName, tableData, domainSchema }) => {
  * - FATAL: Missing required headers prevent processing the entire table
  * - FATAL: Invalid row values on REJECTED rows block submission entirely
  *
- * @param {Object} schemaRegistry - Schema registry mapping processing types to table schemas
+ * @param {Record<string, DataSyntaxTableSchema>} tables - The template's table schemas by table name
  * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult} Validator function that takes parsed summary log
  */
-export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
+export const createDataSyntaxValidator = (tables) => (parsed) => {
   const data = parsed?.data || {}
-  const processingType = parsed?.meta?.PROCESSING_TYPE?.value
-  const getTableSchema = createTableSchemaGetter(processingType, schemaRegistry)
 
   const tableResults = Object.entries(data).map(([tableName, tableData]) => {
-    const domainSchema = getTableSchema(tableName)
+    const domainSchema = tables[tableName]
 
     if (!domainSchema) {
       const location = tableData.location

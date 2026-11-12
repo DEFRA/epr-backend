@@ -146,7 +146,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
           rowId: 3002,
           productTonnage: 200,
           productUkPackagingWeightProportion: 200,
-          dateLeft: '2025-01-16T00:00:00.000Z'
+          dateLeft: '2026-01-16T00:00:00.000Z'
         }
       ])
 
@@ -171,7 +171,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
           {
             rowId: 5001,
             tonnageSent: 50,
-            dateLeft: '2025-01-20T00:00:00.000Z'
+            dateLeft: '2026-01-20T00:00:00.000Z'
           }
         ]
       )
@@ -234,13 +234,13 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         {
           rowId: 3001,
           productUkPackagingWeightProportion: 100,
-          dateLeft: '2024-12-31T00:00:00.000Z' // Before 2025-01-01
+          dateLeft: '2025-12-31T00:00:00.000Z' // Before 2026-01-01
         },
         {
           rowId: 3002,
           productTonnage: 200,
           productUkPackagingWeightProportion: 200,
-          dateLeft: '2025-01-01T00:00:00.000Z' // On start date
+          dateLeft: '2026-01-01T00:00:00.000Z' // On start date
         }
       ])
 

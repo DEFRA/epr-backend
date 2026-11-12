@@ -12,10 +12,7 @@ import { classifyRecordChanges } from '#application/summary-logs/classify-record
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
 import { decemberRowCountFor } from '#waste-balances/application/december-credit-total.js'
 import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
-import {
-  createTableSchemaGetter,
-  PROCESSING_TYPE_TABLES
-} from '#domain/summary-logs/table-schemas/index.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import {
   isEprMarker,
   SKIP_HEADER_ROW_TEXT
@@ -25,6 +22,8 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { TableSchema } from '#domain/summary-logs/table-schemas/index.js'
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
  * @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -101,18 +100,14 @@ const prepareRows = (headers, rows, rowIdField) => {
  * Only processes tables that have schemas defined.
  *
  * @param {Object} parsedData - The parsed summary log data
+ * @param {Record<string, TableSchema>} tables - The template's table schemas by table name
  * @returns {Object} New structure with row data objects built
  */
-const prepareRowsForTransformation = (parsedData) => {
-  const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
-  const getTableSchema = createTableSchemaGetter(
-    processingType,
-    PROCESSING_TYPE_TABLES
-  )
+const prepareRowsForTransformation = (parsedData, tables) => {
   const transformedData = {}
 
   for (const [tableName, tableData] of Object.entries(parsedData.data)) {
-    const tableSchema = getTableSchema(tableName)
+    const tableSchema = tables[tableName]
     if (!tableSchema) {
       transformedData[tableName] = tableData
       continue
@@ -427,6 +422,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {OrganisationNumber} summaryLog.organisationNumber
    * @param {RegistrationNumber} summaryLog.registrationNumber
+   * @param {Year} summaryLog.year
    * @param {AccreditationNumber | null} summaryLog.accreditationNumber - `null` for a registered-only submission
    * @param {Year} summaryLog.year
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
@@ -436,8 +432,10 @@ export const syncFromSummaryLog = (dependencies) => {
     // 1. Extract/parse the summary log
     const parsedData = await extractor.extract(summaryLog, { logger })
 
-    // 2. Extract row IDs for transformation
-    const preparedData = prepareRowsForTransformation(parsedData)
+    // 2. Extract row IDs for transformation, using the template validation chose
+    const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
+    const { tables } = getTemplate(summaryLog.year, processingType)
+    const preparedData = prepareRowsForTransformation(parsedData, tables)
 
     const { ledgerAccreditation, ledgerId } = await resolveSubmissionLedger(
       organisationReadRepository,
@@ -446,10 +444,9 @@ export const syncFromSummaryLog = (dependencies) => {
     const accreditation = ledgerAccreditation && validityOf(ledgerAccreditation)
 
     // 3. Transform to waste records
-    const wasteRecords = transformFromSummaryLog(preparedData)
+    const wasteRecords = transformFromSummaryLog(preparedData, tables)
 
     // 4. Resolve overseas sites for exporter ORS validation (VAL014)
-    const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
     const overseasSites =
       processingType === PROCESSING_TYPES.EXPORTER && ledgerAccreditation
         ? overseasSitesOf(ledgerAccreditation)

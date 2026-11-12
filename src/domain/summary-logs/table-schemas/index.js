@@ -32,8 +32,7 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
  */
 
 /**
- * Summary log templates by year, then processing type (ADR 0055). A year
- * missing here has no template, so uploads for it are rejected.
+ * Summary log templates by year, then processing type (ADR 0055).
  *
  * @type {Record<number, Record<string, Template>>}
  */
@@ -52,22 +51,23 @@ export const TEMPLATES = {
 }
 
 /**
- * The DEFAULT_TEMPLATE_YEAR table schemas by processing type
- *
- * Each table schema defines:
- * - rowIdField: Field name containing the row identifier
- * - wasteRecordType: The waste record type this table maps to (e.g. 'received', 'exported')
- * - sheetName: The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
- * - requiredHeaders: Headers that must be present in the table
- * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
- * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)
- * - classifyForWasteBalance: {@link import('./validation-pipeline.js').ClassifyForWasteBalance}|null — classifies a row for waste balance (null if table does not contribute)
- * - rowTransformer: Function to transform a parsed row into waste record metadata
+ * @param {Record<string, Template>} templatesForYear
+ * @returns {Record<string, Record<string, TableSchema>>}
  */
-export const PROCESSING_TYPE_TABLES = Object.fromEntries(
-  Object.entries(TEMPLATES[DEFAULT_TEMPLATE_YEAR]).map(
-    ([processingType, { tables }]) => [processingType, tables]
+const tablesByProcessingType = (templatesForYear) =>
+  Object.fromEntries(
+    Object.entries(templatesForYear).map(([processingType, { tables }]) => [
+      processingType,
+      tables
+    ])
   )
+
+/**
+ * The DEFAULT_TEMPLATE_YEAR {@link TableSchema}s by processing type, for
+ * readers of stored rows, which carry no year.
+ */
+export const PROCESSING_TYPE_TABLES = tablesByProcessingType(
+  TEMPLATES[DEFAULT_TEMPLATE_YEAR]
 )
 
 /**
@@ -85,6 +85,16 @@ export const getTemplate = (year, processingType) => {
   }
   return template
 }
+
+/**
+ * The placeholders of every table in a year's templates, for the parser, which
+ * reads a file before its processing type is known.
+ *
+ * @param {Year} year
+ * @returns {Record<string, string[]>}
+ */
+export const unfilledValuesForYear = (year) =>
+  aggregateUnfilledValues(tablesByProcessingType(TEMPLATES[year] ?? {}))
 
 /**
  * Finds a table schema by processing type and waste record type
@@ -110,18 +120,6 @@ export const findSchemaForProcessingType = (
       (schema) => schema.wasteRecordType === wasteRecordType
     ) ?? null
   )
-}
-
-/**
- * Creates a table schema getter bound to a specific processing type
- *
- * @param {string} processingType - The processing type from meta.PROCESSING_TYPE
- * @param {Object} registry - Schema registry mapping processing types to table schemas
- * @returns {(tableName: string) => Object | null} A function that takes a table name and returns its schema
- */
-export const createTableSchemaGetter = (processingType, registry) => {
-  const tables = registry[processingType]
-  return (tableName) => tables?.[tableName] || null
 }
 
 /**

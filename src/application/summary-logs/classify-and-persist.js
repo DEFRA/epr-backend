@@ -1,9 +1,5 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import {
-  findSchemaForProcessingType,
-  PROCESSING_TYPE_TABLES
-} from '#domain/summary-logs/table-schemas/index.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -26,6 +22,7 @@ import {
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {string} ProcessingType */
 /** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 
@@ -33,14 +30,13 @@ import {
  * Filters waste records to only those from tables that participate in waste balance.
  *
  * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {string} processingType
+ * @param {Record<string, TableSchema> | undefined} tables - The template's table schemas, absent when validation stopped before choosing it
  * @returns {ValidatedWasteRecord[]}
  */
-export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
-  wasteRecords?.filter((wr) => {
-    const schema = findSchemaForProcessingType(processingType, wr.record.type)
-    return !isNil(schema?.classifyForWasteBalance)
-  }) ?? []
+export const filterWasteBalanceRecords = (wasteRecords, tables) =>
+  wasteRecords?.filter(
+    (wr) => !isNil(tables?.[wr.tableName]?.classifyForWasteBalance)
+  ) ?? []
 
 /**
  * Computes all load classifications for validated summary logs.
@@ -49,7 +45,7 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @param {string} params.status - Summary log status after validation
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {ProcessingType} params.processingType
+ * @param {Record<string, TableSchema> | undefined} params.tables - The template's table schemas
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {Registration} [params.registration]
@@ -57,7 +53,7 @@ export const filterWasteBalanceRecords = (wasteRecords, processingType) =>
  * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
 export const classifyLoads = ({
-  processingType,
+  tables,
   status,
   wasteBalanceRecords,
   wasteRecords,
@@ -92,11 +88,9 @@ export const classifyLoads = ({
     })
   )
 
-  const tableSchemas = PROCESSING_TYPE_TABLES[processingType]
-
-  /* v8 ignore start -- defensive guard: registration and tableSchemas are always set when status is VALIDATED */
+  /* v8 ignore start -- defensive guard: registration and tables are always set when status is VALIDATED */
   const loadsByReportingPeriod =
-    registration && tableSchemas
+    registration && tables
       ? classifyByPeriodStatus({
           wasteRecords,
           submittedRowStatesByKey,
@@ -105,7 +99,7 @@ export const classifyLoads = ({
           cadence: isRegistrationAccredited(registration)
             ? CADENCE.monthly
             : CADENCE.quarterly,
-          tableSchemas,
+          tableSchemas: tables,
           operatorCategory: getOperatorCategory(registration),
           classificationContext: {
             accreditation: registration.accreditation ?? null,
