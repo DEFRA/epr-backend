@@ -9,6 +9,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -37,7 +38,8 @@ const REGISTERED_ONLY_LEDGER = {
   accreditationId: null,
   organisationNumber: ORGANISATION_NUMBER,
   registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
-  accreditationNumber: null
+  accreditationNumber: null,
+  year: DEFAULT_YEAR
 }
 
 const buildRegistration = () => {

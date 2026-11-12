@@ -1,6 +1,7 @@
 import {
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION,
+  PRN_YEAR,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
@@ -49,6 +50,8 @@ const PRN_NUMBERS = {
   registrationNumber: TEST_REGISTRATION.registrationNumber,
   accreditationNumber: toAccreditationNumber('ACC-2026-001')
 }
+// The ledger the PRN fixtures' accreditation year names.
+const PRN_LEDGER_ID = { ...PRN_NUMBERS, year: PRN_YEAR }
 const organisation = buildOrganisationHolding({
   organisationId,
   registrationId,
@@ -76,7 +79,7 @@ const openingBalanceEvent = () =>
     registrationId,
     accreditationId,
     organisationId,
-    ...PRN_NUMBERS,
+    ...PRN_LEDGER_ID,
     number: 1
   })
 
@@ -136,7 +139,7 @@ const buildPrn = (
   },
   registration: TEST_REGISTRATION,
   accreditation: buildAccreditationSnapshot({
-    accreditationYear: toYear(2026)
+    accreditationYear: PRN_LEDGER_ID.year
   }),
   issuedToOrganisation: { id: 'producer-org-789', name: 'Producer Org' },
   tonnage: 100,
@@ -180,7 +183,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     expect(stored?.updatedBy).toEqual(rpd)
     expect(stored?.status.accepted?.by).toEqual(rpd)
 
-    const latestEvent = await ledgerRepository.findLatestInLedger(PRN_NUMBERS)
+    const latestEvent = await ledgerRepository.findLatestInLedger(PRN_LEDGER_ID)
     expect(latestEvent.kind).toBe(LEDGER_EVENT_KIND.PRN_ACCEPTED)
     expect(latestEvent.createdBy).toEqual(rpd)
     // Acceptance is balance-neutral: the closing balance matches the opening one.

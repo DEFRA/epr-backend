@@ -14,6 +14,7 @@ import {
   buildAwaitingAcceptancePrn,
   buildAwaitingAuthorisationPrn,
   buildCancelledPrn,
+  PRN_YEAR,
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -306,13 +307,17 @@ describe('reconcileStalePrnProjections', () => {
     const { insertedId } = await prnCollection.insertOne(
       /** @type {*} */ ({
         registration: { registrationNumber: badIds.registrationNumber },
-        accreditation: { accreditationNumber: badIds.accreditationNumber },
+        accreditation: {
+          accreditationNumber: badIds.accreditationNumber,
+          accreditationYear: PRN_YEAR
+        },
         notAValidPrn: true
       })
     )
     await ledgerCollection.insertOne(
       buildPrnRejectedEvent({
         ...badIds,
+        year: PRN_YEAR,
         number: 3,
         payload: { prnId: insertedId.toHexString(), amount: 50 }
       })
