@@ -41,6 +41,11 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { ReprocessorAccreditation, ReprocessorRegistration } from '#organisation-read-model/domain/model.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { RegistrationKey } from '#reports/repository/port.js'
+ * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
+ * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
+ * @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js'
  */
 
 const SUMMARY_LOG_ID = 'sl-1'
@@ -102,8 +107,14 @@ const buildReceivedEntry = (overrides = {}) =>
   })
 
 /**
+ * @typedef {{ key: RegistrationKey, reportRegistration: ReportRegistration }} ReportStream
+ */
+
+/**
  * The stream a report reads: the report key's numbers and the registration's
  * current accreditation.
+ *
+ * @param {ReportStream} params
  */
 const reportLedger = ({ key, reportRegistration: { accreditation } }) => ({
   ...LEDGER_IDS,
@@ -112,6 +123,23 @@ const reportLedger = ({ key, reportRegistration: { accreditation } }) => ({
   accreditationNumber: accreditation?.accreditationNumber ?? null
 })
 
+/**
+ * @typedef {{
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
+ * }} Stores
+ */
+
+/**
+ * @typedef {{
+ *   fileId: string,
+ *   year: Year,
+ *   submittedAt: string,
+ *   entries: SummaryLogRowStateEntry[]
+ * }} Submission
+ */
+
+/** @returns {Stores} */
 const emptyStores = () => ({
   summaryLogsRepository:
     createInMemorySummaryLogsRepository()(createMockLogger()),
@@ -121,6 +149,10 @@ const emptyStores = () => ({
 /**
  * Submits a summary log for `year`: its row states, and the submitted summary
  * log the report service resolves as the head.
+ *
+ * @param {Stores} stores
+ * @param {ReturnType<typeof reportLedger>} ledgerId
+ * @param {Submission} submission
  */
 const submitLog = async (
   { summaryLogsRepository, summaryLogRowStatesRepository },
@@ -146,6 +178,10 @@ const submitLog = async (
 /**
  * Seeds `entries` as the state at the latest submitted summary log for the
  * report's year. An empty `entries` leaves the year without a submission.
+ *
+ * @param {ReportStream & { year: Year }} params
+ * @param {SummaryLogRowStateEntry[]} entries
+ * @returns {Promise<Stores>}
  */
 const seedState = async (params, entries) => {
   const stores = emptyStores()
@@ -296,13 +332,15 @@ describe('report-service', () => {
       await submitLog(afterCommit, ledgerId, second)
 
       let lookups = 0
-      const summaryLogsRepository = /** @type {any} */ ({
+      /** @type {SummaryLogsRepository} */
+      const summaryLogsRepository = {
+        ...afterCommit.summaryLogsRepository,
         findLatestSubmitted: (key) =>
           (lookups++ === 0
             ? beforeCommit
             : afterCommit
           ).summaryLogsRepository.findLatestSubmitted(key)
-      })
+      }
       const { summaryLogRowStatesRepository } = afterCommit
 
       const report =
