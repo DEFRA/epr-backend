@@ -52,6 +52,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Log runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo; nproc
+
       - name: Cache vitest file durations
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
