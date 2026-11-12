@@ -10,6 +10,7 @@ import { createReportsService } from '#reports/application/report-service.js'
  *   | 'uploadsRepository'
  *   | 'summaryLogsRepository'
  *   | 'organisationAdministrationRepository'
+ *   | 'organisationReadRepository'
  *   | 'summaryLogRowStatesRepository'
  *   | 'ledgerRepository'
  *   | 'wasteBalanceService'
@@ -31,6 +32,7 @@ export const buildSummaryLogHandlerDeps = ({
   uploadsRepository,
   summaryLogsRepository,
   organisationAdministrationRepository,
+  organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   wasteBalanceService,
@@ -40,6 +42,7 @@ export const buildSummaryLogHandlerDeps = ({
 }) => ({
   summaryLogsRepository,
   organisationAdministrationRepository,
+  organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   wasteBalanceService,
