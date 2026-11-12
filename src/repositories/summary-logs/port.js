@@ -54,6 +54,19 @@
  */
 
 /**
+ * A submitted summary log, which always holds when it was submitted.
+ *
+ * @typedef {KeyedSummaryLog & { submittedAt: string }} SubmittedSummaryLog
+ */
+
+/**
+ * @typedef {Object} SubmittedSummaryLogWithId
+ * @property {SummaryLogId} id
+ * @property {number} version
+ * @property {SubmittedSummaryLog} summaryLog
+ */
+
+/**
  * @typedef {Object} DownloadUrlResult
  * @property {string} url - The download URL
  * @property {string} expiresAt - ISO 8601 timestamp when the URL expires
@@ -66,7 +79,7 @@
  * @property {(id: SummaryLogId, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: SummaryLogId) => Promise<SummaryLogVersion|null>} findById
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records
- * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
+ * @property {(key: SummaryLogKey) => Promise<SubmittedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration
  * @property {(logId: SummaryLogId) => Promise<TransitionResult>} transitionToSubmittingExclusive

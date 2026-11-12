@@ -8,9 +8,10 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -28,7 +29,7 @@ import {
   pendingSite,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -62,7 +63,8 @@ const seedRepositories = async (
   }
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
-  const ledgerEvents = []
+  const summaryLogsRepository =
+    createInMemorySummaryLogsRepository()(createMockLogger())
   if (wasteRecords.length > 0) {
     const entries = wasteRecords.map((record, index) =>
       buildSummaryLogRowStateEntry({
@@ -76,19 +78,17 @@ const seedRepositories = async (
       entries,
       toSummaryLogFileId(SUMMARY_LOG_ID)
     )
-    ledgerEvents.push(
-      buildLedgerEvent({
+    await summaryLogsRepository.insert(
+      toSummaryLogId(`log-${SUMMARY_LOG_ID}`),
+      summaryLogFactory.submitted({
         ...ledgerId,
-        number: 1,
-        createdAt: SUBMITTED_AT,
-        payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
+        year: YEAR,
+        file: { id: toSummaryLogFileId(SUMMARY_LOG_ID) },
+        submittedAt: SUBMITTED_AT.toISOString()
       })
     )
   }
-  return {
-    ledgerRepository: createInMemoryLedgerRepository(ledgerEvents)(),
-    summaryLogRowStatesRepository
-  }
+  return { summaryLogsRepository, summaryLogRowStatesRepository }
 }
 
 const registeredOnlyReprocessor = () => ({ registration: reprocessor() })
@@ -138,7 +138,7 @@ const createServer = async ({
     accreditations
   })
 
-  const { ledgerRepository, summaryLogRowStatesRepository } =
+  const { summaryLogsRepository, summaryLogRowStatesRepository } =
     await seedRepositories(org, registration, accreditations[0], wasteRecords)
 
   const reportsRepositoryFactory = createInMemoryReportsRepository()
@@ -149,7 +149,7 @@ const createServer = async ({
         [partialMock(org)],
         { overseasSites }
       ),
-      ledgerRepository,
+      summaryLogsRepository,
       summaryLogRowStatesRepository,
       reportsRepository: reportsRepositoryFactory
     },

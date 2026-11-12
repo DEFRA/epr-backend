@@ -8,9 +8,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -42,7 +43,7 @@ import {
 import { reportsPostFailureMessage } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
-import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -93,12 +94,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   ) => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
-    // An accreditation without its number holds no ledger.
+    const summaryLogsRepository =
+      createInMemorySummaryLogsRepository()(createMockLogger())
+    // An accreditation without its number holds no summary log.
     if (accreditationRecord && !accreditationRecord.accreditationNumber) {
-      return {
-        ledgerRepository: createInMemoryLedgerRepository()(),
-        summaryLogRowStatesRepository
-      }
+      return { summaryLogsRepository, summaryLogRowStatesRepository }
     }
     const ledgerId = {
       organisationId: org.id,
@@ -112,17 +112,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       rows,
       toSummaryLogFileId(SUMMARY_LOG_ID)
     )
-    const ledgerRepository = createInMemoryLedgerRepository([
-      partialMock(
-        buildLedgerEvent({
-          ...ledgerId,
-          number: 1,
-          createdAt: SUBMITTED_AT,
-          payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
-        })
-      )
-    ])()
-    return { ledgerRepository, summaryLogRowStatesRepository }
+    await summaryLogsRepository.insert(
+      toSummaryLogId(`log-${SUMMARY_LOG_ID}`),
+      summaryLogFactory.submitted({
+        ...ledgerId,
+        year: YEAR,
+        file: { id: toSummaryLogFileId(SUMMARY_LOG_ID) },
+        submittedAt: SUBMITTED_AT.toISOString()
+      })
+    )
+    return { summaryLogsRepository, summaryLogRowStatesRepository }
   }
 
   /**
@@ -161,7 +160,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       ...(accreditationRecord && { accreditations: [accreditationRecord] })
     })
 
-    const { ledgerRepository, summaryLogRowStatesRepository } =
+    const { summaryLogsRepository, summaryLogRowStatesRepository } =
       await seedRepositories(org, registration, accreditationRecord, rows)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
 
@@ -170,7 +169,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         organisationReadRepository: await organisationReadRepositoryOf([
           partialMock(org)
         ]),
-        ledgerRepository,
+        summaryLogsRepository,
         summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory,
         packagingRecyclingNotesRepository:

@@ -288,7 +288,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
 
     return createReportForPeriod({
       reportsRepository: env.reportsRepository,
-      ledgerRepository: env.ledgerRepository,
+      summaryLogsRepository: env.summaryLogsRepository,
       summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository: env.packagingRecyclingNotesRepository,
       numbers: env.reportKey,
