@@ -18,7 +18,7 @@ import { ledgerIdFor } from './ledger-id.js'
  * @param {{
  *   summaryLog: SubmittedSummaryLog,
  *   validatedData: ValidatedSummaryLog,
- *   tables: Record<string, TableSchema>,
+ *   tableSchemas: Record<string, TableSchema>,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} params
@@ -30,7 +30,7 @@ import { ledgerIdFor } from './ledger-id.js'
 export const transformAndValidateData = async ({
   summaryLog,
   validatedData,
-  tables,
+  tableSchemas,
   summaryLogRowStatesRepository,
   ledgerRepository
 }) => {
@@ -41,9 +41,13 @@ export const transformAndValidateData = async ({
   })
 
   /** @type {ValidatedWasteRecord[]} */
-  const wasteRecords = transformFromSummaryLog(validatedData, tables)
+  const wasteRecords = transformFromSummaryLog(validatedData, tableSchemas)
 
-  const issues = validateDataBusiness({ wasteRecords, previousSubmission })
+  const issues = validateDataBusiness({
+    wasteRecords,
+    previousSubmission,
+    tableSchemas
+  })
 
   return { wasteRecords, issues }
 }

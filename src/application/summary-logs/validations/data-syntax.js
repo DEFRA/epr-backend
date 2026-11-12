@@ -432,7 +432,7 @@ const validateTable = ({ tableName, tableData, domainSchema }) => {
  */
 
 /**
- * Creates a data syntax validator bound to a template's tables
+ * Creates a data syntax validator bound to a template's table schemas
  *
  * Validates each table in parsed.data that has a defined schema in the template:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
@@ -446,14 +446,14 @@ const validateTable = ({ tableName, tableData, domainSchema }) => {
  * - FATAL: Missing required headers prevent processing the entire table
  * - FATAL: Invalid row values on REJECTED rows block submission entirely
  *
- * @param {Record<string, DataSyntaxTableSchema>} tables - The template's table schemas by table name
+ * @param {Record<string, DataSyntaxTableSchema>} tableSchemas - The template's table schemas by table name
  * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult} Validator function that takes parsed summary log
  */
-export const createDataSyntaxValidator = (tables) => (parsed) => {
+export const createDataSyntaxValidator = (tableSchemas) => (parsed) => {
   const data = parsed?.data || {}
 
   const tableResults = Object.entries(data).map(([tableName, tableData]) => {
-    const domainSchema = tables[tableName]
+    const domainSchema = tableSchemas[tableName]
 
     if (!domainSchema) {
       const location = tableData.location

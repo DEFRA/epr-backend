@@ -179,7 +179,7 @@ const setupSubmit = async ({
     externalAccreditations.push(
       buildExternalAccreditation({
         registrationNumber: toRegistrationNumber('REG-123'),
-        year: toYear(2025),
+        year: toYear(2026),
         accreditationNumber: toAccreditationNumber('ACC-123'),
         status: {
           current: 'approved',

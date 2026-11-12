@@ -211,7 +211,7 @@ describe('syncFromSummaryLog', () => {
     )
 
     await makeSync({ extractor })(
-      summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2027)),
+      summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2026)),
       TEST_USER
     )
 
@@ -225,7 +225,7 @@ describe('syncFromSummaryLog', () => {
       organisationNumber: '500001',
       registrationNumber: 'REG-1',
       accreditationNumber: 'ACC-1',
-      year: 2027
+      year: 2026
     })
   })
 

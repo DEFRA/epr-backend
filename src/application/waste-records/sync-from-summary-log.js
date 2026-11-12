@@ -100,14 +100,14 @@ const prepareRows = (headers, rows, rowIdField) => {
  * Only processes tables that have schemas defined.
  *
  * @param {Object} parsedData - The parsed summary log data
- * @param {Record<string, TableSchema>} tables - The template's table schemas by table name
+ * @param {Record<string, TableSchema>} tableSchemas - The template's table schemas by table name
  * @returns {Object} New structure with row data objects built
  */
-const prepareRowsForTransformation = (parsedData, tables) => {
+const prepareRowsForTransformation = (parsedData, tableSchemas) => {
   const transformedData = {}
 
   for (const [tableName, tableData] of Object.entries(parsedData.data)) {
-    const tableSchema = tables[tableName]
+    const tableSchema = tableSchemas[tableName]
     if (!tableSchema) {
       transformedData[tableName] = tableData
       continue
@@ -134,7 +134,6 @@ const prepareRowsForTransformation = (parsedData, tables) => {
  * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  * @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
- * @import { Year } from '#common/helpers/dates/year.js'
  */
 
 /**
@@ -422,7 +421,6 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {OrganisationNumber} summaryLog.organisationNumber
    * @param {RegistrationNumber} summaryLog.registrationNumber
-   * @param {Year} summaryLog.year
    * @param {AccreditationNumber | null} summaryLog.accreditationNumber - `null` for a registered-only submission
    * @param {Year} summaryLog.year
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
@@ -434,8 +432,8 @@ export const syncFromSummaryLog = (dependencies) => {
 
     // 2. Extract row IDs for transformation, using the template validation chose
     const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
-    const { tables } = getTemplate(summaryLog.year, processingType)
-    const preparedData = prepareRowsForTransformation(parsedData, tables)
+    const { tableSchemas } = getTemplate(summaryLog.year, processingType)
+    const preparedData = prepareRowsForTransformation(parsedData, tableSchemas)
 
     const { ledgerAccreditation, ledgerId } = await resolveSubmissionLedger(
       organisationReadRepository,
@@ -444,7 +442,7 @@ export const syncFromSummaryLog = (dependencies) => {
     const accreditation = ledgerAccreditation && validityOf(ledgerAccreditation)
 
     // 3. Transform to waste records
-    const wasteRecords = transformFromSummaryLog(preparedData, tables)
+    const wasteRecords = transformFromSummaryLog(preparedData, tableSchemas)
 
     // 4. Resolve overseas sites for exporter ORS validation (VAL014)
     const overseasSites =

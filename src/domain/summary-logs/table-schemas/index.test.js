@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  PROCESSING_TYPE_TABLES,
-  TEMPLATES,
-  aggregateUnfilledValues,
+  checkTemplateVersion,
   getTemplate,
   findSchemaByWasteRecordType,
   findSchemaForProcessingType,
@@ -11,68 +9,66 @@ import {
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { DEFAULT_TEMPLATE_YEAR } from '../template-year.js'
+import { EXPORTER_TEMPLATES } from './exporter/index.js'
+import { EXPORTER_REGISTERED_ONLY_TEMPLATES } from './exporter-registered-only/index.js'
+import { REPROCESSOR_INPUT_TEMPLATES } from './reprocessor-input/index.js'
+import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
+import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
 
 const YEAR_2027 = /** @type {Year} */ (2027)
 
-describe('table-schemas', () => {
-  describe('PROCESSING_TYPE_TABLES', () => {
-    it('exports a registry object', () => {
-      expect(PROCESSING_TYPE_TABLES).toBeDefined()
-      expect(typeof PROCESSING_TYPE_TABLES).toBe('object')
-    })
+/** @param {string} processingType */
+const tableSchemasOf = (processingType) =>
+  getTemplate(DEFAULT_TEMPLATE_YEAR, processingType).tableSchemas
 
-    it('has entries for all processing types', () => {
-      expect(PROCESSING_TYPE_TABLES).toHaveProperty(
-        PROCESSING_TYPES.REPROCESSOR_INPUT
-      )
-      expect(PROCESSING_TYPE_TABLES).toHaveProperty(
-        PROCESSING_TYPES.REPROCESSOR_OUTPUT
-      )
-      expect(PROCESSING_TYPE_TABLES).toHaveProperty(PROCESSING_TYPES.EXPORTER)
-      expect(PROCESSING_TYPE_TABLES).toHaveProperty(
-        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-      )
-      expect(PROCESSING_TYPE_TABLES).toHaveProperty(
-        PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
-      )
-    })
+describe('table-schemas', () => {
+  describe('2026 tables', () => {
+    it.each(Object.values(PROCESSING_TYPES))(
+      'has a template for %s',
+      (processingType) => {
+        expect(() =>
+          getTemplate(DEFAULT_TEMPLATE_YEAR, processingType)
+        ).not.toThrow()
+      }
+    )
 
     describe('REPROCESSOR_REGISTERED_ONLY', () => {
-      const tables =
-        PROCESSING_TYPE_TABLES[PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]
+      const tableSchemas = tableSchemasOf(
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      )
 
       it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
-        expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
+        expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
       })
 
       it('does not have REPROCESSED_LOADS table', () => {
-        expect(tables).not.toHaveProperty('REPROCESSED_LOADS')
+        expect(tableSchemas).not.toHaveProperty('REPROCESSED_LOADS')
       })
 
       it('has SENT_ON_LOADS table', () => {
-        expect(tables).toHaveProperty('SENT_ON_LOADS')
+        expect(tableSchemas).toHaveProperty('SENT_ON_LOADS')
       })
     })
 
     describe('REPROCESSOR_INPUT', () => {
-      const tables = PROCESSING_TYPE_TABLES[PROCESSING_TYPES.REPROCESSOR_INPUT]
+      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
 
       it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
-        expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
+        expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
       })
 
       it('has REPROCESSED_LOADS table', () => {
-        expect(tables).toHaveProperty('REPROCESSED_LOADS')
+        expect(tableSchemas).toHaveProperty('REPROCESSED_LOADS')
       })
 
       it('has SENT_ON_LOADS table', () => {
-        expect(tables).toHaveProperty('SENT_ON_LOADS')
+        expect(tableSchemas).toHaveProperty('SENT_ON_LOADS')
       })
 
       describe('RECEIVED_LOADS_FOR_REPROCESSING schema', () => {
-        const schema = tables.RECEIVED_LOADS_FOR_REPROCESSING
+        const schema = tableSchemas.RECEIVED_LOADS_FOR_REPROCESSING
 
         it('has rowIdField', () => {
           expect(schema.rowIdField).toBe('ROW_ID')
@@ -95,47 +91,48 @@ describe('table-schemas', () => {
     })
 
     describe('REPROCESSOR_OUTPUT', () => {
-      const tables = PROCESSING_TYPE_TABLES[PROCESSING_TYPES.REPROCESSOR_OUTPUT]
+      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_OUTPUT)
 
       it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
-        expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
+        expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
       })
 
       it('has REPROCESSED_LOADS table', () => {
-        expect(tables).toHaveProperty('REPROCESSED_LOADS')
+        expect(tableSchemas).toHaveProperty('REPROCESSED_LOADS')
       })
 
       it('has SENT_ON_LOADS table', () => {
-        expect(tables).toHaveProperty('SENT_ON_LOADS')
+        expect(tableSchemas).toHaveProperty('SENT_ON_LOADS')
       })
     })
 
     describe('EXPORTER', () => {
-      const tables = PROCESSING_TYPE_TABLES[PROCESSING_TYPES.EXPORTER]
+      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.EXPORTER)
 
       it('has RECEIVED_LOADS_FOR_EXPORT table', () => {
-        expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
+        expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
       })
 
       it('has SENT_ON_LOADS table', () => {
-        expect(tables).toHaveProperty('SENT_ON_LOADS')
+        expect(tableSchemas).toHaveProperty('SENT_ON_LOADS')
       })
     })
 
     describe('EXPORTER_REGISTERED_ONLY', () => {
-      const tables =
-        PROCESSING_TYPE_TABLES[PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]
+      const tableSchemas = tableSchemasOf(
+        PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
+      )
 
       it('has RECEIVED_LOADS_FOR_EXPORT table', () => {
-        expect(tables).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
+        expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
       })
 
       it('has LOADS_EXPORTED table', () => {
-        expect(tables).toHaveProperty('LOADS_EXPORTED')
+        expect(tableSchemas).toHaveProperty('LOADS_EXPORTED')
       })
 
       it('has SENT_ON_LOADS table', () => {
-        expect(tables).toHaveProperty('SENT_ON_LOADS')
+        expect(tableSchemas).toHaveProperty('SENT_ON_LOADS')
       })
     })
   })
@@ -144,7 +141,7 @@ describe('table-schemas', () => {
     it('returns tableName and schema for a known waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.RECEIVED,
-        PROCESSING_TYPE_TABLES
+        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
       )
 
       expect(result).not.toBeNull()
@@ -159,7 +156,7 @@ describe('table-schemas', () => {
     it('returns the correct table for exported waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.EXPORTED,
-        PROCESSING_TYPE_TABLES
+        tableSchemasOf(PROCESSING_TYPES.EXPORTER)
       )
 
       expect(result).not.toBeNull()
@@ -173,7 +170,7 @@ describe('table-schemas', () => {
     it('returns the correct table for processed waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.PROCESSED,
-        PROCESSING_TYPE_TABLES
+        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
       )
 
       expect(result).not.toBeNull()
@@ -187,7 +184,7 @@ describe('table-schemas', () => {
     it('returns the correct table for sent on waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.SENT_ON,
-        PROCESSING_TYPE_TABLES
+        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
       )
 
       expect(result).not.toBeNull()
@@ -201,25 +198,23 @@ describe('table-schemas', () => {
     it('returns null for an unknown waste record type', () => {
       const result = findSchemaByWasteRecordType(
         'unknownType',
-        PROCESSING_TYPE_TABLES
+        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
       )
 
       expect(result).toBeNull()
     })
 
-    it('works with a minimal registry', () => {
-      const registry = {
-        TYPE_A: {
-          TABLE_1: { wasteRecordType: 'foo', sheetName: 'Foo' }
-        }
+    it('works with minimal table schemas', () => {
+      const schema = {
+        wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+        sheetName: 'Foo'
       }
 
-      const result = findSchemaByWasteRecordType('foo', registry)
-
-      expect(result).toEqual({
-        tableName: 'TABLE_1',
-        schema: { wasteRecordType: 'foo', sheetName: 'Foo' }
+      const result = findSchemaByWasteRecordType(WASTE_RECORD_TYPE.RECEIVED, {
+        TABLE_1: schema
       })
+
+      expect(result).toEqual({ tableName: 'TABLE_1', schema })
     })
   })
 
@@ -278,93 +273,9 @@ describe('table-schemas', () => {
     })
   })
 
-  describe('aggregateUnfilledValues', () => {
-    it('returns empty object for registry with no unfilledValues', () => {
-      const registry = {
-        TYPE_A: {
-          TABLE_1: { unfilledValues: {} }
-        }
-      }
-
-      expect(aggregateUnfilledValues(registry)).toEqual({})
-    })
-
-    it('collects unfilledValues from a single schema', () => {
-      const registry = {
-        TYPE_A: {
-          TABLE_1: {
-            unfilledValues: {
-              DROPDOWN: ['Choose option']
-            }
-          }
-        }
-      }
-
-      expect(aggregateUnfilledValues(registry)).toEqual({
-        DROPDOWN: ['Choose option']
-      })
-    })
-
-    it('merges unfilledValues across schemas and processing types', () => {
-      const registry = {
-        TYPE_A: {
-          TABLE_1: {
-            unfilledValues: { FIELD_A: ['Choose option'] }
-          }
-        },
-        TYPE_B: {
-          TABLE_2: {
-            unfilledValues: { FIELD_B: ['Choose option'] }
-          }
-        }
-      }
-
-      expect(aggregateUnfilledValues(registry)).toEqual({
-        FIELD_A: ['Choose option'],
-        FIELD_B: ['Choose option']
-      })
-    })
-
-    it('deduplicates values for the same field across schemas', () => {
-      const registry = {
-        TYPE_A: {
-          TABLE_1: {
-            unfilledValues: { DROPDOWN: ['Choose option'] }
-          }
-        },
-        TYPE_B: {
-          TABLE_2: {
-            unfilledValues: { DROPDOWN: ['Choose option'] }
-          }
-        }
-      }
-
-      expect(aggregateUnfilledValues(registry)).toEqual({
-        DROPDOWN: ['Choose option']
-      })
-    })
-
-    it('merges distinct values for the same field across schemas', () => {
-      const registry = {
-        TYPE_A: {
-          TABLE_1: {
-            unfilledValues: { DROPDOWN: ['Choose option'] }
-          }
-        },
-        TYPE_B: {
-          TABLE_2: {
-            unfilledValues: { DROPDOWN: ['Select one'] }
-          }
-        }
-      }
-
-      expect(aggregateUnfilledValues(registry)).toEqual({
-        DROPDOWN: ['Choose option', 'Select one']
-      })
-    })
-
-    it('produces correct result for the real PROCESSING_TYPE_TABLES registry', () => {
-      const result = aggregateUnfilledValues(PROCESSING_TYPE_TABLES)
+  describe('unfilledValuesForYear', () => {
+    it('gathers the placeholders of every table in the 2026 templates', () => {
+      const result = unfilledValuesForYear(DEFAULT_TEMPLATE_YEAR)
 
       // All dropdown fields use 'Choose option'
       expect(result.EWC_CODE).toContain('Choose option')
@@ -389,47 +300,95 @@ describe('table-schemas', () => {
       expect(result.WAS_THE_WASTE_STOPPED).toContain('Choose option')
       expect(result.OSR_COUNTRY).toContain('Choose option')
     })
-  })
 
-  describe('unfilledValuesForYear', () => {
-    it('gathers the placeholders of every table in the year', () => {
-      expect(unfilledValuesForYear(DEFAULT_TEMPLATE_YEAR)).toEqual(
-        aggregateUnfilledValues(PROCESSING_TYPE_TABLES)
+    it('throws for a year with no templates', () => {
+      expect(() => unfilledValuesForYear(YEAR_2027)).toThrow(
+        'No summary log templates for 2027'
       )
     })
-
-    it('has no placeholders for a year with no templates', () => {
-      expect(unfilledValuesForYear(YEAR_2027)).toEqual({})
-    })
   })
 
-  describe('TEMPLATES', () => {
-    it('has templates for 2026 only', () => {
-      expect(Object.keys(TEMPLATES)).toEqual(['2026'])
+  describe('templates by year', () => {
+    it('has no templates for 2027', () => {
+      expect(() => getTemplate(YEAR_2027, PROCESSING_TYPES.EXPORTER)).toThrow()
     })
 
     it.each([
-      [PROCESSING_TYPES.EXPORTER, 5],
-      [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY, 2.1],
-      [PROCESSING_TYPES.REPROCESSOR_INPUT, 5],
-      [PROCESSING_TYPES.REPROCESSOR_OUTPUT, 5],
-      [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY, 2.1]
+      [PROCESSING_TYPES.EXPORTER, 5, EXPORTER_TEMPLATES],
+      [
+        PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY,
+        2.1,
+        EXPORTER_REGISTERED_ONLY_TEMPLATES
+      ],
+      [PROCESSING_TYPES.REPROCESSOR_INPUT, 5, REPROCESSOR_INPUT_TEMPLATES],
+      [PROCESSING_TYPES.REPROCESSOR_OUTPUT, 5, REPROCESSOR_OUTPUT_TEMPLATES],
+      [
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY,
+        2.1,
+        REPROCESSOR_REGISTERED_ONLY_TEMPLATES
+      ]
     ])(
-      'has a 2026 %s template with minimum version %s and its tables',
-      (processingType, minVersion) => {
-        expect(TEMPLATES[2026][processingType]).toEqual({
-          minVersion,
-          tables: PROCESSING_TYPE_TABLES[processingType]
-        })
+      'has a 2026 %s template with minimum version %s and its tableSchemas',
+      (processingType, minVersion, templatesByYear) => {
+        const template = getTemplate(DEFAULT_TEMPLATE_YEAR, processingType)
+        expect(template).toBe(templatesByYear[2026])
+        expect(template.minVersion).toBe(minVersion)
       }
     )
+  })
+
+  describe('checkTemplateVersion', () => {
+    const check = (version, year = DEFAULT_TEMPLATE_YEAR) =>
+      checkTemplateVersion({
+        year,
+        processingType: PROCESSING_TYPES.EXPORTER,
+        version
+      })
+
+    it.each([5, 5.5])('accepts version %s for 2026', (version) => {
+      expect(check(version)).toBeNull()
+    })
+
+    it('rejects a version below the minimum with the minimum', () => {
+      expect(check(4)).toEqual({
+        error: 'number.min',
+        context: { limit: 5 }
+      })
+    })
+
+    it('rejects a version for a year with no template', () => {
+      expect(check(2027.01, YEAR_2027)).toEqual({
+        error: 'templateVersion.year'
+      })
+    })
+
+    it('rejects a version for a year with no template before the year mismatch', () => {
+      expect(check(2027.01)).toEqual({ error: 'templateVersion.year' })
+    })
+
+    it('rejects a version whose year is not the summary log year', () => {
+      expect(check(5, YEAR_2027)).toEqual({
+        error: 'templateVersion.yearMismatch',
+        context: { year: YEAR_2027 }
+      })
+    })
+
+    it('rejects an unknown processing type as having no template', () => {
+      expect(
+        checkTemplateVersion({
+          year: DEFAULT_TEMPLATE_YEAR,
+          processingType: 'UNKNOWN',
+          version: 5
+        })
+      ).toEqual({ error: 'templateVersion.year' })
+    })
   })
 
   describe('getTemplate', () => {
     it('returns the template for a year and processing type', () => {
       expect(
         getTemplate(DEFAULT_TEMPLATE_YEAR, PROCESSING_TYPES.EXPORTER)
-      ).toBe(TEMPLATES[2026][PROCESSING_TYPES.EXPORTER])
+      ).toBe(EXPORTER_TEMPLATES[2026])
     })
 
     it('throws for a year with no templates', () => {

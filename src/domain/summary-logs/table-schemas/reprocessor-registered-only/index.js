@@ -7,7 +7,7 @@ import { SENT_ON_LOADS } from './sent-on-loads.js'
 export const REPROCESSOR_REGISTERED_ONLY_TEMPLATES = {
   2026: {
     minVersion: 2.1,
-    tables: {
+    tableSchemas: {
       RECEIVED_LOADS_FOR_REPROCESSING,
       SENT_ON_LOADS
     }

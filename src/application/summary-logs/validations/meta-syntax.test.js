@@ -194,6 +194,7 @@ describe('validateMetaSyntax', () => {
   it('returns multiple fatal technical errors when multiple fields are invalid', () => {
     const parsed = {
       meta: {
+        PROCESSING_TYPE: { value: 'EXPORTER' },
         TEMPLATE_VERSION: { value: 0 }
       }
     }
@@ -203,12 +204,12 @@ describe('validateMetaSyntax', () => {
     expect(result.isValid()).toBe(false)
     expect(result.isFatal()).toBe(true)
 
-    // Missing PROCESSING_TYPE, invalid TEMPLATE_VERSION, missing REGISTRATION_NUMBER
+    // Invalid TEMPLATE_VERSION, missing REGISTRATION_NUMBER
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals).toHaveLength(3)
+    expect(fatals).toHaveLength(2)
 
     const issues = result.getIssuesByCategory(VALIDATION_CATEGORY.TECHNICAL)
-    expect(issues).toHaveLength(3)
+    expect(issues).toHaveLength(2)
   })
 
   it('includes actual value in context for debugging', () => {
@@ -534,23 +535,14 @@ describe('validateMetaSyntax', () => {
       })
     })
 
-    it('rejects only the processing type when it is unknown and the version meets every minimum', () => {
-      const fatals = fatalsFor(5, { processingType: 'UNKNOWN' })
+    it.each([5, 4, 2027.01])(
+      'rejects only the processing type when it is unknown, whatever the version (%s)',
+      (version) => {
+        const fatals = fatalsFor(version, { processingType: 'UNKNOWN' })
 
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].code).toBe('PROCESSING_TYPE_INVALID')
-    })
-
-    it('rejects a version below the highest minimum when the processing type is unknown', () => {
-      const fatals = fatalsFor(4, { processingType: 'UNKNOWN' })
-
-      expect(fatals.map((f) => f.code)).toEqual([
-        'PROCESSING_TYPE_INVALID',
-        'TEMPLATE_VERSION_INVALID'
-      ])
-      expect(fatals[1].message).toBe(
-        "Invalid meta field 'TEMPLATE_VERSION': must be a supported template version"
-      )
-    })
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0].code).toBe('PROCESSING_TYPE_INVALID')
+      }
+    )
   })
 })

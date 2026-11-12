@@ -3,9 +3,16 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
 /** @import { ValidatedWasteRecord } from '#application/waste-records/transform-from-summary-log.js' */
 /** @import { PreviousSubmission, WasteRecordState } from '#waste-records/application/read-summary-log-row-states.js' */
+
+const { tableSchemas } = getTemplate(
+  DEFAULT_TEMPLATE_YEAR,
+  PROCESSING_TYPES.REPROCESSOR_INPUT
+)
 
 describe('validateDataBusiness', () => {
   /**
@@ -70,6 +77,7 @@ describe('validateDataBusiness', () => {
 
   it('returns valid result when validators pass', () => {
     const result = validateDataBusiness({
+      tableSchemas,
       wasteRecords: [createValidatedWasteRecord({ rowId: 'row-1' })],
       previousSubmission: null
     })
@@ -81,6 +89,7 @@ describe('validateDataBusiness', () => {
 
   it('returns invalid result when validators fail', () => {
     const result = validateDataBusiness({
+      tableSchemas,
       wasteRecords: [createValidatedWasteRecord({ rowId: 'row-2' })],
       previousSubmission: createPreviousSubmission([
         createWasteRecordState('row-1'),

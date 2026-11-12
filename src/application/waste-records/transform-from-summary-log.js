@@ -98,11 +98,11 @@ const transformTable = (
  * flow through to the output.
  *
  * @param {ValidatedSummaryLog} parsedData - Validated summary log with TransformableRow[] in each table
- * @param {Record<string, TableSchema>} tables - The template's table schemas by table name
+ * @param {Record<string, TableSchema>} tableSchemas - The template's table schemas by table name
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
-export const transformFromSummaryLog = (parsedData, tables) => {
-  const results = Object.entries(tables).map(([tableName, schema]) => {
+export const transformFromSummaryLog = (parsedData, tableSchemas) => {
+  const results = Object.entries(tableSchemas).map(([tableName, schema]) => {
     const tableData = parsedData.data[tableName]
 
     // Skip tables that don't exist in this summary log or have no transformer

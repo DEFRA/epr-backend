@@ -36,7 +36,7 @@ const transformWithItsTemplate = (parsedData) =>
   transformFromSummaryLog(
     parsedData,
     getTemplate(DEFAULT_TEMPLATE_YEAR, parsedData.meta.PROCESSING_TYPE.value)
-      .tables
+      .tableSchemas
   )
 
 describe('transformFromSummaryLog', () => {

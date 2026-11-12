@@ -30,12 +30,12 @@ import {
  * Filters waste records to only those from tables that participate in waste balance.
  *
  * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {Record<string, TableSchema> | undefined} tables - The template's table schemas, absent when validation stopped before choosing it
+ * @param {Record<string, TableSchema> | undefined} tableSchemas - The template's table schemas, absent when validation stopped before choosing it
  * @returns {ValidatedWasteRecord[]}
  */
-export const filterWasteBalanceRecords = (wasteRecords, tables) =>
+export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
   wasteRecords?.filter(
-    (wr) => !isNil(tables?.[wr.tableName]?.classifyForWasteBalance)
+    (wr) => !isNil(tableSchemas?.[wr.tableName]?.classifyForWasteBalance)
   ) ?? []
 
 /**
@@ -45,7 +45,7 @@ export const filterWasteBalanceRecords = (wasteRecords, tables) =>
  * @param {string} params.status - Summary log status after validation
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {Record<string, TableSchema> | undefined} params.tables - The template's table schemas
+ * @param {Record<string, TableSchema> | undefined} params.tableSchemas - The template's table schemas
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {Registration} [params.registration]
@@ -53,7 +53,7 @@ export const filterWasteBalanceRecords = (wasteRecords, tables) =>
  * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
 export const classifyLoads = ({
-  tables,
+  tableSchemas,
   status,
   wasteBalanceRecords,
   wasteRecords,
@@ -88,9 +88,9 @@ export const classifyLoads = ({
     })
   )
 
-  /* v8 ignore start -- defensive guard: registration and tables are always set when status is VALIDATED */
+  /* v8 ignore start -- defensive guard: registration and tableSchemas are always set when status is VALIDATED */
   const loadsByReportingPeriod =
-    registration && tables
+    registration && tableSchemas
       ? classifyByPeriodStatus({
           wasteRecords,
           submittedRowStatesByKey,
@@ -99,7 +99,7 @@ export const classifyLoads = ({
           cadence: isRegistrationAccredited(registration)
             ? CADENCE.monthly
             : CADENCE.quarterly,
-          tableSchemas: tables,
+          tableSchemas,
           operatorCategory: getOperatorCategory(registration),
           classificationContext: {
             accreditation: registration.accreditation ?? null,

@@ -1,5 +1,5 @@
 import { PROCESSING_TYPES } from '../meta-fields.js'
-import { DEFAULT_TEMPLATE_YEAR } from '../template-year.js'
+import { DEFAULT_TEMPLATE_YEAR, templateYear } from '../template-year.js'
 import { EXPORTER_TEMPLATES } from './exporter/index.js'
 import { EXPORTER_REGISTERED_ONLY_TEMPLATES } from './exporter-registered-only/index.js'
 import { REPROCESSOR_INPUT_TEMPLATES } from './reprocessor-input/index.js'
@@ -28,47 +28,23 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
 /**
  * @typedef {Object} Template
  * @property {number} minVersion - The lowest template version accepted
- * @property {Record<string, TableSchema>} tables - Table schemas by table name
+ * @property {Record<string, TableSchema>} tableSchemas - Table schemas by table name
  */
 
 /**
- * Summary log templates by year, then processing type (ADR 0055).
+ * Each processing type's templates by year (ADR 0055).
  *
- * @type {Record<number, Record<string, Template>>}
+ * @type {Record<string, Record<number, Template>>}
  */
-export const TEMPLATES = {
-  [DEFAULT_TEMPLATE_YEAR]: {
-    [PROCESSING_TYPES.REPROCESSOR_INPUT]:
-      REPROCESSOR_INPUT_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
-    [PROCESSING_TYPES.REPROCESSOR_OUTPUT]:
-      REPROCESSOR_OUTPUT_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
-    [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]:
-      REPROCESSOR_REGISTERED_ONLY_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
-    [PROCESSING_TYPES.EXPORTER]: EXPORTER_TEMPLATES[DEFAULT_TEMPLATE_YEAR],
-    [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]:
-      EXPORTER_REGISTERED_ONLY_TEMPLATES[DEFAULT_TEMPLATE_YEAR]
-  }
+const TEMPLATES_BY_PROCESSING_TYPE = {
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT_TEMPLATES,
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: REPROCESSOR_OUTPUT_TEMPLATES,
+  [PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY]:
+    REPROCESSOR_REGISTERED_ONLY_TEMPLATES,
+  [PROCESSING_TYPES.EXPORTER]: EXPORTER_TEMPLATES,
+  [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY]:
+    EXPORTER_REGISTERED_ONLY_TEMPLATES
 }
-
-/**
- * @param {Record<string, Template>} templatesForYear
- * @returns {Record<string, Record<string, TableSchema>>}
- */
-const tablesByProcessingType = (templatesForYear) =>
-  Object.fromEntries(
-    Object.entries(templatesForYear).map(([processingType, { tables }]) => [
-      processingType,
-      tables
-    ])
-  )
-
-/**
- * The DEFAULT_TEMPLATE_YEAR {@link TableSchema}s by processing type, for
- * readers of stored rows, which carry no year.
- */
-export const PROCESSING_TYPE_TABLES = tablesByProcessingType(
-  TEMPLATES[DEFAULT_TEMPLATE_YEAR]
-)
 
 /**
  * The template for a year and processing type. Callers must have validated
@@ -79,7 +55,7 @@ export const PROCESSING_TYPE_TABLES = tablesByProcessingType(
  * @returns {Template}
  */
 export const getTemplate = (year, processingType) => {
-  const template = TEMPLATES[year]?.[processingType]
+  const template = TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[year]
   if (!template) {
     throw new Error(`No ${processingType} summary log template for ${year}`)
   }
@@ -87,17 +63,92 @@ export const getTemplate = (year, processingType) => {
 }
 
 /**
+ * @typedef {{ error: string, context?: Record<string, unknown> }} TemplateVersionFailure
+ */
+
+/**
+ * Checks a template version against the summary log's year and the processing
+ * type's template for the version's year (ADR 0055).
+ *
+ * @param {Object} params
+ * @param {Year} params.year - The summary log's year
+ * @param {string} params.processingType
+ * @param {number} params.version
+ * @returns {TemplateVersionFailure | null}
+ */
+export const checkTemplateVersion = ({ year, processingType, version }) => {
+  const versionYear = templateYear(version)
+  const template = TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[versionYear]
+  if (!template) {
+    return { error: 'templateVersion.year' }
+  }
+  if (versionYear !== year) {
+    return { error: 'templateVersion.yearMismatch', context: { year } }
+  }
+  if (version < template.minVersion) {
+    return { error: 'number.min', context: { limit: template.minVersion } }
+  }
+  return null
+}
+
+/**
+ * Aggregates unfilledValues from every table of a year's templates into a
+ * single per-column map for the parser's unfilledValues option.
+ *
+ * @param {{tableSchemas: Record<string, Pick<TableSchema, 'unfilledValues'>>}[]} templatesForYear
+ * @returns {Record<string, string[]>} Union of all unfilledValues across all tables
+ */
+const aggregateUnfilledValues = (templatesForYear) => {
+  /** @type {Record<string, Set<string>>} */
+  const sets = {}
+  const allSchemas = templatesForYear.flatMap(({ tableSchemas }) =>
+    Object.values(tableSchemas)
+  )
+  for (const { unfilledValues } of allSchemas) {
+    for (const [field, values] of Object.entries(unfilledValues)) {
+      sets[field] ??= new Set()
+      values.forEach((v) => sets[field].add(v))
+    }
+  }
+  return Object.fromEntries(Object.entries(sets).map(([k, v]) => [k, [...v]]))
+}
+
+/**
  * The placeholders of every table in a year's templates, for the parser, which
- * reads a file before its processing type is known.
+ * reads a file before its processing type is known. Callers must have a year
+ * with templates, so a year with none is a programming error.
  *
  * @param {Year} year
  * @returns {Record<string, string[]>}
  */
-export const unfilledValuesForYear = (year) =>
-  aggregateUnfilledValues(tablesByProcessingType(TEMPLATES[year] ?? {}))
+export const unfilledValuesForYear = (year) => {
+  const templatesForYear = Object.values(TEMPLATES_BY_PROCESSING_TYPE).flatMap(
+    (templatesByYear) => templatesByYear[year] ?? []
+  )
+  if (templatesForYear.length === 0) {
+    throw new Error(`No summary log templates for ${year}`)
+  }
+  return aggregateUnfilledValues(templatesForYear)
+}
 
 /**
- * Finds a table schema by processing type and waste record type
+ * Finds a table by waste record type in a template's table schemas.
+ *
+ * @template {Pick<TableSchema, 'wasteRecordType'>} S
+ * @param {string} wasteRecordType - The waste record type to find (e.g. 'received', 'exported')
+ * @param {Record<string, S>} tableSchemas
+ * @returns {{ tableName: string, schema: S } | null}
+ */
+export const findSchemaByWasteRecordType = (wasteRecordType, tableSchemas) => {
+  const match = Object.entries(tableSchemas).find(
+    ([, schema]) => schema.wasteRecordType === wasteRecordType
+  )
+  return match ? { tableName: match[0], schema: match[1] } : null
+}
+
+/**
+ * Finds a table schema by processing type and waste record type. Stored rows
+ * carry no year, so this reads the DEFAULT_TEMPLATE_YEAR templates.
  *
  * @param {string} processingType - The processing type (e.g. 'REPROCESSOR_INPUT')
  * @param {string} wasteRecordType - The waste record type (e.g. 'received', 'sentOn')
@@ -107,55 +158,10 @@ export const findSchemaForProcessingType = (
   processingType,
   wasteRecordType
 ) => {
-  const tables =
-    PROCESSING_TYPE_TABLES[
-      /** @type {keyof typeof PROCESSING_TYPE_TABLES} */ (processingType)
-    ]
-  if (!tables) {
-    return null
-  }
-
+  const tableSchemas =
+    TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[DEFAULT_TEMPLATE_YEAR]
+      ?.tableSchemas ?? {}
   return (
-    Object.values(tables).find(
-      (schema) => schema.wasteRecordType === wasteRecordType
-    ) ?? null
+    findSchemaByWasteRecordType(wasteRecordType, tableSchemas)?.schema ?? null
   )
-}
-
-/**
- * Finds a table schema by waste record type, scanning across all processing types.
- *
- * @param {string} wasteRecordType - The waste record type to find (e.g. 'received', 'exported')
- * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
- * @returns {{ tableName: string, schema: TableSchema } | null} The table name and schema, or null if not found
- */
-export const findSchemaByWasteRecordType = (wasteRecordType, registry) => {
-  for (const tables of Object.values(registry)) {
-    for (const [tableName, schema] of Object.entries(tables)) {
-      if (schema.wasteRecordType === wasteRecordType) {
-        return { tableName, schema }
-      }
-    }
-  }
-  return null
-}
-
-/**
- * Aggregates unfilledValues from all table schemas across all processing types
- * into a single per-column map for the parser's unfilledValues option.
- *
- * @param {Object} registry - Schema registry (PROCESSING_TYPE_TABLES)
- * @returns {Record<string, string[]>} Union of all unfilledValues across all schemas
- */
-export const aggregateUnfilledValues = (registry) => {
-  /** @type {Record<string, Set<string>>} */
-  const sets = {}
-  const allSchemas = Object.values(registry).flatMap(Object.values)
-  for (const { unfilledValues } of allSchemas) {
-    for (const [field, values] of Object.entries(unfilledValues)) {
-      sets[field] ??= new Set()
-      values.forEach((v) => sets[field].add(v))
-    }
-  }
-  return Object.fromEntries(Object.entries(sets).map(([k, v]) => [k, [...v]]))
 }

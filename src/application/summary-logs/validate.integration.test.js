@@ -9,7 +9,9 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { EXPORTER_TEMPLATES } from '#domain/summary-logs/table-schemas/exporter/index.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -1206,7 +1208,10 @@ describe('SummaryLogsValidator integration', () => {
     })
 
     it('should capture cell errors from every sheet, not just the first', async () => {
-      const { tables } = EXPORTER_TEMPLATES[2026]
+      const { tableSchemas } = getTemplate(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.EXPORTER
+      )
       const { updated } = await runValidation({
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
@@ -1215,9 +1220,9 @@ describe('SummaryLogsValidator integration', () => {
         data: {
           RECEIVED_LOADS_FOR_EXPORT: {
             location: { sheet: 'Exported', row: 7, column: 'A' },
-            headers: tables.RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
+            headers: tableSchemas.RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
             rows: [
-              rowForTable(tables.RECEIVED_LOADS_FOR_EXPORT, 8, {
+              rowForTable(tableSchemas.RECEIVED_LOADS_FOR_EXPORT, 8, {
                 ROW_ID: 1000,
                 DATE_RECEIVED_FOR_EXPORT: 'not-a-date'
               })
@@ -1225,9 +1230,9 @@ describe('SummaryLogsValidator integration', () => {
           },
           SENT_ON_LOADS: {
             location: { sheet: 'Sent on', row: 7, column: 'A' },
-            headers: tables.SENT_ON_LOADS.requiredHeaders,
+            headers: tableSchemas.SENT_ON_LOADS.requiredHeaders,
             rows: [
-              rowForTable(tables.SENT_ON_LOADS, 8, {
+              rowForTable(tableSchemas.SENT_ON_LOADS, 8, {
                 ROW_ID: 5000,
                 DATE_LOAD_LEFT_SITE: 'not-a-date'
               })

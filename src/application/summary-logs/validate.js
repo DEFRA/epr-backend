@@ -155,7 +155,7 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {Registration} [registration] - Registration fetched during validation
- * @property {Record<string, TableSchema>} [tables] - The template's table schemas, once meta syntax has chosen it
+ * @property {Record<string, TableSchema>} [tableSchemas] - The template's table schemas, once meta syntax has chosen it
  */
 
 /**
@@ -208,10 +208,10 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
 const markIgnoredByDateRange = (
   /** @type ValidatedWasteRecord[] */ wasteRecords,
   /** @type Registration */ registration,
-  /** @type Record<string, TableSchema> */ tables
+  /** @type Record<string, TableSchema> */ tableSchemas
 ) => {
   for (const wasteRecord of wasteRecords) {
-    const schema = tables[wasteRecord.tableName]
+    const schema = tableSchemas[wasteRecord.tableName]
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
@@ -278,7 +278,7 @@ const performValidationChecks = async ({
   /** @type {Registration | undefined} */
   let registration
   /** @type {Record<string, TableSchema> | undefined} */
-  let tables
+  let tableSchemas
 
   try {
     const parsed = await extractSummaryLog({
@@ -296,7 +296,10 @@ const performValidationChecks = async ({
       return { issues, wasteRecords, meta }
     }
 
-    tables = getTemplate(summaryLog.year, meta.PROCESSING_TYPE).tables
+    tableSchemas = getTemplate(
+      summaryLog.year,
+      meta.PROCESSING_TYPE
+    ).tableSchemas
 
     registration = await fetchRegistration({
       organisationAdministrationRepository,
@@ -314,29 +317,29 @@ const performValidationChecks = async ({
     )
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta, registration, tables }
+      return { issues, wasteRecords, meta, registration, tableSchemas }
     }
 
     // Data syntax validation returns validated data with issues attached to rows
     const { issues: dataSyntaxIssues, validatedData } =
-      createDataSyntaxValidator(tables)(parsed)
+      createDataSyntaxValidator(tableSchemas)(parsed)
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords, meta, registration, tables }
+      return { issues, wasteRecords, meta, registration, tableSchemas }
     }
 
     const dataResult = await transformAndValidateData({
       summaryLog,
       validatedData,
-      tables,
+      tableSchemas,
       summaryLogRowStatesRepository,
       ledgerRepository
     })
 
     wasteRecords = dataResult.wasteRecords
 
-    markIgnoredByDateRange(wasteRecords, registration, tables)
+    markIgnoredByDateRange(wasteRecords, registration, tableSchemas)
 
     issues.merge(dataResult.issues)
   } catch (error) {
@@ -348,7 +351,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, wasteRecords, meta, registration, tables }
+  return { issues, wasteRecords, meta, registration, tableSchemas }
 }
 
 /**
@@ -551,7 +554,7 @@ const loadSubmittedRowStatesByKey = async ({
 const classifyAndPersistResult = async ({
   issues,
   processingType,
-  tables,
+  tableSchemas,
   status,
   summaryLogId,
   wasteBalanceRecords,
@@ -589,7 +592,7 @@ const classifyAndPersistResult = async ({
   })
 
   const { loads, loadsByReportingPeriod } = classifyLoads({
-    tables,
+    tableSchemas,
     status,
     wasteBalanceRecords,
     wasteRecords,
@@ -668,7 +671,7 @@ export const createSummaryLogsValidator = ({
     })
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta, registration, tables } =
+    const { issues, wasteRecords, meta, registration, tableSchemas } =
       await performValidationChecks({
         summaryLog,
         loggingContext,
@@ -685,7 +688,10 @@ export const createSummaryLogsValidator = ({
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
-    const wasteBalanceRecords = filterWasteBalanceRecords(wasteRecords, tables)
+    const wasteBalanceRecords = filterWasteBalanceRecords(
+      wasteRecords,
+      tableSchemas
+    )
 
     await recordValidationMetrics({
       issues,
@@ -698,7 +704,7 @@ export const createSummaryLogsValidator = ({
     await classifyAndPersistResult({
       issues,
       processingType,
-      tables,
+      tableSchemas,
       status,
       summaryLogId,
       wasteBalanceRecords,

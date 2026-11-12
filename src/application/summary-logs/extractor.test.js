@@ -117,16 +117,14 @@ describe('SummaryLogExtractor', () => {
     })
   })
 
-  it('parses with no placeholders when the summary log year has no templates', async () => {
+  it('rejects a summary log whose year has no templates', async () => {
     uploadsRepository.findByLocation.mockResolvedValue(Buffer.from('x'))
     summaryLog.year = /** @type {Year} */ (2027)
 
-    await summaryLogExtractor.extract(summaryLog, { logger })
-
-    expect(parse).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ unfilledValues: {} })
-    )
+    await expect(
+      summaryLogExtractor.extract(summaryLog, { logger })
+    ).rejects.toThrow('No summary log templates for 2027')
+    expect(parse).not.toHaveBeenCalled()
   })
 
   it('should return parsed data', async () => {

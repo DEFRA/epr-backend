@@ -8,7 +8,7 @@ import { SENT_ON_LOADS } from './sent-on-loads.js'
 export const REPROCESSOR_OUTPUT_TEMPLATES = {
   2026: {
     minVersion: 5,
-    tables: {
+    tableSchemas: {
       RECEIVED_LOADS_FOR_REPROCESSING,
       REPROCESSED_LOADS,
       SENT_ON_LOADS

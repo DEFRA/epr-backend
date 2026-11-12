@@ -7,7 +7,7 @@ import { SENT_ON_LOADS } from './sent-on-loads.js'
 export const EXPORTER_TEMPLATES = {
   2026: {
     minVersion: 5,
-    tables: {
+    tableSchemas: {
       RECEIVED_LOADS_FOR_EXPORT,
       SENT_ON_LOADS
     }
