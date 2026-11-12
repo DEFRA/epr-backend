@@ -219,8 +219,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
             checksumSha256: 'abc123',
             detectedContentType:
               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            s3Bucket: 'test-bucket',
-            s3Key: `path/to/${fileId}`
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: `/organisations/${organisationId}/registrations/${registrationId}/${fileId}/waste-data.xlsx`
           }
         },
         numberOfRejectedFiles: 0

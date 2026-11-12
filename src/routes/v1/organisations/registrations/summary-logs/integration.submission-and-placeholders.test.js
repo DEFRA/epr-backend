@@ -531,7 +531,7 @@ describe('Submission and placeholder tests', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
-      expect(response.headers.location).toContain('test-bucket')
+      expect(response.headers.location).toContain('re-ex-summary-logs')
     })
 
     it('should classify loads as added, adjusted, and unchanged on second upload', async () => {

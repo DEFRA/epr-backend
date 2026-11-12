@@ -11,6 +11,17 @@ const NEXT_YEAR_IN_PROD_ERROR =
   'OPEN_NEXT_YEAR must not be true when ENVIRONMENT is prod'
 
 describe('config', () => {
+  describe('cdpUploader.callbackHmacKey', () => {
+    it('should refuse to validate without a key', () => {
+      const cfg = getConfig()
+      cfg.set('cdpUploader.callbackHmacKey', null)
+
+      expect(() => cfg.validate({ allowed: 'strict' })).toThrow(
+        'cdpUploader.callbackHmacKey: must be 64 lowercase hex characters'
+      )
+    })
+  })
+
   describe('opening next year', () => {
     const loadConfig = ({ environment, openNextYear }) => {
       vi.stubEnv('ENVIRONMENT', environment)
