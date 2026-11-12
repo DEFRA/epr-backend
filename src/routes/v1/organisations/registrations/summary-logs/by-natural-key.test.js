@@ -35,7 +35,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
-import { signedCallback } from '#test/upload-callback.js'
+import { signedCallbackPayload } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
@@ -211,7 +211,8 @@ describe('summary-log routes by natural key', () => {
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
           organisationId: organisation.id,
           registrationId: registration.id,
-          callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
+          callbackUrl: `${config.get('appBaseUrl')}${uploads}/${summaryLogId}/upload-completed`,
+          callbackSignature: expect.stringMatching(/^[0-9a-f]{64}$/)
         })
       })
 
@@ -220,8 +221,11 @@ describe('summary-log routes by natural key', () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
-          payload: uploadCompletedFor(registration.id)
+          url: `${uploads}/${summaryLogId}/upload-completed`,
+          payload: signedCallbackPayload(
+            `${uploads}/${summaryLogId}/upload-completed`,
+            uploadCompletedFor(registration.id)
+          )
         })
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -318,10 +322,11 @@ describe('summary-log routes by natural key', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: signedCallback(
-        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
-      ),
-      payload: uploadCompletedFor(accreditedRegistration.id)
+      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+      payload: signedCallbackPayload(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+        uploadCompletedFor(accreditedRegistration.id)
+      )
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -338,10 +343,11 @@ describe('summary-log routes by natural key', () => {
 
     await server.inject({
       method: 'POST',
-      url: signedCallback(
-        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
-      ),
-      payload: uploadCompletedFor(accreditedRegistration.id)
+      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+      payload: signedCallbackPayload(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+        uploadCompletedFor(accreditedRegistration.id)
+      )
     })
 
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -460,6 +466,8 @@ describe('summary-log routes by natural key', () => {
     })
   })
 
+  const unaccreditedCompletedPath = `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
+
   it.each([
     [
       'creating under a registration with no accreditation',
@@ -482,10 +490,11 @@ describe('summary-log routes by natural key', () => {
     [
       'completing an upload under a registration with no accreditation',
       'POST',
-      signedCallback(
-        `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
-      ),
-      uploadCompletedFor(registeredOnlyRegistration.id)
+      unaccreditedCompletedPath,
+      signedCallbackPayload(
+        unaccreditedCompletedPath,
+        uploadCompletedFor(registeredOnlyRegistration.id)
+      )
     ],
     [
       'reading under an unknown registration',

@@ -24,7 +24,6 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -44,7 +43,8 @@ import {
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
-  UPLOAD_YEAR
+  UPLOAD_YEAR,
+  createSigningTestServer
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
@@ -423,7 +423,7 @@ describe('Submission and placeholder tests', () => {
         }
       }
 
-      server = await createTestServer({
+      server = await createSigningTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -795,7 +795,8 @@ describe('Submission and placeholder tests', () => {
         registrationId,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+        callbackSignature: 'signature'
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,
@@ -821,7 +822,7 @@ describe('Submission and placeholder tests', () => {
         ),
         overseasSitesRepository: createInMemoryOverseasSitesRepository()()
       })
-      server = await createTestServer({
+      server = await createSigningTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,

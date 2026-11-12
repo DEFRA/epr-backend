@@ -7,7 +7,6 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -35,7 +34,8 @@ import {
   createReprocessedRowValues,
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
-  TEST_REGISTRATION_NUMBER
+  TEST_REGISTRATION_NUMBER,
+  createSigningTestServer
 } from './integration-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -490,7 +490,7 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      server = await createTestServer({
+      server = await createSigningTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -674,7 +674,7 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      server = await createTestServer({
+      server = await createSigningTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -902,7 +902,7 @@ describe('Advanced validation scenarios', () => {
           )
         ])()
 
-      server = await createTestServer({
+      server = await createSigningTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           organisationAdministrationRepository: () =>

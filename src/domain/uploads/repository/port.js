@@ -5,6 +5,7 @@
  * @property {string} summaryLogId - Summary log ID (for metadata)
  * @property {string} redirectUrl - URL to redirect user after upload completes
  * @property {string} callbackUrl - URL for CDP Uploader to call when upload completes
+ * @property {string} callbackSignature - Signature CDP Uploader sends back in the callback's metadata
  */
 
 /**
@@ -19,6 +20,7 @@
  * @property {string} importId - ORS import ID
  * @property {string} redirectUrl - URL to redirect user after upload completes
  * @property {string} callbackUrl - URL for CDP Uploader to call when upload completes
+ * @property {string} callbackSignature - Signature CDP Uploader sends back in the callback's metadata
  */
 
 /**

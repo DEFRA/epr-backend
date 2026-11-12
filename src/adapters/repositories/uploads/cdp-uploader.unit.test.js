@@ -91,10 +91,32 @@ describe('bucket routing', () => {
       registrationId: 'reg-1',
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callbackUrl: 'https://backend.test/callback',
+      callbackSignature: 'abc123'
     })
 
     expect(parseFetchBody().s3Bucket).toBe('test-summary-logs-bucket')
+  })
+
+  it('sends the callback signature in the ORS import metadata, not the callback url', async () => {
+    stubFetch()
+
+    const repository = createUploadsRepository({
+      s3Client: partialMock({ send: vi.fn() }),
+      ...testConfig
+    })
+
+    await repository.initiateOrsImport({
+      importId: 'import-1',
+      redirectUrl: 'https://admin.test/redirect',
+      callbackUrl: 'https://backend.test/callback',
+      callbackSignature: 'abc123'
+    })
+
+    expect(parseFetchBody()).toMatchObject({
+      callback: 'https://backend.test/callback',
+      metadata: { importId: 'import-1', signature: 'abc123' }
+    })
   })
 
   it('sends only xlsx MIME type for summary log uploads', async () => {
@@ -110,7 +132,8 @@ describe('bucket routing', () => {
       registrationId: 'reg-1',
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callbackUrl: 'https://backend.test/callback',
+      callbackSignature: 'abc123'
     })
 
     expect(parseFetchBody().mimeTypes).toEqual([
@@ -129,7 +152,8 @@ describe('bucket routing', () => {
     await repository.initiateOrsImport({
       importId: 'import-1',
       redirectUrl: 'https://admin.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callbackUrl: 'https://backend.test/callback',
+      callbackSignature: 'abc123'
     })
 
     expect(parseFetchBody().s3Bucket).toBe('test-ors-bucket')
@@ -146,7 +170,8 @@ describe('bucket routing', () => {
     await repository.initiateOrsImport({
       importId: 'import-1',
       redirectUrl: 'https://admin.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callbackUrl: 'https://backend.test/callback',
+      callbackSignature: 'abc123'
     })
 
     expect(parseFetchBody().mimeTypes).toEqual([

@@ -18,6 +18,14 @@ const CDP_UPLOADER = {
   isMachine: true
 }
 
+/**
+ * @param {unknown} payload
+ * @returns {unknown}
+ */
+const signatureIn = (payload) =>
+  /** @type {{ metadata?: { signature?: unknown } } | null} */ (payload)
+    ?.metadata?.signature
+
 const SCHEME_NAME = 'upload-callback-signature'
 export const STRATEGY_NAME = 'upload-callback'
 
@@ -32,14 +40,17 @@ export const uploadCallbackAuthPlugin = {
       const key = uploadCallbackKey()
 
       server.auth.scheme(SCHEME_NAME, () => ({
-        authenticate: (request, h) =>
+        authenticate: (_request, h) =>
+          h.authenticated({ credentials: CDP_UPLOADER }),
+        payload: (request, h) =>
           isUploadCallbackSignatureValid(
             key,
             toUploadCallbackPath(request.path),
-            request.query.signature
+            signatureIn(request.payload)
           )
-            ? h.authenticated({ credentials: CDP_UPLOADER })
-            : h.unauthenticated(Boom.unauthorized())
+            ? h.continue
+            : Boom.unauthorized(),
+        options: { payload: true }
       }))
 
       server.auth.strategy(STRATEGY_NAME, SCHEME_NAME)

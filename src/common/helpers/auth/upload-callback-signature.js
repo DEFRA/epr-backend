@@ -39,15 +39,15 @@ const signatureFor = (key, path) =>
   createHmac('sha256', Buffer.from(key, 'hex')).update(path).digest()
 
 /**
- * The path CDP Uploader calls back on, with a signature only this service can
- * make, so a callback proves it was set up by us for that path.
+ * A signature only this service can make for a callback path, so a callback
+ * carrying it proves it was set up by us for that path.
  *
  * @param {UploadCallbackKey} key
  * @param {UploadCallbackPath} path
  * @returns {string}
  */
-export const signedUploadCallbackPath = (key, path) =>
-  `${path}?signature=${signatureFor(key, path).toString('hex')}`
+export const uploadCallbackSignature = (key, path) =>
+  signatureFor(key, path).toString('hex')
 
 /**
  * The key this service signs and checks upload callbacks with.
@@ -58,14 +58,18 @@ export const uploadCallbackKey = () =>
   toUploadCallbackKey(config.get('cdpUploader.callbackHmacKey'))
 
 /**
- * The URL to give CDP Uploader for an upload's callback: this service's base
- * URL and the signed path.
+ * What to give CDP Uploader for an upload's callback: this service's URL for
+ * the path, and the signature for it to send back in the callback's metadata.
+ * The URL stays free of the signature because CDP Uploader and the ingress
+ * both log it.
  *
  * @param {UploadCallbackPath} path
- * @returns {string}
+ * @returns {{ url: string, signature: string }}
  */
-export const uploadCallbackUrl = (path) =>
-  `${config.get('appBaseUrl')}${signedUploadCallbackPath(uploadCallbackKey(), path)}`
+export const uploadCallback = (path) => ({
+  url: `${config.get('appBaseUrl')}${path}`,
+  signature: uploadCallbackSignature(uploadCallbackKey(), path)
+})
 
 /**
  * @param {UploadCallbackKey} key

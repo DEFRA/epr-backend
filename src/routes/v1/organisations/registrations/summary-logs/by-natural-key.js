@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { uploadCallbackUrl } from '#common/helpers/auth/upload-callback-signature.js'
+import { uploadCallback } from '#common/helpers/auth/upload-callback-signature.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
@@ -50,11 +50,11 @@ const uploadAddresses = [
 const callbackToNaturalKeys = (accredited) => (request) => {
   const { organisationNumber, registrationNumber, year } = request.params
   const app =
-    /** @type {{ summaryLogCallbackUrl?: (summaryLogId: string) => string }} */ (
+    /** @type {{ summaryLogCallback?: (summaryLogId: string) => { url: string, signature: string } }} */ (
       request.app
     )
-  app.summaryLogCallbackUrl = (id) =>
-    uploadCallbackUrl(
+  app.summaryLogCallback = (id) =>
+    uploadCallback(
       uploadCompletedPath({
         organisationNumber,
         registrationNumber,

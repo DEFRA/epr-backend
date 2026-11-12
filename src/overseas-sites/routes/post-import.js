@@ -11,7 +11,7 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import {
   toUploadCallbackPath,
-  uploadCallbackUrl
+  uploadCallback
 } from '#common/helpers/auth/upload-callback-signature.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
@@ -48,7 +48,7 @@ export const orsImportCreate = {
 
     const importId = randomUUID()
     const resolvedRedirectUrl = redirectUrl.replace('{importId}', importId)
-    const callbackUrl = uploadCallbackUrl(
+    const { url: callbackUrl, signature: callbackSignature } = uploadCallback(
       toUploadCallbackPath(
         `/v1/overseas-sites/imports/${importId}/upload-completed`
       )
@@ -66,7 +66,8 @@ export const orsImportCreate = {
       const cdpResponse = await uploadsRepository.initiateOrsImport({
         importId,
         redirectUrl: resolvedRedirectUrl,
-        callbackUrl
+        callbackUrl,
+        callbackSignature
       })
 
       await auditOverseasSiteImport(request, importId)

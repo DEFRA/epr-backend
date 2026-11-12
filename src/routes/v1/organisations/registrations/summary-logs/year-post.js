@@ -34,7 +34,7 @@ export const summaryLogsYearCreate = {
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
    *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year },
-   *   app: { summaryLogCallbackUrl: (summaryLogId: string) => string },
+   *   app: { summaryLogCallback: (summaryLogId: string) => { url: string, signature: string } },
    *   uploadsRepository: UploadsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
@@ -63,7 +63,7 @@ export const summaryLogsYearCreate = {
       organisationId,
       registrationId,
       redirectUrl,
-      callbackUrlFor: request.app.summaryLogCallbackUrl
+      callbackFor: request.app.summaryLogCallback
     })
 
     return h.response(result).code(StatusCodes.CREATED)

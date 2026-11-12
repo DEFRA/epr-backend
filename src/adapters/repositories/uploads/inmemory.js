@@ -21,15 +21,21 @@ import { parseUploadUri } from './s3-uri.js'
  * Calls back the way CDP Uploader does once a file is scanned and stored.
  *
  * @param {string} callbackUrl
+ * @param {Record<string, string>} metadata
  * @param {{ s3Bucket: string, s3Key: string }} location
  */
-const postCompletedCallback = async (callbackUrl, { s3Bucket, s3Key }) => {
+const postCompletedCallback = async (
+  callbackUrl,
+  metadata,
+  { s3Bucket, s3Key }
+) => {
   await fetch(callbackUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
+      metadata,
       form: {
         file: {
           fileId: randomUUID(),
@@ -100,15 +106,12 @@ export const createInMemoryUploadsRepository = (config = {}) => {
       }
     },
 
-    async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
-      orsInitiateCalls.push({ importId, redirectUrl, callbackUrl })
+    async initiateOrsImport(options) {
+      orsInitiateCalls.push(options)
 
       const uploadId = randomUUID()
 
-      pendingUploads.set(uploadId, {
-        uploadId,
-        options: { importId, redirectUrl, callbackUrl }
-      })
+      pendingUploads.set(uploadId, { uploadId, options })
 
       return {
         uploadId,
@@ -126,17 +129,24 @@ export const createInMemoryUploadsRepository = (config = {}) => {
 
       const /** @type {InitiateSummaryLogUploadOptions} */ options =
           /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
-      const { organisationId, registrationId, callbackUrl } = options
+      const {
+        organisationId,
+        registrationId,
+        summaryLogId,
+        callbackUrl,
+        callbackSignature
+      } = options
       const s3Key = `${summaryLogUploadPath({ organisationId, registrationId })}/${uploadId}.xlsx`
       const s3Uri = `s3://${summaryLogsBucket}/${s3Key}`
 
       storage.set(s3Uri, buffer)
       pendingUploads.delete(uploadId)
 
-      await postCompletedCallback(callbackUrl, {
-        s3Bucket: summaryLogsBucket,
-        s3Key
-      })
+      await postCompletedCallback(
+        callbackUrl,
+        { summaryLogId, signature: callbackSignature },
+        { s3Bucket: summaryLogsBucket, s3Key }
+      )
 
       return { s3Uri }
     }

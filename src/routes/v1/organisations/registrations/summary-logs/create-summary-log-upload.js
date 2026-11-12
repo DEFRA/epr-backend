@@ -27,7 +27,7 @@ const FAILURE_MESSAGE = 'Failure initiating summary log upload'
  *   organisationId: string,
  *   registrationId: string,
  *   redirectUrl: string,
- *   callbackUrlFor: (summaryLogId: SummaryLogId) => string
+ *   callbackFor: (summaryLogId: SummaryLogId) => { url: string, signature: string }
  * }} args
  * @returns {Promise<{ summaryLogId: SummaryLogId, uploadId: string, uploadUrl: string, statusUrl: string }>}
  */
@@ -37,14 +37,15 @@ export async function createSummaryLogUpload({
   organisationId,
   registrationId,
   redirectUrl,
-  callbackUrlFor
+  callbackFor
 }) {
   const summaryLogId = toSummaryLogId(randomUUID())
   const resolvedRedirectUrl = redirectUrl.replace(
     '{summaryLogId}',
     summaryLogId
   )
-  const callbackUrl = callbackUrlFor(summaryLogId)
+  const { url: callbackUrl, signature: callbackSignature } =
+    callbackFor(summaryLogId)
 
   try {
     const cdpResponse = await uploadsRepository.initiateSummaryLogUpload({
@@ -52,7 +53,8 @@ export async function createSummaryLogUpload({
       registrationId,
       summaryLogId,
       redirectUrl: resolvedRedirectUrl,
-      callbackUrl
+      callbackUrl,
+      callbackSignature
     })
 
     logger.info({
