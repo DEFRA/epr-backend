@@ -55,7 +55,7 @@ const NEEDS_CALLBACK_RECEIVER_DEFAULT = false
  */
 
 // Configuration flag for whether tests need the callback receiver
-// Use it.scoped({ needsCallbackReceiver: true }) in describe blocks that need it.
+// Use it.override('needsCallbackReceiver', true) in describe blocks that need it.
 // File-scoped so the file-scoped callbackReceiver fixture may depend on it.
 /** @type {{ needsCallbackReceiver: [boolean, { scope: 'file' }] }} */
 const configFixtures = {
