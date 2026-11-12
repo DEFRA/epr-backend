@@ -21,7 +21,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  *
  * @param {Object} params
  * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
- * @param {import('#domain/organisations/accreditation.js').Accreditation} params.accreditation
+ * @param {import('#domain/organisations/accreditation.js').AccreditationValidity} params.accreditation
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
