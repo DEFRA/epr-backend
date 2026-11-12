@@ -22,9 +22,10 @@
  * links to. This keeps the generator to mechanical facts only.
  */
 import {
-  PROCESSING_TYPE_TABLES,
-  findSchemaForProcessingType
+  findSchemaForProcessingType,
+  getTemplate
 } from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index.js'
@@ -318,10 +319,10 @@ const header = [
 export const generateDocument = () => {
   const output = [header.join('\n')]
   for (const [processingType, displayName] of TEMPLATE_ORDER) {
-    const tables = PROCESSING_TYPE_TABLES[processingType]
+    const { tableSchemas } = getTemplate(DEFAULT_TEMPLATE_YEAR, processingType)
     output.push(`## ${displayName}`, '')
     output.push(renderReportMandatory(processingType).join('\n'))
-    for (const schema of Object.values(tables)) {
+    for (const schema of Object.values(tableSchemas)) {
       output.push(renderSection(processingType, schema))
     }
   }

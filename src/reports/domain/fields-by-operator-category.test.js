@@ -6,7 +6,8 @@ import {
 } from './aggregation/fields-by-operator-category.js'
 import { OPERATOR_CATEGORY, isExporterCategory } from './operator-category.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
 /** @import { OperatorCategory } from './operator-category.js' */
 
@@ -98,21 +99,21 @@ describe('reporting date fields against the summary log templates', () => {
     PROCESSING_TYPES_BY_OPERATOR_CATEGORY
   ).flatMap(([operatorCategory, processingTypes]) =>
     processingTypes.flatMap((processingType) =>
-      Object.entries(PROCESSING_TYPE_TABLES[processingType]).map(
-        ([tableName, schema]) => ({
-          operatorCategory,
-          processingType,
-          tableName,
-          schema
-        })
-      )
+      Object.entries(
+        getTemplate(DEFAULT_TEMPLATE_YEAR, processingType).tableSchemas
+      ).map(([tableName, schema]) => ({
+        operatorCategory,
+        processingType,
+        tableName,
+        schema
+      }))
     )
   )
 
   it('covers every processing type with a template', () => {
     expect(
       Object.values(PROCESSING_TYPES_BY_OPERATOR_CATEGORY).flat().sort()
-    ).toStrictEqual(Object.keys(PROCESSING_TYPE_TABLES).sort())
+    ).toStrictEqual(Object.values(PROCESSING_TYPES).sort())
   })
 
   it.each(
@@ -130,7 +131,7 @@ describe('reporting date fields against the summary log templates', () => {
     '$operatorCategory: $field is a required header on a $processingType table',
     ({ processingType, field }) => {
       const requiredHeaders = Object.values(
-        PROCESSING_TYPE_TABLES[processingType]
+        getTemplate(DEFAULT_TEMPLATE_YEAR, processingType).tableSchemas
       ).flatMap((schema) => schema.requiredHeaders)
 
       expect(requiredHeaders).toContain(field)

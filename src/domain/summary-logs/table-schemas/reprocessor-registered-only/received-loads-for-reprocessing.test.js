@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { TABLE_SCHEMAS } from './index.js'
+import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessing.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-
-const { RECEIVED_LOADS_FOR_REPROCESSING } = TABLE_SCHEMAS
 
 describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_REGISTERED_ONLY)', () => {
   const schema = RECEIVED_LOADS_FOR_REPROCESSING

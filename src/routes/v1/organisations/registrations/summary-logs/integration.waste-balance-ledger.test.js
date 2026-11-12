@@ -119,8 +119,8 @@ describe('Waste balance stream (Exporter)', () => {
         {
           rowId: 1002,
           exportTonnage: 200,
-          dateReceived: '2025-01-16T00:00:00.000Z',
-          dateOfExport: '2025-01-21T00:00:00.000Z'
+          dateReceived: '2026-01-16T00:00:00.000Z',
+          dateOfExport: '2026-01-21T00:00:00.000Z'
         }
       ])
     )
@@ -185,8 +185,8 @@ describe('Waste balance stream (Exporter)', () => {
         {
           rowId: 3002,
           exportTonnage: 200,
-          dateReceived: '2025-01-16T00:00:00.000Z',
-          dateOfExport: '2025-01-21T00:00:00.000Z'
+          dateReceived: '2026-01-16T00:00:00.000Z',
+          dateOfExport: '2026-01-21T00:00:00.000Z'
         }
       ])
     )
@@ -200,8 +200,8 @@ describe('Waste balance stream (Exporter)', () => {
         {
           rowId: 3002,
           exportTonnage: 100,
-          dateReceived: '2025-01-16T00:00:00.000Z',
-          dateOfExport: '2025-01-21T00:00:00.000Z',
+          dateReceived: '2026-01-16T00:00:00.000Z',
+          dateOfExport: '2026-01-21T00:00:00.000Z',
           grossWeight: 1000,
           tareWeight: 100,
           palletWeight: 50,

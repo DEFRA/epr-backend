@@ -33,6 +33,8 @@ const SUPPLEMENTARY_FIELDS = [
   FIELDS.WEIGHBRIDGE_TICKET
 ]
 
+/** @import {TableSchema} from '../index.js' */
+
 /**
  * Creates a SENT_ON_LOADS table schema for exporter and reprocessor-input variants.
  *
@@ -40,7 +42,7 @@ const SUPPLEMENTARY_FIELDS = [
  * and the same waste balance calculation requirements. Only the ROW_ID minimum differs.
  *
  * @param {number} rowIdMinimum - Minimum ROW_ID value for this variant
- * @param {Function} rowTransformer - Function to transform a row into waste record metadata
+ * @param {TableSchema['rowTransformer']} rowTransformer - Function to transform a row into waste record metadata
  */
 export const createSentOnLoadsSchema = (rowIdMinimum, rowTransformer) => ({
   rowIdField: FIELDS.ROW_ID,
