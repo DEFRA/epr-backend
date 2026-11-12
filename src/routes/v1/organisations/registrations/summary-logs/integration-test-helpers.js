@@ -853,8 +853,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
     wasteBalanceService,
-    organisationAdministrationRepository,
-    overseasSitesRepository,
+    organisationReadRepository: organisationReadRepositoryOver(
+      organisationAdministrationRepository,
+      { overseasSitesRepository }
+    ),
     summaryLogRowStatesRepository,
     ledgerRepository,
     logger: mockLogger
