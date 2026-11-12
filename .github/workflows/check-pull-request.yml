@@ -52,6 +52,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Log runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo; nproc
+
       - name: Pull test container images in the background
         run: |
           for image in \
