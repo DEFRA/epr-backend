@@ -52,6 +52,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Log runner CPU
+        run: grep -m1 'model name' /proc/cpuinfo; nproc
+
       - name: Test and Scan
         uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:
