@@ -248,21 +248,22 @@ describe('report-service', () => {
       expect(report).not.toHaveProperty('id')
     })
 
-    it("reads each report's summary log from its own year when one accreditation spans two years", async () => {
-      const accreditation = readModelAccreditation()
-      const registration = readModelRegistration({
-        accreditations: { 2025: accreditation, 2026: accreditation }
-      })
-      /** @param {number} year @param {number} period */
-      const paramsFor = (year, period) => ({
+    it("reads each report's summary log from its own year when a registered-only registration submits in two years", async () => {
+      const registration = readModelRegistration({ accreditations: {} })
+      /** @param {number} year @param {number} quarter */
+      const paramsFor = (year, quarter) => ({
         ...defaultParams(),
-        reportRegistration: { registration, accreditation },
+        reportRegistration: { registration, accreditation: null },
+        cadenceAccreditation: {
+          cadence: CADENCE.quarterly,
+          accreditationNumber: null
+        },
         year: toYear(year),
-        period,
-        requiredPeriods: generateAllPeriodsForYear('monthly', toYear(year))
+        period: quarter,
+        requiredPeriods: generateAllPeriodsForYear('quarterly', toYear(year))
       })
       const stores = emptyStores()
-      const ledgerId = reportLedger(paramsFor(2025, 12))
+      const ledgerId = reportLedger(paramsFor(2025, 4))
 
       await submitLog(stores, ledgerId, {
         fileId: 'sl-2025',
@@ -271,7 +272,7 @@ describe('report-service', () => {
         entries: [
           buildReceivedEntry({
             SUPPLIER_NAME: 'December Supplier',
-            DATE_RECEIVED_FOR_REPROCESSING: '2025-12-20'
+            MONTH_RECEIVED_FOR_REPROCESSING: '2025-12'
           })
         ]
       })
@@ -282,20 +283,20 @@ describe('report-service', () => {
         entries: [
           buildReceivedEntry({
             SUPPLIER_NAME: 'January Supplier',
-            DATE_RECEIVED_FOR_REPROCESSING: '2026-01-20'
+            MONTH_RECEIVED_FOR_REPROCESSING: '2026-01'
           })
         ]
       })
 
-      /** @param {number} year @param {number} period */
-      const generate = async (year, period) => {
+      /** @param {number} year @param {number} quarter */
+      const generate = async (year, quarter) => {
         const { source, recyclingActivity } =
           /** @type {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail} */ (
             await fetchOrGenerateReportForPeriod({
               reportsRepository: createInMemoryReportsRepository()(),
               packagingRecyclingNotesRepository: createPrnRepo(),
               ...stores,
-              ...paramsFor(year, period)
+              ...paramsFor(year, quarter)
             })
           )
         return {
@@ -306,7 +307,7 @@ describe('report-service', () => {
         }
       }
 
-      expect(await generate(2025, 12)).toEqual({
+      expect(await generate(2025, 4)).toEqual({
         source: {
           summaryLogId: 'sl-2025',
           lastUploadedAt: '2026-01-05T00:00:00.000Z'
