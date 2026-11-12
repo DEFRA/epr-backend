@@ -5,6 +5,7 @@ import {
 } from '#domain/organisations/numbers.js'
 
 /** @import { Organisation, ReprocessorAccreditation, ReprocessorRegistration, ExporterRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationReadRepository } from './port.js' */
 
 /**
  * Organisations, registrations and accreditations built directly in the read
@@ -175,12 +176,21 @@ export const buildReadApprovedOrganisation = ({
 }
 
 /**
- * Organisations a test builds one at a time, and the in-memory read
- * repository holding them.
+ * Organisations a test builds one at a time, and an in-memory read repository
+ * serving them. The repository reads the organisations live, so one added
+ * after `repository()` is called is still served by it.
  */
 export const servedOrganisations = () => {
   /** @type {Organisation[]} */
   const held = []
+  const current = () => createInMemoryOrganisationReadRepository(held)()
+  /** @type {OrganisationReadRepository} */
+  const repository = {
+    findByOrganisationNumber: (...args) =>
+      current().findByOrganisationNumber(...args),
+    find: (params) => current().find(params),
+    findAll: () => current().findAll()
+  }
   return {
     /** @param {Organisation} organisation */
     add: (organisation) => {
@@ -193,7 +203,7 @@ export const servedOrganisations = () => {
       held.push(organisation)
       return organisation
     },
-    repository: () => createInMemoryOrganisationReadRepository(held)()
+    repository: () => repository
   }
 }
 

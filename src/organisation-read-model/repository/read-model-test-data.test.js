@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildReadOrganisationWithNumbersOf } from './read-model-test-data.js'
+import {
+  buildReadOrganisation,
+  buildReadOrganisationWithNumbersOf,
+  servedOrganisations
+} from './read-model-test-data.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 describe('read-model-test-data', () => {
@@ -30,6 +34,27 @@ describe('read-model-test-data', () => {
       })
 
       expect(organisation.registrations).toEqual({})
+    })
+  })
+
+  describe('servedOrganisations', () => {
+    it('serves an organisation added after the repository was taken', async () => {
+      const served = servedOrganisations()
+      const repository = served.repository()
+
+      const added = served.add(buildReadOrganisation())
+      const approved = served.approved()
+
+      expect(await repository.findAll()).toEqual([added, approved])
+      expect(
+        await repository.findByOrganisationNumber(added.organisationNumber)
+      ).toEqual(added)
+      const { items } = await repository.find({
+        organisationNumber: approved.organisationNumber,
+        page: 1,
+        pageSize: 10
+      })
+      expect(items).toEqual([approved])
     })
   })
 })

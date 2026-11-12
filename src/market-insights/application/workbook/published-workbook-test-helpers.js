@@ -52,12 +52,7 @@ export const readParamsFor = (months) => {
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     organisationAdministrationRepository,
-    organisationReadRepository: {
-      findByOrganisationNumber: (...args) =>
-        served.repository().findByOrganisationNumber(...args),
-      find: (params) => served.repository().find(params),
-      findAll: () => served.repository().findAll()
-    },
+    organisationReadRepository: served.repository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
     year: toYear(2026),
