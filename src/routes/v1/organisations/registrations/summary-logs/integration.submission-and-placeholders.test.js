@@ -24,7 +24,6 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -44,7 +43,8 @@ import {
   servedTestAccreditation,
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
-  TEST_REGISTRATION_NUMBER
+  TEST_REGISTRATION_NUMBER,
+  UPLOAD_YEAR
 } from './integration-test-helpers.js'
 import {
   toAccreditationNumber,
@@ -390,10 +390,9 @@ describe('Submission and placeholder tests', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationAdministrationRepository,
-        overseasSitesRepository: createMockOverseasSitesRepository({
-          findByIds: vi.fn().mockResolvedValue([])
-        }),
+        organisationReadRepository: organisationReadRepositoryOver(
+          organisationAdministrationRepository
+        ),
         logger: mockLogger
       })
 
@@ -491,6 +490,7 @@ describe('Submission and placeholder tests', () => {
         organisationNumber: TEST_ORGANISATION_NUMBER,
         registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
         accreditationNumber: toAccreditationNumber('ACC-2025-001'),
+        year: UPLOAD_YEAR,
         ledgerRepository,
         summaryLogRowStatesRepository
       })

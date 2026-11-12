@@ -6,10 +6,12 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { utcYearOf } from '#common/helpers/dates/year.js'
 import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
 
 /** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * Build a summary-log row state document (insert shape — no `id`).
@@ -63,6 +65,8 @@ export const buildSummaryLogRowStateEntry = (overrides = {}) => ({
   ...overrides
 })
 
+export const DEFAULT_YEAR = utcYearOf('2026-01-01')
+
 export const DEFAULT_LEDGER_ID = Object.freeze({
   organisationId: 'org-1',
   registrationId: 'reg-1',
@@ -93,15 +97,17 @@ export const registrationNumbersOf = ({ organisationId, registrationId }) => [
 ]
 
 /**
- * The ledger identity with the numbers a submission stores beside its ids.
+ * The ledger identity with the numbers a submission stores beside its ids,
+ * for `DEFAULT_YEAR` unless the identity names its year.
  *
- * @param {RegistrationOrAccreditationId} ledgerId
+ * @param {RegistrationOrAccreditationId & { year?: Year }} ledgerId
  * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
  */
 export const withNumbers = (ledgerId) => {
   const [organisationNumber, registrationNumber] =
     registrationNumbersOf(ledgerId)
   return {
+    year: DEFAULT_YEAR,
     ...ledgerId,
     organisationNumber,
     registrationNumber,

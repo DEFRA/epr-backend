@@ -1,9 +1,7 @@
-/**
- * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
- */
+/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 
 /**
- * @param {WasteBalanceLedgerId} ledgerId
+ * @param {RequiredNumbers} ledgerId
  * @returns {string}
  */
 export const ledgerKey = ({

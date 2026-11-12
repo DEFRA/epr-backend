@@ -6,9 +6,11 @@ import {
   GetQueueAttributesCommand
 } from '@aws-sdk/client-sqs'
 
+import { images } from './images.js'
+
 /** @import { TestAPI } from 'vitest' */
 
-const FLOCI_IMAGE = 'hectorvent/floci:1.5.3'
+const FLOCI_IMAGE = images.floci
 const FLOCI_PORT = 4566
 
 const REGION = 'eu-west-2'

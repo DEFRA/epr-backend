@@ -2,10 +2,8 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { yearSchema } from '#common/validation/year-schema.js'
-import { organisationInYear } from '#organisation-read-model/domain/organisation-years.js'
+import { openYearSchema } from '#common/validation/year-schema.js'
 import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
 import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
@@ -17,7 +15,7 @@ import { organisationViewSchema } from './response.schema.js'
 /** @typedef {{ year?: Year }} OrganisationQuery */
 /** @typedef {{ prns: { open: boolean } }} PrnYearState */
 
-const organisationQuery = { year: yearSchema() }
+const organisationQuery = { year: openYearSchema() }
 
 /**
  * The trading name when there is one, otherwise the company name.
@@ -61,20 +59,12 @@ const registrationsAt = (registrations, now) =>
 
 /**
  * @param {Organisation} organisation
- * @param {OrganisationQuery} query
  */
-export const organisationFor = (organisation, { year }) => {
-  const now = new Date()
-  const inYear =
-    year === undefined
-      ? organisation
-      : organisationInYear(organisation, year, now)
-  return {
-    ...inYear,
-    displayName: displayNameOf(organisation),
-    registrations: registrationsAt(inYear.registrations, now)
-  }
-}
+export const organisationFor = (organisation) => ({
+  ...organisation,
+  displayName: displayNameOf(organisation),
+  registrations: registrationsAt(organisation.registrations, new Date())
+})
 
 export const organisationViewGet = {
   method: 'GET',
@@ -101,20 +91,16 @@ export const organisationViewGet = {
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
+    const { year } = request.query
     const organisation =
       await request.organisationReadRepository.findByOrganisationNumber(
-        request.params.organisationNumber
+        request.params.organisationNumber,
+        { year }
       )
     if (!organisation) {
       throw Boom.notFound('Organisation not found')
     }
-    const { year } = request.query
-    if (year !== undefined && year > latestOpenYear(new Date())) {
-      throw Boom.notFound('Year not found')
-    }
 
-    return h
-      .response(organisationFor(organisation, request.query))
-      .code(StatusCodes.OK)
+    return h.response(organisationFor(organisation)).code(StatusCodes.OK)
   }
 }
