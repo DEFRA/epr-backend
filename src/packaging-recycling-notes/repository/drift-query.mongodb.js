@@ -14,7 +14,7 @@ import { COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME } from './
 
 /**
  * Detects which PRN documents lag their ledger, keyed per-PRN so a sibling
- * advancing the shared `(registrationNumber, accreditationNumber)` slot
+ * advancing the shared `(registrationNumber, accreditationNumber, year)` slot
  * sequence cannot falsely flag one (ADR-0047). The `$lookup` sub-pipeline joins
  * each PRN to events for ITS OWN `payload.prnId` past its watermark (a missing
  * watermark reads as `0`) and stops at the first — this is an existence probe,

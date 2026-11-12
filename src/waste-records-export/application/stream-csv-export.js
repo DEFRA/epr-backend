@@ -96,8 +96,8 @@ export const encodeRow = async (cells) => {
 
 /**
  * Deterministic partition order within a registration: registered-only
- * (null accreditation) first, then accreditation numbers ascending, each
- * accreditation's years in order.
+ * (null accreditation) first with its years in order, then accreditation
+ * numbers ascending.
  *
  * @param {LatestSubmittedSummaryLogPerLedger} a
  * @param {LatestSubmittedSummaryLogPerLedger} b
