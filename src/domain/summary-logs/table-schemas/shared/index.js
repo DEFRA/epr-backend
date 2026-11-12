@@ -27,6 +27,7 @@ export {
   createDateFieldSchema,
   createThreeDigitIdSchema,
   toThreeDigitId,
+  toText,
   createPercentageFieldSchema,
   createFreeTextFieldSchema,
   createEnumFieldSchema
@@ -35,7 +36,8 @@ export {
 // Shared field definitions
 export {
   SENT_ON_LOADS_FIELDS,
-  RECEIVED_LOADS_FOR_REPROCESSING_FIELDS
+  RECEIVED_LOADS_FOR_REPROCESSING_FIELDS,
+  RECEIVED_LOADS_FOR_REPROCESSING_FIELDS_2027
 } from './fields.js'
 
 // Schema factories

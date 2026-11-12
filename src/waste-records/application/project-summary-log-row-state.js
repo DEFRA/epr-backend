@@ -32,18 +32,20 @@ const normaliseNegativeZero = (value) => (value === 0 ? 0 : value)
  * cross-field reconciliation arithmetic requires.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} tableSchemas - The table schemas of the record's template
  * @param {Object} accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {SummaryLogRowStateEntry}
  */
 export const projectSummaryLogRowState = (
   record,
+  tableSchemas,
   accreditation,
   overseasSites
 ) => {
   const classified = classifyWasteRecord(
     record,
-    record.data?.processingType,
+    tableSchemas,
     accreditation,
     overseasSites
   )

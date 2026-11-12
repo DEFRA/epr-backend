@@ -253,19 +253,23 @@ export const devSummaryLogsSubmitPath =
  *
  * @param {SummaryLogContentPayload} payload
  * @param {Registration} registration
+ * @param {Year} year
  * @returns {ReturnType<typeof templateForRegistration>}
  */
-const templateFor = (payload, registration) =>
-  templateForRegistration({
-    ...registration,
-    accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
-      ? {
-          accreditationNumber: toAccreditationNumber(
-            String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
-          )
-        }
-      : null
-  })
+const templateFor = (payload, registration, year) =>
+  templateForRegistration(
+    {
+      ...registration,
+      accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+        ? {
+            accreditationNumber: toAccreditationNumber(
+              String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
+            )
+          }
+        : null
+    },
+    year
+  )
 
 /**
  * @param {Registration} registration
@@ -314,7 +318,7 @@ export const devSummaryLogsSubmit = {
       )
     const parsed = toParsedSummaryLog(
       payload,
-      templateFor(payload, registration)
+      templateFor(payload, registration, year)
     )
 
     await insertValidatingLog(request, summaryLogId, year, registration)

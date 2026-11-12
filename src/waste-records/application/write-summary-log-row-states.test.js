@@ -9,6 +9,8 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 /**
  * @param {{ rowId: string, tonnage: number }} args
@@ -64,6 +66,10 @@ const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
 
 const overseasSites = /** @type {any} */ (new Map())
 
+/** @param {string} processingType */
+const tableSchemasOf = (processingType) =>
+  getTemplate(toYear(2026), processingType).tableSchemas
+
 const registeredOnlyLedgerId = withNumbers({
   organisationId: 'org-1',
   registrationId: 'reg-1',
@@ -86,6 +92,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('writes a row state per record under the registered-only ledger', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf('REPROCESSOR_REGISTERED_ONLY'),
       summaryLogRowStatesRepository,
       wasteRecords: [
         buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 }),
@@ -115,6 +122,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf('REPROCESSOR_REGISTERED_ONLY'),
       summaryLogRowStatesRepository,
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
       accreditation: null,
@@ -133,6 +141,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores weight quantities coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf('REPROCESSOR_REGISTERED_ONLY'),
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
       accreditation: null,
@@ -151,6 +160,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages so round-each-then-sum no longer drifts from sum-then-round', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf('REPROCESSOR_REGISTERED_ONLY'),
       summaryLogRowStatesRepository,
       wasteRecords: [
         buildReceivedRecord({ rowId: '1', tonnage: 1.005 }),
@@ -180,6 +190,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('writes the row states under the supplied accreditation ledger', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf('REPROCESSOR_REGISTERED_ONLY'),
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
       accreditation: {
@@ -207,6 +218,7 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stamps the missing field on a row excluded for incomplete data', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf('REPROCESSOR_INPUT'),
       summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
       accreditation: {
@@ -236,6 +248,7 @@ describe('writeSummaryLogRowStates', () => {
   it('is idempotent — re-running the same submission adds no duplicate', async () => {
     const submit = () =>
       writeSummaryLogRowStates({
+        tableSchemas: tableSchemasOf('REPROCESSOR_REGISTERED_ONLY'),
         summaryLogRowStatesRepository,
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
         accreditation: null,

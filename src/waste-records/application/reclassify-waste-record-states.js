@@ -1,7 +1,12 @@
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
+import {
+  getTemplate,
+  hasTemplate
+} from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * @import {WasteRecordState} from './read-summary-log-row-states.js'
+ * @import {Year} from '#common/helpers/dates/year.js'
  */
 
 /**
@@ -22,22 +27,26 @@ import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-bala
  * submits again. Reads that answer current-state questions call this so that
  * context changes show up without waiting for a submission.
  *
- * The template the row reported under comes from the row itself, so rows
- * classify independently of each other and of the registration's current
- * processing type.
+ * The template the row reported under is the partition's year's template for
+ * the row's own processing type, so rows classify independently of each other and of
+ * the registration's current processing type.
  *
  * @param {WasteRecordState} rowState
+ * @param {Year} year - The year of the row's partition
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState}
  */
 export const reclassifyWasteRecordState = (
   rowState,
+  year,
   { accreditation, overseasSites }
 ) => ({
   ...rowState,
   classification: classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    rowState.processingType,
+    hasTemplate(year, rowState.processingType)
+      ? getTemplate(year, rowState.processingType).tableSchemas
+      : {},
     accreditation,
     overseasSites
   )
@@ -51,8 +60,11 @@ export const reclassifyWasteRecordState = (
  * whole run instead of once per partition.
  *
  * @param {WasteRecordState[]} rowStates
+ * @param {Year} year - The year of the partition
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState[]}
  */
-export const reclassifyWasteRecordStates = (rowStates, context) =>
-  rowStates.map((rowState) => reclassifyWasteRecordState(rowState, context))
+export const reclassifyWasteRecordStates = (rowStates, year, context) =>
+  rowStates.map((rowState) =>
+    reclassifyWasteRecordState(rowState, year, context)
+  )

@@ -52,9 +52,11 @@ const prnAwareSchema = /** @type {*} */ ({
         }
 })
 
-vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
-  findSchemaForProcessingType: vi.fn()
-}))
+/** @param {*} schema */
+const exportedTableSchemas = (schema) =>
+  /** @type {*} */ ({
+    EXPORTED_TABLE: { wasteRecordType: WASTE_RECORD_TYPE.EXPORTED, ...schema }
+  })
 
 /** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
@@ -99,6 +101,7 @@ describe('performUpdateViaLedger', () => {
   let ledgerRepository
   let systemLogsRepository
   let commitSummaryLogSubmittedEvent
+  let tableSchemas
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
@@ -107,9 +110,7 @@ describe('performUpdateViaLedger', () => {
       ledgerRepository,
       systemLogsRepository
     ).commitSummaryLogSubmittedEvent
-    const { findSchemaForProcessingType } =
-      await import('#domain/summary-logs/table-schemas/index.js')
-    vi.mocked(findSchemaForProcessingType).mockReturnValue(prnAwareSchema)
+    tableSchemas = exportedTableSchemas(prnAwareSchema)
   })
 
   describe('first submission', () => {
@@ -120,6 +121,7 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -148,6 +150,7 @@ describe('performUpdateViaLedger', () => {
   describe('subsequent submission', () => {
     it('computes delta from previous creditTotal', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
@@ -162,6 +165,7 @@ describe('performUpdateViaLedger', () => {
       })
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 80 }),
@@ -197,6 +201,7 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -223,6 +228,7 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -245,6 +251,7 @@ describe('performUpdateViaLedger', () => {
       const appendSpy = vi.spyOn(ledgerRepository, 'appendEvents')
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -264,6 +271,7 @@ describe('performUpdateViaLedger', () => {
   describe('audit emission', () => {
     it('inserts one system-log entry covering the submission', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
@@ -299,6 +307,7 @@ describe('performUpdateViaLedger', () => {
 
     it("lists the entry in its organisation's system log", async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -325,6 +334,7 @@ describe('performUpdateViaLedger', () => {
         ).commitSummaryLogSubmittedEvent
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent: auditlessSubmit,
@@ -346,18 +356,15 @@ describe('performUpdateViaLedger', () => {
 
   describe('classifier outcome', () => {
     it('treats records with non-INCLUDED outcome as zero contribution', async () => {
-      const { findSchemaForProcessingType } =
-        await import('#domain/summary-logs/table-schemas/index.js')
-      vi.mocked(findSchemaForProcessingType).mockReturnValue(
-        /** @type {*} */ ({
-          classifyForWasteBalance: () => ({
-            outcome: ROW_OUTCOME.IGNORED,
-            reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
-          })
+      tableSchemas = exportedTableSchemas({
+        classifyForWasteBalance: () => ({
+          outcome: ROW_OUTCOME.IGNORED,
+          reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
         })
-      )
+      })
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -376,6 +383,7 @@ describe('performUpdateViaLedger', () => {
   describe('actor attribution', () => {
     it('stamps createdBy with the submitter id, name and email', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -396,6 +404,7 @@ describe('performUpdateViaLedger', () => {
 
     it('omits name when the submitter has none, keeping the email distinct', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -423,6 +432,7 @@ describe('performUpdateViaLedger', () => {
     it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
       const submit = (summaryLogId, tonnage) =>
         performUpdateViaLedger({
+          tableSchemas,
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
           accreditation,
           commitSummaryLogSubmittedEvent,

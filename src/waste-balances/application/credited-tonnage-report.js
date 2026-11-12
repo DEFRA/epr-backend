@@ -12,6 +12,7 @@ import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisati
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { monthKeyForDate } from '#common/helpers/dates/year-month.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
+import { templateYearOf } from '#domain/summary-logs/template-year.js'
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
@@ -172,6 +173,7 @@ export const buildCreditedTonnageReport = async ({
         ledgerId,
         summaryLogId
       ),
+      templateYearOf(ledgerAccreditation.year),
       {
         accreditation: validityOf(ledgerAccreditation),
         overseasSites: overseasSitesOf(ledgerAccreditation)

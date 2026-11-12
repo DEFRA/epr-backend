@@ -1,15 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 import {
   WASTE_BALANCE_OUTCOME,
   classifyRecordForWasteBalance
 } from './waste-balance-classification.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-
-vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
-  findSchemaForProcessingType: vi.fn()
-}))
 
 const accreditation =
   /** @type {import('#domain/organisations/accreditation.js').Accreditation} */ (
@@ -25,12 +20,12 @@ const buildRecord = (overrides = {}) =>
     ...overrides
   })
 
-const setSchema = async (schema) => {
-  const { findSchemaForProcessingType } =
-    await import('#domain/summary-logs/table-schemas/index.js')
-  vi.mocked(findSchemaForProcessingType).mockReturnValue(
-    /** @type {*} */ (schema)
-  )
+let tableSchemas = {}
+
+const setSchema = (schema) => {
+  tableSchemas = schema
+    ? /** @type {*} */ ({ TABLE: { wasteRecordType: 'EXPORTED', ...schema } })
+    : {}
 }
 
 describe('WASTE_BALANCE_OUTCOME', () => {
@@ -49,12 +44,8 @@ describe('WASTE_BALANCE_OUTCOME', () => {
 })
 
 describe('classifyRecordForWasteBalance', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('is NOT_APPLICABLE when there is no accreditation', async () => {
-    await setSchema({
+  it('is NOT_APPLICABLE when there is no accreditation', () => {
+    setSchema({
       classifyForWasteBalance: () => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [],
@@ -65,7 +56,7 @@ describe('classifyRecordForWasteBalance', () => {
     expect(
       classifyRecordForWasteBalance(
         buildRecord(),
-        PROCESSING_TYPES.EXPORTER,
+        tableSchemas,
         null,
         overseasSites
       )
@@ -76,13 +67,13 @@ describe('classifyRecordForWasteBalance', () => {
     })
   })
 
-  it('is NOT_APPLICABLE when the schema has no waste-balance classifier', async () => {
-    await setSchema(null)
+  it('is NOT_APPLICABLE when the schema has no waste-balance classifier', () => {
+    setSchema(null)
 
     expect(
       classifyRecordForWasteBalance(
         buildRecord(),
-        PROCESSING_TYPES.EXPORTER,
+        tableSchemas,
         accreditation,
         overseasSites
       )
@@ -93,8 +84,8 @@ describe('classifyRecordForWasteBalance', () => {
     })
   })
 
-  it('surfaces the excluded outcome and reasons from the schema classifier, contributing no amount', async () => {
-    await setSchema({
+  it('surfaces the excluded outcome and reasons from the schema classifier, contributing no amount', () => {
+    setSchema({
       classifyForWasteBalance: () => ({
         outcome: ROW_OUTCOME.EXCLUDED,
         reasons: [{ code: 'MISSING_REQUIRED_FIELD', field: 'tonnage' }]
@@ -104,7 +95,7 @@ describe('classifyRecordForWasteBalance', () => {
     expect(
       classifyRecordForWasteBalance(
         buildRecord(),
-        PROCESSING_TYPES.EXPORTER,
+        tableSchemas,
         accreditation,
         overseasSites
       )
@@ -115,8 +106,8 @@ describe('classifyRecordForWasteBalance', () => {
     })
   })
 
-  it('surfaces the included outcome, reasons and amount from the schema classifier', async () => {
-    await setSchema({
+  it('surfaces the included outcome, reasons and amount from the schema classifier', () => {
+    setSchema({
       classifyForWasteBalance: () => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
@@ -127,7 +118,7 @@ describe('classifyRecordForWasteBalance', () => {
     expect(
       classifyRecordForWasteBalance(
         buildRecord(),
-        PROCESSING_TYPES.EXPORTER,
+        tableSchemas,
         accreditation,
         overseasSites
       )
@@ -138,8 +129,8 @@ describe('classifyRecordForWasteBalance', () => {
     })
   })
 
-  it('surfaces an ignored classifier outcome and reasons, contributing no amount', async () => {
-    await setSchema({
+  it('surfaces an ignored classifier outcome and reasons, contributing no amount', () => {
+    setSchema({
       classifyForWasteBalance: () => ({
         outcome: ROW_OUTCOME.IGNORED,
         reasons: [{ code: 'PRN_ISSUED' }]
@@ -149,7 +140,7 @@ describe('classifyRecordForWasteBalance', () => {
     expect(
       classifyRecordForWasteBalance(
         buildRecord(),
-        PROCESSING_TYPES.EXPORTER,
+        tableSchemas,
         accreditation,
         overseasSites
       )

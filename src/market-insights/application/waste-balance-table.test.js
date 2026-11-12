@@ -1955,6 +1955,40 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
+  describe('a row whose processing type has no template', () => {
+    const operator = makeOperator({ orgId: 500012 })
+
+    it('leaves it out of the tonnage eligible for the waste balance', async () => {
+      const { table } = await run({
+        organisations: [operator.organisation],
+        submissions: [
+          {
+            ...operator,
+            rows: [
+              receivedRow('row-1', '2026-03-10', 100),
+              {
+                ...receivedRow('row-2', '2026-03-10', 50),
+                processingType: 'UNKNOWN'
+              }
+            ]
+          }
+        ]
+      })
+
+      expect(reported(table)).toEqual([
+        {
+          material: MATERIAL.PLASTIC,
+          accreditationType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          month: '2026-03',
+          totalCredited: 150,
+          eligibleForWasteBalance: 100,
+          sentOnDeductions: 0,
+          netCredit: 100
+        }
+      ])
+    })
+  })
+
   describe('a month after the window', () => {
     const operator = makeOperator({ orgId: 500012 })
 

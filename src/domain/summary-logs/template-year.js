@@ -21,3 +21,13 @@ export const templateYear = (version) =>
   version >= FIRST_YEAR_VERSIONED_TEMPLATE
     ? toYear(Math.trunc(version))
     : DEFAULT_TEMPLATE_YEAR
+
+/**
+ * The year of templates a partition's rows were submitted on: years before
+ * DEFAULT_TEMPLATE_YEAR had no templates of their own and used its templates.
+ *
+ * @param {Year} year
+ * @returns {Year}
+ */
+export const templateYearOf = (year) =>
+  year < DEFAULT_TEMPLATE_YEAR ? DEFAULT_TEMPLATE_YEAR : year

@@ -1,4 +1,4 @@
-/** @import {Year} from '#common/helpers/dates/year.js' */
+import { toYear } from '#common/helpers/dates/year.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { validateMetaSyntax } from './meta-syntax.js'
 import {
@@ -431,8 +431,6 @@ describe('validateMetaSyntax', () => {
   })
 
   describe('template year', () => {
-    const YEAR_2027 = /** @type {Year} */ (2027)
-
     const validateVersion = (
       version,
       {
@@ -471,13 +469,47 @@ describe('validateMetaSyntax', () => {
       }
     )
 
-    it.each([
-      [DEFAULT_TEMPLATE_YEAR, 2026],
-      [YEAR_2027, 2027]
-    ])(
-      'rejects 2027.01, a year with no template yet, in a %s summary log as TEMPLATE_YEAR_INVALID',
+    it.each(['REPROCESSOR_INPUT', 'EXPORTER_REGISTERED_ONLY'])(
+      'accepts the 2027 template version 2027.01 for %s in a 2027 summary log',
+      (processingType) => {
+        expect(
+          validateVersion(2027.01, {
+            processingType,
+            year: toYear(2027)
+          }).isValid()
+        ).toBe(true)
+      }
+    )
+
+    it.each([2027.02, 2027.1])(
+      'rejects %s, beyond the 2027 template versions, as TEMPLATE_VERSION_INVALID',
+      (version) => {
+        const fatals = fatalsFor(version, { year: toYear(2027) })
+
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0]).toMatchObject({
+          code: 'TEMPLATE_VERSION_INVALID',
+          message:
+            "Invalid meta field 'TEMPLATE_VERSION': must be at most 2027.01"
+        })
+      }
+    )
+
+    it('rejects the 2027 template version 2027.01 in a 2026 summary log as TEMPLATE_YEAR_MISMATCH', () => {
+      const fatals = fatalsFor(2027.01)
+
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0]).toMatchObject({
+        code: 'TEMPLATE_YEAR_MISMATCH',
+        message:
+          "Invalid meta field 'TEMPLATE_VERSION': must be a template for 2026"
+      })
+    })
+
+    it.each([2026, 2028])(
+      'rejects 2028.01, a year with no template yet, in a %s summary log as TEMPLATE_YEAR_INVALID',
       (year) => {
-        const fatals = fatalsFor(2027.01, { year })
+        const fatals = fatalsFor(2028.01, { year: toYear(year) })
 
         expect(fatals).toHaveLength(1)
         expect(fatals[0]).toMatchObject({
@@ -486,7 +518,7 @@ describe('validateMetaSyntax', () => {
           message:
             "Invalid meta field 'TEMPLATE_VERSION': must be a template for a supported year",
           context: {
-            actual: 2027.01,
+            actual: 2028.01,
             location: {
               sheet: 'Cover',
               row: 3,
@@ -504,7 +536,10 @@ describe('validateMetaSyntax', () => {
     ])(
       'rejects the 2026 template version %s for %s in a 2027 summary log as TEMPLATE_YEAR_MISMATCH',
       (version, processingType) => {
-        const fatals = fatalsFor(version, { processingType, year: YEAR_2027 })
+        const fatals = fatalsFor(version, {
+          processingType,
+          year: toYear(2027)
+        })
 
         expect(fatals).toHaveLength(1)
         expect(fatals[0]).toMatchObject({

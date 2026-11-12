@@ -29,6 +29,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
+ * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} params.tableSchemas - The table schemas of the summary log's template
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,
@@ -38,19 +39,15 @@ export const performUpdateViaLedger = async ({
   user,
   overseasSites,
   summaryLogId,
-  ledgerId
+  ledgerId,
+  tableSchemas
 }) => {
   if (wasteRecords.length === 0) {
     return
   }
 
   const classifiedRows = wasteRecords.map((record) =>
-    classifyWasteRecord(
-      record,
-      record.data?.processingType,
-      accreditation,
-      overseasSites
-    )
+    classifyWasteRecord(record, tableSchemas, accreditation, overseasSites)
   )
 
   let creditTotal = 0

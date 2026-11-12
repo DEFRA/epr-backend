@@ -30,6 +30,9 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
     'number.min': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
     },
+    'number.max': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+    },
     'templateVersion.year': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_YEAR_INVALID
     },

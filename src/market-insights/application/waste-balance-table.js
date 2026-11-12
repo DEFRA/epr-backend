@@ -8,6 +8,11 @@ import {
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
+import {
+  getTemplate,
+  hasTemplate
+} from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
@@ -260,7 +265,9 @@ const publishedContribution = (rowState, partitions) => {
   const { registration, accreditation, overseasSites } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    rowState.processingType,
+    hasTemplate(DEFAULT_TEMPLATE_YEAR, rowState.processingType)
+      ? getTemplate(DEFAULT_TEMPLATE_YEAR, rowState.processingType).tableSchemas
+      : {},
     accreditation,
     overseasSites
   )

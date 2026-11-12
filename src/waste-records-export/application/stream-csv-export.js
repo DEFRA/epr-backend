@@ -13,6 +13,7 @@ import {
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import {
   buildHeaderRow,
   buildDataRow,
@@ -117,7 +118,8 @@ const sortEntriesByAccreditationNumberAndYear = (a, b) =>
  * @returns {WasteRecordState['classification']}
  */
 const recomputedClassification = (rowState, context) =>
-  reclassifyWasteRecordState(rowState, context).classification
+  reclassifyWasteRecordState(rowState, DEFAULT_TEMPLATE_YEAR, context)
+    .classification
 
 /** @type {ReclassificationContext} */
 const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }

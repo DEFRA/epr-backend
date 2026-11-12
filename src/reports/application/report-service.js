@@ -286,7 +286,8 @@ export async function fetchOrGenerateReportForPeriod({
   // a not-yet-ended period never gets here, as it is not a required period.
   const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
     reportDataValidationEnabled,
-    wasteRecordStates
+    wasteRecordStates,
+    year
   )
 
   return {
@@ -455,16 +456,18 @@ async function assertReportCreationAllowed({
  *
  * @param {boolean | undefined} reportDataValidationEnabled
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {Year} year
  * @param {string} reference
  * @returns {void}
  */
 function assertReportDataCompleteIfEnabled(
   reportDataValidationEnabled,
   wasteRecordStates,
+  year,
   reference
 ) {
   if (reportDataValidationEnabled) {
-    assertReportDataComplete(wasteRecordStates, reference)
+    assertReportDataComplete(wasteRecordStates, year, reference)
   }
 }
 
@@ -477,16 +480,18 @@ function assertReportDataCompleteIfEnabled(
  *
  * @param {boolean | undefined} reportDataValidationEnabled
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {Year} year
  * @returns {{ total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } | null}
  */
 function summariseIncompleteDataIfEnabled(
   reportDataValidationEnabled,
-  wasteRecordStates
+  wasteRecordStates,
+  year
 ) {
   if (!reportDataValidationEnabled) {
     return null
   }
-  return summariseIncompleteData(wasteRecordStates)
+  return summariseIncompleteData(wasteRecordStates, year)
 }
 
 /**
@@ -553,6 +558,7 @@ export async function createReportForPeriod({
   assertReportDataCompleteIfEnabled(
     reportDataValidationEnabled,
     wasteRecordStates,
+    year,
     numbers.registrationNumber
   )
 

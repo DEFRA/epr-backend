@@ -221,11 +221,19 @@ export const createWasteBalanceService = (
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {SummaryLogFileId} options.summaryLogId
      * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
+     * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} options.tableSchemas - The table schemas of the summary log's template
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (
       wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId, ledgerId }
+      {
+        user,
+        accreditation,
+        overseasSites,
+        summaryLogId,
+        ledgerId,
+        tableSchemas
+      }
     ) => {
       if (wasteRecords.length === 0) {
         return
@@ -239,7 +247,8 @@ export const createWasteBalanceService = (
         user,
         overseasSites,
         summaryLogId,
-        ledgerId
+        ledgerId,
+        tableSchemas
       })
     },
 

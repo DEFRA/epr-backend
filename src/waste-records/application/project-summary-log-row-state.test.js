@@ -7,8 +7,14 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const overseasSites = /** @type {any} */ (new Map())
+
+/** @param {WasteRecord} record */
+const tableSchemasOf = (record) =>
+  getTemplate(toYear(2026), record.data.processingType).tableSchemas
 
 const accreditation = buildAccreditation({
   validFrom: '2024-01-01',
@@ -33,7 +39,12 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const projected = projectSummaryLogRowState(record, null, overseasSites)
+    const projected = projectSummaryLogRowState(
+      record,
+      tableSchemasOf(record),
+      null,
+      overseasSites
+    )
 
     expect(projected).toMatchObject({
       rowId: '1',
@@ -63,7 +74,12 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const projected = projectSummaryLogRowState(record, null, overseasSites)
+    const projected = projectSummaryLogRowState(
+      record,
+      tableSchemasOf(record),
+      null,
+      overseasSites
+    )
 
     expect(projected.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
     expect(projected.data).not.toHaveProperty('processingType')
@@ -81,7 +97,12 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const projected = projectSummaryLogRowState(record, null, overseasSites)
+    const projected = projectSummaryLogRowState(
+      record,
+      tableSchemasOf(record),
+      null,
+      overseasSites
+    )
 
     expect(projected.data).not.toHaveProperty('ROW_ID')
     expect(projected.rowId).toBe('1011')
@@ -101,7 +122,12 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const { data } = projectSummaryLogRowState(record, null, overseasSites)
+    const { data } = projectSummaryLogRowState(
+      record,
+      tableSchemasOf(record),
+      null,
+      overseasSites
+    )
 
     expect(data.NET_WEIGHT).toBe(9.99)
     expect(data.NET_WEIGHT).toBe(
@@ -123,6 +149,7 @@ describe('projectSummaryLogRowState', () => {
 
     const projected = projectSummaryLogRowState(
       record,
+      tableSchemasOf(record),
       accreditation,
       overseasSites
     )
@@ -147,7 +174,12 @@ describe('projectSummaryLogRowState', () => {
       data: { processingType: 'REPROCESSOR_REGISTERED_ONLY', NET_WEIGHT: 7.536 }
     }
 
-    projectSummaryLogRowState(record, null, overseasSites)
+    projectSummaryLogRowState(
+      record,
+      tableSchemasOf(record),
+      null,
+      overseasSites
+    )
 
     expect(record.data.NET_WEIGHT).toBe(7.536)
   })

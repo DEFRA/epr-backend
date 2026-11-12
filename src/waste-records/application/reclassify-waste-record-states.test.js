@@ -12,6 +12,8 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 /** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
@@ -63,6 +65,7 @@ describe('reclassifyWasteRecordStates', () => {
   it('classifies a row the accreditation now covers as included', () => {
     const [row] = reclassifyWasteRecordStates(
       [receivedRowState()],
+      toYear(2026),
       contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
     )
 
@@ -78,6 +81,7 @@ describe('reclassifyWasteRecordStates', () => {
 
     const [row] = reclassifyWasteRecordStates(
       [stampedAsIncluded],
+      toYear(2026),
       contextWith(accreditationCovering('2026-06-01', '2027-01-01'))
     )
 
@@ -102,6 +106,7 @@ describe('reclassifyWasteRecordStates', () => {
 
     const [row] = reclassifyWasteRecordStates(
       [stampedAsIgnored],
+      toYear(2026),
       contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
     )
 
@@ -114,6 +119,7 @@ describe('reclassifyWasteRecordStates', () => {
 
     const [row] = reclassifyWasteRecordStates(
       [state],
+      toYear(2026),
       contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
     )
 
@@ -128,10 +134,12 @@ describe('reclassifyWasteRecordStates', () => {
 
     const [underReprocessorInput] = reclassifyWasteRecordStates(
       [receivedRowState()],
+      toYear(2026),
       contextWith(covering)
     )
     const [underExporter] = reclassifyWasteRecordStates(
       [receivedRowState({ processingType: PROCESSING_TYPES.EXPORTER })],
+      toYear(2026),
       contextWith(covering)
     )
 
@@ -143,9 +151,38 @@ describe('reclassifyWasteRecordStates', () => {
     )
   })
 
+  it.each([2026, 2027])(
+    "classifies a %s row on that year's template",
+    (year) => {
+      const [row] = reclassifyWasteRecordStates(
+        [receivedRowState()],
+        toYear(year),
+        contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
+      )
+
+      expect(row.classification.outcome).toBe(WASTE_BALANCE_OUTCOME.INCLUDED)
+    }
+  )
+
+  it.each([
+    ['a year with no templates', PROCESSING_TYPES.REPROCESSOR_INPUT, 2028],
+    ['an unknown processing type', 'UNKNOWN', 2026]
+  ])('is NOT_APPLICABLE for %s', (_name, processingType, year) => {
+    const [row] = reclassifyWasteRecordStates(
+      [receivedRowState({ processingType })],
+      toYear(year),
+      contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
+    )
+
+    expect(row.classification.outcome).toBe(
+      WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
+    )
+  })
+
   it('is NOT_APPLICABLE for every row when the registration has no accreditation', () => {
     const [row] = reclassifyWasteRecordStates(
       [receivedRowState()],
+      toYear(2026),
       contextWith(null)
     )
 
@@ -178,6 +215,10 @@ const fullPrecisionReceivedRecord = (tonnage) => ({
 })
 
 describe('reclassifying a projected row state preserves the stamped classification', () => {
+  const reprocessorInputTableSchemas = getTemplate(
+    toYear(2026),
+    PROCESSING_TYPES.REPROCESSOR_INPUT
+  ).tableSchemas
   const covering = accreditationCovering('2026-01-01', '2027-01-01')
   const fullPrecisionTonnage = 9.126789
   const twoDecimalPlaceTonnage = roundToTwoDecimalPlaces(fullPrecisionTonnage)
@@ -185,6 +226,7 @@ describe('reclassifying a projected row state preserves the stamped classificati
   it('drops precision below two decimal places when it stamps and stores the row', () => {
     const stamped = projectSummaryLogRowState(
       fullPrecisionReceivedRecord(fullPrecisionTonnage),
+      reprocessorInputTableSchemas,
       covering,
       ORS_VALIDATION_DISABLED
     )
@@ -201,11 +243,12 @@ describe('reclassifying a projected row state preserves the stamped classificati
   it('reproduces the stamped classification when it re-derives from the stored two-decimal-place data', () => {
     const stamped = projectSummaryLogRowState(
       fullPrecisionReceivedRecord(fullPrecisionTonnage),
+      reprocessorInputTableSchemas,
       covering,
       ORS_VALIDATION_DISABLED
     )
 
-    const reclassified = reclassifyWasteRecordState(stamped, {
+    const reclassified = reclassifyWasteRecordState(stamped, toYear(2026), {
       accreditation: covering,
       overseasSites: ORS_VALIDATION_DISABLED
     })

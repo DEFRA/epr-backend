@@ -1,13 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-
-vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
-  findSchemaForProcessingType: vi.fn()
-}))
 
 const accreditation =
   /** @type {import('#domain/organisations/accreditation.js').Accreditation} */ (
@@ -23,21 +19,17 @@ const buildRecord = (overrides = {}) =>
     ...overrides
   })
 
-const setSchema = async (schema) => {
-  const { findSchemaForProcessingType } =
-    await import('#domain/summary-logs/table-schemas/index.js')
-  vi.mocked(findSchemaForProcessingType).mockReturnValue(
-    /** @type {*} */ (schema)
-  )
+let tableSchemas = {}
+
+const setSchema = (schema) => {
+  tableSchemas = /** @type {*} */ ({
+    TABLE: { wasteRecordType: 'EXPORTED', ...schema }
+  })
 }
 
 describe('classifyWasteRecord', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('carries the row identity and data alongside the classification', async () => {
-    await setSchema({
+  it('carries the row identity and data alongside the classification', () => {
+    setSchema({
       classifyForWasteBalance: () => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [],
@@ -52,7 +44,7 @@ describe('classifyWasteRecord', () => {
 
     const result = classifyWasteRecord(
       record,
-      PROCESSING_TYPES.EXPORTER,
+      tableSchemas,
       accreditation,
       overseasSites
     )
@@ -65,8 +57,8 @@ describe('classifyWasteRecord', () => {
     })
   })
 
-  it('delegates classification to the waste-balance classifier', async () => {
-    await setSchema({
+  it('delegates classification to the waste-balance classifier', () => {
+    setSchema({
       classifyForWasteBalance: () => ({
         outcome: ROW_OUTCOME.INCLUDED,
         reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
@@ -76,7 +68,7 @@ describe('classifyWasteRecord', () => {
 
     const { classification } = classifyWasteRecord(
       buildRecord(),
-      PROCESSING_TYPES.EXPORTER,
+      tableSchemas,
       accreditation,
       overseasSites
     )

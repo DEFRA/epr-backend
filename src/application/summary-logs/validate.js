@@ -476,6 +476,7 @@ const classifyAndPersistResult = async ({
       loadsByReportingPeriod,
       periodicReports,
       wasteRecords,
+      tableSchemas,
       registration,
       overseasSites,
       summaryLog,

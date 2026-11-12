@@ -1,6 +1,13 @@
 import Joi from 'joi'
-import { DROPDOWN_PLACEHOLDER, createDateFieldSchema } from '../shared/index.js'
-import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
+import {
+  DROPDOWN_PLACEHOLDER,
+  createDateFieldSchema,
+  toText
+} from '../shared/index.js'
+import {
+  RECEIVED_LOADS_FIELDS as FIELDS,
+  RECEIVED_LOADS_FIELDS_2027 as FIELDS_2027
+} from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -77,4 +84,20 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   })
     .unknown(true)
     .prefs({ abortEarly: false })
+}
+
+export const RECEIVED_LOADS_FOR_REPROCESSING_2027 = {
+  ...RECEIVED_LOADS_FOR_REPROCESSING,
+  rowTransformer: (rowData, rowIndex) =>
+    RECEIVED_LOADS_FOR_REPROCESSING.rowTransformer(
+      {
+        ...rowData,
+        [FIELDS_2027.DWT_SUPPLY_ID]: toText(rowData[FIELDS_2027.DWT_SUPPLY_ID])
+      },
+      rowIndex
+    ),
+  requiredHeaders: [
+    ...RECEIVED_LOADS_FOR_REPROCESSING.requiredHeaders,
+    ...Object.values(FIELDS_2027)
+  ]
 }
