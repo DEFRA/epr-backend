@@ -12,13 +12,15 @@ import {
 } from 'testcontainers'
 import { test as baseTest } from 'vitest'
 
+import { images } from './images.js'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FLOCI_INIT_DIR = path.resolve(__dirname, 'cdp-uploader/floci')
 
-const FLOCI_IMAGE = 'hectorvent/floci:1.5.3'
-const AWS_CLI_IMAGE = 'amazon/aws-cli:2.17.43'
-const REDIS_IMAGE = 'redis:7.2.11-alpine3.21'
-const CDP_UPLOADER_IMAGE = 'defradigital/cdp-uploader:1.15.0'
+const FLOCI_IMAGE = images.floci
+const AWS_CLI_IMAGE = images['aws-cli']
+const REDIS_IMAGE = images.redis
+const CDP_UPLOADER_IMAGE = images['cdp-uploader']
 
 const FLOCI_PORT = 4566
 const REDIS_PORT = 6379
