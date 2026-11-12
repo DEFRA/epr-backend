@@ -52,6 +52,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Pull test container images in the background
+        run: |
+          for image in \
+            defradigital/cdp-uploader:1.15.0 \
+            hectorvent/floci:1.5.3 \
+            amazon/aws-cli:2.17.43 \
+            redis:7.2.11-alpine3.21 \
+            redis:7-alpine \
+            alpine/socat:1.7.4.3-r0 \
+            testcontainers/ryuk:0.14.0 \
+            testcontainers/sshd:1.4.0; do
+            nohup docker pull -q "$image" > /dev/null 2>&1 &
+          done
+
       - name: Test and Scan
         uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:
