@@ -443,8 +443,8 @@ describe('syncFromSummaryLog', () => {
     )
   })
 
-  it('classifies against the accreditation held for the summary log’s year', async () => {
-    const fileId = 'file-wb-year'
+  it('throws when the accreditation with the number is for another year', async () => {
+    const fileId = 'file-other-year'
     const extractor = extractorFor(
       fileId,
       exporterInput([
@@ -452,25 +452,15 @@ describe('syncFromSummaryLog', () => {
       ])
     )
     organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
-      organisationWith({
-        registration: {
-          accreditations: {
-            [YEAR]: accreditationNumbered(ACCREDITATION_NUMBER),
-            2027: accreditationNumbered(ACCREDITATION_NUMBER)
-          }
-        }
-      })
+      organisationWith()
     )
 
-    await makeSync({ extractor })(
-      summaryLogFor(fileId, ACCREDITATION_NUMBER),
-      TEST_USER
-    )
-
-    expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ accreditation: ACCREDITATION_VALIDITY })
-    )
+    await expect(
+      makeSync({ extractor })(
+        summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2027)),
+        TEST_USER
+      )
+    ).rejects.toThrow('Accreditation not found: ACC-1 for 2027')
   })
 
   it('resolves overseas sites for exporter waste balance validation', async () => {
