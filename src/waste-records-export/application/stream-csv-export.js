@@ -40,6 +40,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
  * @property {Organisation} [organisation] - When set, export only this organisation.
  * @property {RegistrationNumber} [registrationNumber] - When set (with organisation), export only this registration.
+ * @property {boolean} [showYear] - When set, each row names its ledger's year.
  */
 
 /**
@@ -164,6 +165,7 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
  * @param {string[]} input.dataFieldColumns
+ * @param {boolean} input.showYear
  * @returns {AsyncGenerator<string>}
  */
 async function* streamPartitionRows({
@@ -174,7 +176,8 @@ async function* streamPartitionRows({
   ledgerId,
   rowStates,
   summaryLogEntry,
-  dataFieldColumns
+  dataFieldColumns,
+  showYear
 }) {
   const { accreditationNumber, context } = heldAccreditation(
     ledgerIndex,
@@ -193,6 +196,8 @@ async function* streamPartitionRows({
         rowId: rowState.rowId,
         classification: recomputedClassification(rowState, context),
         summaryLogEntry,
+        year: ledgerId.year,
+        showYear,
         dataFieldColumns
       })
     )
@@ -207,6 +212,7 @@ async function* streamPartitionRows({
  * @property {Map<string, LedgerAccreditation>} ledgerIndex
  * @property {Map<string, { submittedAt: string }>} summaryLogMap
  * @property {string[]} dataFieldColumns
+ * @property {boolean} showYear
  */
 
 /**
@@ -257,6 +263,7 @@ async function* streamLatestSubmissionRows({
  * @param {Map<string, LedgerAccreditation>} input.ledgerIndex
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
  * @param {string[]} input.dataFieldColumns
+ * @param {boolean} input.showYear
  * @param {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} input.summaryLogRowStatesRepository
  * @param {Pick<SummaryLogsRepository, 'findAll'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
@@ -268,6 +275,7 @@ async function* streamRegistrationRows({
   ledgerIndex,
   entries,
   dataFieldColumns,
+  showYear,
   summaryLogRowStatesRepository,
   summaryLogsRepository
 }) {
@@ -281,6 +289,7 @@ async function* streamRegistrationRows({
     registration,
     ledgerIndex,
     dataFieldColumns,
+    showYear,
     summaryLogMap: await loadSummaryLogMap(summaryLogsRepository, org, {
       registrationNumber
     }),
@@ -333,7 +342,8 @@ export async function* streamCsvExport(deps) {
     ledgerRepository,
     summaryLogsRepository,
     organisation,
-    registrationNumber: onlyRegistration
+    registrationNumber: onlyRegistration,
+    showYear = false
   } = deps
 
   const [observedKeys, latestSubmittedEntries] = await Promise.all([
@@ -342,7 +352,7 @@ export async function* streamCsvExport(deps) {
   ])
 
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
-  yield await encodeRow(buildHeaderRow(dataFieldColumns))
+  yield await encodeRow(buildHeaderRow(dataFieldColumns, { showYear }))
 
   const entriesByRegistration = groupByRegistration(latestSubmittedEntries)
 
@@ -368,6 +378,7 @@ export async function* streamCsvExport(deps) {
             registrationKey(org.organisationNumber, registrationNumber)
           ) ?? [],
         dataFieldColumns,
+        showYear,
         summaryLogRowStatesRepository,
         summaryLogsRepository
       })

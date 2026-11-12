@@ -19,6 +19,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
@@ -172,6 +173,18 @@ describe('csv-columns', () => {
         'BETA'
       ])
     })
+
+    it('shows the year after the accreditation number when asked to', () => {
+      const header = buildHeaderRow(['ALPHA'], { showYear: true })
+
+      expect(
+        header.slice(
+          METADATA_COL_INDEX['Accreditation Number'],
+          METADATA_COL_INDEX['Accreditation Number'] + 3
+        )
+      ).toEqual(['Accreditation Number', 'Year', 'Waste Record Type'])
+      expect(header).toHaveLength(METADATA_COLUMNS.length + 2)
+    })
   })
 
   describe('buildDataRow', () => {
@@ -230,8 +243,23 @@ describe('csv-columns', () => {
       summaryLogEntry: {
         submittedAt: '2026-04-15T09:00:00Z'
       },
+      year: toYear(2026),
       dataFieldColumns
     }
+
+    it('shows the year after the accreditation number when asked to', () => {
+      const row = buildDataRow({ ...baseInput, showYear: true })
+
+      expect(
+        row.slice(
+          METADATA_COL_INDEX['Accreditation Number'],
+          METADATA_COL_INDEX['Accreditation Number'] + 3
+        )
+      ).toEqual(['ACC-001', 2026, WASTE_RECORD_TYPE.RECEIVED])
+      expect(row).toHaveLength(
+        METADATA_COLUMNS.length + 1 + dataFieldColumns.length
+      )
+    })
 
     it('produces a row whose length matches metadata + dataFieldColumns', () => {
       const row = buildDataRow(baseInput)

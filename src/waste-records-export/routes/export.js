@@ -51,7 +51,8 @@ export const wasteRecordsExportRoute = {
       organisationReadRepository: request.organisationReadRepository,
       summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
       ledgerRepository: request.ledgerRepository,
-      summaryLogsRepository: request.summaryLogsRepository
+      summaryLogsRepository: request.summaryLogsRepository,
+      showYear: request.config.get('featureFlags.wasteRecordsExportYear')
     })
 
     return h

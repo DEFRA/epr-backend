@@ -891,6 +891,34 @@ describe('streamCsvExport', () => {
     ).toEqual(['1001', '2002'])
   })
 
+  it("names each row's year when the export shows the year", async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [
+        {
+          summaryLogId: 'sl-this-year',
+          rows: [receivedRowState({ rowId: '2002' })]
+        },
+        {
+          year: PREVIOUS_YEAR,
+          summaryLogId: 'sl-previous-year',
+          rows: [receivedRowState({ rowId: '1001' })]
+        }
+      ]
+    })
+
+    const [header, ...rows] = (
+      await collect(streamCsvExport({ ...deps, showYear: true }))
+    ).map(cellsOf)
+
+    const yearIndex = header.indexOf('Year')
+    expect(yearIndex).toBe(METADATA_COL_INDEX['Accreditation Number'] + 1)
+    expect(rows.map((cells) => cells[yearIndex])).toEqual([
+      String(PREVIOUS_YEAR),
+      String(DEFAULT_YEAR)
+    ])
+  })
+
   it('orders organisations by organisation number and registrations by registration number', async () => {
     const beta = readModelOrg({
       organisationNumber: '500002',

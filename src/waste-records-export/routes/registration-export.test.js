@@ -93,7 +93,7 @@ const submittedLog = (fileId, submittedAt) => ({
  * row-state adapters, so the route's own wiring is what is under test. An
  * empty `ledgerEvents` stands for a registration that has never submitted.
  *
- * @param {{ ledgerEvents?: LedgerEvent[] }} [options]
+ * @param {{ ledgerEvents?: LedgerEvent[], config?: Record<string, any> }} [options]
  */
 const createServer = async ({
   ledgerEvents = /** @type {LedgerEvent[]} */ ([
@@ -101,7 +101,8 @@ const createServer = async ({
       ...REGISTERED_ONLY_LEDGER,
       payload: { summaryLogId: FILE_ID, creditTotal: 0 }
     })
-  ])
+  ]),
+  config = {}
 } = {}) => {
   const organisation = buildReadOrganisation({
     id: ORGANISATION_ID,
@@ -132,7 +133,8 @@ const createServer = async ({
           .fn()
           .mockResolvedValue([submittedLog(FILE_ID, SUBMITTED_AT)])
       })
-    }
+    },
+    config
   })
 }
 
@@ -157,8 +159,23 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const lines = response.payload.split('\n').filter((line) => line !== '')
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('Organisation Name')
+    expect(lines[0].split(',')).not.toContain('Year')
     expect(lines[1]).toContain('Acme Ltd')
     expect(lines[1]).toContain('1001')
+  })
+
+  it('shows the Year column when its feature flag is on', async () => {
+    const server = await createServer({
+      config: { featureFlags: { wasteRecordsExportYear: true } }
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.payload.split('\n')[0].split(',')).toContain('Year')
   })
 
   it('names the download by registration number and the moment of export', async () => {
