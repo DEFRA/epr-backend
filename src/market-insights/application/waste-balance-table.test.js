@@ -15,9 +15,7 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
@@ -33,7 +31,6 @@ import {
 
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
 const TEST_ORG_ID = 999999
@@ -66,6 +63,119 @@ const SITE_ADDRESS = {
 }
 
 /**
+ * The read model's view of each stored organisation a test builds, so the
+ * read repository is seeded with what the read model serves for it.
+ *
+ * @type {WeakMap<object, import('#organisation-read-model/domain/model.js').Organisation>}
+ */
+const servedFor = new WeakMap()
+
+/**
+ * Records `served` as the read model's view of `stored`.
+ *
+ * @template {object} T
+ * @param {T} stored
+ * @param {import('#organisation-read-model/domain/model.js').Organisation} served
+ * @returns {T}
+ */
+const serving = (stored, served) => {
+  servedFor.set(stored, served)
+  return stored
+}
+
+/**
+ * @param {object} stored
+ * @returns {import('#organisation-read-model/domain/model.js').Organisation}
+ */
+const servedOf = (stored) => {
+  const served = servedFor.get(stored)
+  if (!served) {
+    throw new Error(
+      'No read model organisation was built for this organisation'
+    )
+  }
+  return structuredClone(served)
+}
+
+/**
+ * A status change as the read model times it.
+ *
+ * @param {string} status
+ * @param {string} day - `YYYY-MM-DD` or an ISO date-time
+ */
+const changed = (status, day) => {
+  const at = new Date(day).toISOString()
+  return { status, at, updatedAt: at }
+}
+
+const APPROVED_TIMELINE = [
+  changed('created', '2025-11-01'),
+  {
+    ...changed('approved', ACCREDITED_FROM),
+    updatedAt: '2025-12-01T00:00:00.000Z'
+  }
+]
+
+/**
+ * The served organisation with each registration's accreditation and standing
+ * changed by `change`.
+ *
+ * @param {object} stored
+ * @param {(registration: any) => object} change
+ */
+const servedWith = (stored, change) => {
+  const served = servedOf(stored)
+  return {
+    ...served,
+    registrations: Object.fromEntries(
+      Object.entries(served.registrations).map(([number, registration]) => [
+        number,
+        { ...registration, ...change(registration) }
+      ])
+    )
+  }
+}
+
+/** The served registration with no accreditation, registered only all year. */
+const asRegisteredOnly = () => ({
+  accreditations: {},
+  standingByDate: {
+    2026: { [ACCREDITED_FROM]: { standing: 'registeredOnly' } }
+  }
+})
+
+/**
+ * The served registration's accreditation in `status`, with `transitions`
+ * added to its timeline and `standing` to its standing.
+ *
+ * @param {string} status
+ * @param {Array<{ status: string, updatedAt: string }>} transitions
+ * @param {Record<string, { standing: string }>} [standing]
+ */
+const accreditationNow =
+  (status, transitions, standing = {}) =>
+  (registration) => ({
+    standingByDate: {
+      2026: { ...registration.standingByDate[2026], ...standing }
+    },
+    accreditations: Object.fromEntries(
+      Object.entries(registration.accreditations).map(([year, held]) => [
+        year,
+        {
+          ...held,
+          status: {
+            current: status,
+            timeline: [
+              ...held.status.timeline,
+              ...transitions.map((t) => changed(t.status, t.updatedAt))
+            ]
+          }
+        }
+      ])
+    )
+  })
+
+/**
  * A 24-hex id the reports store accepts, distinct per prefix and operator.
  *
  * @param {string} prefix - one hex character
@@ -86,7 +196,8 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   overseasSites?: Record<string, { overseasSiteId: string }>,
  *   validFrom?: string,
  *   validTo?: string,
- *   regulator?: import('#domain/organisations/model.js').RegulatorValue
+ *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
+ *   siteApproved?: boolean
  * }} options
  */
 const makeOperator = ({
@@ -98,56 +209,141 @@ const makeOperator = ({
   overseasSites,
   validFrom = ACCREDITED_FROM,
   validTo = ACCREDITED_TO,
-  regulator = REGULATOR.EA
+  regulator = REGULATOR.EA,
+  siteApproved = true
 }) => {
   const id = objectIdFor('a', orgId)
+  const isExporter = wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+  const accreditation = {
+    accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
+    prnIssuance: { tonnageBand: 'up_to_500' },
+    status: {
+      current: 'approved',
+      timeline: [
+        changed('created', '2025-11-01'),
+        {
+          ...changed('approved', validFrom),
+          updatedAt: '2025-12-01T00:00:00.000Z'
+        }
+      ]
+    }
+  }
+  const siteNumbers = Object.keys(overseasSites ?? {})
+  /** @type {import('#organisation-read-model/domain/model.js').Organisation} */
+  const served = /** @type {any} */ ({
+    organisationNumber: toOrganisationNumber(String(orgId)),
+    name: `Operator ${orgId}`,
+    status: { current: 'approved', timeline: APPROVED_TIMELINE },
+    submittedToRegulator: { code: regulator },
+    submitterContactDetails: CONTACT,
+    users: [],
+    version: 1,
+    registrations: {
+      [`REG-${orgId}`]: {
+        applicationContactDetails: CONTACT,
+        approvedPersons: [],
+        submitterContactDetails: CONTACT,
+        material: glassRecyclingProcess?.[0] ?? material,
+        status: { current: 'approved', timeline: APPROVED_TIMELINE },
+        standingByDate: {
+          2026:
+            validFrom === ACCREDITED_FROM
+              ? { [ACCREDITED_FROM]: { standing: 'accredited' } }
+              : {
+                  [ACCREDITED_FROM]: { standing: 'registeredOnly' },
+                  [validFrom]: { standing: 'accredited' }
+                }
+        },
+        submittedToRegulator: { code: regulator },
+        validFrom: ACCREDITED_FROM,
+        wasteProcessingType,
+        ...(isExporter
+          ? {
+              overseasSites: Object.fromEntries(
+                siteNumbers.map((number) => [
+                  number,
+                  {
+                    name: 'Site 1',
+                    address: {
+                      line1: '1 Dock Road',
+                      townOrCity: 'Rotterdam',
+                      country: 'Netherlands'
+                    }
+                  }
+                ])
+              ),
+              accreditations: {
+                2026: {
+                  ...accreditation,
+                  overseasSites: Object.fromEntries(
+                    siteNumbers.map((number) => [
+                      number,
+                      siteApproved
+                        ? { status: 'approved', approvedOn: ACCREDITED_FROM }
+                        : { status: 'pending' }
+                    ])
+                  )
+                }
+              }
+            }
+          : {
+              reprocessingType,
+              site: { address: SITE_ADDRESS },
+              accreditations: { 2026: accreditation }
+            })
+      }
+    }
+  })
   const registrationId = objectIdFor('b', orgId)
   const accreditationId = `acc-${orgId}`
 
   return {
-    organisation: {
-      id,
-      organisationNumber: toOrganisationNumber(String(orgId)),
-      companyDetails: { name: `Operator ${orgId}` },
-      statusHistory: approvedHistory,
-      submittedToRegulator: regulator,
-      submitterContactDetails: CONTACT,
-      users: [],
-      registrations: [
-        {
-          id: registrationId,
-          registrationNumber: `REG-${orgId}`,
-          accreditationId,
-          statusHistory: approvedHistory,
-          validFrom: ACCREDITED_FROM,
-          applicationContactDetails: CONTACT,
-          approvedPersons: [],
-          submitterContactDetails: CONTACT,
-          site: { address: SITE_ADDRESS },
-          material,
-          glassRecyclingProcess,
-          wasteProcessingType,
-          reprocessingType,
-          overseasSites,
-          submittedToRegulator: regulator
-        }
-      ],
-      accreditations: [
-        {
-          id: accreditationId,
-          accreditationNumber: `ACC-${orgId}`,
-          status: 'approved',
-          prnIssuance: { tonnageBand: 'up_to_500' },
-          statusHistory: approvedHistory,
-          validFrom,
-          validTo,
-          material,
-          wasteProcessingType,
-          reprocessingType,
-          submittedToRegulator: regulator
-        }
-      ]
-    },
+    organisation: serving(
+      {
+        id,
+        organisationNumber: toOrganisationNumber(String(orgId)),
+        companyDetails: { name: `Operator ${orgId}` },
+        statusHistory: approvedHistory,
+        submittedToRegulator: regulator,
+        submitterContactDetails: CONTACT,
+        users: [],
+        registrations: [
+          {
+            id: registrationId,
+            registrationNumber: `REG-${orgId}`,
+            accreditationId,
+            statusHistory: approvedHistory,
+            validFrom: ACCREDITED_FROM,
+            applicationContactDetails: CONTACT,
+            approvedPersons: [],
+            submitterContactDetails: CONTACT,
+            site: { address: SITE_ADDRESS },
+            material,
+            glassRecyclingProcess,
+            wasteProcessingType,
+            reprocessingType,
+            overseasSites,
+            submittedToRegulator: regulator
+          }
+        ],
+        accreditations: [
+          {
+            id: accreditationId,
+            accreditationNumber: `ACC-${orgId}`,
+            status: 'approved',
+            prnIssuance: { tonnageBand: 'up_to_500' },
+            statusHistory: approvedHistory,
+            validFrom,
+            validTo,
+            material,
+            wasteProcessingType,
+            reprocessingType,
+            submittedToRegulator: regulator
+          }
+        ]
+      },
+      served
+    ),
     ledgerId: {
       organisationId: id,
       registrationId,
@@ -270,14 +466,55 @@ const sentOnRow = (rowId, date, tonnage) => ({
  *
  * @param {ReturnType<typeof makeOperator>} operator
  */
-const registeredOnly = ({ organisation }) => ({
-  ...organisation,
-  registrations: organisation.registrations.map((registration) => ({
-    ...registration,
-    accreditationId: null
-  })),
-  accreditations: []
-})
+const registeredOnly = ({ organisation }) =>
+  serving(
+    {
+      ...organisation,
+      registrations: organisation.registrations.map((registration) => ({
+        ...registration,
+        accreditationId: null
+      })),
+      accreditations: []
+    },
+    servedWith(organisation, asRegisteredOnly)
+  )
+
+/**
+ * The same operator whose accreditation is held outside re-ex: the stored
+ * organisation holds only its registration, and the read model serves the
+ * accreditation, approved on `approvedOn`.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ * @param {import('#domain/organisations/numbers.js').AccreditationNumber} accreditationNumber
+ * @param {string} approvedOn - `YYYY-MM-DD`
+ */
+const heldOutside = (operator, accreditationNumber, approvedOn) => {
+  const stored = registeredOnly(operator)
+  return serving(
+    stored,
+    servedWith(stored, () => ({
+      standingByDate: {
+        2026:
+          approvedOn <= ACCREDITED_FROM
+            ? { [ACCREDITED_FROM]: { standing: 'accredited' } }
+            : {
+                [ACCREDITED_FROM]: { standing: 'registeredOnly' },
+                [approvedOn]: { standing: 'accredited' }
+              }
+      },
+      accreditations: {
+        2026: {
+          accreditationNumber,
+          prnIssuance: { tonnageBand: 'up_to_500' },
+          status: {
+            current: 'approved',
+            timeline: [changed('approved', approvedOn)]
+          }
+        }
+      }
+    }))
+  )
+}
 
 /**
  * @typedef {Pick<import('#reports/repository/port.js').CreateReportParams, 'organisationNumber' | 'registrationNumber' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
@@ -291,15 +528,29 @@ const registeredOnly = ({ organisation }) => ({
  * @param {Organisation} organisation
  * @param {AccreditationStatus} status
  * @param {StatusHistoryEntry[]} transitions
+ * @param {Record<string, { standing: string }>} [standing] - how the change moves the registration's standing, as the read model serves it
  */
-const withAccreditationStatus = (organisation, status, transitions) => ({
-  ...organisation,
-  accreditations: organisation.accreditations.map((accreditation) => ({
-    ...accreditation,
-    status,
-    statusHistory: [...accreditation.statusHistory, ...transitions]
-  }))
-})
+const withAccreditationStatus = (organisation, status, transitions, standing) =>
+  serving(
+    {
+      ...organisation,
+      accreditations: organisation.accreditations.map((accreditation) => ({
+        ...accreditation,
+        status,
+        statusHistory: [...accreditation.statusHistory, ...transitions]
+      }))
+    },
+    servedWith(
+      organisation,
+      accreditationNow(
+        status,
+        /** @type {any[]} */ (
+          transitions.map((t) => ({ ...t, updatedAt: String(t.updatedAt) }))
+        ),
+        standing
+      )
+    )
+  )
 
 /**
  * The organisation with its accreditation cancelled on the given day. The
@@ -310,13 +561,18 @@ const withAccreditationStatus = (organisation, status, transitions) => ({
  * @param {string} day - `YYYY-MM-DD`
  */
 const cancelledOn = (organisation, day) =>
-  withAccreditationStatus(organisation, ACCREDITATION_STATUS.CANCELLED, [
-    { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: day },
-    {
-      status: ACCREDITATION_STATUS.CANCELLED,
-      updatedAt: `${day}T09:00:00.000Z`
-    }
-  ])
+  withAccreditationStatus(
+    organisation,
+    ACCREDITATION_STATUS.CANCELLED,
+    [
+      { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: day },
+      {
+        status: ACCREDITATION_STATUS.CANCELLED,
+        updatedAt: `${day}T09:00:00.000Z`
+      }
+    ],
+    { [day]: { standing: 'registeredOnly' } }
+  )
 
 /**
  * The organisation with its cancelled accreditation approved again on the
@@ -327,9 +583,12 @@ const cancelledOn = (organisation, day) =>
  * @param {string} day - `YYYY-MM-DD`
  */
 const reinstatedOn = (organisation, day) =>
-  withAccreditationStatus(organisation, ACCREDITATION_STATUS.APPROVED, [
-    { status: ACCREDITATION_STATUS.APPROVED, updatedAt: day }
-  ])
+  withAccreditationStatus(
+    organisation,
+    ACCREDITATION_STATUS.APPROVED,
+    [{ status: ACCREDITATION_STATUS.APPROVED, updatedAt: day }],
+    { [day]: { standing: 'accredited' } }
+  )
 
 /**
  * The same operator whose accreditation was never granted, so it holds no
@@ -337,16 +596,20 @@ const reinstatedOn = (organisation, day) =>
  *
  * @param {ReturnType<typeof makeOperator>} operator
  */
-const neverAccredited = ({ organisation }) => ({
-  ...organisation,
-  accreditations: organisation.accreditations.map(
-    ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) => ({
-      ...accreditation,
-      status: ACCREDITATION_STATUS.CREATED,
-      statusHistory: [approvedHistory[0]]
-    })
+const neverAccredited = ({ organisation }) =>
+  serving(
+    {
+      ...organisation,
+      accreditations: organisation.accreditations.map(
+        ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) => ({
+          ...accreditation,
+          status: ACCREDITATION_STATUS.CREATED,
+          statusHistory: [approvedHistory[0]]
+        })
+      )
+    },
+    servedWith(organisation, asRegisteredOnly)
   )
-})
 
 /**
  * The same operator whose approval was reverted, which leaves the validity
@@ -354,17 +617,21 @@ const neverAccredited = ({ organisation }) => ({
  *
  * @param {ReturnType<typeof makeOperator>} operator
  */
-const approvalReverted = ({ organisation }) => ({
-  ...organisation,
-  accreditations: organisation.accreditations.map((accreditation) => ({
-    ...accreditation,
-    status: ACCREDITATION_STATUS.CREATED,
-    statusHistory: [
-      ...accreditation.statusHistory,
-      { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
-    ]
-  }))
-})
+const approvalReverted = ({ organisation }) =>
+  serving(
+    {
+      ...organisation,
+      accreditations: organisation.accreditations.map((accreditation) => ({
+        ...accreditation,
+        status: ACCREDITATION_STATUS.CREATED,
+        statusHistory: [
+          ...accreditation.statusHistory,
+          { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
+        ]
+      }))
+    },
+    servedWith(organisation, asRegisteredOnly)
+  )
 
 /**
  * The monthly report an operator submitted for one period of 2026.
@@ -393,8 +660,6 @@ const monthlyReport = ({ organisation }, period) => ({
  *   submissions: any[],
  *   reports?: MonthlyReportRef[],
  *   unsubmittedReports?: MonthlyReportRef[],
- *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
- *   externalAccreditations?: ExternalAccreditation[],
  *   readModelOrganisations?: any[],
  *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
  *   now?: Date
@@ -405,8 +670,6 @@ const run = async ({
   submissions,
   reports = [],
   unsubmittedReports = [],
-  overseasSites = [],
-  externalAccreditations = [],
   readModelOrganisations = organisations,
   months = JANUARY_TO_JUNE_2026,
   now = NOW
@@ -450,7 +713,6 @@ const run = async ({
   )()
 
   const logger = { info: vi.fn(), warn: vi.fn() }
-  const readModelLogger = { warn: vi.fn() }
 
   const organisationAdministrationRepository =
     createInMemoryOrganisationsRepository(
@@ -462,15 +724,8 @@ const run = async ({
     summaryLogRowStatesRepository,
     organisationAdministrationRepository,
     organisationReadRepository: createInMemoryOrganisationReadRepository(
-      await createInMemoryOrganisationsRepository(
-        readModelOrganisations.map((organisation) => partialMock(organisation))
-      )().findAll(),
-      externalAccreditations
-    )({
-      overseasSitesRepository:
-        createInMemoryOverseasSitesRepository(overseasSites)(),
-      logger: readModelLogger
-    }),
+      readModelOrganisations.map(servedOf)
+    )(),
     reportsRepository,
     logger: partialMock(logger),
     year: yearOf(months[0]),
@@ -478,7 +733,7 @@ const run = async ({
     now
   })
 
-  return { table, logger, readModelLogger }
+  return { table, logger }
 }
 
 /** @type {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures & import('#market-insights/application/operator-counts.js').OperatorCounts} */
@@ -835,11 +1090,27 @@ describe('buildWasteBalanceTable', () => {
      * @param {ReturnType<typeof makeOperator>} first
      * @param {ReturnType<typeof makeOperator>} second
      */
-    const oneBusiness = ({ organisation }, { organisation: other }) => ({
-      ...organisation,
-      registrations: [...organisation.registrations, ...other.registrations],
-      accreditations: [...organisation.accreditations, ...other.accreditations]
-    })
+    const oneBusiness = ({ organisation }, { organisation: other }) =>
+      serving(
+        {
+          ...organisation,
+          registrations: [
+            ...organisation.registrations,
+            ...other.registrations
+          ],
+          accreditations: [
+            ...organisation.accreditations,
+            ...other.accreditations
+          ]
+        },
+        {
+          ...servedOf(organisation),
+          registrations: {
+            ...servedOf(organisation).registrations,
+            ...servedOf(other).registrations
+          }
+        }
+      )
 
     it('counts every operator owed a report for the month, whether or not the figure includes its tonnage', async () => {
       const crediting = makeOperator({ orgId: 500030 })
@@ -1119,13 +1390,16 @@ describe('buildWasteBalanceTable', () => {
         makeOperator({ orgId: 500050 }).organisation,
         '2026-02-10'
       )
-      const withoutWindow = {
-        ...cancelled,
-        accreditations: cancelled.accreditations.map(
-          ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) =>
-            accreditation
-        )
-      }
+      const withoutWindow = serving(
+        {
+          ...cancelled,
+          accreditations: cancelled.accreditations.map(
+            ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) =>
+              accreditation
+          )
+        },
+        servedWith(cancelled, asRegisteredOnly)
+      )
 
       const { table } = await run({
         organisations: [withoutWindow],
@@ -1301,23 +1575,8 @@ describe('buildWasteBalanceTable', () => {
       const accreditationNumber = toAccreditationNumber('ACC-EXT-500061')
 
       const { table } = await run({
-        organisations: [registeredOnly(operator)],
-        externalAccreditations: [
-          buildExternalAccreditation({
-            registrationNumber: operator.ledgerId.registrationNumber,
-            year: operator.ledgerId.year,
-            accreditationNumber,
-            status: {
-              current: 'approved',
-              timeline: [
-                {
-                  status: 'approved',
-                  at: '2026-03-01T00:00:00.000Z',
-                  updatedAt: '2026-03-01T00:00:00.000Z'
-                }
-              ]
-            }
-          })
+        organisations: [
+          heldOutside(operator, accreditationNumber, '2026-03-01')
         ],
         submissions: [
           {
@@ -1362,12 +1621,12 @@ describe('buildWasteBalanceTable', () => {
         orgId: 500064,
         wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
         reprocessingType: undefined,
-        overseasSites: { '099': { overseasSiteId: site.id } }
+        overseasSites: { '099': { overseasSiteId: site.id } },
+        siteApproved: site.validFrom !== undefined
       })
 
       const { table } = await run({
         organisations: [exporter.organisation],
-        overseasSites: [site],
         submissions: [
           { ...exporter, rows: [exportedRow('row-1', '2026-02-10', 30)] }
         ]
@@ -1395,23 +1654,8 @@ describe('buildWasteBalanceTable', () => {
       const accreditationNumber = toAccreditationNumber('ACC-EXT-500063')
 
       const { table } = await run({
-        organisations: [registeredOnly(operator)],
-        externalAccreditations: [
-          buildExternalAccreditation({
-            registrationNumber: operator.ledgerId.registrationNumber,
-            year: operator.ledgerId.year,
-            accreditationNumber,
-            status: {
-              current: 'approved',
-              timeline: [
-                {
-                  status: 'approved',
-                  at: '2025-12-01T00:00:00.000Z',
-                  updatedAt: '2025-12-01T00:00:00.000Z'
-                }
-              ]
-            }
-          })
+        organisations: [
+          heldOutside(operator, accreditationNumber, '2025-12-01')
         ],
         submissions: [
           {
@@ -1447,7 +1691,11 @@ describe('buildWasteBalanceTable', () => {
             [
               { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' },
               { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-04-20' }
-            ]
+            ],
+            {
+              '2026-01-01': { standing: 'accredited' },
+              '2026-02-01': { standing: 'registeredOnly' }
+            }
           )
         ],
         submissions: [
@@ -1757,7 +2005,6 @@ describe('buildWasteBalanceTable', () => {
         plasticExporter.organisation,
         paperReprocessor.organisation
       ],
-      overseasSites: [approvedOverseasSite],
       submissions: [
         {
           ...paperReprocessor,

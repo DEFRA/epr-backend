@@ -1,5 +1,10 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -62,6 +67,27 @@ const organisation = buildOrganisation({
 })
 
 const { organisationNumber } = organisation
+
+/** The organisation as the read model serves it. */
+const servedOrganisation = buildReadOrganisation({
+  organisationNumber,
+  registrations: {
+    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      standingByDate: {
+        [YEAR]: {
+          '2026-02-01': { standing: 'registeredOnly' },
+          '2026-07-01': { standing: 'accredited' }
+        }
+      },
+      accreditations: {
+        [YEAR]: buildReadAccreditation({
+          accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+        })
+      }
+    })
+  }
+})
 const registeredOnlyLog = {
   registrationId: registeredOnlyRegistration.id,
   accreditationId: null,
@@ -131,8 +157,8 @@ describe('summary-log routes by natural key', () => {
       repositories: {
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([partialMock(organisation)]),
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          servedOrganisation
         ]),
         summaryLogsRepository: () => summaryLogsRepository,
         uploadsRepository

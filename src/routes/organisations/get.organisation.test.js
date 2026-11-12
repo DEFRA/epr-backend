@@ -1,14 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
 
-import {
-  accreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import {
-  buildLinkedDefraOrg,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { config } from '#root/config.js'
 import { asOperator, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -17,105 +15,59 @@ import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   body,
-  createAccreditedOrganisationBuilder,
+  buildAccreditedOrganisation,
   exporterResponse,
   reprocessorResponse,
   useViewServer
 } from './organisation-view-test-helpers.js'
 
-const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation } = organisationBuilders
-const buildAccreditedOrganisation =
-  createAccreditedOrganisationBuilder(organisationBuilders)
-
-const reinstatedThenCancelledOnNewYearsDay = () => {
-  const statusHistory = [
-    { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
-    { status: 'approved', updatedAt: '2025-02-01T09:00:00.000Z' },
-    { status: 'cancelled', updatedAt: '2026-01-01T09:00:00.000Z' },
-    { status: 'approved', updatedAt: '2026-01-01T12:00:00.000Z' },
-    { status: 'cancelled', updatedAt: '2026-01-01T15:00:00.000Z' }
-  ]
-  const accredited = accreditation({
-    validFrom: '2025-07-01',
-    validTo: '2025-12-31',
-    statusHistory
-  })
-  return buildOrganisation({
-    registrations: [
-      reprocessor({
-        accreditationId: accredited.id,
-        validFrom: '2025-02-01',
-        statusHistory
-      })
-    ],
-    accreditations: [accredited]
-  })
-}
-
-const approvedThenCancelled = () =>
-  buildOrganisation({
-    registrations: [
-      reprocessor({
-        validFrom: '2025-03-01',
-        statusHistory: [
-          { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
-          { status: 'approved', updatedAt: '2025-04-01T09:00:00.000Z' },
-          { status: 'cancelled', updatedAt: '2026-03-01T09:00:00.000Z' }
-        ]
-      })
-    ]
-  })
-
-const approvedThenCancelledTimeline = [
-  {
-    status: 'created',
-    at: '2025-01-01T09:00:00.000Z',
-    updatedAt: '2025-01-01T09:00:00.000Z'
-  },
-  {
-    status: 'approved',
-    at: '2025-03-01T00:00:00.000Z',
-    updatedAt: '2025-04-01T09:00:00.000Z'
-  },
-  {
-    status: 'cancelled',
-    at: '2026-03-01T09:00:00.000Z',
-    updatedAt: '2026-03-01T09:00:00.000Z'
-  }
-]
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 
 describe('GET /organisations/{organisationNumber}', () => {
   setupAuthContext()
 
-  const { server, serve, serveStored, get } = useViewServer()
+  const { server, serve, get } = useViewServer()
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
+  /** @param {Organisation} organisation */
+  const urlOf = (organisation) =>
+    `/organisations/${organisation.organisationNumber}`
+
   it('serves the organisation without the fields that are not served', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-01') })
-    const linked = buildLinkedDefraOrg('defra-org-1', 'Defra Org')
     const organisation = buildAccreditedOrganisation({
-      linkedDefraOrganisation: linked
+      companiesHouseNumber: 'AC012345',
+      registeredAddress: {
+        line1: 'Palace of Westminster',
+        town: 'London',
+        postcode: 'SW1A 0AA'
+      },
+      linkedDefraOrganisation: {
+        defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
+        linkedAt: '2026-03-01T09:00:00.000Z',
+        linkedBy: { email: 'linker@example.com', id: 'linker-id' }
+      },
+      users: [
+        { email: 'user@example.com', fullName: 'A User', roles: ['standard'] }
+      ]
     })
     await serve(organisation)
 
-    const response = await get(
-      `/organisations/${organisation.organisationNumber}`
-    )
+    const response = await get(urlOf(organisation))
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({
       organisationNumber: organisation.organisationNumber,
       name: 'ACME ltd',
       displayName: 'ACME ltd',
-      status: { current: 'created' },
+      status: { current: 'approved' },
       submittedToRegulator: { code: 'ea' },
       linkedDefraOrganisation: {
         defraOrganisation: { id: 'defra-org-1', name: 'Defra Org' },
-        linkedAt: linked.linkedAt,
+        linkedAt: '2026-03-01T09:00:00.000Z',
         linkedBy: { email: 'linker@example.com' }
       },
       registrations: {
@@ -125,179 +77,12 @@ describe('GET /organisations/{organisationNumber}', () => {
     })
   })
 
-  it('serves the whole status timelines of an accreditation and its registration', async () => {
-    const suspended = accreditation({
-      statusHistory: [
-        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
-        { status: 'suspended', updatedAt: '2026-05-01T09:00:00.000Z' }
-      ]
-    })
-    const organisation = buildOrganisation({
-      registrations: [reprocessor({ accreditationId: suspended.id })],
-      accreditations: [suspended]
-    })
-    await serve(organisation)
-
-    const response = await get(
-      `/organisations/${organisation.organisationNumber}`
-    )
-
-    const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2026].status.timeline).toEqual([
-      {
-        status: 'created',
-        at: '2026-01-01T09:00:00.000Z',
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: 'suspended',
-        at: '2026-05-01T09:00:00.000Z',
-        updatedAt: '2026-05-01T09:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-07-01T00:00:00.000Z',
-        updatedAt: '2026-02-01T09:00:00.000Z'
-      }
-    ])
-    expect(registration.status.timeline).toEqual([
-      {
-        status: 'created',
-        at: '2026-01-01T09:00:00.000Z',
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-02-01T00:00:00.000Z',
-        updatedAt: '2026-02-01T09:00:00.000Z'
-      }
-    ])
-  })
-
-  it('serves a registration approved and later cancelled with its whole status timeline', async () => {
-    const organisation = approvedThenCancelled()
-    await serve(organisation)
-
-    const response = await get(
-      `/organisations/${organisation.organisationNumber}`
-    )
-
-    const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.status.timeline).toEqual(approvedThenCancelledTimeline)
-  })
-
-  it('serves every one of several status changes on one day with its time', async () => {
-    const organisation = reinstatedThenCancelledOnNewYearsDay()
-    await serve(organisation)
-
-    const response = await get(
-      `/organisations/${organisation.organisationNumber}`
-    )
-
-    const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2025].status.timeline).toEqual([
-      {
-        status: 'created',
-        at: '2025-01-01T09:00:00.000Z',
-        updatedAt: '2025-01-01T09:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2025-07-01T00:00:00.000Z',
-        updatedAt: '2025-02-01T09:00:00.000Z'
-      },
-      {
-        status: 'cancelled',
-        at: '2026-01-01T09:00:00.000Z',
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-01-01T12:00:00.000Z',
-        updatedAt: '2026-01-01T12:00:00.000Z'
-      },
-      {
-        status: 'cancelled',
-        at: '2026-01-01T15:00:00.000Z',
-        updatedAt: '2026-01-01T15:00:00.000Z'
-      }
-    ])
-  })
-
-  it('serves each status change at its own time even when the history is stored out of order', async () => {
-    const reinstated = accreditation({
-      statusHistory: [
-        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
-        { status: 'cancelled', updatedAt: '2026-03-01T15:00:00.000Z' },
-        { status: 'suspended', updatedAt: '2026-03-01T12:00:00.000Z' }
-      ]
-    })
-    const organisation = buildOrganisation({
-      registrations: [reprocessor({ accreditationId: reinstated.id })],
-      accreditations: [reinstated]
-    })
-    await serve(organisation)
-
-    const response = await get(
-      `/organisations/${organisation.organisationNumber}`
-    )
-
-    const registration = body(response).registrations[REPROCESSOR_NUMBER]
-    expect(registration.accreditations[2026].status.timeline).toEqual([
-      {
-        status: 'created',
-        at: '2026-01-01T09:00:00.000Z',
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: 'suspended',
-        at: '2026-03-01T12:00:00.000Z',
-        updatedAt: '2026-03-01T12:00:00.000Z'
-      },
-      {
-        status: 'cancelled',
-        at: '2026-03-01T15:00:00.000Z',
-        updatedAt: '2026-03-01T15:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-07-01T00:00:00.000Z',
-        updatedAt: '2026-02-01T09:00:00.000Z'
-      }
-    ])
-  })
-
-  it('serves an organisation as the repository stores it', async () => {
-    const linked = buildLinkedDefraOrg(crypto.randomUUID(), 'Defra Org')
-    const organisation = buildOrganisation({
-      linkedDefraOrganisation: linked
-    })
-    await serveStored(organisation)
-
-    const response = await get(
-      `/organisations/${organisation.organisationNumber}`
-    )
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(body(response).linkedDefraOrganisation.linkedAt).toBe(
-      linked.linkedAt
-    )
-  })
-
   describe('display name', () => {
-    /** @param {{ name: string, tradingName?: string }} companyDetails */
-    const displayNameFor = async (companyDetails) => {
-      const base = buildOrganisation()
-      const organisation = {
-        ...base,
-        companyDetails: { ...base.companyDetails, ...companyDetails }
-      }
+    /** @param {{ name: string, tradingName?: string }} names */
+    const displayNameFor = async (names) => {
+      const organisation = buildReadOrganisation(names)
       await serve(organisation)
-      return body(
-        await get(`/organisations/${organisation.organisationNumber}`)
-      )
+      return body(await get(urlOf(organisation)))
     }
 
     it('is the trading name when the organisation has one', async () => {
@@ -314,10 +99,7 @@ describe('GET /organisations/{organisationNumber}', () => {
 
     it('is the company name when there is no trading name', async () => {
       expect(
-        await displayNameFor({
-          name: 'Kirkby Plastics Ltd',
-          tradingName: undefined
-        })
+        await displayNameFor({ name: 'Kirkby Plastics Ltd' })
       ).toMatchObject({ displayName: 'Kirkby Plastics Ltd' })
     })
 
@@ -339,7 +121,9 @@ describe('GET /organisations/{organisationNumber}', () => {
 
   it('returns 404 for an unknown organisation number', async () => {
     await serve(
-      buildOrganisation({ organisationNumber: toOrganisationNumber('500001') })
+      buildReadOrganisation({
+        organisationNumber: toOrganisationNumber('500001')
+      })
     )
 
     const response = await get('/organisations/500002')
@@ -348,7 +132,7 @@ describe('GET /organisations/{organisationNumber}', () => {
   })
 
   it('rejects an organisation number that is not a number', async () => {
-    await serve(buildOrganisation())
+    await serve(buildReadOrganisation())
 
     const response = await get('/organisations/not-a-number')
 
@@ -356,10 +140,11 @@ describe('GET /organisations/{organisationNumber}', () => {
   })
 
   it('rejects an organisation number with a leading zero', async () => {
-    const organisation = buildOrganisation({
-      organisationNumber: toOrganisationNumber('500001')
-    })
-    await serve(organisation)
+    await serve(
+      buildReadOrganisation({
+        organisationNumber: toOrganisationNumber('500001')
+      })
+    )
 
     const response = await get('/organisations/0500001')
 
@@ -370,10 +155,7 @@ describe('GET /organisations/{organisationNumber}', () => {
     const organisation = buildAccreditedOrganisation()
     const request = async () => {
       await serve(organisation)
-      return {
-        method: 'GET',
-        url: `/organisations/${organisation.organisationNumber}`
-      }
+      return { method: 'GET', url: urlOf(organisation) }
     }
 
     it('shows an operator their own organisation', async () => {
@@ -396,72 +178,44 @@ describe('GET /organisations/{organisationNumber}', () => {
   })
 
   describe('relevant year', () => {
+    const accreditedFor2026 = () =>
+      buildReadOrganisation({
+        registrations: {
+          [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+            accreditations: { 2026: buildReadAccreditation() }
+          })
+        }
+      })
+
     it.for([
       {
         description: 'open during the year',
-        validFrom: '2026-01-01',
         now: '2026-10-01T00:00:00.000Z',
         open: true
       },
       {
         description: 'open on the last instant of 31 January after it',
-        validFrom: '2026-01-01',
         now: '2027-01-31T23:59:59.999Z',
         open: true
       },
       {
         description: 'closed from 1 February after it',
-        validFrom: '2026-01-01',
-        now: '2027-02-01T00:00:00.000Z',
-        open: false
-      },
-      {
-        description: 'open to the same deadline when granted mid-year',
-        validFrom: '2026-05-01',
-        now: '2027-01-31T23:59:59.999Z',
-        open: true
-      },
-      {
-        description: 'closed at the same deadline when granted mid-year',
-        validFrom: '2026-05-01',
         now: '2027-02-01T00:00:00.000Z',
         open: false
       }
-    ])(
-      'should serve the accreditation as $description',
-      async ({ validFrom, now, open }) => {
-        vi.useFakeTimers({ toFake: ['Date'], now: new Date(now) })
-        const accredited = accreditation({ validFrom })
-        const organisation = buildOrganisation({
-          registrations: [reprocessor({ accreditationId: accredited.id })],
-          accreditations: [accredited]
-        })
-        await serve(organisation)
+    ])('serves the accreditation as $description', async ({ now, open }) => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date(now) })
+      const organisation = accreditedFor2026()
+      await serve(organisation)
 
-        const response = await get(
-          `/organisations/${organisation.organisationNumber}`
-        )
+      const response = await get(urlOf(organisation))
 
-        const registration = body(response).registrations[REPROCESSOR_NUMBER]
-        expect(registration.accreditations[2026].prns).toStrictEqual({ open })
-      }
-    )
+      const registration = body(response).registrations[REPROCESSOR_NUMBER]
+      expect(registration.accreditations[2026].prns).toStrictEqual({ open })
+    })
   })
 
-  describe('standingByDate', () => {
-    const approvedSince = (updatedAt) => [
-      { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
-      { status: 'approved', updatedAt }
-    ]
-
-    const standingOf = async (organisation, query = '') => {
-      await serve(organisation)
-      const response = await get(
-        `/organisations/${organisation.organisationNumber}${query}`
-      )
-      return body(response).registrations[REPROCESSOR_NUMBER].standingByDate
-    }
-
+  describe('with a year', () => {
     beforeEach(() => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
     })
@@ -470,333 +224,73 @@ describe('GET /organisations/{organisationNumber}', () => {
       config.reset('openNextYear')
     })
 
-    it('serves every year the registration was approved in', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          reprocessor({
-            validFrom: '2026-02-01',
-            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
-          })
-        ]
-      })
+    it('asks the repository for the organisation as it stood in that year', async () => {
+      const organisation = buildAccreditedOrganisation()
+      const repository = await serve(organisation)
 
-      expect(await standingOf(organisation)).toEqual({
-        2026: { '2026-02-01': { standing: 'registeredOnly' } },
-        2027: { '2027-01-01': { standing: 'registeredOnly' } }
-      })
-    })
+      const response = await get(`${urlOf(organisation)}?year=2026`)
 
-    it('serves next year while it is open', async () => {
-      config.set('openNextYear', true)
-      const organisation = buildOrganisation({
-        registrations: [
-          reprocessor({
-            validFrom: '2026-02-01',
-            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
-          })
-        ]
-      })
-
-      expect(await standingOf(organisation, '?year=2028')).toEqual({
-        2028: { '2028-01-01': { standing: 'registeredOnly' } }
-      })
-    })
-
-    it('serves only the year asked for', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          reprocessor({
-            validFrom: '2026-02-01',
-            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
-          })
-        ]
-      })
-
-      expect(await standingOf(organisation, '?year=2026')).toEqual({
-        2026: { '2026-02-01': { standing: 'registeredOnly' } }
-      })
-    })
-
-    const accreditedEarlyForNextYear = () => {
-      const accredited = accreditation({
-        validFrom: '2028-01-01',
-        validTo: '2028-12-31',
-        statusHistory: approvedSince('2027-02-01T09:00:00.000Z')
-      })
-      return buildOrganisation({
-        registrations: [
-          reprocessor({
-            accreditationId: accredited.id,
-            validFrom: '2027-01-10',
-            statusHistory: approvedSince('2027-01-10T09:00:00.000Z')
-          })
-        ],
-        accreditations: [accredited]
-      })
-    }
-
-    it('serves next year accredited from an accreditation approved early, while that year is open', async () => {
-      config.set('openNextYear', true)
-      expect(await standingOf(accreditedEarlyForNextYear())).toEqual({
-        2027: { '2027-01-10': { standing: 'registeredOnly' } },
-        2028: { '2028-01-01': { standing: 'accredited' } }
-      })
-    })
-
-    it('serves next year accredited from an accreditation approved early, while that year is open and request specifies that year', async () => {
-      config.set('openNextYear', true)
-
-      expect(
-        await standingOf(accreditedEarlyForNextYear(), '?year=2028')
-      ).toEqual({
-        2028: { '2028-01-01': { standing: 'accredited' } }
-      })
-    })
-
-    it('serves approved years only up to the current year when request does not specify years', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          reprocessor({
-            validFrom: '2026-02-01',
-            statusHistory: approvedSince('2026-02-01T09:00:00.000Z')
-          })
-        ]
-      })
-
-      expect(await standingOf(organisation)).toEqual({
-        2026: { '2026-02-01': { standing: 'registeredOnly' } },
-        2027: { '2027-01-01': { standing: 'registeredOnly' } }
-      })
-    })
-
-    it('leaves out next year when request specifies year, even when next year is open and accreditation approved early', async () => {
-      config.set('openNextYear', true)
-
-      expect(
-        await standingOf(accreditedEarlyForNextYear(), '?year=2027')
-      ).toEqual({
-        2027: { '2027-01-10': { standing: 'registeredOnly' } }
-      })
-    })
-
-    const servedYearsOf = async (organisation) => {
-      await serve(organisation)
-      const response = await get(
-        `/organisations/${organisation.organisationNumber}`
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(repository.findByOrganisationNumber).toHaveBeenCalledWith(
+        organisation.organisationNumber,
+        { year: toYear(2026) }
       )
-      const registration = body(response).registrations[REPROCESSOR_NUMBER]
-      return {
-        accreditations: Object.keys(registration.accreditations),
-        standingByDate: Object.keys(registration.standingByDate)
-      }
-    }
-
-    it("serves next year's accreditation alongside its status dates while that year is open", async () => {
-      config.set('openNextYear', true)
-
-      expect(await servedYearsOf(accreditedEarlyForNextYear())).toEqual({
-        accreditations: ['2028'],
-        standingByDate: ['2027', '2028']
-      })
     })
 
-    it("leaves out next year's accreditation along with its status dates while that year is closed", async () => {
-      expect(await servedYearsOf(accreditedEarlyForNextYear())).toEqual({
-        accreditations: [],
-        standingByDate: ['2027']
-      })
+    it('asks the repository for every year when no year is given', async () => {
+      const organisation = buildAccreditedOrganisation()
+      const repository = await serve(organisation)
+
+      await get(urlOf(organisation))
+
+      expect(repository.findByOrganisationNumber).toHaveBeenCalledWith(
+        organisation.organisationNumber,
+        { year: undefined }
+      )
     })
 
-    it('serves a registration cancelled part way through a year', async () => {
-      expect(await standingOf(approvedThenCancelled())).toEqual({
-        2025: { '2025-03-01': { standing: 'registeredOnly' } },
-        2026: {
-          '2026-01-01': { standing: 'registeredOnly' },
-          '2026-03-01': { standing: 'cancelled' }
-        }
-      })
-    })
-  })
-
-  describe('with a year', () => {
-    const urlFor = (organisation, year) =>
-      `/organisations/${organisation.organisationNumber}?year=${year}`
-
-    /** @param {typeof reprocessorResponse | typeof exporterResponse} registration */
-    const closed = (registration) => ({
-      ...registration,
-      accreditations: {
-        2026: { ...registration.accreditations[2026], prns: { open: false } }
-      }
-    })
-
-    beforeEach(() => {
-      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
-    })
-
-    it('serves the registrations approved in the year with that year’s accreditations', async () => {
+    it('serves the organisation the repository gives for the year, with its PRNs closed once the year has closed', async () => {
       const organisation = buildAccreditedOrganisation()
       await serve(organisation)
 
-      const response = await get(urlFor(organisation, 2026))
+      const response = await get(`${urlOf(organisation)}?year=2026`)
 
+      const closed = (registration) => ({
+        ...registration,
+        accreditations: {
+          2026: { ...registration.accreditations[2026], prns: { open: false } }
+        }
+      })
       expect(body(response).registrations).toEqual({
         [REPROCESSOR_NUMBER]: closed(reprocessorResponse),
         [EXPORTER_NUMBER]: closed(exporterResponse)
       })
     })
 
-    it('serves the status and accreditation as they stood in the year', async () => {
-      const accredited = accreditation({
-        validFrom: '2025-07-01',
-        validTo: '2025-12-31',
-        statusHistory: [
-          { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
-          { status: 'approved', updatedAt: '2025-02-01T09:00:00.000Z' }
-        ]
-      })
-      const organisation = buildOrganisation({
-        registrations: [
-          reprocessor({
-            accreditationId: accredited.id,
-            validFrom: '2025-02-01',
-            statusHistory: [
-              { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
-              { status: 'approved', updatedAt: '2025-02-01T09:00:00.000Z' },
-              { status: 'cancelled', updatedAt: '2026-03-01T09:00:00.000Z' }
-            ]
-          })
-        ],
-        accreditations: [accredited]
-      })
+    it('accepts next year while it is open', async () => {
+      config.set('openNextYear', true)
+      const organisation = buildAccreditedOrganisation()
       await serve(organisation)
 
-      const summaries = []
-      for (const year of [2025, 2026, 2027]) {
-        const response = await get(urlFor(organisation, year))
-        const registration = body(response).registrations[REPROCESSOR_NUMBER]
-        summaries.push(
-          registration && [
-            registration.status.current,
-            Object.keys(registration.accreditations)
-          ]
-        )
-      }
+      const response = await get(`${urlOf(organisation)}?year=2028`)
 
-      expect(summaries).toEqual([
-        ['approved', ['2025']],
-        ['cancelled', []],
-        undefined
-      ])
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
-    it('serves a registration recorded after its validFrom as approved in that year', async () => {
-      const recordedLate = [
-        { status: 'created', updatedAt: '2026-10-14T14:30:47.171Z' },
-        { status: 'approved', updatedAt: '2026-10-14T14:30:47.204Z' }
-      ]
-      const accredited = accreditation({
-        validFrom: '2026-01-01',
-        statusHistory: recordedLate
-      })
-      const organisation = buildOrganisation({
-        registrations: [
-          reprocessor({
-            accreditationId: accredited.id,
-            validFrom: '2026-01-01',
-            statusHistory: recordedLate
-          })
-        ],
-        accreditations: [accredited]
-      })
+    it('rejects next year while it is closed', async () => {
+      const organisation = buildAccreditedOrganisation()
       await serve(organisation)
 
-      const response = await get(urlFor(organisation, 2026))
+      const response = await get(`${urlOf(organisation)}?year=2028`)
 
-      const registration = body(response).registrations[REPROCESSOR_NUMBER]
-      expect(registration.status.current).toBe('approved')
-      expect(registration.accreditations[2026].status.timeline).toEqual([
-        {
-          status: 'created',
-          at: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-10-14T14:30:47.171Z'
-        },
-        {
-          status: 'approved',
-          at: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-10-14T14:30:47.204Z'
-        }
-      ])
-    })
-
-    it('serves a registration’s whole status timeline in a year it was cancelled', async () => {
-      const organisation = approvedThenCancelled()
-      await serve(organisation)
-
-      const response = await get(urlFor(organisation, 2026))
-
-      const registration = body(response).registrations[REPROCESSOR_NUMBER]
-      expect(registration.status.current).toBe('cancelled')
-      expect(registration.status.timeline).toEqual(
-        approvedThenCancelledTimeline
-      )
-    })
-
-    it('classifies a year by the last of several status changes on one day', async () => {
-      const organisation = reinstatedThenCancelledOnNewYearsDay()
-      await serve(organisation)
-
-      const in2025 = body(await get(urlFor(organisation, 2025)))
-      const in2026 = body(await get(urlFor(organisation, 2026)))
-      expect(in2025.registrations[REPROCESSOR_NUMBER].status.current).toBe(
-        'approved'
-      )
-      expect(in2026.registrations).toEqual({})
-    })
-
-    describe('for next year', () => {
-      const withNextYearAccreditation = () => {
-        const accredited = accreditation({
-          validFrom: '2028-01-01',
-          validTo: '2028-12-31'
-        })
-        return buildOrganisation({
-          registrations: [reprocessor({ accreditationId: accredited.id })],
-          accreditations: [accredited]
-        })
-      }
-
-      afterEach(() => {
-        config.reset('openNextYear')
-      })
-
-      it('serves its registrations and accreditations while it is open', async () => {
-        config.set('openNextYear', true)
-        const organisation = withNextYearAccreditation()
-        await serve(organisation)
-
-        const response = await get(urlFor(organisation, 2028))
-
-        const registration = body(response).registrations[REPROCESSOR_NUMBER]
-        expect(Object.keys(registration.accreditations)).toEqual(['2028'])
-        expect(registration.status.current).toBe('approved')
-      })
-
-      it('rejects the year while it is closed', async () => {
-        const organisation = withNextYearAccreditation()
-        await serve(organisation)
-
-        const response = await get(urlFor(organisation, 2028))
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
     it('rejects a year outside the supported range', async () => {
       const organisation = buildAccreditedOrganisation()
       await serve(organisation)
 
-      const response = await get(urlFor(organisation, 1999))
+      const response = await get(`${urlOf(organisation)}?year=1999`)
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })

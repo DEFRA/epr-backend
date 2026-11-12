@@ -1,48 +1,29 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { overseasSites } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asRegulator, asSupport } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import {
   body,
-  createAccreditedOrganisationBuilder
+  buildAccreditedOrganisation
 } from './organisation-view-test-helpers.js'
-
-const organisationBuilders = createOrganisationBuilders()
-const buildAccreditedOrganisation =
-  createAccreditedOrganisationBuilder(organisationBuilders)
 
 describe('GET /organisations', () => {
   setupAuthContext()
 
-  const acme = buildAccreditedOrganisation({
-    companyDetails: { name: 'Acme Recycling' }
-  })
-  const beta = buildAccreditedOrganisation({
-    companyDetails: { name: 'Beta Recycling' }
-  })
+  const acme = buildAccreditedOrganisation({ name: 'Acme Recycling' })
+  const beta = buildAccreditedOrganisation({ name: 'Beta Recycling' })
 
   let server
 
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository(
-            [acme, beta].map((organisation) => partialMock(organisation))
-          ),
-        overseasSitesRepository:
-          createInMemoryOverseasSitesRepository(overseasSites),
-        organisationReadRepository: await organisationReadRepositoryOf(
-          [acme, beta],
-          { overseasSites }
-        )
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          acme,
+          beta
+        ])
       }
     })
   })
@@ -72,12 +53,6 @@ describe('GET /organisations', () => {
     })
   })
 
-  it('serves no database id', async () => {
-    const response = await get('/organisations?search=acme')
-
-    expect(JSON.stringify(body(response))).not.toContain(acme.id)
-  })
-
   it('finds an organisation by its number', async () => {
     const response = await get(
       `/organisations?organisationNumber=${beta.organisationNumber}`
@@ -102,8 +77,10 @@ describe('GET /organisations', () => {
     ])
   })
 
-  it('finds nothing for an organisation number that is not one, such as a database id', async () => {
-    const response = await get(`/organisations?organisationNumber=${acme.id}`)
+  it('finds nothing for an organisation number that is not one', async () => {
+    const response = await get(
+      `/organisations?organisationNumber=0123456789abcdef01234567`
+    )
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(body(response)).toEqual({

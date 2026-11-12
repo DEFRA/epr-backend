@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
@@ -12,12 +11,14 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { RegistrationApproved } from '#domain/organisations/registration.js' */
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadExporterRegistration,
+  buildReadOrganisation
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
@@ -28,58 +29,24 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
-const { buildReadOrganisation } = createOrganisationBuilders()
-
 const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 
 /**
- * Vary a complete approved registration, so a fixture stays one however few of
- * its fields a test cares about and the read model serves it. The exporter arm
- * of the contract sample carries no accreditation link, so a fixture built on
- * it inherits no identifier pointing at an accreditation this organisation does
- * not hold.
+ * An organisation the read model serves with one approved, registered-only
+ * exporter for plastic.
  *
- * @param {Partial<RegistrationApproved>} [overrides]
- * @returns {RegistrationApproved}
- */
-const buildRegistration = (overrides = {}) => {
-  const [, exporterRegistration] = buildReadOrganisation().registrations
-  return {
-    ...exporterRegistration,
-    id: 'reg-1',
-    registrationNumber: toRegistrationNumber(`REG-${overrides.id ?? 'reg-1'}`),
-    material: 'plastic',
-    submittedToRegulator: 'ea',
-    accreditation: null,
-    overseasSites: {},
-    status: REGISTRATION_STATUS.APPROVED,
-    statusHistory: [
-      {
-        status: REGISTRATION_STATUS.CREATED,
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: REGISTRATION_STATUS.APPROVED,
-        updatedAt: '2026-02-01T09:00:00.000Z'
-      }
-    ],
-    validFrom: '2026-02-01',
-    ...overrides
-  }
-}
-
-/**
- * @param {Partial<Organisation>} [overrides]
+ * @param {string} [registrationNumber]
  * @returns {Organisation}
  */
-const buildOrganisation = (overrides = {}) =>
+const organisationWith = (registrationNumber = 'REG-reg-1') =>
   buildReadOrganisation({
-    id: 'org-1',
     organisationNumber: ORGANISATION_NUMBER,
-    companyDetails: { name: 'Acme Ltd' },
-    submittedToRegulator: 'ea',
-    registrations: [],
-    ...overrides
+    name: 'Acme Ltd',
+    registrations: {
+      [registrationNumber]: buildReadExporterRegistration({
+        material: 'plastic'
+      })
+    }
   })
 
 /**
@@ -175,7 +142,7 @@ const createServerWithRepos = async ({
     repositories: {
       organisationAdministrationRepository: () => ({ findAll: readsLegacy }),
       organisationReadRepository:
-        await organisationReadRepositoryOf(organisations),
+        createInMemoryOrganisationReadRepository(organisations),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => ledgerRepository,
       summaryLogsRepository: () => summaryLogsRepository
@@ -222,13 +189,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
     })
 
     it('streams a header row plus one data row for a single waste record', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          buildRegistration({
-            registrationNumber: toRegistrationNumber('R26ER5000000002PA')
-          })
-        ]
-      })
+      const organisation = organisationWith('R26ER5000000002PA')
       const server = await createServerWithRepos({
         organisations: [organisation],
         seeds: [
@@ -295,9 +256,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
   describe('streaming response shape', () => {
     it('returns a body composed of multiple CSV-encoded lines from the underlying stream', async () => {
-      const organisation = buildOrganisation({
-        registrations: [buildRegistration()]
-      })
+      const organisation = organisationWith()
       const server = await createServerWithRepos({
         organisations: [organisation],
         seeds: [{ rows: [receivedRowState()] }]

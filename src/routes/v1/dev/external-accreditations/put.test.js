@@ -4,18 +4,18 @@ import { describe, expect, it } from 'vitest'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
-  exporter,
-  reprocessor
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 const {
   registrationNumber,
@@ -44,8 +44,13 @@ const serverWith = async (featureFlags) => {
     config: { featureFlags },
     repositories: {
       externalAccreditationsRepository,
-      organisationReadRepository: await organisationReadRepositoryOf([
-        buildOrganisation({ registrations: [reprocessor(), exporter()] })
+      organisationReadRepository: createInMemoryOrganisationReadRepository([
+        buildReadOrganisation({
+          registrations: {
+            [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration(),
+            [EXPORTER_NUMBER]: buildReadExporterRegistration()
+          }
+        })
       ])
     }
   })

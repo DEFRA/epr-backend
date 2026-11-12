@@ -26,6 +26,26 @@ describe('test-data', () => {
 
       expect(org.accreditations.map(({ id }) => id)).not.toContain('acc-1')
     })
+
+    it('should link a matching accreditation with the given status', () => {
+      const registration = buildRegistration({ accreditationId: 'acc-1' })
+
+      const org = buildOrganisationWithRegistration(
+        partialMock(registration),
+        'approved'
+      )
+
+      expect(org.accreditations).toEqual([
+        expect.objectContaining({
+          id: 'acc-1',
+          wasteProcessingType: registration.wasteProcessingType,
+          statusHistory: [
+            expect.objectContaining({ status: 'created' }),
+            expect.objectContaining({ status: 'approved' })
+          ]
+        })
+      ])
+    })
   })
 
   describe('createOrganisationBuilders', () => {
