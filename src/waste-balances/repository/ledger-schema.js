@@ -1,6 +1,8 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Joi from 'joi'
 
+import { yearSchema } from '#common/validation/year-schema.js'
+
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 
@@ -129,9 +131,10 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 /**
  * A waste balance ledger is keyed by the numbers of the registration or
  * accreditation whose balance it records. A registered-only ledger's
- * accreditation number is `null`.
+ * accreditation number is `null`. The year is the one each event written to
+ * the ledger records.
  *
- * @typedef {RequiredNumbers} WasteBalanceLedgerId
+ * @typedef {RequiredNumbers & { year: Year }} WasteBalanceLedgerId
  */
 
 /**
@@ -162,9 +165,10 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
- * written.
+ * written. An event written before ledger events recorded their year has
+ * none.
  *
- * @typedef {LedgerEventFields} LedgerEvent
+ * @typedef {Omit<LedgerEventFields, 'year'> & { year?: Year }} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({
@@ -196,10 +200,11 @@ const prnAcceptedPayloadSchema = prnPayloadSchema.keys({
   obligationYear: Joi.number().integer()
 })
 
-const numbersKeys = {
+const ledgerIdKeys = {
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.string().allow(null).required()
+  accreditationNumber: Joi.string().allow(null).required(),
+  year: yearSchema().required()
 }
 
 const ledgerEventBaseSchema = Joi.object({
@@ -239,6 +244,9 @@ const ledgerEventBaseSchema = Joi.object({
   return value
 })
 
-export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys(numbersKeys)
+export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys(ledgerIdKeys)
 
-export const ledgerEventReadSchema = ledgerEventBaseSchema.keys(numbersKeys)
+export const ledgerEventReadSchema = ledgerEventBaseSchema.keys({
+  ...ledgerIdKeys,
+  year: yearSchema()
+})

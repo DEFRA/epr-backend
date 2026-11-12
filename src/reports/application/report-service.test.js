@@ -111,16 +111,21 @@ const buildReceivedEntry = (overrides = {}) =>
  */
 
 /**
- * The stream a report reads: the report key's numbers and the registration's
- * current accreditation.
+ * The stream a report reads: the report key's numbers, the registration's
+ * current accreditation and the report's year.
  *
- * @param {ReportStream} params
+ * @param {ReportStream & { year: Year }} params
  */
-const reportLedger = ({ key, reportRegistration: { accreditation } }) => ({
+const reportLedger = ({
+  key,
+  reportRegistration: { accreditation },
+  year
+}) => ({
   ...LEDGER_IDS,
   accreditationId: accreditation === null ? null : LEDGER_IDS.accreditationId,
   ...key,
-  accreditationNumber: accreditation?.accreditationNumber ?? null
+  accreditationNumber: accreditation?.accreditationNumber ?? null,
+  year
 })
 
 /**
@@ -136,7 +141,6 @@ const seedState = async (params, entries) => {
   if (entries.length > 0) {
     await submitSummaryLog(stores, reportLedger(params), {
       fileId: SUMMARY_LOG_ID,
-      year: params.year,
       submittedAt: SUBMITTED_AT,
       entries
     })
@@ -211,11 +215,9 @@ describe('report-service', () => {
         requiredPeriods: generateAllPeriodsForYear('quarterly', toYear(year))
       })
       const stores = emptySummaryLogStores()
-      const ledgerId = reportLedger(paramsFor(2025, 4))
 
-      await submitSummaryLog(stores, ledgerId, {
+      await submitSummaryLog(stores, reportLedger(paramsFor(2025, 4)), {
         fileId: 'sl-2025',
-        year: toYear(2025),
         submittedAt: '2026-01-05T00:00:00.000Z',
         entries: [
           buildReceivedEntry({
@@ -224,9 +226,8 @@ describe('report-service', () => {
           })
         ]
       })
-      await submitSummaryLog(stores, ledgerId, {
+      await submitSummaryLog(stores, reportLedger(paramsFor(2026, 1)), {
         fileId: 'sl-2026',
-        year: toYear(2026),
         submittedAt: '2026-02-05T00:00:00.000Z',
         entries: [
           buildReceivedEntry({
@@ -278,13 +279,11 @@ describe('report-service', () => {
       const ledgerId = reportLedger(params)
       const first = {
         fileId: 'sl-1',
-        year: params.year,
         submittedAt: SUBMITTED_AT,
         entries: [buildReceivedEntry({ SUPPLIER_NAME: 'First Supplier' })]
       }
       const second = {
         fileId: 'sl-2',
-        year: params.year,
         submittedAt: '2024-02-15T00:00:00.000Z',
         entries: [buildReceivedEntry({ SUPPLIER_NAME: 'Second Supplier' })]
       }

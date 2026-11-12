@@ -97,11 +97,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrationId: registration.id,
       accreditationId: accreditationRecord?.id ?? null,
       ...reportKeyOf(org, registration),
-      accreditationNumber: accreditationRecord?.accreditationNumber ?? null
+      accreditationNumber: accreditationRecord?.accreditationNumber ?? null,
+      year: YEAR
     }
     await submitSummaryLog(stores, ledgerId, {
       fileId: SUMMARY_LOG_ID,
-      year: YEAR,
       submittedAt: SUBMITTED_AT,
       entries: rows
     })

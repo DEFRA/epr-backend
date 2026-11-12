@@ -336,13 +336,11 @@ async function readSubmissionRowStates({
   const ledgerId = {
     organisationNumber,
     registrationNumber,
-    accreditationNumber: accreditation?.accreditationNumber ?? null
+    accreditationNumber: accreditation?.accreditationNumber ?? null,
+    year
   }
 
-  const found = await summaryLogsRepository.findLatestSubmitted({
-    ...ledgerId,
-    year
-  })
+  const found = await summaryLogsRepository.findLatestSubmitted(ledgerId)
   const latestSubmission = found === null ? null : found.summaryLog
   const wasteRecordStates = await wasteRecordStatesForHead(
     summaryLogRowStatesRepository,

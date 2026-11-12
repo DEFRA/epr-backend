@@ -1,4 +1,7 @@
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  PRN_YEAR,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -32,7 +35,8 @@ const { getProjectedPrnByNumber, getProjectedPrnById } =
 const LEDGER = {
   organisationNumber: toOrganisationNumber('500123'),
   registrationNumber: toRegistrationNumber('R26ER5001230456PA'),
-  accreditationNumber: toAccreditationNumber('A26ER5001230456PA')
+  accreditationNumber: toAccreditationNumber('A26ER5001230456PA'),
+  year: PRN_YEAR
 }
 const PRN_ID = '507f1f77bcf86cd799439011'
 const PRN_NUMBER = 'ER2600001'

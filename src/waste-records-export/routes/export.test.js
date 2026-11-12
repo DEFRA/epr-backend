@@ -20,6 +20,7 @@ import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-mo
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -133,7 +134,8 @@ const createServerWithRepos = async ({
     registrationNumber: toRegistrationNumber(
       seed.registrationNumber ?? 'REG-reg-1'
     ),
-    accreditationNumber: null
+    accreditationNumber: null,
+    year: DEFAULT_YEAR
   })
 
   const ledgerRepository = createInMemoryLedgerRepository(

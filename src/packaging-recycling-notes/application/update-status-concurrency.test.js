@@ -19,6 +19,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import {
+  PRN_YEAR,
   buildAccreditationSnapshot,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
@@ -62,7 +63,8 @@ const SECOND_PRN_ID = '507f1f77bcf86cd799439012'
 const LEDGER = {
   organisationNumber: toOrganisationNumber('500123'),
   registrationNumber: toRegistrationNumber('R26ER5001230456PA'),
-  accreditationNumber: toAccreditationNumber('A26ER5001230456PA')
+  accreditationNumber: toAccreditationNumber('A26ER5001230456PA'),
+  year: PRN_YEAR
 }
 const TONNAGE = 50
 const RINGFENCED_AVAILABLE = 950
@@ -178,7 +180,7 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
     ledgerRepository: {
       ...ledgerRepository,
       findLatestInLedger: async (
-        /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */ ledgerId
+        /** @type {import('#domain/organisations/numbers.js').RequiredNumbers} */ ledgerId
       ) => {
         status = ACCREDITATION_STATUS.SUSPENDED
         return ledgerRepository.findLatestInLedger(ledgerId)

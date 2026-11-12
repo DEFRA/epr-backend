@@ -38,10 +38,9 @@ const SUBMITTED_AT = '2026-03-31T09:00:00.000Z'
 const YEAR = toYear(2026)
 
 /**
- * Seeds the summary-log row states and the waste balance ledger so the report
- * routes resolve `wasteRecords` (each `{ type, data }`) as the state at the
- * latest submitted summary log. No records leaves the ledger without a
- * submission, so the report has no source.
+ * Submits a summary log for the report year whose rows are `wasteRecords`
+ * (each `{ type, data }`). No records leaves the year without a submission,
+ * so the report has no source.
  *
  * @param {{ id: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} org
  * @param {Record<string, any>} registration
@@ -59,13 +58,13 @@ const seedRepositories = async (
     registrationId: registration.id,
     accreditationId: accredited?.id ?? null,
     ...reportKeyOf(org, registration),
-    accreditationNumber: accredited?.accreditationNumber ?? null
+    accreditationNumber: accredited?.accreditationNumber ?? null,
+    year: YEAR
   }
   const stores = emptySummaryLogStores()
   if (wasteRecords.length > 0) {
     await submitSummaryLog(stores, ledgerId, {
       fileId: SUMMARY_LOG_ID,
-      year: YEAR,
       submittedAt: SUBMITTED_AT,
       entries: wasteRecords.map((record, index) =>
         buildSummaryLogRowStateEntry({

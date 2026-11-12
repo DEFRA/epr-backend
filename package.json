@@ -17,6 +17,7 @@
     "#feature-flags/*": "./src/feature-flags/*",
     "#formsubmission/*": "./src/forms-submission-data/*",
     "#glass-migration/*": "./src/glass-migration/*",
+    "#ledger-year-backfill/*": "./src/ledger-year-backfill/*",
     "#market-insights/*": "./src/market-insights/*",
     "#non-prod-data-reset/*": "./src/non-prod-data-reset/*",
     "#organisation-read-model/*": "./src/organisation-read-model/*",

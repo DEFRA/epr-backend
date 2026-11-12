@@ -7,6 +7,8 @@ import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 
 /**
  * @import {TypedLogger} from '#common/hapi-types.js'
@@ -49,7 +51,7 @@ const makeAccreditation = ({
   reprocessingType = REPROCESSING_TYPE.INPUT,
   accreditationNumber = `ACC-${orgId}`,
   status = 'approved',
-  year = 2026,
+  year = DEFAULT_YEAR,
   approvedOn = APPROVED_ON,
   overseasSites = {}
 }) => {
@@ -83,7 +85,8 @@ const makeAccreditation = ({
       ledgerId: {
         organisationNumber: String(orgId),
         registrationNumber,
-        accreditationNumber
+        accreditationNumber,
+        year: toYear(year)
       },
       summaryLogId: `log-${orgId}`
     }
@@ -342,7 +345,8 @@ describe('buildCreditedTonnageReport', () => {
           ledgerId: {
             organisationNumber: '500008',
             registrationNumber: 'REG-500008',
-            accreditationNumber: 'ACC-DANGLING'
+            accreditationNumber: 'ACC-DANGLING',
+            year: DEFAULT_YEAR
           },
           summaryLogId: 'log-dangling'
         }
@@ -501,7 +505,7 @@ describe('buildCreditedTonnageReport', () => {
 
   it('keeps each accreditation contiguous when two share an organisation, material and type', async () => {
     const accreditation = (accreditationNumber) => ({
-      2026: {
+      [DEFAULT_YEAR]: {
         accreditationNumber,
         status: {
           current: 'approved',
@@ -532,7 +536,8 @@ describe('buildCreditedTonnageReport', () => {
           ledgerId: {
             organisationNumber: '500005',
             registrationNumber: 'REG-A',
-            accreditationNumber: 'ACC-A'
+            accreditationNumber: 'ACC-A',
+            year: DEFAULT_YEAR
           },
           summaryLogId: 'log-a'
         },
@@ -540,7 +545,8 @@ describe('buildCreditedTonnageReport', () => {
           ledgerId: {
             organisationNumber: '500005',
             registrationNumber: 'REG-B',
-            accreditationNumber: 'ACC-B'
+            accreditationNumber: 'ACC-B',
+            year: DEFAULT_YEAR
           },
           summaryLogId: 'log-b'
         }
@@ -752,7 +758,8 @@ describe('buildCreditedTonnageReport', () => {
       ledgerId: {
         organisationNumber: '500001',
         registrationNumber: 'REG-500001',
-        accreditationNumber: null
+        accreditationNumber: null,
+        year: DEFAULT_YEAR
       },
       summaryLogId: 'log-registered-only'
     }

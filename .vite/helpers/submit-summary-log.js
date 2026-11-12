@@ -5,7 +5,6 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
- * @import { Year } from '#common/helpers/dates/year.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
@@ -30,7 +29,6 @@ import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 /**
  * @typedef {{
  *   fileId: string,
- *   year: Year,
  *   submittedAt: string,
  *   entries: SummaryLogRowStateEntry[]
  * }} Submission
@@ -44,8 +42,8 @@ export const emptySummaryLogStores = () => ({
 })
 
 /**
- * Submits a summary log for `year`: its row states on the ledger, and the
- * submitted summary log a report resolves as the head for that year.
+ * Submits a summary log for the ledger's year: its row states on the ledger,
+ * and the submitted summary log a report resolves as the head for that year.
  *
  * @param {SummaryLogStores} stores
  * @param {SummaryLogLedger} ledgerId
@@ -54,7 +52,7 @@ export const emptySummaryLogStores = () => ({
 export const submitSummaryLog = async (
   { summaryLogsRepository, summaryLogRowStatesRepository },
   ledgerId,
-  { fileId, year, submittedAt, entries }
+  { fileId, submittedAt, entries }
 ) => {
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     ledgerId,
@@ -65,7 +63,6 @@ export const submitSummaryLog = async (
     toSummaryLogId(`log-${fileId}`),
     summaryLogFactory.submitted({
       ...ledgerId,
-      year,
       file: { id: toSummaryLogFileId(fileId) },
       submittedAt
     })

@@ -346,7 +346,8 @@ export const createPrn =
         ledgerId: {
           organisationNumber: params.organisationNumber,
           registrationNumber: params.registrationNumber,
-          accreditationNumber: accreditation.accreditationNumber
+          accreditationNumber: accreditation.accreditationNumber,
+          year: accreditation.accreditationYear
         },
         payload,
         now

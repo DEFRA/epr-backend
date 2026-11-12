@@ -1,5 +1,6 @@
 import {
   TEST_ORGANISATION_NUMBER,
+  PRN_YEAR,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
@@ -57,7 +58,8 @@ const { organisationNumber } = buildOrganisation()
 const LEDGER = {
   organisationNumber,
   registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+  year: PRN_YEAR
 }
 const prns = `/organisations/${organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
 
