@@ -3,8 +3,10 @@ import {
   toAccreditationNumber,
   toOrganisationNumber
 } from '#domain/organisations/numbers.js'
+import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
-/** @import { Organisation, ReprocessorAccreditation, ReprocessorRegistration, ExporterRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
@@ -14,29 +16,34 @@ import {
  */
 
 let organisationSequence = 600000
+let accreditationSequence = 9000000000
 
 /** @returns {Organisation['organisationNumber']} */
 export const nextReadOrganisationNumber = () =>
   toOrganisationNumber(String(organisationSequence++))
 
 /**
- * A created then approved timeline, approved at `approvedAt`.
+ * A number no other default accreditation holds.
+ *
+ * @returns {ReprocessorAccreditation['accreditationNumber']}
+ */
+export const nextReadAccreditationNumber = () =>
+  toAccreditationNumber(`A26ER${accreditationSequence++}PL`)
+
+/**
+ * A created then approved timeline, both recorded and taking effect at the
+ * start of `approvedAt`, so it is oldest first for any date.
  *
  * @param {string} approvedAt - a calendar date, such as '2026-02-01'
  * @returns {StatusTimeline}
  */
-export const approvedTimelineFrom = (approvedAt) => [
-  {
-    status: 'created',
-    at: '2026-01-01T09:00:00.000Z',
-    updatedAt: '2026-01-01T09:00:00.000Z'
-  },
-  {
-    status: 'approved',
-    at: new Date(approvedAt).toISOString(),
-    updatedAt: '2026-02-01T09:00:00.000Z'
-  }
-]
+export const approvedTimelineFrom = (approvedAt) => {
+  const at = new Date(approvedAt).toISOString()
+  return [
+    { status: 'created', at, updatedAt: at },
+    { status: 'approved', at, updatedAt: at }
+  ]
+}
 
 const contact = {
   email: 'luke.skywalker@starwars.com',
@@ -49,57 +56,103 @@ const contact = {
  * @returns {ReprocessorAccreditation}
  */
 export const buildReadAccreditation = (overrides = {}) => ({
-  accreditationNumber: toAccreditationNumber('A26ER5001180114PL'),
+  accreditationNumber: nextReadAccreditationNumber(),
   prnIssuance: { tonnageBand: 'over_10000' },
   status: { current: 'approved', timeline: approvedTimelineFrom('2026-07-01') },
   ...overrides
 })
 
 /**
- * @param {Partial<ReprocessorRegistration>} [overrides]
- * @returns {ReprocessorRegistration}
+ * @param {Partial<ExporterAccreditation>} [overrides]
+ * @returns {ExporterAccreditation}
  */
-export const buildReadReprocessorRegistration = (overrides = {}) => ({
-  applicationContactDetails: contact,
-  approvedPersons: [contact],
-  material: 'glass_re_melt',
-  standingByDate: { 2026: { '2026-02-01': { standing: 'registeredOnly' } } },
-  status: { current: 'approved', timeline: approvedTimelineFrom('2026-02-01') },
-  submittedToRegulator: { code: 'ea' },
-  submitterContactDetails: contact,
-  validFrom: '2026-02-01',
-  accreditations: {},
-  reprocessingType: 'input',
-  site: {
-    address: {
-      line1: '7 Glass processing site',
-      town: 'London',
-      postcode: 'SW2A 0AA'
-    }
-  },
-  wasteProcessingType: 'reprocessor',
+export const buildReadExporterAccreditation = (overrides = {}) => ({
+  ...buildReadAccreditation(),
+  overseasSites: {},
   ...overrides
 })
 
 /**
+ * The registration with `standingByDate` as the read model works it out from
+ * the registration's and its accreditations' timelines, for every year up to
+ * the last one they name, unless the registration already gives one. So an
+ * accredited registration is accredited from its accreditation's approval, as
+ * the mapper would make it.
+ *
+ * @template {Omit<RegistrationCommon, 'standingByDate'> & Partial<Pick<RegistrationCommon, 'standingByDate'>> & { accreditations: Record<string, { status: { timeline: StatusTimeline } }> }} R
+ * @param {R} registration
+ * @returns {R & Pick<RegistrationCommon, 'standingByDate'>}
+ */
+const withStanding = (registration) => {
+  if (registration.standingByDate) {
+    return /** @type {any} */ (registration)
+  }
+  const lastYear = Math.max(
+    ...[
+      ...Object.keys(registration.accreditations),
+      ...registration.status.timeline.map(({ at }) => at)
+    ].map(utcYearOf)
+  )
+  return {
+    ...registration,
+    standingByDate: standingByYear(
+      /** @type {any} */ (registration),
+      lastDayOfYear(utcYearOf(`${lastYear}-12-31`))
+    )
+  }
+}
+
+const commonRegistrationDefaults = () => ({
+  applicationContactDetails: contact,
+  approvedPersons: [contact],
+  status: {
+    current: /** @type {const} */ ('approved'),
+    timeline: approvedTimelineFrom('2026-02-01')
+  },
+  submittedToRegulator: { code: /** @type {const} */ ('ea') },
+  submitterContactDetails: contact,
+  validFrom: '2026-02-01',
+  accreditations: {}
+})
+
+/**
+ * An approved registration from 2026-02-01. Without a `standingByDate`
+ * override, its standing follows from its timeline and accreditations.
+ *
+ * @param {Partial<ReprocessorRegistration>} [overrides]
+ * @returns {ReprocessorRegistration}
+ */
+export const buildReadReprocessorRegistration = (overrides = {}) =>
+  withStanding({
+    ...commonRegistrationDefaults(),
+    material: /** @type {const} */ ('glass_re_melt'),
+    reprocessingType: /** @type {const} */ ('input'),
+    site: {
+      address: {
+        line1: '7 Glass processing site',
+        town: 'London',
+        postcode: 'SW2A 0AA'
+      }
+    },
+    wasteProcessingType: /** @type {const} */ ('reprocessor'),
+    ...overrides
+  })
+
+/**
+ * An approved registration from 2026-02-01. Without a `standingByDate`
+ * override, its standing follows from its timeline and accreditations.
+ *
  * @param {Partial<ExporterRegistration>} [overrides]
  * @returns {ExporterRegistration}
  */
-export const buildReadExporterRegistration = (overrides = {}) => {
-  const {
-    reprocessingType: _reprocessingType,
-    site: _site,
-    ...common
-  } = buildReadReprocessorRegistration()
-  return {
-    ...common,
-    material: 'plastic',
-    accreditations: {},
+export const buildReadExporterRegistration = (overrides = {}) =>
+  withStanding({
+    ...commonRegistrationDefaults(),
+    material: /** @type {const} */ ('plastic'),
     overseasSites: {},
-    wasteProcessingType: 'exporter',
+    wasteProcessingType: /** @type {const} */ ('exporter'),
     ...overrides
-  }
-}
+  })
 
 /**
  * @param {Partial<Organisation>} [overrides]
@@ -136,23 +189,12 @@ export const buildReadApprovedOrganisation = ({
   organisationNumber = nextReadOrganisationNumber(),
   year = 2026,
   validFrom = `${year}-01-01`,
-  standingByDate = { [year]: { [validFrom]: { standing: 'accredited' } } },
+  standingByDate,
   overrides = {}
 } = {}) => {
   const approved = {
     current: /** @type {const} */ ('approved'),
-    timeline: [
-      {
-        status: 'created',
-        at: `${validFrom}T00:00:00.000Z`,
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: `${validFrom}T00:00:00.000Z`,
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      }
-    ]
+    timeline: approvedTimelineFrom(validFrom)
   }
   return buildReadOrganisation({
     organisationNumber,

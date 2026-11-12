@@ -33,6 +33,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   buildReadAccreditation,
+  buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation as buildServedOrganisation,
   buildReadReprocessorRegistration
@@ -1158,7 +1159,7 @@ const buildComplexTestReadOrg = ({
               : {},
             accreditations: accredited
               ? {
-                  [UPLOAD_YEAR]: {
+                  [UPLOAD_YEAR]: buildReadExporterAccreditation({
                     ...accreditation,
                     overseasSites: {
                       100: { status: 'approved', approvedOn: VALID_FROM },
@@ -1167,7 +1168,7 @@ const buildComplexTestReadOrg = ({
                         approvedOn: UNAPPROVED_VALID_FROM
                       }
                     }
-                  }
+                  })
                 }
               : {}
           })

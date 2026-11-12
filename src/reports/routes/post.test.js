@@ -3,6 +3,7 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import {
   approvedTimelineFrom,
   buildReadAccreditation,
+  buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -102,7 +103,7 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
       })
     : undefined
   const accreditations = served
-    ? { [YEAR]: isExporter ? { ...served, overseasSites: {} } : served }
+    ? { [YEAR]: isExporter ? buildReadExporterAccreditation(served) : served }
     : {}
   const fields = {
     validFrom: registration.validFrom,

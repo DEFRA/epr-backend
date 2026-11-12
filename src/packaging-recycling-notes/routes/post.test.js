@@ -3,6 +3,7 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import {
   approvedTimelineFrom,
   buildReadAccreditation,
+  buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -189,7 +190,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           ? buildReadExporterRegistration({
               ...registrationFields,
               accreditations: {
-                [year]: { ...served, overseasSites: {} }
+                [year]: buildReadExporterAccreditation(served)
               }
             })
           : buildReadReprocessorRegistration({

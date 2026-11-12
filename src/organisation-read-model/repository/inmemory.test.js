@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 import {
   buildReadAccreditation,
@@ -159,7 +160,11 @@ describe('in-memory organisation read repository', () => {
           name: 'Beta Recycling',
           registrations: {
             R26ER5001180041PL: buildReadReprocessorRegistration({
-              accreditations: { 2026: buildReadAccreditation() }
+              accreditations: {
+                2026: buildReadAccreditation({
+                  accreditationNumber: toAccreditationNumber('A26ER5001180114PL')
+                })
+              }
             })
           }
         })

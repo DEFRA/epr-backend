@@ -2,6 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   buildReadAccreditation,
+  buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -71,7 +72,7 @@ describe('PATCH /organisations/{organisationNumber}/registrations/{registrationN
     const accreditations = accredited
       ? {
           [YEAR]: isExporter
-            ? { ...buildReadAccreditation(), overseasSites: {} }
+            ? buildReadExporterAccreditation()
             : buildReadAccreditation()
         }
       : {}

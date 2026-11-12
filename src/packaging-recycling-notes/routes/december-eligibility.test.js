@@ -9,6 +9,7 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import {
   approvedTimelineFrom,
   buildReadAccreditation,
+  buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -58,7 +59,7 @@ const organisationWith = ({
     registrations: exporting
       ? {
           [EXPORTER_NUMBER]: buildReadExporterRegistration({
-            accreditations: { 2026: { ...accredited, overseasSites: {} } }
+            accreditations: { 2026: buildReadExporterAccreditation(accredited) }
           })
         }
       : {

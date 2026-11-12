@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   buildReadAccreditation,
+  buildReadExporterAccreditation,
   buildReadApprovedOrganisation,
   buildReadExporterRegistration,
   buildReadOrganisation,
@@ -110,14 +111,11 @@ const servedExporter = () =>
   buildReadExporterRegistration({
     standingByDate: accreditedStanding,
     accreditations: {
-      2026: {
-        ...buildReadAccreditation({
+      2026: buildReadExporterAccreditation({
           accreditationNumber: toAccreditationNumber(
             EXPORTER_ACCREDITATION_NUMBER
           )
-        }),
-        overseasSites: {}
-      }
+      })
     }
   })
 

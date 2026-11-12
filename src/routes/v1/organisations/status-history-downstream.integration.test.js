@@ -13,7 +13,11 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { COLLECTION_NAME as PRNS_COLLECTION } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
+import {
+  toStoredFields,
+  toStoredOrganisation
+} from '#repositories/organisations/helpers.js'
+import { validateOrganisationInsert } from '#repositories/organisations/schema/index.js'
 import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { it } from '#vite/fixtures/server-with-real-db.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -59,13 +63,17 @@ const grantRegistrationPayload = {
 }
 
 /**
- * Stores the organisation as the organisations repository stores it, without
- * the validation its writes apply.
+ * Stores the organisation as the organisations repository stores it, once the
+ * repository's insert validation accepts it, so a fixture the write path would
+ * reject fails here. It is written directly rather than through `insert`,
+ * because `insert` starts every status history at `created`, and these tests
+ * start from approved, suspended and cancelled states.
  *
  * @param {Db} db
  * @param {Organisation} organisation
  */
 const storeOrganisation = async (db, organisation) => {
+  validateOrganisationInsert(toStoredFields(organisation))
   const { id, ...stored } = toStoredOrganisation(organisation)
   await db
     .collection(ORGANISATIONS_COLLECTION)

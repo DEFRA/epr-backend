@@ -5,6 +5,7 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import {
   approvedTimelineFrom,
   buildReadAccreditation,
+  buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -55,7 +56,11 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
     registrations: {
       [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
         standingByDate,
-        accreditations: { 2026: buildReadAccreditation() }
+        accreditations: {
+          2026: buildReadAccreditation({
+            accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+          })
+        }
       }),
       [EXPORTER_NUMBER]: buildReadExporterRegistration({
         standingByDate,
@@ -64,17 +69,15 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
           '002': pendingOverseasSite
         },
         accreditations: {
-          2026: {
-            ...buildReadAccreditation({
-              accreditationNumber: toAccreditationNumber(
-                EXPORTER_ACCREDITATION_NUMBER
-              )
-            }),
+          2026: buildReadExporterAccreditation({
+            accreditationNumber: toAccreditationNumber(
+              EXPORTER_ACCREDITATION_NUMBER
+            ),
             overseasSites: {
               '001': { status: 'approved', approvedOn: '2026-01-01' },
               '002': { status: 'pending' }
             }
-          }
+          })
         }
       })
     },
