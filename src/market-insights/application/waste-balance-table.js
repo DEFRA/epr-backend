@@ -199,11 +199,10 @@ const periodFigures = (cells, months) =>
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {string} accreditationNumber
- * @param {Year} year
  */
-const warnAboutUnmatchedPartition = (logger, accreditationNumber, year) => {
+const warnAboutUnmatchedPartition = (logger, accreditationNumber) => {
   logger.warn({
-    message: `Market insights waste balance left out a ledger partition whose accreditation no longer resolves: ${accreditationNumber} for ${year}. Everything that partition reported is absent from the publication.`,
+    message: `Market insights waste balance left out a ledger partition whose accreditation no longer resolves: ${accreditationNumber}. Everything that partition reported is absent from the publication.`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: 'market_insights_partition_unmatched',
@@ -229,7 +228,7 @@ const resolvePublishedPartitions = (entries, index, logger) => {
     const ledgerAccreditation = index.get(ledgerKey(ledgerId))
     if (ledgerAccreditation === undefined) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
-        warnAboutUnmatchedPartition(logger, accreditationNumber, ledgerId.year)
+        warnAboutUnmatchedPartition(logger, accreditationNumber)
       }
       continue
     }

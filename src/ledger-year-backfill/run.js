@@ -6,8 +6,13 @@ import { createYearlessLedgers } from '#ledger-year-backfill/mongodb.js'
 import { config } from '../config.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
+/** @import { LedgerRecordCounts } from '#ledger-year-backfill/mongodb.js' */
 
 const LOCK_NAME = 'ledger-year-backfill'
+
+/** @param {LedgerRecordCounts} counts */
+const describeCounts = ({ events, rowStates }) =>
+  `events=${events} rowStates=${rowStates}`
 
 /** @param {StartedServer} server */
 const runBackfill = async (server) => {
@@ -17,7 +22,7 @@ const runBackfill = async (server) => {
     logger
   )
 
-  const { ledgers, events, rowStates, unplaced, failed, auditFailed } =
+  const { ledgers, years, skipped, failed, auditFailed } =
     await backfillLedgerYear(
       {
         ledgers: createYearlessLedgers(server.db),
@@ -28,8 +33,12 @@ const runBackfill = async (server) => {
     )
 
   const mode = isDryRun ? 'dry-run' : 'backfill'
+  const byYear = [...years]
+    .sort(([a], [b]) => a - b)
+    .map(([year, counts]) => `; ${year}: ${describeCounts(counts)}`)
+    .join('')
   logger.info({
-    message: `Ledger year backfill (${mode}): ledgers=${ledgers} events=${events} rowStates=${rowStates} unplaced=${unplaced} failed=${failed} auditFailed=${auditFailed}`
+    message: `Ledger year backfill (${mode}): ledgers=${ledgers} failed=${failed} auditFailed=${auditFailed}${byYear}; skipped: ${describeCounts(skipped)}`
   })
 }
 
@@ -37,8 +46,8 @@ const runBackfill = async (server) => {
  * Startup backfill of the year on ledger events and row states stored
  * before ledgers were kept apart by year. Flag off (the default) only
  * reports what it would change; on writes it, auditing each ledger. Both
- * modes log each ledger it cannot place. Idempotent, so safe to leave
- * enabled across restarts.
+ * modes log one summary line, and an error for each ledger that fails.
+ * Idempotent, so safe to leave enabled across restarts.
  *
  * @param {StartedServer} server
  */

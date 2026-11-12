@@ -217,7 +217,7 @@ export const createWasteBalanceService = (
      * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {import('#domain/organisations/accreditation.js').Accreditation} options.accreditation
+     * @param {import('#domain/organisations/accreditation.js').AccreditationValidity} options.accreditation
      * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
      * @param {SummaryLogFileId} options.summaryLogId
      * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
@@ -258,12 +258,11 @@ export const createWasteBalanceService = (
       organisationNumber,
       registrationNumber,
       accreditationNumber,
-      year,
       prnId,
       afterEventNumber
     }) =>
       ledgerRepository.findEventsByPrnIdAfter(
-        { organisationNumber, registrationNumber, accreditationNumber, year },
+        { organisationNumber, registrationNumber, accreditationNumber },
         prnId,
         afterEventNumber
       )

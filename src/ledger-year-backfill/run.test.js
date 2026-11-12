@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '../config.js'
 
 import { backfillLedgerYear } from './application/backfill.js'
@@ -32,9 +33,11 @@ describe('runLedgerYearBackfill', () => {
     server = { db: {}, locker: { lock: vi.fn().mockResolvedValue(lock) } }
     vi.mocked(backfillLedgerYear).mockResolvedValue({
       ledgers: 2,
-      events: 5,
-      rowStates: 3,
-      unplaced: 1,
+      years: new Map([
+        [toYear(2027), { events: 1, rowStates: 0 }],
+        [toYear(2026), { events: 4, rowStates: 3 }]
+      ]),
+      skipped: { events: 0, rowStates: 1 },
       failed: 0,
       auditFailed: 0
     })
@@ -51,7 +54,7 @@ describe('runLedgerYearBackfill', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Ledger year backfill (dry-run): ledgers=2 events=5 rowStates=3 unplaced=1 failed=0 auditFailed=0'
+        'Ledger year backfill (dry-run): ledgers=2 failed=0 auditFailed=0; 2026: events=4 rowStates=3; 2027: events=1 rowStates=0; skipped: events=0 rowStates=1'
     })
     expect(lock.free).toHaveBeenCalled()
   })

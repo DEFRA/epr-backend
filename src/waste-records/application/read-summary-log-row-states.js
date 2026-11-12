@@ -44,9 +44,8 @@ export const wasteRecordStatesForHead = async (
       )
 
 /**
- * A ledger's latest submitted summary log together with the row states that
- * belong to it — the baseline a subsequent upload in the same year is judged
- * against.
+ * A registration's latest submitted summary log together with the row states
+ * that belong to it — the baseline a subsequent upload is judged against.
  *
  * @typedef {Object} PreviousSubmission
  * @property {{ summaryLogId: SummaryLogFileId, submittedAt: Date }} summaryLog

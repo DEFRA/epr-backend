@@ -5,7 +5,7 @@ import { RECORD_CHANGE } from './record-change.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {RecordChange} from './record-change.js' */
 
@@ -25,7 +25,7 @@ import { RECORD_CHANGE } from './record-change.js'
  * @param {{
  *   wasteRecords: ValidatedWasteRecord[],
  *   submittedRowStatesByKey: Map<string, WasteRecordState>,
- *   accreditation: Accreditation | null,
+ *   accreditation: AccreditationValidity | null,
  *   overseasSites: OverseasSitesContext
  * }} params
  * @returns {Map<string, RecordChange>} record change keyed by `${type}:${rowId}`
