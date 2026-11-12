@@ -94,9 +94,14 @@ export const encodeRow = async (cells) => {
   return `${line}\n`
 }
 
-// Deterministic partition order within a registration: registered-only
-// (null accreditation) first, then accreditation numbers ascending, each
-// accreditation's years in order.
+/**
+ * Deterministic partition order within a registration: registered-only
+ * (null accreditation) first, then accreditation numbers ascending, each
+ * accreditation's years in order.
+ *
+ * @param {LatestSubmittedSummaryLogPerLedger} a
+ * @param {LatestSubmittedSummaryLogPerLedger} b
+ */
 const sortEntriesByAccreditationNumberAndYear = (a, b) =>
   String(a.ledgerId.accreditationNumber ?? '').localeCompare(
     String(b.ledgerId.accreditationNumber ?? '')
