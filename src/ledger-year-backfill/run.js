@@ -37,8 +37,8 @@ const runBackfill = async (server) => {
  * Startup backfill of the year on ledger events and row states stored
  * before ledgers were kept apart by year. Flag off (the default) only
  * reports what it would change; on writes it, auditing each ledger. Both
- * modes log each ledger it cannot place. Idempotent, so safe to leave
- * enabled across restarts.
+ * modes log one summary line, and an error for each ledger that fails.
+ * Idempotent, so safe to leave enabled across restarts.
  *
  * @param {StartedServer} server
  */
