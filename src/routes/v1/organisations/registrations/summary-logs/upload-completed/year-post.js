@@ -6,15 +6,22 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import {
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-logs/status.js'
 import {
   formatS3Info,
-  updateStatusBasedOnUpload
-} from './update-status-based-on-upload.js'
+  isInUploadLocation,
+  summaryLogUploadPath
+} from '#domain/uploads/upload-locations.js'
+import { config } from '#root/config.js'
+import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import { updateStatusBasedOnUpload } from './update-status-based-on-upload.js'
 import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
-/** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
@@ -34,6 +41,20 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
  */
 
 const FAILURE_MESSAGE = 'Failure completing summary log upload'
+const OUT_OF_LOCATION_MESSAGE =
+  'Upload is not in the upload location for this registration'
+
+/**
+ * The upload as a rejection, keeping none of where the file was said to be.
+ *
+ * @param {SummaryLogUpload} upload
+ * @returns {SummaryLogUpload}
+ */
+const asRejected = ({ fileId, filename }) => ({
+  fileId,
+  filename,
+  fileStatus: UPLOAD_STATUS.REJECTED
+})
 
 /**
  * A registered-only upload has no accreditation number, whatever the
@@ -60,13 +81,39 @@ const numbersFromPath = async (request) => {
 }
 
 /**
+ * @param {SummaryLogUpload} upload
+ * @param {{ organisationId: string, registrationId: string }} ids
+ * @returns {boolean}
+ */
+const isUploadedForRegistration = (upload, ids) =>
+  isInUploadLocation(upload, {
+    bucket: config.get('cdpUploader.summaryLogsBucket'),
+    path: summaryLogUploadPath(ids)
+  })
+
+/**
+ * @param {TypedLogger} logger
+ * @param {SummaryLogId} summaryLogId
+ * @param {SummaryLogUpload} upload
+ */
+const logOutOfLocation = (logger, summaryLogId, upload) =>
+  logger.error({
+    message: `${OUT_OF_LOCATION_MESSAGE}: summaryLogId=${summaryLogId}${formatS3Info(upload)}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
+      reference: summaryLogId
+    }
+  })
+
+/**
  * The callback for an upload, under the address it was started at. The path
  * carries the year and names the accreditation (`null` for registered-only).
  */
 export const summaryLogsUploadCompletedYear = {
   method: 'POST',
   options: {
-    auth: false,
+    auth: { strategies: [UPLOAD_CALLBACK] },
     validate: {
       payload: uploadCompletedPayloadSchema
     }
@@ -92,12 +139,20 @@ export const summaryLogsUploadCompletedYear = {
       accreditationId
     } = params
     const { summaryLogUpload } = payload.form
+    const isInLocation = isUploadedForRegistration(summaryLogUpload, {
+      organisationId,
+      registrationId
+    })
 
     try {
+      if (!isInLocation) {
+        logOutOfLocation(logger, summaryLogId, summaryLogUpload)
+      }
+
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
         summaryLogId,
-        summaryLogUpload,
+        isInLocation ? summaryLogUpload : asRejected(summaryLogUpload),
         logger,
         {
           organisationId,
@@ -109,6 +164,10 @@ export const summaryLogsUploadCompletedYear = {
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })
+
+      if (!isInLocation) {
+        throw Boom.badData(OUT_OF_LOCATION_MESSAGE)
+      }
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
         await summaryLogsWorker.validate(summaryLogId)

@@ -9,9 +9,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import {
+  toUploadCallbackPath,
+  uploadCallbackUrl
+} from '#common/helpers/auth/upload-callback-signature.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
-import { config } from '#root/config.js'
 import { orsImportCreatePayloadSchema } from './post-import.schema.js'
 
 /** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -45,8 +48,11 @@ export const orsImportCreate = {
 
     const importId = randomUUID()
     const resolvedRedirectUrl = redirectUrl.replace('{importId}', importId)
-    const appBaseUrl = config.get('appBaseUrl')
-    const callbackUrl = `${appBaseUrl}/v1/overseas-sites/imports/${importId}/upload-completed`
+    const callbackUrl = uploadCallbackUrl(
+      toUploadCallbackPath(
+        `/v1/overseas-sites/imports/${importId}/upload-completed`
+      )
+    )
 
     try {
       await orsImportsRepository.create({

@@ -17,6 +17,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
+import { signedCallback } from '#test/upload-callback.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -35,12 +36,15 @@ const registrationId = '507f1f77bcf86cd799439012'
 const organisationNumber = toOrganisationNumber('500123')
 const registrationNumber = REPROCESSOR_NUMBER
 
+const uploadedKeyFor = (uploadOrganisationId, uploadRegistrationId) =>
+  `/organisations/${uploadOrganisationId}/registrations/${uploadRegistrationId}/upload-1/file-1`
+
 const createFileDetails = (overrides) => ({
   fileId: 'file-123',
   filename: 'test.xlsx',
   fileStatus: 'complete',
-  s3Bucket: 'test-bucket',
-  s3Key: 'test-key',
+  s3Bucket: 're-ex-summary-logs',
+  s3Key: uploadedKeyFor(organisationId, registrationId),
   ...overrides
 })
 
@@ -53,8 +57,11 @@ const createCompletePayload = (fileId = 'file-complete-123') => ({
   numberOfRejectedFiles: 0
 })
 
-const uploadCompletedUrl = (year, summaryLogId) =>
+const uploadCompletedPath = (year, summaryLogId) =>
   `/organisations/${organisationNumber}/registrations/${registrationNumber}/summary-logs/${year}/${summaryLogId}/upload-completed`
+
+const uploadCompletedUrl = (year, summaryLogId) =>
+  signedCallback(uploadCompletedPath(year, summaryLogId))
 
 const createTestOrganisationsRepository = () =>
   createInMemoryOrganisationsRepository([
@@ -69,7 +76,6 @@ const createTestOrganisationsRepository = () =>
 
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{year}/{summaryLogId}/upload-completed', () => {
   // Mock OIDC servers are needed for server startup (auth plugin fetches configs)
-  // but the route itself is unauthenticated.
   setupAuthContext()
 
   let server
@@ -200,7 +206,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        url: signedCallback(
+          `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+        ),
         payload: {
           uploadStatus: 'ready',
           metadata: {
@@ -208,7 +216,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
             registrationId: accreditedRegistrationId
           },
           form: {
-            summaryLogUpload: createFileDetails({ fileId: 'file-accredited' })
+            summaryLogUpload: createFileDetails({
+              fileId: 'file-accredited',
+              s3Key: uploadedKeyFor(
+                accreditedOrganisationId,
+                accreditedRegistrationId
+              )
+            })
           },
           numberOfRejectedFiles: 0
         }
@@ -232,7 +246,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await accreditedServer.inject({
         method: 'POST',
-        url: `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+        url: signedCallback(
+          `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+        ),
         payload: createCompletePayload('file-unnumbered')
       })
 
@@ -312,6 +328,81 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  describe('when the upload is not where this registration sends its uploads', () => {
+    it.for([
+      {
+        description: 'another bucket',
+        s3Bucket: 'some-other-bucket',
+        s3Key: uploadedKeyFor(organisationId, registrationId)
+      },
+      {
+        description: 'another organisation',
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: uploadedKeyFor('507f1f77bcf86cd799439099', registrationId)
+      },
+      {
+        description: 'another registration',
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: uploadedKeyFor(organisationId, '507f1f77bcf86cd799439099')
+      }
+    ])(
+      'refuses $description, rejects the summary log without the file, and logs an error',
+      async ({ s3Bucket, s3Key }) => {
+        const summaryLogId = randomUUID()
+
+        const response = await server.inject({
+          method: 'POST',
+          url: uploadCompletedUrl(2026, summaryLogId),
+          payload: {
+            ...createCompletePayload(),
+            form: {
+              summaryLogUpload: createFileDetails({ s3Bucket, s3Key })
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        const { summaryLog } = await waitForVersion(
+          summaryLogsRepository,
+          summaryLogId,
+          1
+        )
+        expect(summaryLog).toStrictEqual(
+          expect.objectContaining({
+            status: 'rejected',
+            file: {
+              id: 'file-123',
+              name: 'test.xlsx',
+              status: 'rejected'
+            },
+            validation: { failures: [{ code: 'FILE_REJECTED' }] }
+          })
+        )
+        expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
+        expect(server.loggerMocks.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: `Upload is not in the upload location for this registration: summaryLogId=${summaryLogId}, s3Bucket=${s3Bucket}, s3Key=${s3Key}`,
+            event: expect.objectContaining({ reference: summaryLogId })
+          })
+        )
+      }
+    )
+  })
+
+  it('refuses an unsigned callback, and stores nothing', async () => {
+    const summaryLogId = randomUUID()
+
+    const response = await server.inject({
+      method: 'POST',
+      url: uploadCompletedPath(2026, summaryLogId),
+      payload: createCompletePayload()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    expect(await summaryLogsRepository.findById(summaryLogId)).toBeNull()
+    expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
   })
 
   it.each([
