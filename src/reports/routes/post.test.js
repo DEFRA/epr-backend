@@ -1,5 +1,12 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -56,6 +63,70 @@ vi.mock('#reports/application/audit.js', () => ({
 }))
 
 const YEAR = toYear(2026)
+
+/**
+ * The organisation as the read model serves the stored one built here: its
+ * registration from its validFrom, and its accreditation, when it has a number,
+ * from July.
+ *
+ * @param {any} org
+ * @param {any} registration
+ * @param {any} accreditationRecord
+ */
+const readOrganisationOf = (org, registration, accreditationRecord) => {
+  const isExporter = registration.wasteProcessingType === 'exporter'
+  const approved = accreditationRecord?.status !== 'cancelled'
+  const served = accreditationRecord?.accreditationNumber
+    ? buildReadAccreditation({
+        accreditationNumber: accreditationRecord.accreditationNumber,
+        status: approved
+          ? {
+              current: 'approved',
+              timeline: approvedTimelineFrom('2026-07-01')
+            }
+          : {
+              current: 'cancelled',
+              timeline: [
+                {
+                  status: 'created',
+                  at: '2026-01-01T09:00:00.000Z',
+                  updatedAt: '2026-01-01T09:00:00.000Z'
+                },
+                {
+                  status: 'cancelled',
+                  at: '2026-02-01T09:00:00.000Z',
+                  updatedAt: '2026-02-01T09:00:00.000Z'
+                }
+              ]
+            }
+      })
+    : undefined
+  const accreditations = served
+    ? { [YEAR]: isExporter ? { ...served, overseasSites: {} } : served }
+    : {}
+  const fields = {
+    validFrom: registration.validFrom,
+    status: {
+      current: 'approved',
+      timeline: approvedTimelineFrom(registration.validFrom)
+    },
+    standingByDate: {
+      [YEAR]: {
+        [registration.validFrom]: { standing: 'registeredOnly' },
+        ...(served && approved && { '2026-07-01': { standing: 'accredited' } })
+      }
+    },
+    accreditations
+  }
+  return buildReadOrganisation({
+    organisationNumber: org.organisationNumber,
+    registrations: {
+      [registration.registrationNumber]: isExporter
+        ? buildReadExporterRegistration(/** @type {any} */ (fields))
+        : buildReadReprocessorRegistration(/** @type {any} */ (fields))
+    }
+  })
+}
 const QUARTER = 1
 // The accreditation from the read-model fixtures starts in July.
 const MONTH = 7
@@ -168,8 +239,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(org)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          readOrganisationOf(org, registration, accreditationRecord)
         ]),
         ledgerRepository,
         summaryLogRowStatesRepository,

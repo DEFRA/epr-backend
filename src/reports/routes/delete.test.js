@@ -1,23 +1,23 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
-import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportDelete: vi.fn().mockResolvedValue(undefined)
@@ -29,8 +29,12 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
   setupAuthContext()
 
   const createServer = async ({ withReport = true } = {}) => {
-    const registration = reprocessor()
-    const org = buildOrganisation({ registrations: [registration] })
+    const registration = { registrationNumber: REPROCESSOR_NUMBER }
+    const org = buildReadOrganisation({
+      registrations: {
+        [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration()
+      }
+    })
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
@@ -51,8 +55,8 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(org)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          org
         ]),
         reportsRepository: reportsRepositoryFactory
       }

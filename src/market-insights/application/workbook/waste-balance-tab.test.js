@@ -44,7 +44,7 @@ const FIRST_FIGURE_COLUMN = 3
 /**
  * @typedef {Pick<ReadMarketInsightsFiguresParams,
  *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationAdministrationRepository' | 'organisationReadRepository' | 'reportsRepository'
- * >} Register
+ * > & { served: ReturnType<typeof readParamsFor>['served'] }} Register
  */
 
 /** @returns {Register} */
@@ -54,9 +54,11 @@ const emptyRegister = () => {
     summaryLogRowStatesRepository,
     organisationAdministrationRepository,
     organisationReadRepository,
-    reportsRepository
+    reportsRepository,
+    served
   } = readParamsFor([])
   return {
+    served,
     ledgerRepository,
     summaryLogRowStatesRepository,
     organisationAdministrationRepository,
@@ -130,15 +132,17 @@ const seedOperator = async (
   {
     organisationAdministrationRepository,
     summaryLogRowStatesRepository,
-    ledgerRepository
+    ledgerRepository,
+    served
   },
   { material, regulator = REGULATOR.EA, validFrom, rows = [] }
 ) => {
-  const { ledgerId } = await insertAccreditedOperator(
+  const { ledgerId, servedOrganisation } = await insertAccreditedOperator(
     organisationAdministrationRepository,
     regulator,
     { material, validFrom }
   )
+  served.add(servedOrganisation)
   const summaryLogId = `log-${ledgerId.registrationId}`
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(

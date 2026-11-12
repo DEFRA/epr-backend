@@ -19,7 +19,7 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { createMockLogger } from '#test/mock-logger.js'
 import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -31,6 +31,7 @@ import {
   pollForValidation,
   pollWhileStatus,
   servedTestAccreditation,
+  servedTestReadOrganisation,
   servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
@@ -280,9 +281,13 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: organisationReadRepositoryOver(
-          organisationAdministrationRepository
-        ),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'glass_re_melt',
+            accreditationNumber: toAccreditationNumber('ACC-2025-001')
+          })
+        ])(),
         logger: mockLogger
       })
 
@@ -315,7 +320,13 @@ describe('Repeated uploads of identical data', () => {
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+            createInMemoryOrganisationReadRepository([
+              servedTestReadOrganisation({
+                wasteProcessingType: 'reprocessor',
+                material: 'glass_re_melt',
+                accreditationNumber: toAccreditationNumber('ACC-2025-001')
+              })
+            ])()
         },
         workers: {
           summaryLogsWorker

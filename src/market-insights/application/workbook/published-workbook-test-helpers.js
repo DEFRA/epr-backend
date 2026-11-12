@@ -6,7 +6,7 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
@@ -36,22 +36,28 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
 
 /**
  * What the shared read is given for a period, over an empty register, taken
- * when the published figures were.
+ * when the published figures were. Organisations added to `served` are seen
+ * by every later read of `organisationReadRepository`.
  *
  * @param {YearMonth[]} months
- * @returns {ReadMarketInsightsFiguresParams}
+ * @returns {ReadMarketInsightsFiguresParams & { served: ReturnType<typeof servedOrganisations> }}
  */
 export const readParamsFor = (months) => {
   const organisationAdministrationRepository =
     createInMemoryOrganisationsRepository([])()
+  const served = servedOrganisations()
   return {
+    served,
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
     organisationAdministrationRepository,
-    organisationReadRepository: organisationReadRepositoryOver(
-      organisationAdministrationRepository
-    ),
+    organisationReadRepository: {
+      findByOrganisationNumber: (...args) =>
+        served.repository().findByOrganisationNumber(...args),
+      find: (params) => served.repository().find(params),
+      findAll: () => served.repository().findAll()
+    },
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
     year: toYear(2026),
