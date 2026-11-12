@@ -52,16 +52,16 @@ const reachesLeak = (file, seen = new Set()) => {
 const needsIsolation = (file) =>
   leaksStateUndetected.has(file) || reachesLeak(file)
 
-const testFiles = globSync('{src,.vite}/**/*.test.js')
+const appTestFiles = '{src,.vite}/**/*.test.js'
+
+export const testFilePatterns = [appTestFiles, 'scripts/**/*.test.mjs']
 
 /**
- * Test files that mock modules or change config, env or globals, directly or
- * through a shared contract or test helper, keep a fresh module graph per
- * file; the rest share one per worker.
+ * Test files that neither mock modules nor change config, env or globals,
+ * directly or through a shared contract or test helper, so they can share one
+ * module graph per worker. Every other test file, including one created after
+ * the config loaded (in watch mode), keeps a fresh module graph per file.
  */
-export const isolatedTestFiles = [
-  ...testFiles.filter(needsIsolation),
-  'scripts/**/*.test.mjs'
-]
-
-export const sharedTestFiles = testFiles.filter((file) => !needsIsolation(file))
+export const sharedTestFiles = globSync(appTestFiles).filter(
+  (file) => !needsIsolation(file)
+)
