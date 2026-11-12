@@ -34,7 +34,8 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
 const matchesLedger = (doc, ledgerId) =>
   doc.organisationNumber === ledgerId.organisationNumber &&
   doc.registrationNumber === ledgerId.registrationNumber &&
-  doc.accreditationNumber === ledgerId.accreditationNumber
+  doc.accreditationNumber === ledgerId.accreditationNumber &&
+  doc.year === ledgerId.year
 
 /**
  * @param {SummaryLogRowState} doc
@@ -104,6 +105,7 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
         organisationNumber: doc.organisationNumber,
         registrationNumber: doc.registrationNumber,
         accreditationNumber: doc.accreditationNumber,
+        year: doc.year,
         wasteRecordType: doc.wasteRecordType,
         processingType: doc.processingType,
         data: doc.data

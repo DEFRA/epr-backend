@@ -35,6 +35,7 @@ import { wasteBalanceSchema } from './response.schema.js'
 
 /**
  * @typedef {ResolvedRequest & {
+ *   params: { year: Year },
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
  * }} LedgerRequest
@@ -51,20 +52,22 @@ const ledgerOptions = {
 }
 
 /**
- * The ledger the path resolved to: the accreditation's, or the registered-only
- * one when the path names no accreditation.
+ * The ledger the path resolved to for its year: the accreditation's, or the
+ * registered-only one when the path names no accreditation.
  *
- * @param {ResolvedParams} params
+ * @param {ResolvedParams & { year: Year }} params
  * @returns {WasteBalanceLedgerId}
  */
 const ledgerIdOf = ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 }) => ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber: accreditationNumber ?? null
+  accreditationNumber: accreditationNumber ?? null,
+  year
 })
 
 /**
@@ -81,15 +84,14 @@ const readLedgerEvents = async (request) => {
 }
 
 /**
- * The registered-only ledger spans a registration's years, so a year narrows
- * it to the events submitted in that year (UTC). A year the registration was
- * not approved in is not found.
+ * The registered-only ledger of the year. A year the registration was not
+ * approved in is not found.
  */
 const registeredOnlyLedgerGet = {
   method: 'GET',
   options: ledgerOptions,
   /**
-   * @param {LedgerRequest & { params: { year: Year } }} request
+   * @param {LedgerRequest} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -104,13 +106,8 @@ const registeredOnlyLedgerGet = {
     ) {
       throw Boom.notFound('Year not found')
     }
-    const events = await readLedgerEvents(request)
     return h
-      .response({
-        events: events.filter(
-          (event) => event.createdAt.getUTCFullYear() === year
-        )
-      })
+      .response({ events: await readLedgerEvents(request) })
       .code(StatusCodes.OK)
   }
 }
@@ -136,7 +133,7 @@ const accreditationWasteBalanceGet = {
     response: { schema: wasteBalanceSchema }
   },
   /**
-   * @param {ResolvedRequest} request
+   * @param {ResolvedRequest & { params: { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -192,7 +189,8 @@ const organisationWasteBalancesGet = {
             registrationNumber: /** @type {RegistrationNumber} */ (
               registration.registrationNumber
             ),
-            accreditationNumber: accreditation.accreditationNumber
+            accreditationNumber: accreditation.accreditationNumber,
+            year
           })
         )
       ])

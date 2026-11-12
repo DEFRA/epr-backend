@@ -115,20 +115,45 @@ describe('ensureSummaryLogRowStatesCollection', () => {
   }) => {
     const indexes = await summaryLogRowStatesCollection.indexes()
     expect(
-      indexKeyFor(indexes, 'summary_log_row_state_identity_by_number')
+      indexKeyFor(indexes, 'summary_log_row_state_identity_by_year')
     ).toEqual({
       organisationNumber: 1,
       registrationNumber: 1,
       accreditationNumber: 1,
+      year: 1,
       rowId: 1,
       wasteRecordType: 1,
       contentHash: 1
     })
     expect(
       indexes.find(
-        (idx) => idx.name === 'summary_log_row_state_identity_by_number'
+        (idx) => idx.name === 'summary_log_row_state_identity_by_year'
       )?.unique
     ).toBe(true)
+  })
+
+  it('drops the identity index without the year', async (/** @type {*} */ {
+    mongoClient,
+    summaryLogRowStatesCollection
+  }) => {
+    await summaryLogRowStatesCollection.createIndex(
+      {
+        organisationNumber: 1,
+        registrationNumber: 1,
+        accreditationNumber: 1,
+        rowId: 1,
+        wasteRecordType: 1,
+        contentHash: 1
+      },
+      { name: 'summary_log_row_state_identity_by_number', unique: true }
+    )
+
+    await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
+
+    const names = (await summaryLogRowStatesCollection.indexes()).map(
+      ({ name }) => name
+    )
+    expect(names).not.toContain('summary_log_row_state_identity_by_number')
   })
 
   it('drops the id-keyed identity index it replaces', async (/** @type {*} */ {

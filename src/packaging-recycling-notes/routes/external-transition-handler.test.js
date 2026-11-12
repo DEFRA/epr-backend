@@ -1,4 +1,7 @@
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
+import {
+  PRN_YEAR,
+  buildAccreditationSnapshot
+} from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
@@ -60,7 +63,8 @@ const LEDGER = {
   accreditationId: ACC_ID,
   organisationNumber: organisation.organisationNumber,
   registrationNumber: toRegistrationNumber(`REG-${REG_ID}`),
-  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`)
+  accreditationNumber: toAccreditationNumber(`ACC-${ACC_ID}`),
+  year: PRN_YEAR
 }
 const organisationAdministrationRepository = () => ({
   findById: async () => organisation
@@ -221,6 +225,7 @@ describe('mapTransitionError', () => {
       organisationNumber: toOrganisationNumber('500001'),
       registrationNumber: toRegistrationNumber('REG-1'),
       accreditationNumber: toAccreditationNumber('ACC-1'),
+      year: PRN_YEAR,
       number: 2
     })
 

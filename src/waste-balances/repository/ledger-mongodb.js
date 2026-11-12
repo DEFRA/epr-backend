@@ -28,18 +28,21 @@ export const WASTE_BALANCE_EVENTS_COLLECTION_NAME = 'waste-balance-events'
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
-const INDEX_NAME_SLOT = 'ledger_slot_by_number'
+const INDEX_NAME_SLOT = 'ledger_slot_by_year'
 
 const RETIRED_INDEX_NAMES = [
   'partition_number',
   'partition_kind_latest',
-  'prn_watermark_catchup'
+  'prn_watermark_catchup',
+  'ledger_slot_by_number',
+  'ledger_kind_latest_by_number',
+  'prn_watermark_catchup_by_number'
 ]
 
 /**
  * Ensures the ledger collection exists with the indexes required by the
- * event-sourced ledger design. The number-keyed indexes are built before the
- * id-keyed ones they replace are dropped, so a slot is never unguarded.
+ * event-sourced ledger design. The year-keyed indexes are built before the
+ * ones they replace are dropped, so a slot is never unguarded.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -51,23 +54,30 @@ export async function ensureLedgerCollection(db) {
   const collection = db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
 
   await collection.createIndex(
-    { registrationNumber: 1, accreditationNumber: 1, number: 1 },
+    { registrationNumber: 1, accreditationNumber: 1, year: 1, number: 1 },
     { name: INDEX_NAME_SLOT, unique: true }
-  )
-
-  await collection.createIndex(
-    { registrationNumber: 1, accreditationNumber: 1, kind: 1, number: -1 },
-    { name: 'ledger_kind_latest_by_number' }
   )
 
   await collection.createIndex(
     {
       registrationNumber: 1,
       accreditationNumber: 1,
+      year: 1,
+      kind: 1,
+      number: -1
+    },
+    { name: 'ledger_kind_latest_by_year' }
+  )
+
+  await collection.createIndex(
+    {
+      registrationNumber: 1,
+      accreditationNumber: 1,
+      year: 1,
       'payload.prnId': 1,
       number: 1
     },
-    { name: 'prn_watermark_catchup_by_number' }
+    { name: 'prn_watermark_catchup_by_year' }
   )
 
   await collection.createIndex(
@@ -87,7 +97,7 @@ const toLedgerEvent = (doc) => validateLedgerEventRead(doc)
 /**
  * Classify a MongoDB E11000 duplicate key error raised by an append.
  *
- * `partition_number` is the only unique index on this collection — the other
+ * The slot index is the only unique index on this collection — the other
  * two are non-unique, and driver-generated `_id`s do not collide — so a
  * duplicate key can only mean a competing writer took the slot.
  *
@@ -142,11 +152,13 @@ const findDuplicateKeyWriteError = (error) => {
 const ledgerFilter = ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 }) => ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 })
 
 /**
@@ -179,7 +191,8 @@ const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
           _id: {
             organisationNumber: '$organisationNumber',
             registrationNumber: '$registrationNumber',
-            accreditationNumber: '$accreditationNumber'
+            accreditationNumber: '$accreditationNumber',
+            year: '$year'
           },
           latest: { $first: '$$ROOT' }
         }
@@ -258,7 +271,8 @@ const performFindLatestSubmittedSummaryLogPerLedger =
             _id: {
               organisationNumber: '$organisationNumber',
               registrationNumber: '$registrationNumber',
-              accreditationNumber: '$accreditationNumber'
+              accreditationNumber: '$accreditationNumber',
+              year: '$year'
             },
             summaryLogId: { $first: '$payload.summaryLogId' }
           }

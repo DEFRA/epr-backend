@@ -133,17 +133,15 @@ const prepareRowsForTransformation = (parsedData) => {
  * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  */
 
 /**
- * The numbers a summary log names its registration and accreditation by. The
- * accreditation number is `null` for a registered-only submission.
+ * The numbers a summary log names its registration and accreditation by, and
+ * its year. The accreditation number is `null` for a registered-only
+ * submission.
  *
- * @typedef {{
- *   organisationNumber: OrganisationNumber,
- *   registrationNumber: RegistrationNumber,
- *   accreditationNumber: AccreditationNumber | null
- * }} SubmissionNumbers
+ * @typedef {WasteBalanceLedgerId} SubmissionNumbers
  */
 
 /**
@@ -205,7 +203,8 @@ const resolveSubmissionLedger = async (
     ledgerId: {
       organisationNumber: summaryLog.organisationNumber,
       registrationNumber: summaryLog.registrationNumber,
-      accreditationNumber: summaryLog.accreditationNumber
+      accreditationNumber: summaryLog.accreditationNumber,
+      year: summaryLog.year
     }
   }
 }
@@ -453,6 +452,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {OrganisationNumber} summaryLog.organisationNumber
    * @param {RegistrationNumber} summaryLog.registrationNumber
    * @param {AccreditationNumber | null} summaryLog.accreditationNumber - `null` for a registered-only submission
+   * @param {Year} summaryLog.year
    * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user - Authenticated user driving the submit
    * @returns {Promise<{created: number, updated: number, decemberWasteRowCount: number}>} Counts of created and updated waste records, and how many changed rows carry December-attributable tonnage
    */

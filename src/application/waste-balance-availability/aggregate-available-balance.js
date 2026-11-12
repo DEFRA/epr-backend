@@ -25,10 +25,11 @@ export const aggregateAvailableBalance = async (
 
   const latestEvents = await ledgerRepository.findLatestInLedgers(
     [...accreditations.values()].map(
-      ({ organisation, registrationNumber, accreditation }) => ({
+      ({ organisation, registrationNumber, accreditation, year }) => ({
         organisationNumber: organisation.organisationNumber,
         registrationNumber,
-        accreditationNumber: accreditation.accreditationNumber
+        accreditationNumber: accreditation.accreditationNumber,
+        year
       })
     )
   )

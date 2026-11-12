@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { yearSchema } from '#common/validation/year-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   REPROCESSING_TYPE,
@@ -100,7 +101,8 @@ const aggregatedRowSchema = Joi.object({
   ledgerId: Joi.object({
     organisationNumber: Joi.string().required(),
     registrationNumber: Joi.string().required(),
-    accreditationNumber: Joi.string().required()
+    accreditationNumber: Joi.string().required(),
+    year: yearSchema().required()
   }).required(),
   registration: Joi.object().required(),
   awaitingAuthorisationTonnage: Joi.number().required(),

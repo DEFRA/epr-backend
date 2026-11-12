@@ -56,7 +56,8 @@ export { asOperator } from '#test/inject-auth.js'
  * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers & {
  *   organisationId: string,
  *   registrationId: string,
- *   accreditationId: string | null
+ *   accreditationId: string | null,
+ *   year: import('#common/helpers/dates/year.js').Year
  * }} LedgerEnvironment
  */
 
@@ -72,14 +73,16 @@ export const ledgerIdOf = ({
   accreditationId,
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 }) => ({
   organisationId,
   registrationId,
   accreditationId,
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 })
 
 /**
@@ -497,7 +500,7 @@ export const createUploadPayload = (
 /** The natural keys every organisation these helpers build is served under. */
 export const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500999')
 export const TEST_REGISTRATION_NUMBER = 'REG-123'
-const UPLOAD_YEAR = toYear(2025)
+export const UPLOAD_YEAR = toYear(2025)
 
 export const registrationUrl = `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}`
 export const accreditationUrl = `${registrationUrl}/accreditations/${UPLOAD_YEAR}`
@@ -896,6 +899,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     organisationNumber: TEST_ORGANISATION_NUMBER,
     registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
     accreditationNumber: accredited ? TEST_ACCREDITATION_NUMBER : null,
+    year: UPLOAD_YEAR,
     accredited,
     fileDataMap,
     ledgerRepository,

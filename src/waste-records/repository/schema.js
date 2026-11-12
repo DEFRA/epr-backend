@@ -1,5 +1,7 @@
 import Joi from 'joi'
 
+import { yearSchema } from '#common/validation/year-schema.js'
+
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -21,18 +23,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @property {number} transactionAmount
  */
 
-/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-
-/**
- * The numbers that identify a row state's ledger. A registered-only row
- * state's accreditation number is `null`.
- *
- * @typedef {{
- *   organisationNumber: OrganisationNumber,
- *   registrationNumber: RegistrationNumber,
- *   accreditationNumber: AccreditationNumber | null
- * }} RowStateNumbers
- */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * A single row from the 1.1 per-row classification list — the unit
@@ -68,13 +59,13 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * identity, a row entry's content + classification, and the
  * membership of submissions that produced this exact state.
  *
- * @typedef {RowStateFields & RowStateNumbers} SummaryLogRowStateInsert
+ * @typedef {RowStateFields & WasteBalanceLedgerId} SummaryLogRowStateInsert
  */
 
 /**
  * Shape returned by reads — the stored fields plus the storage-assigned `id`.
  *
- * @typedef {RowStateFields & RowStateNumbers & { id: string }} SummaryLogRowState
+ * @typedef {RowStateFields & WasteBalanceLedgerId & { id: string }} SummaryLogRowState
  */
 
 const classificationReasonSchema = Joi.object({
@@ -92,10 +83,11 @@ const classificationSchema = Joi.object({
   transactionAmount: Joi.number().required()
 })
 
-const numbersKeys = {
+const ledgerIdKeys = {
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.string().allow(null).required()
+  accreditationNumber: Joi.string().allow(null).required(),
+  year: yearSchema().required()
 }
 
 const rowStateBaseSchema = Joi.object({
@@ -110,9 +102,9 @@ const rowStateBaseSchema = Joi.object({
 })
 
 export const summaryLogRowStateInsertSchema =
-  rowStateBaseSchema.keys(numbersKeys)
+  rowStateBaseSchema.keys(ledgerIdKeys)
 
 export const summaryLogRowStateReadSchema = rowStateBaseSchema.keys({
-  ...numbersKeys,
+  ...ledgerIdKeys,
   id: Joi.string().required()
 })

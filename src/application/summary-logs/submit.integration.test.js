@@ -242,8 +242,13 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
   it('proceeds and writes records when no report has been submitted since creation', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
-      await setupSubmit({ reportsRepository })
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: submitted,
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({ reportsRepository })
 
     // An open (never-submitted) report exists for the registration: the guard
     // reacts only to SUBMITTED closures, so submission must still proceed.
@@ -254,6 +259,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const rowStates = await summaryLogRowStatesForRegistration({
       ...reportKey,
       accreditationNumber: toAccreditationNumber('ACC-123'),
+      year: submitted.year,
       ledgerRepository: deps.ledgerRepository,
       summaryLogRowStatesRepository: deps.summaryLogRowStatesRepository
     })
@@ -487,7 +493,8 @@ describe('submitSummaryLog for an accreditation stored by number only', () => {
     const balance = await deps.wasteBalanceService.currentBalance({
       organisationNumber: reportKey.organisationNumber,
       registrationNumber: reportKey.registrationNumber,
-      accreditationNumber: toAccreditationNumber('ACC-123')
+      accreditationNumber: toAccreditationNumber('ACC-123'),
+      year: summaryLog.year
     })
     const rowStates =
       await deps.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(

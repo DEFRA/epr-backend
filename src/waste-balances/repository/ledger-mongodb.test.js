@@ -88,42 +88,77 @@ describe('ensureLedgerCollection', () => {
   })
 
   describe('indexes', () => {
-    it('creates the ledger slot unique index on the numbers', async (/** @type {*} */ {
+    it('creates the ledger slot unique index on the numbers and year', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'ledger_slot_by_number')).toEqual({
+      expect(indexKeyFor(indexes, 'ledger_slot_by_year')).toEqual({
         registrationNumber: 1,
         accreditationNumber: 1,
+        year: 1,
         number: 1
       })
-      expect(indexOptionFor(indexes, 'ledger_slot_by_number', 'unique')).toBe(
+      expect(indexOptionFor(indexes, 'ledger_slot_by_year', 'unique')).toBe(
         true
       )
     })
 
-    it('creates the ledger_kind_latest_by_number index for findLatestInLedgerByKind', async (/** @type {*} */ {
+    it('creates the ledger_kind_latest_by_year index for findLatestInLedgerByKind', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'ledger_kind_latest_by_number')).toEqual({
+      expect(indexKeyFor(indexes, 'ledger_kind_latest_by_year')).toEqual({
         registrationNumber: 1,
         accreditationNumber: 1,
+        year: 1,
         kind: 1,
         number: -1
       })
     })
 
-    it('creates the prn_watermark_catchup_by_number index for findEventsByPrnIdAfter', async (/** @type {*} */ {
+    it('creates the prn_watermark_catchup_by_year index for findEventsByPrnIdAfter', async (/** @type {*} */ {
       ledgerCollection
     }) => {
       const indexes = await ledgerCollection.indexes()
-      expect(indexKeyFor(indexes, 'prn_watermark_catchup_by_number')).toEqual({
+      expect(indexKeyFor(indexes, 'prn_watermark_catchup_by_year')).toEqual({
         registrationNumber: 1,
         accreditationNumber: 1,
+        year: 1,
         'payload.prnId': 1,
         number: 1
       })
+    })
+
+    it('drops the indexes keyed on the numbers without the year', async (/** @type {*} */ {
+      mongoClient
+    }) => {
+      const collection = mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+      await collection.createIndex(
+        { registrationNumber: 1, accreditationNumber: 1, number: 1 },
+        { name: 'ledger_slot_by_number', unique: true }
+      )
+      await collection.createIndex(
+        { registrationNumber: 1, accreditationNumber: 1, kind: 1, number: -1 },
+        { name: 'ledger_kind_latest_by_number' }
+      )
+      await collection.createIndex(
+        {
+          registrationNumber: 1,
+          accreditationNumber: 1,
+          'payload.prnId': 1,
+          number: 1
+        },
+        { name: 'prn_watermark_catchup_by_number' }
+      )
+
+      await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
+
+      const names = (await collection.indexes()).map(({ name }) => name)
+      expect(names).not.toContain('ledger_slot_by_number')
+      expect(names).not.toContain('ledger_kind_latest_by_number')
+      expect(names).not.toContain('prn_watermark_catchup_by_number')
     })
 
     it('drops the indexes keyed on the ids', async (/** @type {*} */ {

@@ -26,9 +26,10 @@
 const describeLedger = ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 }) =>
-  `organisation ${organisationNumber} registration ${registrationNumber} accreditation ${accreditationNumber}`
+  `organisation ${organisationNumber} registration ${registrationNumber} accreditation ${accreditationNumber} year ${year}`
 
 /**
  * Raised by `appendEvents` when the slot a position addresses is already

@@ -9,6 +9,12 @@
 export const ledgerKey = ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber
+  accreditationNumber,
+  year
 }) =>
-  JSON.stringify([organisationNumber, registrationNumber, accreditationNumber])
+  JSON.stringify([
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber,
+    year
+  ])

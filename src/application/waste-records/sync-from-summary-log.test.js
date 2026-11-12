@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { toYear } from '#common/helpers/dates/year.js'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -29,11 +30,14 @@ const TEST_USER = {
   scope: ['some-scope']
 }
 
+const YEAR = toYear(2026)
+
 // The numbers the mocked organisation record gives org-1/reg-1.
 const LEDGER_ID = {
   organisationNumber: toOrganisationNumber('500001'),
   registrationNumber: toRegistrationNumber('REG-1'),
-  accreditationNumber: null
+  accreditationNumber: null,
+  year: YEAR
 }
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500001')
@@ -76,11 +80,12 @@ const organisationWith = ({ registration = {}, accreditations } = {}) => ({
  * @param {string} fileId
  * @param {import('#domain/organisations/numbers.js').AccreditationNumber | null} [accreditationNumber]
  */
-const summaryLogFor = (fileId, accreditationNumber = null) => ({
+const summaryLogFor = (fileId, accreditationNumber = null, year = YEAR) => ({
   file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
   organisationNumber: ORGANISATION_NUMBER,
   registrationNumber: REGISTRATION_NUMBER,
-  accreditationNumber
+  accreditationNumber,
+  year
 })
 
 const reprocessorInput = (rows) =>
@@ -175,7 +180,7 @@ describe('syncFromSummaryLog', () => {
     ).toBe(true)
   })
 
-  it('stores the organisation, registration and accreditation numbers on each row state', async () => {
+  it('stores the organisation, registration and accreditation numbers and the year on each row state', async () => {
     const fileId = 'file-numbers'
     const extractor = extractorFor(
       fileId,
@@ -185,7 +190,7 @@ describe('syncFromSummaryLog', () => {
     )
 
     await makeSync({ extractor })(
-      summaryLogFor(fileId, ACCREDITATION_NUMBER),
+      summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2027)),
       TEST_USER
     )
 
@@ -198,7 +203,8 @@ describe('syncFromSummaryLog', () => {
     expect(rowState).toMatchObject({
       organisationNumber: '500001',
       registrationNumber: 'REG-1',
-      accreditationNumber: 'ACC-1'
+      accreditationNumber: 'ACC-1',
+      year: 2027
     })
   })
 
@@ -402,7 +408,8 @@ describe('syncFromSummaryLog', () => {
         ledgerId: {
           organisationNumber: '500001',
           registrationNumber: 'REG-1',
-          accreditationNumber: 'ACC-1'
+          accreditationNumber: 'ACC-1',
+          year: YEAR
         }
       }
     )
@@ -458,7 +465,8 @@ describe('syncFromSummaryLog', () => {
       {
         organisationNumber: '500001',
         registrationNumber: 'REG-1',
-        accreditationNumber: null
+        accreditationNumber: null,
+        year: YEAR
       },
       { summaryLogId: fileId, creditTotal: 0 },
       expect.objectContaining({ id: TEST_USER.id, email: TEST_USER.email })

@@ -31,11 +31,16 @@ export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
 const RETIRED_ROW_HISTORY_INDEX_NAMES = ['row_history', 'row_history_by_number']
 
+const RETIRED_IDENTITY_INDEX_NAMES = [
+  'summary_log_row_state_identity',
+  'summary_log_row_state_identity_by_number'
+]
+
 /**
  * Ensures the row-states collection exists with the indexes required by the
  * summary-log row state design: a multikey index on `summaryLogIds` for the
  * committed-state membership query, and a unique index on the
- * summary-log-row-state identity (ledger identity + content hash) that makes
+ * summary-log-row-state identity (ledger identity and year + content hash) that makes
  * the content-addressed dedup atomic under concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
@@ -63,14 +68,19 @@ export async function ensureSummaryLogRowStatesCollection(db) {
       organisationNumber: 1,
       registrationNumber: 1,
       accreditationNumber: 1,
+      year: 1,
       rowId: 1,
       wasteRecordType: 1,
       contentHash: 1
     },
-    { name: 'summary_log_row_state_identity_by_number', unique: true }
+    { name: 'summary_log_row_state_identity_by_year', unique: true }
   )
 
-  await dropIndexIfPresent(collection, 'summary_log_row_state_identity')
+  await Promise.all(
+    RETIRED_IDENTITY_INDEX_NAMES.map((name) =>
+      dropIndexIfPresent(collection, name)
+    )
+  )
 
   return collection
 }
@@ -124,7 +134,7 @@ const hashSummaryLogRowState = (candidate) =>
 
 /**
  * Builds the content-addressed identity filter for a row state — exactly the
- * fields of the unique `summary_log_row_state_identity_by_number` index. Using the unique
+ * fields of the unique `summary_log_row_state_identity_by_year` index. Using the unique
  * key as the upsert filter is what makes concurrent writers converge on a
  * single document: MongoDB retries the upsert against the winning insert
  * instead of surfacing a duplicate-key error.
@@ -136,6 +146,7 @@ const buildIdentityFilter = (candidate, contentHash) => ({
   organisationNumber: candidate.organisationNumber,
   registrationNumber: candidate.registrationNumber,
   accreditationNumber: candidate.accreditationNumber,
+  year: candidate.year,
   rowId: candidate.rowId,
   wasteRecordType: candidate.wasteRecordType,
   contentHash
@@ -146,6 +157,7 @@ const identityKey = (fields) =>
     fields.organisationNumber,
     fields.registrationNumber,
     fields.accreditationNumber,
+    fields.year,
     fields.rowId,
     fields.wasteRecordType,
     fields.contentHash
@@ -163,6 +175,7 @@ const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
   organisationNumber: ledgerId.organisationNumber,
   registrationNumber: ledgerId.registrationNumber,
   accreditationNumber: ledgerId.accreditationNumber,
+  year: ledgerId.year,
   summaryLogIds: summaryLogId
 })
 
@@ -318,6 +331,7 @@ const SUBMITTED_ROW_STATE_PROJECTION = {
   organisationNumber: 1,
   registrationNumber: 1,
   accreditationNumber: 1,
+  year: 1,
   wasteRecordType: 1,
   processingType: 1,
   data: 1
@@ -331,6 +345,7 @@ const toSubmittedRowState = ({
   organisationNumber,
   registrationNumber,
   accreditationNumber,
+  year,
   wasteRecordType,
   processingType,
   data
@@ -338,6 +353,7 @@ const toSubmittedRowState = ({
   organisationNumber,
   registrationNumber,
   accreditationNumber,
+  year,
   wasteRecordType,
   processingType,
   data

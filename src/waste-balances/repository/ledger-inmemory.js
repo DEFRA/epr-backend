@@ -28,7 +28,8 @@ import { validateLedgerEventInsert } from './ledger-validation.js'
 const matchesLedger = (event, ledgerId) =>
   event.organisationNumber === ledgerId.organisationNumber &&
   event.registrationNumber === ledgerId.registrationNumber &&
-  event.accreditationNumber === ledgerId.accreditationNumber
+  event.accreditationNumber === ledgerId.accreditationNumber &&
+  event.year === ledgerId.year
 
 /**
  * Migration PAE-1382: delete all events for a ledgerId.
@@ -61,7 +62,7 @@ const doFindLatestSubmittedSummaryLogPerLedger = (storage) => {
       continue
     }
 
-    const key = `${event.organisationNumber}\u0000${event.registrationNumber}\u0000${event.accreditationNumber}`
+    const key = `${event.organisationNumber}\u0000${event.registrationNumber}\u0000${event.accreditationNumber}\u0000${event.year}`
     const latest = latestByPartition.get(key)
     if (!latest || event.number > latest.number) {
       latestByPartition.set(key, event)
@@ -72,7 +73,8 @@ const doFindLatestSubmittedSummaryLogPerLedger = (storage) => {
     ledgerId: {
       organisationNumber: event.organisationNumber,
       registrationNumber: event.registrationNumber,
-      accreditationNumber: event.accreditationNumber
+      accreditationNumber: event.accreditationNumber,
+      year: event.year
     },
     summaryLogId: /** @type {*} */ (event.payload).summaryLogId
   }))
