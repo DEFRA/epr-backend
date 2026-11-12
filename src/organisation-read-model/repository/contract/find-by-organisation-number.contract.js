@@ -817,6 +817,22 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       expect(registrations[REPROCESSOR_NUMBER].status.current).toBe('approved')
     })
 
+    it('serves a registration approved later in the year with its current status, as it has none yet today', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = buildOrganisation({
+        registrations: [reprocessorFrom('2027-06-01')]
+      })
+
+      const { registrations } = await findInYear(
+        organisationReadRepositoryWith,
+        stored,
+        2027
+      )
+
+      expect(registrations[REPROCESSOR_NUMBER].status.current).toBe('approved')
+    })
+
     it('serves the last status on a year’s final day when it changed several times that day', async ({
       organisationReadRepositoryWith
     }) => {

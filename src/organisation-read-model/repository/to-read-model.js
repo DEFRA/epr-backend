@@ -154,6 +154,21 @@ const onlyYear = (byYear, year) =>
   Object.hasOwn(byYear, year) ? { [year]: byYear[year] } : {}
 
 /**
+ * The registration's status on `date`, or its current status when it had no
+ * served status then, as with one approved later in the year asked for.
+ *
+ * @param {Registration} registration
+ * @param {CalendarDate} date
+ * @returns {Registration['status']['current']}
+ */
+const registrationStatusOn = (registration, date) => {
+  const status = statusOn(registration.status.timeline, date)
+  return isOneOf(REGISTRATION_STATUSES, status)
+    ? status
+    : registration.status.current
+}
+
+/**
  * The organisation as it stood in `year`: registrations approved at any point
  * in it, each with only that year's accreditation and status dates.
  * Organisation and registration statuses are those on the earlier of the end
@@ -177,7 +192,7 @@ const organisationInYear = (organisation, year, context) => {
         ...registration,
         status: {
           ...registration.status,
-          current: statusOn(registration.status.timeline, statusesAsOfDate)
+          current: registrationStatusOn(registration, statusesAsOfDate)
         },
         accreditations: onlyYear(registration.accreditations, year),
         standingByDate: onlyYear(registration.standingByDate, year)
