@@ -2,7 +2,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { toYear } from '#common/helpers/dates/year.js'
+import { nextYear, toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
@@ -1077,8 +1077,8 @@ const buildComplexTestOrg = ({
 /**
  * The organisation `buildComplexTestOrg` builds, as the read model serves it:
  * its registration under the test keys, approved from `VALID_FROM`, and its
- * accreditation for `UPLOAD_YEAR` when accredited, approved from
- * `accreditationValidFrom`.
+ * accreditation for the year of `accreditationValidFrom` when accredited,
+ * approved from `accreditationValidFrom`.
  *
  * @param {{
  *   processingType: string,
@@ -1117,12 +1117,15 @@ const buildComplexTestReadOrg = ({
       }
     ]
   })
-  const standingInUploadYear = !accredited
-    ? { [VALID_FROM]: { standing: 'registeredOnly' } }
-    : accreditationValidFrom === VALID_FROM
-      ? { [VALID_FROM]: { standing: 'accredited' } }
+  const accreditationYear = utcYearOf(accreditationValidFrom)
+  const startOfAccreditationYear = `${accreditationYear}-01-01`
+  const followingYear = nextYear(accreditationYear)
+  const standingInAccreditationYear = !accredited
+    ? { [startOfAccreditationYear]: { standing: 'registeredOnly' } }
+    : accreditationValidFrom === startOfAccreditationYear
+      ? { [startOfAccreditationYear]: { standing: 'accredited' } }
       : {
-          [VALID_FROM]: { standing: 'registeredOnly' },
+          [startOfAccreditationYear]: { standing: 'registeredOnly' },
           [accreditationValidFrom]: { standing: 'accredited' }
         }
   const accreditation = buildReadAccreditation({
@@ -1134,9 +1137,9 @@ const buildComplexTestReadOrg = ({
     validFrom: VALID_FROM,
     status: approvedFrom(VALID_FROM),
     standingByDate: /** @type {any} */ ({
-      [UPLOAD_YEAR]: standingInUploadYear,
-      [UPLOAD_YEAR + 1]: {
-        [`${UPLOAD_YEAR + 1}-01-01`]: { standing: 'registeredOnly' }
+      [accreditationYear]: standingInAccreditationYear,
+      [followingYear]: {
+        [`${followingYear}-01-01`]: { standing: 'registeredOnly' }
       }
     })
   }
@@ -1168,7 +1171,7 @@ const buildComplexTestReadOrg = ({
               : {},
             accreditations: accredited
               ? {
-                  [UPLOAD_YEAR]: buildReadExporterAccreditation({
+                  [accreditationYear]: buildReadExporterAccreditation({
                     ...accreditation,
                     overseasSites: {
                       100: { status: 'approved', approvedOn: VALID_FROM },
@@ -1184,7 +1187,9 @@ const buildComplexTestReadOrg = ({
         : buildReadReprocessorRegistration({
             ...common,
             reprocessingType: /** @type {any} */ (reprocessingType),
-            accreditations: accredited ? { [UPLOAD_YEAR]: accreditation } : {}
+            accreditations: accredited
+              ? { [accreditationYear]: accreditation }
+              : {}
           })
     }
   })
