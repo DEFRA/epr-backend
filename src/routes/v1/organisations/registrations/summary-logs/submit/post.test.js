@@ -219,8 +219,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       }),
       {
         summaryLogId,
-        organisationId,
-        registrationId,
         organisationNumber,
         registrationNumber,
         accreditationNumber: null

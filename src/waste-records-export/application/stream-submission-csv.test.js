@@ -60,8 +60,8 @@ const rowState = (overrides = {}) => ({
  */
 const input = (overrides = {}) =>
   /** @type {SubmissionCsvInput} */ ({
-    org: { id: 'org-1', companyDetails: { name: 'Acme Ltd' } },
-    registration: { id: 'reg-1', submittedToRegulator: 'ea' },
+    org: { name: 'Acme Ltd' },
+    registration: { submittedToRegulator: { code: 'ea' } },
     meta: {
       REGISTRATION_NUMBER: 'REG-001',
       ACCREDITATION_NUMBER: 'ACC-001',

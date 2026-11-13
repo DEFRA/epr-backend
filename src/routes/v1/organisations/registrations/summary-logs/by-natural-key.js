@@ -172,9 +172,5 @@ export const summaryLogRoutesByNaturalKey = [
     `${summaryLogs}/files/{fileId}`,
     fileParams
   ),
-  atNaturalKeys(
-    summaryLogRecordsCsv,
-    `${summaryLogs}/files/{fileId}/records.csv`,
-    fileParams
-  )
+  summaryLogRecordsCsv
 ]
