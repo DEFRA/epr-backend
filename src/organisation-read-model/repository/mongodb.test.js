@@ -1,16 +1,8 @@
-import { MongoClient, ObjectId } from 'mongodb'
-
-import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
-import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
-import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import {
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
-  createOrganisationReadRepository
-} from './mongodb.js'
+import { it as organisationReadIt } from '#vite/fixtures/organisation-read-mongo.js'
 import {
   REPROCESSOR_NUMBER,
+  accreditation,
   findOrganisation,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
@@ -18,82 +10,49 @@ import { testOrganisationReadRepositoryContract } from './port.contract.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { TestAPI } from 'vitest' */
-/** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryWith } from './port.contract.js' */
-/** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryServing, OrganisationSeed } from './port.contract.js' */
 
 /**
- * @typedef {{
- *   mongoClient: MongoClient
- *   organisationReadRepositoryWith: OrganisationReadRepositoryWith
- * }} MongoFixtures
- */
-
-const DATABASE_NAME = 'epr-backend'
-
-/**
- * Stored as-is, so records the write path would refuse can be read back.
+ * The seeded organisation as the organisations collection stores it: each
+ * registration approved and numbered, and linked to an approved accreditation
+ * when the seed gives an accreditation number.
  *
- * @param {any} record
+ * @param {OrganisationSeed} seed
  */
-const toDocument = ({ id, ...rest }) => ({
-  _id: ObjectId.createFromHexString(id),
-  ...rest
-})
-
-const it = /** @type {TestAPI<MongoFixtures>} */ (
-  mongoIt.extend({
-    mongoClient: async ({ db }, use) => {
-      const client = await MongoClient.connect(db)
-      await use(client)
-      await client.close()
-    },
-
-    organisationReadRepositoryWith: async ({ mongoClient }, use) => {
-      const database = mongoClient.db(DATABASE_NAME)
-      await database.collection('epr-organisations').deleteMany({})
-      await database.collection('overseas-sites').deleteMany({})
-      await database
-        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
-        .deleteMany({})
-
-      /** @type {OrganisationReadRepositoryWith} */
-      const organisationReadRepositoryWith = async ({
-        organisations,
-        overseasSites = [],
-        externalAccreditations = [],
-        logger = { warn: () => {} }
-      }) => {
-        for (const organisation of organisations) {
-          await database
-            .collection('epr-organisations')
-            .insertOne(
-              toDocument(
-                toStoredOrganisation(/** @type {Organisation} */ (organisation))
-              )
-            )
-        }
-        for (const site of overseasSites) {
-          await database
-            .collection('overseas-sites')
-            .insertOne(toDocument(site))
-        }
-        const externalAccreditationsRepository = (
-          await createMongoExternalAccreditationsRepository(database)
-        )()
-        for (const externalAccreditation of externalAccreditations) {
-          await externalAccreditationsRepository.upsert(externalAccreditation)
-        }
-
-        return createOrganisationReadRepository(database)({
-          overseasSitesRepository: (
-            await createOverseasSitesRepository(database)
-          )(),
-          logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger))
-        })
+const toStored = ({ name, organisationNumber, registrations }) => {
+  const linked = registrations.map(
+    ({ registrationNumber, accreditationNumber }) => {
+      const held = accreditationNumber
+        ? accreditation({ accreditationNumber })
+        : undefined
+      return {
+        registration: reprocessor({
+          registrationNumber,
+          accreditationId: held?.id
+        }),
+        accreditation: held
       }
-      await use(organisationReadRepositoryWith)
+    }
+  )
+  return buildOrganisation({
+    organisationNumber,
+    companyDetails: { name },
+    registrations: linked.map(({ registration }) => registration),
+    accreditations: linked.flatMap(({ accreditation: held }) =>
+      held ? [held] : []
+    )
+  })
+}
+
+const it = organisationReadIt.extend(
+  /** @type {{ organisationReadRepositoryServing: (context: any, use: (value: OrganisationReadRepositoryServing) => Promise<void>) => Promise<void> }} */ ({
+    organisationReadRepositoryServing: async (
+      { organisationReadRepositoryWith },
+      use
+    ) => {
+      await use((seeds) =>
+        organisationReadRepositoryWith({ organisations: seeds.map(toStored) })
+      )
     }
   })
 )

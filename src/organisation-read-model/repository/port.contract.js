@@ -1,31 +1,42 @@
-import { testDroppedRecordsBehaviour } from './contract/dropped-records.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindAllBehaviour } from './contract/find-all.contract.js'
 import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organisation-number.contract.js'
-import { testExternalAccreditationsBehaviour } from './contract/external-accreditations.contract.js'
-import { testStatusTimelineBehaviour } from './contract/status-timeline.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
-/** @import { ExternalAccreditation } from './to-read-model.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
- * Stores the organisations, overseas sites and external accreditations, and
- * returns a repository that reads them.
+ * An organisation the read model serves, described by what the port reads:
+ * its name and its numbers. Each registration is approved and served, and an
+ * accreditation number gives it an approved accreditation for the current
+ * year. Each adapter's tests store it in their own shape.
  *
- * @typedef {(data: {
- *   externalAccreditations?: ExternalAccreditation[]
- *   logger?: { warn: (...args: any[]) => void }
- *   organisations: object[]
- *   overseasSites?: object[]
- * }) => Promise<OrganisationReadRepository>} OrganisationReadRepositoryWith
+ * @typedef {{
+ *   name: string
+ *   organisationNumber: OrganisationNumber
+ *   registrations: Array<{
+ *     registrationNumber: RegistrationNumber
+ *     accreditationNumber?: AccreditationNumber
+ *   }>
+ * }} OrganisationSeed
  */
 
 /**
- * @typedef {TestAPI<{ organisationReadRepositoryWith: OrganisationReadRepositoryWith }>} OrganisationReadRepositoryContractIt
+ * Stores the organisations so that the repository it returns serves them.
+ *
+ * @typedef {(organisations: OrganisationSeed[]) => Promise<OrganisationReadRepository>} OrganisationReadRepositoryServing
  */
 
 /**
+ * @typedef {TestAPI<{ organisationReadRepositoryServing: OrganisationReadRepositoryServing }>} OrganisationReadRepositoryContractIt
+ */
+
+/**
+ * What every organisation read repository does, whatever it reads from.
+ * Behaviour of one adapter, such as how the MongoDB adapter maps stored
+ * organisations, is tested with that adapter.
+ *
  * @param {OrganisationReadRepositoryContractIt} it
  */
 export const testOrganisationReadRepositoryContract = (it) => {
@@ -33,8 +44,5 @@ export const testOrganisationReadRepositoryContract = (it) => {
     testFindByOrganisationNumberBehaviour(it)
     testFindBehaviour(it)
     testFindAllBehaviour(it)
-    testStatusTimelineBehaviour(it)
-    testDroppedRecordsBehaviour(it)
-    testExternalAccreditationsBehaviour(it)
   })
 }
