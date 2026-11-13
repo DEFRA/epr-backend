@@ -225,7 +225,8 @@ const summaryLogDocument = (fileId, submittedAt) => ({
  *   seeds?: any[],
  *   summaryLogs?: Record<string, any[]>,
  *   organisation?: any,
- *   registrationNumber?: RegistrationNumber
+ *   registrationNumber?: RegistrationNumber,
+ *   year?: import('#common/helpers/dates/year.js').Year
  * }} [options]
  */
 const buildDeps = async ({
@@ -233,7 +234,8 @@ const buildDeps = async ({
   seeds = [],
   summaryLogs = {},
   organisation,
-  registrationNumber
+  registrationNumber,
+  year = DEFAULT_YEAR
 } = {}) => {
   const ledgerIdOf = (seed) => ({
     organisationNumber: seed.organisationNumber ?? ORGANISATION_NUMBER,
@@ -278,6 +280,7 @@ const buildDeps = async ({
       findAll: async ({ organisationNumber, registrationNumber }) =>
         summaryLogs[`${organisationNumber}/${registrationNumber}`] ?? []
     },
+    year,
     organisation,
     registrationNumber
   }
@@ -781,15 +784,22 @@ describe('streamCsvExport', () => {
       ]
     })
 
-    const out = await collect(streamCsvExport(deps))
+    const thisYear = await collect(streamCsvExport(deps))
+    const nextYear = await collect(
+      streamCsvExport({ ...deps, year: NEXT_YEAR })
+    )
 
-    expect(out).toHaveLength(3)
-    const byRowId = cellsByRowId(out)
+    expect(thisYear).toHaveLength(2)
     expect(
-      byRowId.get('1001')[METADATA_COL_INDEX['Accreditation Number']]
+      cellsByRowId(thisYear).get('1001')[
+        METADATA_COL_INDEX['Accreditation Number']
+      ]
     ).toBe('ACC-OLD')
+    expect(nextYear).toHaveLength(2)
     expect(
-      byRowId.get('2002')[METADATA_COL_INDEX['Accreditation Number']]
+      cellsByRowId(nextYear).get('2002')[
+        METADATA_COL_INDEX['Accreditation Number']
+      ]
     ).toBe('ACC-NEW')
   })
 
@@ -853,7 +863,6 @@ describe('streamCsvExport', () => {
         },
         {
           accreditationNumber: 'ACC-A',
-          year: NEXT_YEAR,
           summaryLogId: 'sl-a',
           rows: [receivedRowState({ rowId: '2002' })]
         }
@@ -868,7 +877,7 @@ describe('streamCsvExport', () => {
     ).toEqual(['1001', '2002', '3003'])
   })
 
-  it("orders a registered-only registration's years earliest first", async () => {
+  it("exports only the year's partitions", async () => {
     const deps = await buildDeps({
       orgs: [readModelOrg()],
       seeds: [
@@ -884,11 +893,13 @@ describe('streamCsvExport', () => {
       ]
     })
 
-    const out = await collect(streamCsvExport(deps))
+    const rowIdsOf = async (year) =>
+      (await collect(streamCsvExport({ ...deps, year })))
+        .slice(1)
+        .map((line) => cellsOf(line)[METADATA_COL_INDEX['Row ID']])
 
-    expect(
-      out.slice(1).map((line) => cellsOf(line)[METADATA_COL_INDEX['Row ID']])
-    ).toEqual(['1001', '2002'])
+    expect(await rowIdsOf(DEFAULT_YEAR)).toEqual(['1001'])
+    expect(await rowIdsOf(NEXT_YEAR)).toEqual(['2002'])
   })
 
   it('orders organisations by organisation number and registrations by registration number', async () => {
@@ -1172,7 +1183,8 @@ describe('streamCsvExport', () => {
   it("classifies a partition's rows with its year's templates", async () => {
     const deps = await buildDeps({
       orgs: [readModelOrg()],
-      seeds: [{ year: toYear(2028), rows: [receivedRowState()] }]
+      seeds: [{ year: toYear(2028), rows: [receivedRowState()] }],
+      year: toYear(2028)
     })
 
     await expect(collect(streamCsvExport(deps))).rejects.toThrow(
@@ -1250,6 +1262,24 @@ describe('streamCsvExportToReadable', () => {
     const out = await collect(streamCsvExport(deps))
 
     expect(findDistinctDataKeys).toHaveBeenCalledTimes(1)
+    expect(findDistinctDataKeys).toHaveBeenCalledWith(DEFAULT_YEAR)
     expect(out[0]).toContain('WASTE_TRANSFER_NOTE')
+  })
+
+  it("composes the header from the year's data keys only", async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [
+        {
+          year: NEXT_YEAR,
+          summaryLogId: 'sl-next-year',
+          rows: [receivedRowState({ data: { ONLY_NEXT_YEAR: 'x' } })]
+        }
+      ]
+    })
+
+    const [header] = await collect(streamCsvExport(deps))
+
+    expect(header).not.toContain('ONLY_NEXT_YEAR')
   })
 })

@@ -5,7 +5,6 @@ import {
   hasTemplate,
   hasTemplatesForYear,
   findSchemaByWasteRecordType,
-  findSchemaForProcessingType,
   unfilledValuesForYear,
   tableSchemasOf
 } from './index.js'
@@ -235,61 +234,6 @@ describe('table-schemas', () => {
       })
 
       expect(result).toEqual({ tableName: 'TABLE_1', schema })
-    })
-  })
-
-  describe('findSchemaForProcessingType', () => {
-    it('finds REPROCESSOR_INPUT received loads schema by waste record type', () => {
-      const result = findSchemaForProcessingType(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
-        WASTE_RECORD_TYPE.RECEIVED
-      )
-
-      expect(result).not.toBeNull()
-      const schema = /** @type {NonNullable<typeof result>} */ (result)
-      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
-      expect(schema.sheetName).toBe('Received')
-    })
-
-    it('finds EXPORTER exported loads schema by waste record type', () => {
-      const result = findSchemaForProcessingType(
-        PROCESSING_TYPES.EXPORTER,
-        WASTE_RECORD_TYPE.EXPORTED
-      )
-
-      expect(result).not.toBeNull()
-      const schema = /** @type {NonNullable<typeof result>} */ (result)
-      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.EXPORTED)
-    })
-
-    it('finds sent-on loads schema by waste record type', () => {
-      const schema = findSchemaForProcessingType(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
-        WASTE_RECORD_TYPE.SENT_ON
-      )
-
-      expect(schema).not.toBeNull()
-      expect(
-        /** @type {NonNullable<typeof schema>} */ (schema).wasteRecordType
-      ).toBe(WASTE_RECORD_TYPE.SENT_ON)
-    })
-
-    it('returns null for unknown processing type', () => {
-      const schema = findSchemaForProcessingType(
-        'UNKNOWN',
-        WASTE_RECORD_TYPE.RECEIVED
-      )
-
-      expect(schema).toBeNull()
-    })
-
-    it('returns null for unknown waste record type', () => {
-      const schema = findSchemaForProcessingType(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
-        'unknown'
-      )
-
-      expect(schema).toBeNull()
     })
   })
 

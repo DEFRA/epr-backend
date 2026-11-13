@@ -3,7 +3,11 @@ import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import {
+  findSchemaByWasteRecordType,
+  hasTemplate,
+  tableSchemasOf
+} from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
@@ -39,6 +43,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
+ * @property {Year} year - The year whose ledger partitions are exported.
  * @property {Organisation} [organisation] - When set, export only this organisation.
  * @property {RegistrationNumber} [registrationNumber] - When set (with organisation), export only this registration.
  */
@@ -67,14 +72,24 @@ export const sortRowStates = (a, b) => {
  * another) is stored as submitted, so coercing on read is what makes the
  * exported column hold a single type across rows. `processingType`, held as a
  * top-level field on the row state, is merged back onto the data both to select
- * the schema and to fill its metadata column.
+ * the schema and to fill its metadata column. The schema is the template of the
+ * row's partition year.
  *
  * @param {Pick<SummaryLogRowState, 'data' | 'processingType' | 'wasteRecordType'>} rowState
+ * @param {Year} year
  * @returns {Record<string, any>}
  */
-export const coerceForExport = ({ data, processingType, wasteRecordType }) => {
+export const coerceForExport = (
+  { data, processingType, wasteRecordType },
+  year
+) => {
   const withProcessingType = { ...data, processingType }
-  const schema = findSchemaForProcessingType(processingType, wasteRecordType)
+  const schema = hasTemplate(year, processingType)
+    ? findSchemaByWasteRecordType(
+        wasteRecordType,
+        tableSchemasOf(year, processingType)
+      )?.schema
+    : null
   return schema
     ? coerceRowData(withProcessingType, schema).data
     : withProcessingType
@@ -97,16 +112,15 @@ export const encodeRow = async (cells) => {
 
 /**
  * Deterministic partition order within a registration: registered-only
- * (null accreditation) first with its years in order, then accreditation
- * numbers ascending.
+ * (null accreditation) first, then accreditation numbers ascending.
  *
  * @param {LatestSubmittedSummaryLogPerLedger} a
  * @param {LatestSubmittedSummaryLogPerLedger} b
  */
-const sortEntriesByAccreditationNumberAndYear = (a, b) =>
+const sortEntriesByAccreditationNumber = (a, b) =>
   String(a.ledgerId.accreditationNumber ?? '').localeCompare(
     String(b.ledgerId.accreditationNumber ?? '')
-  ) || a.ledgerId.year - b.ledgerId.year
+  )
 
 /**
  * The export answers a question about the present, so it discards the reading
@@ -190,7 +204,7 @@ async function* streamPartitionRows({
         registrationNumber,
         registration,
         accreditationNumber,
-        data: coerceForExport(rowState),
+        data: coerceForExport(rowState, ledgerId.year),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
         classification: recomputedClassification(
@@ -233,7 +247,7 @@ async function* streamLatestSubmissionRows({
   ...context
 }) {
   for (const { ledgerId, summaryLogId } of [...entries].sort(
-    sortEntriesByAccreditationNumberAndYear
+    sortEntriesByAccreditationNumber
   )) {
     yield* streamPartitionRows({
       ...context,
@@ -319,13 +333,16 @@ const registrationsInOrder = (org, only) =>
  * Yields CSV-encoded lines (header first, then one per row state).
  * Hard-fails on any iterator error — caller must close the response stream.
  *
- * The header row is dynamically composed from the union of schema-declared
- * field constants and any keys observed on stored row-state `data` objects.
- * Observed keys are discovered up-front via a server-side aggregation
+ * Only the year's ledger partitions are exported. The header row is
+ * dynamically composed from the union of schema-declared field constants and
+ * any keys observed on the year's stored row-state `data` objects. Observed
+ * keys are discovered up-front via a server-side aggregation
  * (`findDistinctDataKeys`) so the export does not need to materialise any row
  * state to compose the header. Each registration's ledger partitions are
  * resolved up-front from a single cross-ledger query
- * (`findLatestSubmittedSummaryLogPerLedger`), then rows are streamed one
+ * (`findLatestSubmittedSummaryLogPerLedger`) narrowed to the year — a ledger
+ * belongs to one year, so its latest submission is that year's — then rows
+ * are streamed one
  * partition at a time — memory is bounded by the largest single partition's
  * row count, not the total across the system.
  *
@@ -338,19 +355,22 @@ export async function* streamCsvExport(deps) {
     summaryLogRowStatesRepository,
     ledgerRepository,
     summaryLogsRepository,
+    year,
     organisation,
     registrationNumber: onlyRegistration
   } = deps
 
   const [observedKeys, latestSubmittedEntries] = await Promise.all([
-    summaryLogRowStatesRepository.findDistinctDataKeys(),
+    summaryLogRowStatesRepository.findDistinctDataKeys(year),
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
   ])
 
   const dataFieldColumns = buildDataFieldColumns(observedKeys)
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
-  const entriesByRegistration = groupByRegistration(latestSubmittedEntries)
+  const entriesByRegistration = groupByRegistration(
+    latestSubmittedEntries.filter(({ ledgerId }) => ledgerId.year === year)
+  )
 
   const orgsSorted = organisation
     ? [organisation]
