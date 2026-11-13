@@ -260,7 +260,7 @@ export const testStatusTimelineBehaviour = (it) => {
       ])
     })
 
-    it('leaves out an approval cancelled before its validFrom', async ({
+    it('dates a cancellation recorded before validFrom at validFrom, after the approval', async ({
       organisationReadRepositoryWith
     }) => {
       config.set('openNextYear', true)
@@ -293,8 +293,13 @@ export const testStatusTimelineBehaviour = (it) => {
           updatedAt: '2026-11-12T10:00:00.000Z'
         },
         {
+          status: 'approved',
+          at: '2027-01-01T00:00:00.000Z',
+          updatedAt: '2026-11-12T10:05:00.000Z'
+        },
+        {
           status: 'cancelled',
-          at: '2026-11-15T10:05:00.000Z',
+          at: '2027-01-01T00:00:00.000Z',
           updatedAt: '2026-11-15T10:05:00.000Z'
         }
       ])
@@ -334,8 +339,13 @@ export const testStatusTimelineBehaviour = (it) => {
           updatedAt: '2026-11-12T10:00:00.000Z'
         },
         {
+          status: 'approved',
+          at: '2027-01-01T00:00:00.000Z',
+          updatedAt: '2026-11-12T10:05:00.000Z'
+        },
+        {
           status: 'cancelled',
-          at: '2026-11-15T10:05:00.000Z',
+          at: '2027-01-01T00:00:00.000Z',
           updatedAt: '2026-11-15T10:05:00.000Z'
         },
         {
@@ -388,7 +398,7 @@ export const testStatusTimelineBehaviour = (it) => {
       ])
     })
 
-    it('leaves out an approval suspended before its validFrom, so it stands suspended from then', async ({
+    it('dates a suspension recorded before validFrom at validFrom, after the approval', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = organisationAccredited({
@@ -418,8 +428,13 @@ export const testStatusTimelineBehaviour = (it) => {
           updatedAt: '2026-01-01T09:00:00.000Z'
         },
         {
+          status: 'approved',
+          at: '2026-07-01T00:00:00.000Z',
+          updatedAt: '2026-02-01T09:00:00.000Z'
+        },
+        {
           status: 'suspended',
-          at: '2026-05-01T09:00:00.000Z',
+          at: '2026-07-01T00:00:00.000Z',
           updatedAt: '2026-05-01T09:00:00.000Z'
         }
       ])

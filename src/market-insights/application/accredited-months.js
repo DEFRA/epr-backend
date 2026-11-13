@@ -3,7 +3,6 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { utcYearOf } from '#common/helpers/dates/year.js'
 import { validityOf } from '#waste-balances/application/read-model-accreditations.js'
 import {
   accreditationWindow,
@@ -131,23 +130,24 @@ const isAccreditedDuring = (period, window, history) =>
   )
 
 /**
- * Every accreditation the read model serves, outside test organisations, that
- * has been granted, among those the caller's publication covers. Only an
- * accredited registration reports monthly, so a registered-only operator
- * yields nothing.
+ * Every accreditation for one of the years the read model serves, outside
+ * test organisations, that has been granted, among those the caller's
+ * publication covers. Only an accredited registration reports monthly, so a
+ * registered-only operator yields nothing.
  *
  * @param {Organisation[]} organisations
+ * @param {Year[]} years
  * @param {CoversRegistration} covers
  * @returns {Generator<GrantedRegistration>}
  */
-export function* grantedRegistrations(organisations, covers) {
+export function* grantedRegistrations(organisations, years, covers) {
   for (const {
     organisation: { organisationNumber },
     registrationNumber,
     registration
   } of reportableRegistrations(organisations)) {
-    for (const year of Object.keys(registration.accreditations).map((key) =>
-      utcYearOf(key)
+    for (const year of years.filter((served) =>
+      Object.hasOwn(registration.accreditations, served)
     )) {
       const accreditation = validityOf({ registration, year })
       const candidate = {
@@ -181,7 +181,8 @@ export function* accreditedMonths({
   covers = () => true
 }) {
   const served = new Set(months)
-  const periods = [...new Set(months.map(yearOf))]
+  const years = [...new Set(months.map(yearOf))]
+  const periods = years
     .flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year))
     .filter((period) => served.has(toYearMonth(period.startDate)))
 
@@ -190,7 +191,7 @@ export function* accreditedMonths({
     registrationNumber,
     registration,
     accreditation
-  } of grantedRegistrations(organisations, covers)) {
+  } of grantedRegistrations(organisations, years, covers)) {
     const window = accreditationWindow(accreditation)
     if (window === null) {
       continue

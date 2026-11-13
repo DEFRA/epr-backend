@@ -3,10 +3,11 @@
 
 /**
  * Until ADR-0051's events exist, the first approval after the last `created`
- * takes effect from validFrom, a later one no earlier than that, and every
- * other change when it was recorded. Each change overrides whatever was
- * recorded before it from its own `at` onward, so the timeline holds only
- * the changes that take effect, in order.
+ * takes effect from validFrom, and a later approval, suspension or
+ * cancellation no earlier than that; every other change takes effect when it
+ * was recorded. Each change overrides whatever was recorded before it from its
+ * own `at` onward, so the timeline holds only the changes that take effect, in
+ * order.
  *
  * @param {StatusHistoryEntryOf<string>[]} statusHistory
  * @param {string} [validFrom]
@@ -24,8 +25,10 @@ export function toStatusTimeline(statusHistory, validFrom) {
       (one, other) => one.updatedAt.getTime() - other.updatedAt.getTime()
     )
   if (validFrom) {
-    datesApprovalsFrom(recorded, new Date(validFrom))
+    datesFromValidFrom(recorded, new Date(validFrom))
   }
+  // Dropping every later entry before appending is what keeps the timeline
+  // sorted once changes are redated
   return recorded
     .reduce(
       (timeline, change) => [
@@ -41,19 +44,26 @@ export function toStatusTimeline(statusHistory, validFrom) {
     }))
 }
 
+const FROM_VALID_FROM = new Set(['approved', 'suspended', 'cancelled'])
+
 /**
  * @param {{ status: string, at: Date }[]} recorded - in recorded order
  * @param {Date} validFrom
  */
-function datesApprovalsFrom(recorded, validFrom) {
+function datesFromValidFrom(recorded, validFrom) {
   const lastCreated = recorded.findLastIndex(
     ({ status }) => status === 'created'
   )
-  const approvals = recorded.filter(
+  const approval = recorded.findIndex(
     ({ status }, index) => index > lastCreated && status === 'approved'
   )
-  approvals.forEach((approval, index) => {
-    approval.at =
-      index === 0 || approval.at < validFrom ? validFrom : approval.at
-  })
+  if (approval < 0) {
+    return
+  }
+  recorded[approval].at = validFrom
+  for (const change of recorded.slice(approval + 1)) {
+    if (FROM_VALID_FROM.has(change.status) && change.at < validFrom) {
+      change.at = validFrom
+    }
+  }
 }
