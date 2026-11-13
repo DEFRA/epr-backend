@@ -46,8 +46,8 @@ export const toThreeDigitId = (value) =>
   String(Number(value)).padStart(THREE_DIGIT_PAD, '0')
 
 /**
- * @param {unknown} value
- * @returns {unknown}
+ * @param {string | number | null | undefined} value
+ * @returns {string | null | undefined}
  */
 export const toText = (value) =>
   value === null || value === undefined ? value : String(value)
