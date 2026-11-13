@@ -85,7 +85,7 @@ export const LOADS_EXPORTED_2027 = {
   ],
   validationSchema: LOADS_EXPORTED.validationSchema.keys({
     [LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID]: createRowIdSchema(
-      ROW_ID_MINIMUMS.LOADS_EXPORTED
+      ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
     ).optional(),
     [LOADS_EXPORTED_FIELDS_2027.EXIT_PORT]: createFreeTextFieldSchema(),
     [LOADS_EXPORTED_FIELDS_2027.DWT_EXPORT_ID]: createFreeTextFieldSchema()

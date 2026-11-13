@@ -87,7 +87,7 @@ describe('2027 additional columns', () => {
 
   describe.each([
     [PROCESSING_TYPES.EXPORTER, 'RECEIVED_LOADS_FOR_EXPORT', 1000],
-    [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY, 'LOADS_EXPORTED', 2000]
+    [PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY, 'LOADS_EXPORTED', 1000]
   ])('%s %s PREVIOUS_YEAR_ROW_ID', (processingType, tableName, minimum) => {
     const table = tableOf(2027, processingType, tableName)
     const errorFor = (value) =>
