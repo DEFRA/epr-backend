@@ -819,6 +819,47 @@ describe('SummaryLogsValidator', () => {
     }
   )
 
+  it.each([
+    { unset: 'registrationNumber', number: 'registration' },
+    { unset: 'accreditationNumber', number: 'accreditation' }
+  ])(
+    'marks the summary log invalid when it has no $number number, rather than matching a record with none',
+    async ({ unset, number }) => {
+      delete summaryLog[unset]
+      organisationReadRepository.findByOrganisationNumber.mockResolvedValue({
+        organisationNumber: '500123',
+        registrations: {
+          undefined: {
+            ...served.registration,
+            accreditations: {
+              2026: { status: { current: 'approved', timeline: [] } }
+            }
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-log-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.INVALID,
+          validation: expect.objectContaining({
+            issues: [
+              {
+                severity: 'fatal',
+                category: 'technical',
+                message: `Summary log has no ${number} number`,
+                code: 'VALIDATION_SYSTEM_ERROR'
+              }
+            ]
+          })
+        })
+      )
+    }
+  )
+
   it('ignores rows dated before an approval part-way through the year', async () => {
     givenReadModelAccreditation({ year: '2026', approvedAt: '2026-03-01' })
     summaryLogExtractor.extract.mockResolvedValue(

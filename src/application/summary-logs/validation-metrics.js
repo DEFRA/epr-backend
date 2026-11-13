@@ -26,23 +26,25 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
   }
 
   // Record metrics for each combination
-  for (const [key, count] of counts) {
-    const [severity, category] = key.split(':')
-    await summaryLogMetrics.recordValidationIssues(
-      {
-        severity:
-          /** @type {import('#application/summary-logs/metrics.js').ValidationSeverity} */ (
-            severity
-          ),
-        category:
-          /** @type {import('#application/summary-logs/metrics.js').ValidationCategory} */ (
-            category
-          ),
-        processingType: /** @type {ProcessingType} */ (processingType)
-      },
-      count
-    )
-  }
+  await Promise.all(
+    [...counts].map(([key, count]) => {
+      const [severity, category] = key.split(':')
+      return summaryLogMetrics.recordValidationIssues(
+        {
+          severity:
+            /** @type {import('#application/summary-logs/metrics.js').ValidationSeverity} */ (
+              severity
+            ),
+          category:
+            /** @type {import('#application/summary-logs/metrics.js').ValidationCategory} */ (
+              category
+            ),
+          processingType: /** @type {ProcessingType} */ (processingType)
+        },
+        count
+      )
+    })
+  )
 }
 
 /**
@@ -69,20 +71,22 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
   }
 
   // Record metrics for each outcome with non-zero count
-  for (const [outcome, count] of Object.entries(counts)) {
-    if (count > 0) {
-      await summaryLogMetrics.recordRowOutcome(
-        {
-          outcome:
-            /** @type {import('#application/summary-logs/metrics.js').RowOutcome} */ (
-              outcome
-            ),
-          processingType: /** @type {ProcessingType} */ (processingType)
-        },
-        count
+  await Promise.all(
+    Object.entries(counts)
+      .filter(([, count]) => count > 0)
+      .map(([outcome, count]) =>
+        summaryLogMetrics.recordRowOutcome(
+          {
+            outcome:
+              /** @type {import('#application/summary-logs/metrics.js').RowOutcome} */ (
+                outcome
+              ),
+            processingType: /** @type {ProcessingType} */ (processingType)
+          },
+          count
+        )
       )
-    }
-  }
+  )
 }
 
 /**
