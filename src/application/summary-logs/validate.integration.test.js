@@ -14,6 +14,7 @@ import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
@@ -100,6 +101,41 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
+  /**
+   * A read model serving the summary log's registration, and its
+   * accreditation for the summary log's year, approved from the year's start.
+   *
+   * @param {Record<string, any>} summaryLog
+   */
+  const readModelServing = ({
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber,
+    year
+  }) => {
+    const at = `${year}-01-01T00:00:00.000Z`
+    return createInMemoryOrganisationReadRepository([
+      /** @type {any} */ ({
+        organisationNumber,
+        registrations: {
+          [registrationNumber]: {
+            accreditations: accreditationNumber
+              ? {
+                  [year]: {
+                    accreditationNumber,
+                    status: {
+                      current: 'approved',
+                      timeline: [{ status: 'approved', at, updatedAt: at }]
+                    }
+                  }
+                }
+              : {}
+          }
+        }
+      })
+    ])()
+  }
+
   const createSummaryLog = (testOrg, storedAccreditation) => {
     const [{ id: registrationId, registrationNumber }] = testOrg.registrations
     return summaryLogFactory.validating({
@@ -154,16 +190,19 @@ describe('SummaryLogsValidator integration', () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
 
+    const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
+
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository,
       organisationAdministrationRepository,
+      organisationReadRepository: readModelServing(summaryLog),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: async () => []
       }),
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+      overseasSitesRepository,
       summaryLogExtractor: extractor
     })
 

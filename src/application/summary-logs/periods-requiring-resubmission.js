@@ -16,8 +16,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {ReportableWasteRecordState} from '#reports/domain/aggregation/aggregate-report-detail.js' */
-/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {OrsDetails} from '#overseas-sites/application/get-ors-details-map.js' */
@@ -45,11 +44,10 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
  * share one shape.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
- * @param {Accreditation | null} accreditation
- * @param {OverseasSitesContext} overseasSites
+ * @param {ClassificationContext} classificationContext
  * @returns {ReportableWasteRecordState[]}
  */
-const toNewHeadRowStates = (wasteRecords, accreditation, overseasSites) =>
+const toNewHeadRowStates = (wasteRecords, { accreditation, overseasSites }) =>
   wasteRecords.map((wasteRecord) => ({
     wasteRecordType: /** @type {WasteRecordType} */ (
       wasteRecord.wasteRecordType
@@ -243,7 +241,7 @@ const logPeriodOutcome = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {Registration | undefined} params.registration
- * @param {OverseasSitesContext} params.overseasSites
+ * @param {ClassificationContext | undefined} params.classificationContext
  * @param {ReportsService} params.reportsService
  * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
@@ -259,7 +257,7 @@ const computePeriodsRequiringResubmission = async ({
   periodicReports,
   wasteRecords,
   registration,
-  overseasSites,
+  classificationContext,
   reportsService,
   overseasSitesRepository,
   summaryLogRowStatesRepository,
@@ -269,17 +267,13 @@ const computePeriodsRequiringResubmission = async ({
     return []
   }
   /* v8 ignore next 3 -- closed periods only arise for a classified registration */
-  if (!registration) {
+  if (!registration || !classificationContext) {
     throw new Error('Closed periods without a registration')
   }
 
   const context = await buildFiguresContext({
     registration,
-    newHeadRowStates: toNewHeadRowStates(
-      wasteRecords,
-      registration.accreditation ?? null,
-      overseasSites
-    ),
+    newHeadRowStates: toNewHeadRowStates(wasteRecords, classificationContext),
     overseasSitesRepository,
     summaryLogRowStatesRepository,
     ledgerId

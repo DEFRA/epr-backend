@@ -722,6 +722,7 @@ export const createTestInfrastructure = async (
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
@@ -867,6 +868,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),

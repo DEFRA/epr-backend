@@ -8,8 +8,14 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
+/** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
@@ -138,3 +144,59 @@ export const overseasSitesOf = ({ registration, year }) =>
       }
     ])
   )
+
+/**
+ * The accreditation a summary log's numbers name, as the read model serves
+ * it, or none for a registered-only summary log.
+ *
+ * @param {OrganisationReadRepository} organisationReadRepository
+ * @param {{ organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, accreditationNumber: AccreditationNumber | null }} numbers
+ * @returns {Promise<LedgerAccreditation | null>}
+ */
+export const ledgerAccreditationFor = async (
+  organisationReadRepository,
+  { organisationNumber, registrationNumber, accreditationNumber }
+) => {
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  if (!organisation) {
+    throw new Error(`Organisation not found: ${organisationNumber}`)
+  }
+  if (!Object.hasOwn(organisation.registrations, registrationNumber)) {
+    throw new Error(`Registration not found: ${registrationNumber}`)
+  }
+  if (accreditationNumber === null) {
+    return null
+  }
+
+  const ledgerAccreditation = indexByLedger([organisation], {
+    includeTestOrganisations: true
+  }).get(
+    ledgerKey({ organisationNumber, registrationNumber, accreditationNumber })
+  )
+  if (!ledgerAccreditation) {
+    throw new Error(`Accreditation not found: ${accreditationNumber}`)
+  }
+  return ledgerAccreditation
+}
+
+/**
+ * What classifying a row reads of its accreditation. Only an accredited
+ * exporter's overseas sites are checked.
+ *
+ * @param {LedgerAccreditation | null} ledgerAccreditation
+ * @param {ProcessingType} processingType
+ * @returns {ClassificationContext}
+ */
+export const classificationContextOf = (ledgerAccreditation, processingType) =>
+  ledgerAccreditation
+    ? {
+        accreditation: validityOf(ledgerAccreditation),
+        overseasSites:
+          processingType === PROCESSING_TYPES.EXPORTER
+            ? overseasSitesOf(ledgerAccreditation)
+            : ORS_VALIDATION_DISABLED
+      }
+    : { accreditation: null, overseasSites: ORS_VALIDATION_DISABLED }
