@@ -143,7 +143,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         {
           rowId: 1002,
           tonnageReceived: 200,
-          dateReceived: '2025-01-16T00:00:00.000Z'
+          dateReceived: '2026-01-16T00:00:00.000Z'
         }
       ])
 
@@ -168,7 +168,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
           {
             rowId: 5001,
             tonnageSent: 100,
-            dateLeft: '2025-01-20T00:00:00.000Z'
+            dateLeft: '2026-01-20T00:00:00.000Z'
           }
         ]
       )
@@ -224,7 +224,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
           {
             rowId: sharedRowId,
             tonnageSent: 100,
-            dateLeft: '2025-01-20T00:00:00.000Z'
+            dateLeft: '2026-01-20T00:00:00.000Z'
           }
         ]
       )
@@ -252,12 +252,12 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         {
           rowId: 1001,
           tonnageReceived: 100,
-          dateReceived: '2024-12-31T00:00:00.000Z' // Before 2025-01-01
+          dateReceived: '2025-12-31T00:00:00.000Z' // Before 2026-01-01
         },
         {
           rowId: 1002,
           tonnageReceived: 200,
-          dateReceived: '2025-01-01T00:00:00.000Z' // On start date
+          dateReceived: '2026-01-01T00:00:00.000Z' // On start date
         }
       ])
 
@@ -286,12 +286,12 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
           {
             rowId: 5001,
             tonnageSent: 100,
-            dateLeft: '2024-12-31T00:00:00.000Z' // Before period
+            dateLeft: '2025-12-31T00:00:00.000Z' // Before period
           },
           {
             rowId: 5002,
             tonnageSent: 50,
-            dateLeft: '2025-01-01T00:00:00.000Z' // In period
+            dateLeft: '2026-01-01T00:00:00.000Z' // In period
           }
         ]
       )

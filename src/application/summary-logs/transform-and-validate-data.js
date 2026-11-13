@@ -8,6 +8,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * Transforms the upload's validated rows into waste records and runs data
@@ -17,6 +18,7 @@ import { ledgerIdFor } from './ledger-id.js'
  * @param {{
  *   summaryLog: SubmittedSummaryLog,
  *   validatedData: ValidatedSummaryLog,
+ *   tableSchemas: Record<string, TableSchema>,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} params
@@ -28,6 +30,7 @@ import { ledgerIdFor } from './ledger-id.js'
 export const transformAndValidateData = async ({
   summaryLog,
   validatedData,
+  tableSchemas,
   summaryLogRowStatesRepository,
   ledgerRepository
 }) => {
@@ -38,9 +41,13 @@ export const transformAndValidateData = async ({
   })
 
   /** @type {ValidatedWasteRecord[]} */
-  const wasteRecords = transformFromSummaryLog(validatedData)
+  const wasteRecords = transformFromSummaryLog(validatedData, tableSchemas)
 
-  const issues = validateDataBusiness({ wasteRecords, previousSubmission })
+  const issues = validateDataBusiness({
+    wasteRecords,
+    previousSubmission,
+    tableSchemas
+  })
 
   return { wasteRecords, issues }
 }

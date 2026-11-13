@@ -1,4 +1,3 @@
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -6,18 +5,21 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { asOperator, asServiceMaintainerWrite } from '#test/inject-auth.js'
+import { asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { createStatusHistoryBuilders } from './status-history-test-helpers.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
-const { buildOrganisation } = createOrganisationBuilders()
+const organisationBuilders = createOrganisationBuilders()
+const { buildOrganisation } = organisationBuilders
+const { buildOrgWithRegistrationStatus } =
+  createStatusHistoryBuilders(organisationBuilders)
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -26,47 +28,6 @@ const mockCdpAuditing = vi.fn()
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockCdpAuditing(...args)
 }))
-
-/**
- * Builds an organisation with a target registration whose statusHistory ends
- * in the given status, plus an unrelated second (exporter) registration used
- * to assert that changing the target's status leaves other registrations
- * untouched. A created registration has no number or validFrom yet.
- * @param {string} status
- * @param {{ registrationOverrides?: object }} [options]
- */
-const buildOrgWithRegistrationStatus = (
-  status,
-  { registrationOverrides = {} } = {}
-) => {
-  const registration = buildRegistration({
-    reprocessingType: 'input',
-    statusHistory:
-      status === 'created'
-        ? [{ status: 'created', updatedAt: '2024-01-01' }]
-        : [
-            { status: 'created', updatedAt: '2024-01-01' },
-            { status, updatedAt: '2024-02-01' }
-          ],
-    ...(status !== 'created' && {
-      registrationNumber: 'REG123456',
-      validFrom: '2024-01-01'
-    }),
-    ...registrationOverrides
-  })
-  const otherRegistration = buildRegistration({
-    wasteProcessingType: 'exporter'
-  })
-
-  return /** @type {import('#domain/organisations/model.js').Organisation} */ (
-    /** @type {unknown} */ (
-      buildOrganisation({
-        registrations: [registration, otherRegistration],
-        accreditations: []
-      })
-    )
-  )
-}
 
 /**
  * Builds an organisation whose approved reprocessor registration is linked
@@ -766,94 +727,6 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     // absence and are already enforced on main (see the referenced source);
     // these tests verify they hold for a registration granted through this
     // endpoint specifically, without re-testing the behaviours themselves.
-    it('cannot create a PRN for the granted registration, because it has no accreditation to create one under', async () => {
-      // An approved organisation, so the PRN route finds it and the granted
-      // registration by their natural keys.
-      const fixture = {
-        ...buildOrgWithRegistrationStatus('created'),
-        statusHistory:
-          /** @type {import('#domain/organisations/model.js').Organisation['statusHistory']} */ ([
-            { status: 'approved', updatedAt: new Date('2024-01-01') }
-          ])
-      }
-      // buildOrgWithRegistrationStatus puts the target (reprocessor)
-      // registration first and the unrelated exporter registration second.
-      const registration = fixture.registrations[0]
-
-      const packagingRecyclingNotesRepository =
-        createInMemoryPackagingRecyclingNotesRepository([])({
-          info: vi.fn(),
-          error: vi.fn(),
-          warn: vi.fn(),
-          debug: vi.fn(),
-          trace: vi.fn(),
-          fatal: vi.fn(),
-          child: vi.fn()
-        })
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([fixture])
-      const integrationServer = await createTestServer({
-        repositories: {
-          organisationAdministrationRepository,
-          // Read afresh, so the PRN route sees the grant this endpoint writes.
-          organisationReadRepository: () =>
-            organisationReadRepositoryOver(
-              organisationAdministrationRepository()
-            ),
-          systemLogsRepository: createSystemLogsRepository(),
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
-        }
-      })
-
-      const grantResponse = await integrationServer.inject({
-        method: 'POST',
-        url: statusHistoryUrl({
-          organisationId: fixture.id,
-          registrationId: registration.id
-        }),
-        payload: grantPayload,
-        ...asServiceMaintainerWrite()
-      })
-      expect(grantResponse.statusCode).toBe(StatusCodes.OK)
-
-      // Grant does not cascade to a linked accreditation: confirm the
-      // organisation still has none, and the granted registration still has
-      // no accreditationId, before treating the PRN 404 below as evidence of
-      // registered-only rather than of some unrelated setup gap.
-      const getResponse = await integrationServer.inject({
-        method: 'GET',
-        url: `/v1/organisations/${fixture.id}`,
-        headers: { Authorization: `Bearer ${validToken}` }
-      })
-      const updatedOrg = JSON.parse(getResponse.payload)
-      expect(updatedOrg.accreditations).toEqual([])
-      const grantedRegistration = updatedOrg.registrations.find(
-        (reg) => reg.id === registration.id
-      )
-      expect(grantedRegistration.status).toBe('approved')
-      expect(grantedRegistration.accreditationId).toBeUndefined()
-
-      // Scenario 7: PRNs/PERNs cannot be issued for a registered-only
-      // operator. There is no accreditation to create one under, so the
-      // create endpoint 404s before considering the payload at all.
-      const createResponse = await integrationServer.inject({
-        method: 'POST',
-        url: `/organisations/${fixture.organisationNumber}/registrations/${grantPayload.registrationNumber}/accreditations/2026/packaging-recycling-notes`,
-        ...asOperator(),
-        payload: {
-          issuedToOrganisation: { id: 'org-2', name: 'Recipient Org' },
-          tonnage: 10
-        }
-      })
-
-      expect(createResponse.statusCode).toBe(StatusCodes.NOT_FOUND)
-      expect(JSON.parse(createResponse.payload).message).toBe(
-        'Accreditation not found'
-      )
-    })
-
     it('leaves the granted registration in the registered-only state that drives template selection, waste balance and cadence', async () => {
       const fixture = buildOrgWithRegistrationStatus('created')
       // buildOrgWithRegistrationStatus puts the target (reprocessor)

@@ -1,22 +1,16 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { StatusCodes } from 'http-status-codes'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { publicRegisterGeneratePath } from '#routes/v1/public-register/generate/post.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import {
-  emptyOrganisationReadRepository,
-  organisationReadRepositoryFrom
-} from '#vite/helpers/organisation-read-model.js'
-
-const organisationBuilders = createOrganisationBuilders()
-const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
+import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
 
 const mockAuditPublicRegisterGenerate = vi.fn()
 
@@ -37,13 +31,11 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
   beforeEach(async () => {
     mockAuditPublicRegisterGenerate.mockClear()
     inMemoryPublicRegisterRepository = createInMemoryPublicRegisterRepository()
-    const organisationsRepository = createInMemoryOrganisationsRepository()()
-    await buildApprovedOrg(organisationsRepository)
     server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationsRepository
-        ),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          buildReadApprovedOrganisation({ year: currentUtcYear() })
+        ]),
         publicRegisterRepository: inMemoryPublicRegisterRepository
       }
     })
