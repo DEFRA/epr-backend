@@ -113,7 +113,7 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
  */
 const distinctDataKeys = (storage, year) => {
   const keys = new Set()
-  for (const doc of storage.filter((doc) => doc.year === year)) {
+  for (const doc of storage.filter((stored) => stored.year === year)) {
     for (const key of Object.keys(doc.data)) {
       keys.add(key)
     }
