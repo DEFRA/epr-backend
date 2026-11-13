@@ -12,7 +12,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
- * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
@@ -62,7 +62,7 @@ export const reportsGetDetail = {
   },
   /**
    * @param {ReportRequest & {
-   *   ledgerRepository: WasteBalanceLedgerRepository,
+   *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   reportsRepository: ReportsRepository
@@ -71,7 +71,7 @@ export const reportsGetDetail = {
    */
   handler: async (request, h) => {
     const {
-      ledgerRepository,
+      summaryLogsRepository,
       summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       reportsRepository,
@@ -82,7 +82,7 @@ export const reportsGetDetail = {
 
     const report = await fetchOrGenerateReportForPeriod({
       reportsRepository,
-      ledgerRepository,
+      summaryLogsRepository,
       summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       key: params,
