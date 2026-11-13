@@ -1,13 +1,13 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
   overseasSitesOf,
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
 import { decemberRowCountFor } from '#waste-balances/application/december-credit-total.js'
@@ -176,7 +176,9 @@ const resolveSubmissionLedger = async (
     includeTestOrganisations: true
   }).get(ledgerKey(ledgerId))
   if (!ledgerAccreditation) {
-    throw new Error(`Accreditation not found: ${accreditationNumber}`)
+    throw new Error(
+      `Accreditation not found: ${accreditationNumber} for ${ledgerId.year}`
+    )
   }
   return { ledgerAccreditation, ledgerId }
 }
@@ -187,6 +189,7 @@ const resolveSubmissionLedger = async (
  * @param {AccreditationValidity} params.accreditation
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
+ * @param {Record<string, TableSchema>} params.tableSchemas
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
@@ -198,6 +201,7 @@ const updateWasteBalances = async ({
   accreditation,
   wasteBalanceService,
   wasteRecords,
+  tableSchemas,
   user,
   overseasSites,
   summaryLogId
@@ -212,7 +216,14 @@ const updateWasteBalances = async ({
   if (shouldCalculateWasteBalance) {
     await wasteBalanceService.submitSummaryLog(
       wasteRecords.map((r) => r.record),
-      { user, accreditation, overseasSites, summaryLogId, ledgerId }
+      {
+        user,
+        accreditation,
+        overseasSites,
+        summaryLogId,
+        ledgerId,
+        tableSchemas
+      }
     )
   }
 }
@@ -223,12 +234,14 @@ const updateWasteBalances = async ({
  * `0` for registered-only submissions (`accreditation` is `null`).
  *
  * @param {ValidatedWasteRecord[]} changedRecords
+ * @param {Record<string, TableSchema>} tableSchemas
  * @param {AccreditationValidity | null} accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
  * @returns {number}
  */
 const decemberWasteRowCountFor = (
   changedRecords,
+  tableSchemas,
   accreditation,
   overseasSites
 ) => {
@@ -237,12 +250,7 @@ const decemberWasteRowCountFor = (
   }
 
   const classifiedRows = changedRecords.map(({ record }) =>
-    classifyWasteRecord(
-      record,
-      record.data?.processingType,
-      accreditation,
-      overseasSites
-    )
+    classifyWasteRecord(record, tableSchemas, accreditation, overseasSites)
   )
 
   return decemberRowCountFor(classifiedRows, accreditation)
@@ -261,6 +269,7 @@ const decemberWasteRowCountFor = (
  *
  * @param {object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {Record<string, TableSchema>} params.tableSchemas
  * @param {AccreditationValidity | null} params.accreditation
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
@@ -270,13 +279,14 @@ const decemberWasteRowCountFor = (
  */
 const countRecordChanges = async ({
   wasteRecords,
+  tableSchemas,
   accreditation,
   overseasSites,
   ledgerId,
   ledgerRepository,
   summaryLogRowStatesRepository
 }) => {
-  const previousRowStates = await summaryLogRowStatesForRegistration({
+  const previousRowStates = await summaryLogRowStatesForLedger({
     ...ledgerId,
     ledgerRepository,
     summaryLogRowStatesRepository
@@ -292,6 +302,7 @@ const countRecordChanges = async ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
+    tableSchemas,
     accreditation,
     overseasSites
   })
@@ -318,6 +329,7 @@ const countRecordChanges = async ({
     updated,
     decemberWasteRowCount: decemberWasteRowCountFor(
       changedRecords,
+      tableSchemas,
       accreditation,
       overseasSites
     )
@@ -340,6 +352,7 @@ const countRecordChanges = async ({
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {AccreditationValidity | null} params.accreditation
  * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {Record<string, TableSchema>} params.tableSchemas
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
@@ -351,6 +364,7 @@ const commitStateAndBalance = async ({
   ledgerId,
   accreditation,
   wasteRecords,
+  tableSchemas,
   overseasSites,
   parsedData,
   user,
@@ -360,6 +374,7 @@ const commitStateAndBalance = async ({
   await writeSummaryLogRowStates({
     summaryLogRowStatesRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
+    tableSchemas,
     accreditation,
     ledgerId,
     overseasSites,
@@ -373,6 +388,7 @@ const commitStateAndBalance = async ({
       accreditation,
       wasteBalanceService,
       wasteRecords,
+      tableSchemas,
       user,
       overseasSites,
       summaryLogId
@@ -453,6 +469,7 @@ export const syncFromSummaryLog = (dependencies) => {
     // 5. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
+      tableSchemas,
       accreditation,
       overseasSites,
       ledgerId,
@@ -467,6 +484,7 @@ export const syncFromSummaryLog = (dependencies) => {
       ledgerId,
       accreditation,
       wasteRecords,
+      tableSchemas,
       overseasSites,
       parsedData,
       user,

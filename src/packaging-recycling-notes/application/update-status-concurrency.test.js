@@ -180,7 +180,7 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
     ledgerRepository: {
       ...ledgerRepository,
       findLatestInLedger: async (
-        /** @type {import('#domain/organisations/numbers.js').RequiredNumbers} */ ledgerId
+        /** @type {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} */ ledgerId
       ) => {
         status = ACCREDITATION_STATUS.SUSPENDED
         return ledgerRepository.findLatestInLedger(ledgerId)
