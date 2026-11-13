@@ -127,7 +127,7 @@ export const validityOf = ({ registration, year }) => {
  * The approval date of each overseas site an exporter's accreditation lists,
  * by the site's key, as classification reads it.
  *
- * @param {LedgerAccreditation} ledgerAccreditation
+ * @param {Pick<LedgerAccreditation, 'registration' | 'year'>} ledgerAccreditation
  * @returns {OverseasSitesContext}
  */
 export const overseasSitesOf = ({ registration, year }) =>
@@ -143,6 +143,21 @@ export const overseasSitesOf = ({ registration, year }) =>
       }
     ])
   )
+
+/**
+ * The accreditation a registration holds under this number, with the year it
+ * is for, or none when it holds no such accreditation.
+ *
+ * @param {ReadModelRegistration} registration
+ * @param {AccreditationNumber} accreditationNumber
+ * @returns {{ year: Year, accreditation: ReadModelAccreditation } | null}
+ */
+export const accreditationNumbered = (registration, accreditationNumber) => {
+  const held = Object.entries(registration.accreditations).find(
+    ([, candidate]) => candidate.accreditationNumber === accreditationNumber
+  )
+  return held ? { year: toYear(Number(held[0])), accreditation: held[1] } : null
+}
 
 /**
  * The accreditation a summary log's numbers name, as the read model serves
@@ -185,7 +200,7 @@ export const ledgerAccreditationFor = async (
  * What classifying a row reads of its accreditation. Only an accredited
  * exporter's overseas sites are checked.
  *
- * @param {LedgerAccreditation | null} ledgerAccreditation
+ * @param {Pick<LedgerAccreditation, 'registration' | 'year'> | null} ledgerAccreditation
  * @param {ProcessingType} processingType
  * @returns {ClassificationContext}
  */

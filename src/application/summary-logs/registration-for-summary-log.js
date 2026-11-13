@@ -1,63 +1,58 @@
 import Boom from '@hapi/boom'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
+import { ACTIVE_ACCREDITATION_STATUSES } from '#domain/organisations/model.js'
+import { CADENCE } from '#reports/domain/cadence.js'
+import { reportOperatorCategory } from '#reports/domain/operator-category.js'
+import { accreditationNumbered } from '#waste-balances/application/read-model-accreditations.js'
+
+/** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {AccreditationCommon, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
+/** @import {Cadence} from '#reports/domain/cadence.js' */
+/** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 
 /**
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
- * @param {SubmittedSummaryLog} summaryLog
- * @returns {Promise<Organisation>}
+ * A summary log's registration as the read model serves it, with its number,
+ * and the accreditation its number names with that accreditation's year (none
+ * for a registered-only summary log).
+ *
+ * @typedef {Registration & {
+ *   registrationNumber: RegistrationNumber,
+ *   accreditation: AccreditationCommon | null,
+ *   accreditationYear: Year | null
+ * }} SummaryLogRegistration
  */
-const organisationFor = async (
-  organisationAdministrationRepository,
-  { organisationNumber }
-) => {
-  const organisation =
-    await organisationAdministrationRepository.findByOrganisationNumber(
-      organisationNumber
-    )
-  if (!organisation) {
-    throw Boom.notFound(
-      `Organisation with number ${organisationNumber} not found`
-    )
-  }
-  return organisation
-}
 
 /**
- * The accreditation holding the summary log's number, or none for a
- * registered-only summary log.
- *
- * @param {Organisation} organisation
+ * @param {Registration} registration
  * @param {SubmittedSummaryLog} summaryLog
- * @returns {Registration['accreditation']}
+ * @returns {[Year, AccreditationCommon] | [null, null]}
  */
-const accreditationFor = (organisation, { accreditationNumber }) => {
+const accreditationFor = (registration, { accreditationNumber }) => {
   if (accreditationNumber === null) {
-    return null
+    return [null, null]
   }
-  const accreditation = organisation.accreditations.find(
-    (candidate) => candidate.accreditationNumber === accreditationNumber
-  )
-  if (!accreditation) {
+  const held = accreditationNumbered(registration, accreditationNumber)
+  if (!held) {
     throw Boom.notFound(
       `Accreditation with number ${accreditationNumber} not found`
     )
   }
-  return accreditation
+  return [held.year, held.accreditation]
 }
 
 /**
  * The registration a summary log is validated against, found by its numbers.
  *
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
+ * @param {OrganisationReadRepository} organisationReadRepository
  * @param {SubmittedSummaryLog} summaryLog
- * @returns {Promise<Registration>}
+ * @returns {Promise<SummaryLogRegistration>}
  */
 export const registrationForSummaryLog = async (
-  organisationAdministrationRepository,
+  organisationReadRepository,
   summaryLog
 ) => {
   if (summaryLog.registrationNumber === undefined) {
@@ -66,21 +61,62 @@ export const registrationForSummaryLog = async (
   if (summaryLog.accreditationNumber === undefined) {
     throw new Error('Summary log has no accreditation number')
   }
-  const organisation = await organisationFor(
-    organisationAdministrationRepository,
-    summaryLog
-  )
-  const registration = organisation.registrations.find(
-    (candidate) =>
-      candidate.registrationNumber === summaryLog.registrationNumber
-  )
-  if (!registration) {
+  const { organisationNumber, registrationNumber } = summaryLog
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  if (!organisation) {
     throw Boom.notFound(
-      `Registration with number ${summaryLog.registrationNumber} not found`
+      `Organisation with number ${organisationNumber} not found`
     )
   }
+  if (!Object.hasOwn(organisation.registrations, registrationNumber)) {
+    throw Boom.notFound(
+      `Registration with number ${registrationNumber} not found`
+    )
+  }
+  const registration = organisation.registrations[registrationNumber]
+  const [accreditationYear, accreditation] = accreditationFor(
+    registration,
+    summaryLog
+  )
   return {
     ...registration,
-    accreditation: accreditationFor(organisation, summaryLog)
+    registrationNumber,
+    accreditation,
+    accreditationYear
   }
 }
+
+/**
+ * Whether the summary log is accredited: its accreditation is approved or
+ * suspended today.
+ *
+ * @param {Pick<SummaryLogRegistration, 'accreditation'>} registration
+ * @returns {boolean}
+ */
+const isAccredited = ({ accreditation }) =>
+  accreditation !== null &&
+  ACTIVE_ACCREDITATION_STATUSES.has(
+    /** @type {AccreditationStatus} */ (accreditation.status.current)
+  )
+
+/**
+ * An accredited operator reports monthly, a registered-only one quarterly.
+ *
+ * @param {Pick<SummaryLogRegistration, 'accreditation'>} registration
+ * @returns {Cadence}
+ */
+export const reportingCadenceOf = (registration) =>
+  isAccredited(registration) ? CADENCE.monthly : CADENCE.quarterly
+
+/**
+ * @param {SummaryLogRegistration} registration
+ * @returns {OperatorCategory}
+ */
+export const operatorCategoryOf = (registration) =>
+  reportOperatorCategory({
+    registration,
+    accreditation: registration.accreditation
+  })

@@ -13,9 +13,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -102,31 +100,45 @@ describe('SummaryLogsValidator integration', () => {
   }
 
   /**
-   * A read model serving the summary log's registration, and its
-   * accreditation for the summary log's year, approved from the year's start.
+   * A read model serving the summary log's registration as the test
+   * organisation holds it, and the summary log's accreditation for its year,
+   * approved from the year's start, when the organisation holds that
+   * accreditation.
    *
    * @param {Record<string, any>} summaryLog
+   * @param {Record<string, any>} testOrg
    */
-  const readModelServing = ({
-    organisationNumber,
-    registrationNumber,
-    accreditationNumber,
-    year
-  }) => {
+  const readModelServing = (
+    { organisationNumber, registrationNumber, accreditationNumber, year },
+    testOrg
+  ) => {
+    const [{ wasteProcessingType, reprocessingType, material }] =
+      testOrg.registrations
+    const held = testOrg.accreditations.some(
+      (/** @type {any} */ candidate) =>
+        candidate.accreditationNumber === accreditationNumber
+    )
     const at = `${year}-01-01T00:00:00.000Z`
     return createInMemoryOrganisationReadRepository([
       /** @type {any} */ ({
         organisationNumber,
         registrations: {
           [registrationNumber]: {
-            accreditations: accreditationNumber
+            wasteProcessingType,
+            ...(reprocessingType && { reprocessingType }),
+            ...(wasteProcessingType === 'exporter' && { overseasSites: {} }),
+            material,
+            accreditations: held
               ? {
                   [year]: {
                     accreditationNumber,
                     status: {
                       current: 'approved',
                       timeline: [{ status: 'approved', at, updatedAt: at }]
-                    }
+                    },
+                    ...(wasteProcessingType === 'exporter' && {
+                      overseasSites: {}
+                    })
                   }
                 }
               : {}
@@ -178,8 +190,6 @@ describe('SummaryLogsValidator integration', () => {
     ),
     storedAccreditation = accreditationNumber ? testOrg.accreditations[0] : null
   }) => {
-    const organisationAdministrationRepository =
-      createInMemoryOrganisationsRepository([testOrg])()
     const summaryLog = createSummaryLog(testOrg, storedAccreditation)
     const summaryLogId = randomUUID()
 
@@ -190,19 +200,15 @@ describe('SummaryLogsValidator integration', () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
 
-    const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
-
     const validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository,
-      organisationAdministrationRepository,
-      organisationReadRepository: readModelServing(summaryLog),
+      organisationReadRepository: readModelServing(summaryLog, testOrg),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: async () => []
       }),
-      overseasSitesRepository,
       summaryLogExtractor: extractor
     })
 
