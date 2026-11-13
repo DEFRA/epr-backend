@@ -3,6 +3,8 @@ import { it as organisationReadIt } from '#vite/fixtures/organisation-read-mongo
 import {
   REPROCESSOR_NUMBER,
   accreditation,
+  exporter,
+  exporterAccreditation,
   findOrganisation,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
@@ -15,7 +17,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * The seeded organisation as the organisations collection stores it: each
- * registration approved and numbered, and linked to an accreditation approved
+ * registration approved, numbered and of the kind it names, and linked to an accreditation approved
  * from 1 July of `SEED_ACCREDITATION_YEAR` when the seed gives an
  * accreditation number.
  *
@@ -23,19 +25,23 @@ const { buildOrganisation } = createOrganisationBuilders()
  */
 const toStored = ({ name, organisationNumber, registrations }) => {
   const linked = registrations.map(
-    ({ registrationNumber, accreditationNumber }) => {
+    ({ registrationNumber, accreditationNumber, wasteProcessingType }) => {
+      const exporting = wasteProcessingType === 'exporter'
       const held = accreditationNumber
-        ? accreditation({
+        ? (exporting ? exporterAccreditation : accreditation)({
             accreditationNumber,
             validFrom: `${SEED_ACCREDITATION_YEAR}-07-01`,
             validTo: `${SEED_ACCREDITATION_YEAR}-12-31`
           })
         : undefined
       return {
-        registration: reprocessor({
-          registrationNumber,
-          accreditationId: held?.id
-        }),
+        registration: exporting
+          ? exporter({
+              registrationNumber,
+              accreditationId: held?.id,
+              overseasSites: {}
+            })
+          : reprocessor({ registrationNumber, accreditationId: held?.id }),
         accreditation: held
       }
     }

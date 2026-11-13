@@ -8,7 +8,8 @@ import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organi
 
 /**
  * An organisation the read model serves, described by what the port reads:
- * its name and its numbers. Each registration is approved and served, and an
+ * its name and its numbers. Each registration is approved and served, as a
+ * reprocessor unless its `wasteProcessingType` says exporter, and an
  * accreditation number gives it an accreditation for `SEED_ACCREDITATION_YEAR`,
  * approved from 1 July of that year. Each adapter's tests store it in their
  * own shape.
@@ -19,6 +20,7 @@ import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organi
  *   registrations: Array<{
  *     registrationNumber: RegistrationNumber
  *     accreditationNumber?: AccreditationNumber
+ *     wasteProcessingType?: 'reprocessor' | 'exporter'
  *   }>
  * }} OrganisationSeed
  */

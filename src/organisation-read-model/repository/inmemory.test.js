@@ -6,6 +6,8 @@ import { testOrganisationReadRepositoryContract } from './port.contract.js'
 import {
   approvedTimelineFrom,
   buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from './read-model-test-data.js'
@@ -20,7 +22,7 @@ const repositoryOf = (organisations) =>
 
 /**
  * The seeded organisation in the read model's shape: each registration
- * approved, with an accreditation approved from 1 July of
+ * approved and of the kind it names, with an accreditation approved from 1 July of
  * `SEED_ACCREDITATION_YEAR` when the seed gives an accreditation number.
  *
  * @param {OrganisationSeed} seed
@@ -31,24 +33,38 @@ const toReadModel = ({ name, organisationNumber, registrations }) =>
     name,
     organisationNumber,
     registrations: Object.fromEntries(
-      registrations.map(({ registrationNumber, accreditationNumber }) => [
-        registrationNumber,
-        buildReadReprocessorRegistration({
-          accreditations: accreditationNumber
-            ? {
-                [SEED_ACCREDITATION_YEAR]: buildReadAccreditation({
-                  accreditationNumber,
-                  status: {
-                    current: 'approved',
-                    timeline: approvedTimelineFrom(
-                      `${SEED_ACCREDITATION_YEAR}-07-01`
-                    )
-                  }
+      registrations.map(
+        ({ registrationNumber, accreditationNumber, wasteProcessingType }) => {
+          const exporting = wasteProcessingType === 'exporter'
+          const accreditationFields = {
+            accreditationNumber,
+            status: {
+              current: /** @type {const} */ ('approved'),
+              timeline: approvedTimelineFrom(`${SEED_ACCREDITATION_YEAR}-07-01`)
+            }
+          }
+          return [
+            registrationNumber,
+            exporting
+              ? buildReadExporterRegistration({
+                  accreditations: accreditationNumber
+                    ? {
+                        [SEED_ACCREDITATION_YEAR]:
+                          buildReadExporterAccreditation(accreditationFields)
+                      }
+                    : {}
                 })
-              }
-            : {}
-        })
-      ])
+              : buildReadReprocessorRegistration({
+                  accreditations: accreditationNumber
+                    ? {
+                        [SEED_ACCREDITATION_YEAR]:
+                          buildReadAccreditation(accreditationFields)
+                      }
+                    : {}
+                })
+          ]
+        }
+      )
     )
   })
 

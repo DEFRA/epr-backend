@@ -26,38 +26,74 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       ).toBeNull()
     })
 
-    it('returns the organisation with that number, its registrations keyed by number with their accreditations', async ({
+    it.for(/** @type {const} */ (['reprocessor', 'exporter']))(
+      'returns the organisation with that number, its %s registration keyed by number with its accreditation',
+      async (wasteProcessingType, { organisationReadRepositoryServing }) => {
+        const registrationNumber = nextSeedRegistrationNumber()
+        const accreditationNumber = nextSeedAccreditationNumber()
+        const wanted = seedNamed('Beta Recycling', {
+          registrations: [
+            { registrationNumber, accreditationNumber, wasteProcessingType }
+          ]
+        })
+        const repository = await organisationReadRepositoryServing([
+          seedNamed('Acme Recycling'),
+          wanted
+        ])
+
+        const organisation = await findOrganisation(
+          repository,
+          wanted.organisationNumber
+        )
+
+        expect(organisation).toMatchObject({
+          organisationNumber: wanted.organisationNumber,
+          name: 'Beta Recycling'
+        })
+        expect(Object.keys(organisation.registrations)).toEqual([
+          registrationNumber
+        ])
+        const registration = organisation.registrations[registrationNumber]
+        expect(registration.wasteProcessingType).toBe(wasteProcessingType)
+        expect(registration.accreditations).toEqual({
+          [SEED_ACCREDITATION_YEAR]: expect.objectContaining({
+            accreditationNumber
+          })
+        })
+      }
+    )
+
+    it("gives an exporter's registration and accreditation their overseas sites, and a reprocessor's registration its site", async ({
       organisationReadRepositoryServing
     }) => {
-      const registrationNumber = nextSeedRegistrationNumber()
-      const accreditationNumber = nextSeedAccreditationNumber()
+      const exporterNumber = nextSeedRegistrationNumber()
+      const reprocessorNumber = nextSeedRegistrationNumber()
       const wanted = seedNamed('Beta Recycling', {
-        registrations: [{ registrationNumber, accreditationNumber }]
+        registrations: [
+          {
+            registrationNumber: exporterNumber,
+            accreditationNumber: nextSeedAccreditationNumber(),
+            wasteProcessingType: 'exporter'
+          },
+          { registrationNumber: reprocessorNumber }
+        ]
       })
-      const repository = await organisationReadRepositoryServing([
-        seedNamed('Acme Recycling'),
-        wanted
-      ])
+      const repository = await organisationReadRepositoryServing([wanted])
 
-      const organisation = await findOrganisation(
+      const { registrations } = await findOrganisation(
         repository,
         wanted.organisationNumber
       )
 
-      expect(organisation).toMatchObject({
-        organisationNumber: wanted.organisationNumber,
-        name: 'Beta Recycling'
-      })
-      expect(Object.keys(organisation.registrations)).toEqual([
-        registrationNumber
-      ])
+      expect(registrations[exporterNumber]).toHaveProperty('overseasSites', {})
+      expect(registrations[exporterNumber]).not.toHaveProperty('site')
       expect(
-        organisation.registrations[registrationNumber].accreditations
-      ).toEqual({
-        [SEED_ACCREDITATION_YEAR]: expect.objectContaining({
-          accreditationNumber
-        })
-      })
+        registrations[exporterNumber].accreditations[SEED_ACCREDITATION_YEAR]
+      ).toHaveProperty('overseasSites', {})
+      expect(registrations[reprocessorNumber]).toHaveProperty('site')
+      expect(registrations[reprocessorNumber]).not.toHaveProperty(
+        'overseasSites'
+      )
     })
   })
 }
