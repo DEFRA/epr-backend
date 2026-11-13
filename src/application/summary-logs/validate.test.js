@@ -725,29 +725,49 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
+  const organisationWithNumberlessRecords = {
+    registrations: [{}],
+    accreditations: [{}]
+  }
+
   it.each([
     {
-      missing: 'organisation',
+      when: 'no organisation holds its number',
       stored: null,
       message: 'Organisation with number 500000 not found'
     },
     {
-      missing: 'registration',
+      when: 'no registration holds its number',
       stored: { registrations: [], accreditations: [] },
       message: 'Registration with number REG12345 not found'
     },
     {
-      missing: 'accreditation',
+      when: 'no accreditation holds its number',
       stored: {
         registrations: [{ registrationNumber: 'REG12345' }],
         accreditations: []
       },
       message: 'Accreditation with number ACC12345 not found'
+    },
+    {
+      when: 'it has no registration number, rather than matching a registration with none',
+      unset: 'registrationNumber',
+      stored: organisationWithNumberlessRecords,
+      message: 'Summary log has no registration number'
+    },
+    {
+      when: 'it has no accreditation number, rather than matching an accreditation with none',
+      unset: 'accreditationNumber',
+      stored: organisationWithNumberlessRecords,
+      message: 'Summary log has no accreditation number'
     }
   ])(
-    'marks the summary log invalid when no $missing holds its number',
-    async ({ stored, message }) => {
+    'marks the summary log invalid when $when',
+    async ({ unset, stored, message }) => {
       summaryLog.organisationNumber = '500000'
+      if (unset) {
+        delete summaryLog[unset]
+      }
       organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
         stored
       )

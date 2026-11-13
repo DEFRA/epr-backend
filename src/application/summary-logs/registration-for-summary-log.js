@@ -60,6 +60,12 @@ export const registrationForSummaryLog = async (
   organisationAdministrationRepository,
   summaryLog
 ) => {
+  if (summaryLog.registrationNumber === undefined) {
+    throw new Error('Summary log has no registration number')
+  }
+  if (summaryLog.accreditationNumber === undefined) {
+    throw new Error('Summary log has no accreditation number')
+  }
   const organisation = await organisationFor(
     organisationAdministrationRepository,
     summaryLog
