@@ -8,6 +8,7 @@ import { RECORD_CHANGE } from './record-change.js'
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {RecordChange} from './record-change.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * How a current-upload row changed against the latest submitted summary log,
@@ -25,6 +26,7 @@ import { RECORD_CHANGE } from './record-change.js'
  * @param {{
  *   wasteRecords: ValidatedWasteRecord[],
  *   submittedRowStatesByKey: Map<string, WasteRecordState>,
+ *   tableSchemas: Record<string, TableSchema>,
  *   accreditation: AccreditationValidity | null,
  *   overseasSites: OverseasSitesContext
  * }} params
@@ -33,6 +35,7 @@ import { RECORD_CHANGE } from './record-change.js'
 export const classifyRecordChanges = ({
   wasteRecords,
   submittedRowStatesByKey,
+  tableSchemas,
   accreditation,
   overseasSites
 }) => {
@@ -49,6 +52,7 @@ export const classifyRecordChanges = ({
 
     const projected = projectSummaryLogRowState(
       record,
+      tableSchemas,
       accreditation,
       overseasSites
     )

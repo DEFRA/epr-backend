@@ -60,7 +60,7 @@ describe('summary-log-row-states repository registration', () => {
     )
 
     expect(indexesByName).toHaveProperty('summary_log_membership')
-    expect(indexesByName.summary_log_row_state_identity_by_number.unique).toBe(
+    expect(indexesByName.summary_log_row_state_identity_by_year.unique).toBe(
       true
     )
 

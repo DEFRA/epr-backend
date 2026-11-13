@@ -23,6 +23,8 @@ import {
   withNumbers
 } from './test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -115,20 +117,64 @@ describe('ensureSummaryLogRowStatesCollection', () => {
   }) => {
     const indexes = await summaryLogRowStatesCollection.indexes()
     expect(
-      indexKeyFor(indexes, 'summary_log_row_state_identity_by_number')
+      indexKeyFor(indexes, 'summary_log_row_state_identity_by_year')
     ).toEqual({
       organisationNumber: 1,
       registrationNumber: 1,
       accreditationNumber: 1,
+      year: 1,
       rowId: 1,
       wasteRecordType: 1,
       contentHash: 1
     })
     expect(
       indexes.find(
-        (idx) => idx.name === 'summary_log_row_state_identity_by_number'
+        (idx) => idx.name === 'summary_log_row_state_identity_by_year'
       )?.unique
     ).toBe(true)
+  })
+
+  it('drops the identity index without the year, so identical rows of two years are both stored', async (/** @type {*} */ {
+    mongoClient,
+    summaryLogRowStatesCollection,
+    summaryLogRowStatesRepository
+  }) => {
+    const repository = summaryLogRowStatesRepository()
+    await summaryLogRowStatesCollection.createIndex(
+      {
+        organisationNumber: 1,
+        registrationNumber: 1,
+        accreditationNumber: 1,
+        rowId: 1,
+        wasteRecordType: 1,
+        contentHash: 1
+      },
+      { name: 'summary_log_row_state_identity_by_number', unique: true }
+    )
+
+    await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
+    const entry = buildSummaryLogRowStateEntry()
+    const ledger2026 = withNumbers({
+      ...DEFAULT_LEDGER_ID,
+      accreditationId: null,
+      year: toYear(2026)
+    })
+    await repository.upsertSummaryLogRowStates(
+      ledger2026,
+      [entry],
+      toSummaryLogFileId('log-2026')
+    )
+    await repository.upsertSummaryLogRowStates(
+      { ...ledger2026, year: toYear(2027) },
+      [entry],
+      toSummaryLogFileId('log-2027')
+    )
+
+    const names = (await summaryLogRowStatesCollection.indexes()).map(
+      ({ name }) => name
+    )
+    expect(names).not.toContain('summary_log_row_state_identity_by_number')
+    expect(await summaryLogRowStatesCollection.countDocuments()).toBe(2)
   })
 
   it('drops the id-keyed identity index it replaces', async (/** @type {*} */ {
@@ -169,39 +215,6 @@ describe('summary-log row states repository - mongodb implementation', () => {
     )()
     expect(repository.upsertSummaryLogRowStates).toBeTypeOf('function')
     expect(repository.findWasteRecordStatesForSummaryLog).toBeTypeOf('function')
-  })
-
-  it('adds a summary log to a matching row state stored without a year, and reads it back', async (/** @type {*} */ {
-    summaryLogRowStatesCollection,
-    summaryLogRowStatesRepository
-  }) => {
-    const repository = summaryLogRowStatesRepository()
-    const ledgerId = withNumbers(DEFAULT_LEDGER_ID)
-    const entry = buildSummaryLogRowStateEntry()
-    const [stored] = await repository.upsertSummaryLogRowStates(
-      ledgerId,
-      [entry],
-      toSummaryLogFileId('log-1')
-    )
-    await summaryLogRowStatesCollection.updateMany({}, { $unset: { year: '' } })
-
-    const [matched] = await repository.upsertSummaryLogRowStates(
-      ledgerId,
-      [entry],
-      toSummaryLogFileId('log-2')
-    )
-
-    expect(matched).toMatchObject({
-      id: stored.id,
-      summaryLogIds: ['log-1', 'log-2']
-    })
-    expect(matched.year).toBeUndefined()
-    expect(
-      await repository.findWasteRecordStatesForSummaryLog(
-        ledgerId,
-        toSummaryLogFileId('log-2')
-      )
-    ).toHaveLength(1)
   })
 
   describe('row-state repository contract', () => {
@@ -378,6 +391,11 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     }
   }
 
+  const tableSchemas = tableSchemasOf(
+    toYear(2026),
+    PROCESSING_TYPES.REPROCESSOR_INPUT
+  )
+
   /** @type {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} */
   const currentUpload = {
     record: zeroTonnageSentOn,
@@ -394,6 +412,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     // First submission: project and persist the zero-debit sent-on row.
     const entry = projectSummaryLogRowState(
       zeroTonnageSentOn,
+      tableSchemas,
       accreditation,
       overseasSites
     )
@@ -416,6 +435,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentUpload],
       submittedRowStatesByKey,
+      tableSchemas,
       accreditation,
       overseasSites
     })

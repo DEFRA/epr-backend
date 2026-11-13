@@ -28,12 +28,12 @@
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * A row as it was submitted, carrying no waste-balance classification.
  *
- * @typedef {RequiredNumbers & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
+ * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
  */
 
 /**
@@ -50,7 +50,7 @@
  *   stores the numbers `ledgerId` carries. Idempotent:
  *   re-running the same submission adds no document and no membership entry.
  *   Returns the resulting state document for each entry, in input order.
- * @property {(ledgerId: RequiredNumbers, summaryLogId: SummaryLogFileId) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
  *   Return the waste record states `ledgerId` holds at the summary log
  *   `summaryLogId`. A row state belongs to the ledger that wrote it, so the
  *   summary log alone does not identify one: the same `summaryLogId` under a

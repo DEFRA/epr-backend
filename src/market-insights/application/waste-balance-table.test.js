@@ -1,4 +1,4 @@
-import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -351,7 +351,7 @@ const makeOperator = ({
       organisationNumber: toOrganisationNumber(String(orgId)),
       registrationNumber: toRegistrationNumber(`REG-${orgId}`),
       accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
-      year: utcYearOf(validFrom)
+      year: toYear(2026)
     },
     summaryLogId: `log-${orgId}`
   }
@@ -1955,6 +1955,29 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
+  describe('a row whose processing type has no template', () => {
+    const operator = makeOperator({ orgId: 500012 })
+
+    it('fails rather than leaving the row out', async () => {
+      await expect(
+        run({
+          organisations: [operator.organisation],
+          submissions: [
+            {
+              ...operator,
+              rows: [
+                {
+                  ...receivedRow('row-1', '2026-03-10', 50),
+                  processingType: 'UNKNOWN'
+                }
+              ]
+            }
+          ]
+        })
+      ).rejects.toThrow('No UNKNOWN summary log template for 2026')
+    })
+  })
+
   describe('a month after the window', () => {
     const operator = makeOperator({ orgId: 500012 })
 
@@ -2078,7 +2101,7 @@ describe('buildWasteBalanceTable', () => {
     expect(reported(table)).toEqual([])
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('ACC-500009'),
+        message: expect.stringContaining('ACC-500009 for 2026'),
         event: expect.objectContaining({
           action: 'market_insights_partition_unmatched',
           reference: 'ACC-500009'

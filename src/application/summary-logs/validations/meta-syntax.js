@@ -30,6 +30,9 @@ const mapJoiErrorToCode = (fieldName, joiType) => {
     'number.min': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
     },
+    'number.max': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+    },
     'templateVersion.year': {
       TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_YEAR_INVALID
     },
@@ -81,6 +84,10 @@ export const validateMetaSyntax = ({ parsed, year }) => {
       }
 
       const code = mapJoiErrorToCode(fieldName, detail.type)
+      const yearMismatch =
+        detail.type === 'templateVersion.yearMismatch'
+          ? { expected: year, actual: detail.context?.actualYear }
+          : {}
 
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
@@ -88,7 +95,8 @@ export const validateMetaSyntax = ({ parsed, year }) => {
         code,
         {
           location,
-          actual: metaValues[fieldName]
+          actual: metaValues[fieldName],
+          ...yearMismatch
         }
       )
     }

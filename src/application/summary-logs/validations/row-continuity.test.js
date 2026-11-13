@@ -8,7 +8,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
@@ -18,10 +18,10 @@ import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log-id'
 const PREVIOUS_SUBMITTED_AT = new Date('2024-01-15T10:00:00.000Z')
 
-const REPROCESSOR_INPUT_TABLE_SCHEMAS = getTemplate(
+const REPROCESSOR_INPUT_TABLE_SCHEMAS = tableSchemasOf(
   DEFAULT_TEMPLATE_YEAR,
   PROCESSING_TYPES.REPROCESSOR_INPUT
-).tableSchemas
+)
 
 describe('validateRowContinuity', () => {
   /**
@@ -331,10 +331,10 @@ describe('validateRowContinuity', () => {
     })
 
     it('correctly maps different waste record types to sheets and tables from the upload template table schemas', () => {
-      const exporterTableSchemas = getTemplate(
+      const exporterTableSchemas = tableSchemasOf(
         DEFAULT_TEMPLATE_YEAR,
         PROCESSING_TYPES.EXPORTER
-      ).tableSchemas
+      )
       const testCases = [
         {
           tableSchemas: REPROCESSOR_INPUT_TABLE_SCHEMAS,

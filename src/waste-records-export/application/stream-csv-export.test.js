@@ -85,17 +85,17 @@ const overseasSite = (name, country) => ({
 })
 
 // The year `accredited` holds its second accreditation under.
-const PREVIOUS_YEAR = toYear(DEFAULT_YEAR - 1)
+const NEXT_YEAR = toYear(DEFAULT_YEAR + 1)
 
 /**
  * A reprocessor registration holding `accreditations` by year, the first under
- * `DEFAULT_YEAR` and each after it a year earlier.
+ * `DEFAULT_YEAR` and each after it a year later.
  */
 const accredited = (...accreditations) =>
   reprocessorRegistration({
     accreditations: Object.fromEntries(
       accreditations.map((accreditation, i) => [
-        String(DEFAULT_YEAR - i),
+        String(DEFAULT_YEAR + i),
         accreditation
       ])
     )
@@ -760,8 +760,8 @@ describe('streamCsvExport', () => {
         readModelOrg({
           registrations: {
             [REGISTRATION_NUMBER]: accredited(
-              readModelAccreditation({ accreditationNumber: 'ACC-NEW' }),
-              readModelAccreditation({ accreditationNumber: 'ACC-OLD' })
+              readModelAccreditation({ accreditationNumber: 'ACC-OLD' }),
+              readModelAccreditation({ accreditationNumber: 'ACC-NEW' })
             )
           }
         })
@@ -769,12 +769,12 @@ describe('streamCsvExport', () => {
       seeds: [
         {
           accreditationNumber: 'ACC-OLD',
-          year: PREVIOUS_YEAR,
           summaryLogId: 'sl-old',
           rows: [receivedRowState({ rowId: '1001' })]
         },
         {
           accreditationNumber: 'ACC-NEW',
+          year: NEXT_YEAR,
           summaryLogId: 'sl-new',
           rows: [receivedRowState({ rowId: '2002' })]
         }
@@ -853,7 +853,7 @@ describe('streamCsvExport', () => {
         },
         {
           accreditationNumber: 'ACC-A',
-          year: PREVIOUS_YEAR,
+          year: NEXT_YEAR,
           summaryLogId: 'sl-a',
           rows: [receivedRowState({ rowId: '2002' })]
         }
@@ -866,6 +866,29 @@ describe('streamCsvExport', () => {
     expect(
       out.slice(1).map((line) => cellsOf(line)[METADATA_COL_INDEX['Row ID']])
     ).toEqual(['1001', '2002', '3003'])
+  })
+
+  it("orders a registered-only registration's years earliest first", async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [
+        {
+          year: NEXT_YEAR,
+          summaryLogId: 'sl-next-year',
+          rows: [receivedRowState({ rowId: '2002' })]
+        },
+        {
+          summaryLogId: 'sl-this-year',
+          rows: [receivedRowState({ rowId: '1001' })]
+        }
+      ]
+    })
+
+    const out = await collect(streamCsvExport(deps))
+
+    expect(
+      out.slice(1).map((line) => cellsOf(line)[METADATA_COL_INDEX['Row ID']])
+    ).toEqual(['1001', '2002'])
   })
 
   it('orders organisations by organisation number and registrations by registration number', async () => {
@@ -1129,23 +1152,32 @@ describe('streamCsvExport', () => {
     expect(cellsOf(out[2])[idx]).toBe('9.5') // bare, not the quoted '"9.5"'
   })
 
-  it('leaves data untouched when no schema matches the processing type', async () => {
+  it('fails on a row whose processing type has no template', async () => {
     const deps = await buildDeps({
       orgs: [readModelOrg()],
       seeds: [
         {
           rows: [
-            receivedRowState({
-              processingType: 'UNKNOWN_PROCESSING_TYPE',
-              data: { SOME_FREE_COLUMN: 'kept' }
-            })
+            receivedRowState({ processingType: 'UNKNOWN_PROCESSING_TYPE' })
           ]
         }
       ]
     })
 
-    const out = await collect(streamCsvExport(deps))
-    expect(out[1]).toContain('kept')
+    await expect(collect(streamCsvExport(deps))).rejects.toThrow(
+      'No UNKNOWN_PROCESSING_TYPE summary log template for 2026'
+    )
+  })
+
+  it("classifies a partition's rows with its year's templates", async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [{ year: toYear(2028), rows: [receivedRowState()] }]
+    })
+
+    await expect(collect(streamCsvExport(deps))).rejects.toThrow(
+      'summary log template for 2028'
+    )
   })
 
   it('propagates errors from the row-state read', async () => {

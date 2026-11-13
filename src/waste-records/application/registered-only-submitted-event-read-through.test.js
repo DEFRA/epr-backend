@@ -10,7 +10,7 @@ import {
 } from '#waste-records/repository/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
-import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from './read-summary-log-row-states.js'
 
 /**
  * The reg-only summary-log submitted event migration closes the gap where
@@ -46,7 +46,7 @@ describe('registered-only summary-log submitted event — read-through', () => {
       createInMemorySummaryLogRowStatesRepository()()
     await seedMembership(summaryLogRowStatesRepository, 'log-1')
 
-    const states = await summaryLogRowStatesForRegistration({
+    const states = await summaryLogRowStatesForLedger({
       ledgerRepository: createInMemoryLedgerRepository()(),
       summaryLogRowStatesRepository,
       ...registeredOnlyLedgerId
@@ -63,7 +63,7 @@ describe('registered-only summary-log submitted event — read-through', () => {
 
     await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
-    const states = await summaryLogRowStatesForRegistration({
+    const states = await summaryLogRowStatesForLedger({
       ledgerRepository,
       summaryLogRowStatesRepository,
       ...registeredOnlyLedgerId
