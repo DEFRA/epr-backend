@@ -80,12 +80,11 @@ describe('templateForRegistration', () => {
   )
 
   it.each(cases)(
-    'names the 2026 template an %s would fill in for a year with none',
-    (_label, registration, processingType, templateVersion) => {
-      expect(templateForRegistration(registration, toYear(2025))).toEqual({
-        PROCESSING_TYPE: processingType,
-        TEMPLATE_VERSION: templateVersion
-      })
+    'throws for an %s in a year with no template',
+    (_label, registration, processingType) => {
+      expect(() => templateForRegistration(registration, toYear(2025))).toThrow(
+        `No ${processingType} summary log template for 2025`
+      )
     }
   )
 
