@@ -587,7 +587,10 @@ function toOverseasSite(site) {
       country: site.country,
       ...omitNullish({ line2, stateOrRegion, postcode })
     },
-    ...omitNullish({ coordinates: site.coordinates })
+    ...omitNullish({
+      coordinates: site.coordinates,
+      validFrom: site.validFrom && new Date(site.validFrom).toISOString()
+    })
   }
 }
 
