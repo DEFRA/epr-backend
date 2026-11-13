@@ -64,7 +64,7 @@ export async function* streamSubmissionCsv({
         registration,
         meta,
         submittedAt,
-        data: coerceForExport(rowState),
+        data: coerceForExport(rowState, rowState.year),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
         classification: rowState.classification,

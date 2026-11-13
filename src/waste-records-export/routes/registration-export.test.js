@@ -146,7 +146,21 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     expect(lines[1]).toContain('1001')
   })
 
-  it('names the download by registration number and the moment of export', async () => {
+  it('names the download by registration number, year and the moment of export', async () => {
+    const server = await createServer()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${url}?year=2027`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.headers['content-disposition']).toMatch(
+      /^attachment; filename="R26ER5000000002PA-2027-\d{4}-\d{2}-\d{2}-\d{6}\.csv"$/
+    )
+  })
+
+  it('exports 2026 when no year is given', async () => {
     const server = await createServer()
 
     const response = await server.inject({
@@ -155,10 +169,39 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       ...asServiceMaintainer()
     })
 
-    expect(response.headers['content-disposition']).toMatch(
-      /^attachment; filename="R26ER5000000002PA-\d{4}-\d{2}-\d{2}-\d{6}\.csv"$/
+    expect(response.headers['content-disposition']).toContain(
+      'R26ER5000000002PA-2026-'
     )
   })
+
+  it("serves only the given year's records", async () => {
+    const server = await createServer()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${url}?year=2027`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const lines = response.payload.split('\n').filter((line) => line !== '')
+    expect(lines).toHaveLength(1)
+  })
+
+  it.each(['2025', '2100', 'next'])(
+    'returns 422 for year %s, which has no templates',
+    async (year) => {
+      const server = await createServer()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${url}?year=${year}`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    }
+  )
 
   it('serves a header-only CSV for a registration that has never submitted', async () => {
     const server = await createServer({ ledgerEvents: [] })

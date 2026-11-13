@@ -22,7 +22,7 @@
  * links to. This keeps the generator to mechanical facts only.
  */
 import {
-  findSchemaForProcessingType,
+  findSchemaByWasteRecordType,
   getTemplate
 } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
@@ -215,7 +215,10 @@ const renderReportMandatory = (processingType) => {
     '| ---- | ----- | ------- | --------------- |'
   ]
   for (const [wasteRecordType, rules] of Object.entries(policy)) {
-    const schema = findSchemaForProcessingType(processingType, wasteRecordType)
+    const { schema } = findSchemaByWasteRecordType(
+      wasteRecordType,
+      getTemplate(DEFAULT_TEMPLATE_YEAR, processingType).tableSchemas
+    )
     for (const rule of rules) {
       const trigger = describeTrigger(rule, schema.requiredHeaders)
       const fields = rule.requiredFields.map((f) => `\`${f}\``).join(', ')

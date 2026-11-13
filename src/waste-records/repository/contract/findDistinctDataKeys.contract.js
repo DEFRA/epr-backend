@@ -1,8 +1,11 @@
 import { describe, beforeEach, expect } from 'vitest'
 
+import { toYear } from '#common/helpers/dates/year.js'
+
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
+  DEFAULT_YEAR,
   withNumbers
 } from '../test-data.js'
 
@@ -15,7 +18,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
     })
 
     it('returns an empty array when no row states exist', async () => {
-      expect(await repository.findDistinctDataKeys()).toEqual([])
+      expect(await repository.findDistinctDataKeys(DEFAULT_YEAR)).toEqual([])
     })
 
     it('returns the union of data keys across every stored row state', async () => {
@@ -40,7 +43,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
         'log-1'
       )
 
-      const result = await repository.findDistinctDataKeys()
+      const result = await repository.findDistinctDataKeys(DEFAULT_YEAR)
       expect([...result].sort()).toEqual(['ALPHA', 'BETA', 'GAMMA'])
     })
 
@@ -66,7 +69,7 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
         'log-2'
       )
 
-      const result = await repository.findDistinctDataKeys()
+      const result = await repository.findDistinctDataKeys(DEFAULT_YEAR)
       expect([...result].sort()).toEqual(['NEW_ONLY', 'OLD_ONLY'])
     })
 
@@ -80,7 +83,39 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
         'log-1'
       )
 
-      expect(await repository.findDistinctDataKeys()).toEqual(['SHARED'])
+      expect(await repository.findDistinctDataKeys(DEFAULT_YEAR)).toEqual([
+        'SHARED'
+      ])
+    })
+
+    it('returns only the keys of the given year', async () => {
+      await repository.upsertSummaryLogRowStates(
+        withNumbers({ ...DEFAULT_LEDGER_ID, year: toYear(2026) }),
+        [
+          buildSummaryLogRowStateEntry({
+            rowId: 'row-1',
+            data: { ONLY_2026: 1 }
+          })
+        ],
+        'log-2026'
+      )
+      await repository.upsertSummaryLogRowStates(
+        withNumbers({ ...DEFAULT_LEDGER_ID, year: toYear(2027) }),
+        [
+          buildSummaryLogRowStateEntry({
+            rowId: 'row-1',
+            data: { ONLY_2027: 1 }
+          })
+        ],
+        'log-2027'
+      )
+
+      expect(await repository.findDistinctDataKeys(toYear(2026))).toEqual([
+        'ONLY_2026'
+      ])
+      expect(await repository.findDistinctDataKeys(toYear(2027))).toEqual([
+        'ONLY_2027'
+      ])
     })
   })
 }

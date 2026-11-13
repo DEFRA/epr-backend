@@ -178,7 +178,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(response.headers['content-type']).toBe('text/csv; charset=utf-8')
       expect(response.headers['content-disposition']).toMatch(
-        /^attachment; filename="waste-records-.+\.csv"$/
+        /^attachment; filename="waste-records-2026-.+\.csv"$/
       )
 
       const lines = response.payload.split('\n').filter((line) => line !== '')
@@ -230,6 +230,60 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       expect(lines[1]).toContain('1001')
       expect(lines[1]).toContain('2026-04-15T09:00:00Z')
     })
+  })
+
+  describe('year', () => {
+    it('names the download by the year', async () => {
+      const server = await createServerWithRepos()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${getWasteRecordsExportPath}?year=2027`,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.headers['content-disposition']).toMatch(
+        /^attachment; filename="waste-records-2027-.+\.csv"$/
+      )
+    })
+
+    it("serves only the given year's records", async () => {
+      const server = await createServerWithRepos({
+        organisations: [organisationWith()],
+        seeds: [{ rows: [receivedRowState()] }]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${getWasteRecordsExportPath}?year=2027`,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const lines = response.payload.split('\n').filter((line) => line !== '')
+      expect(lines).toHaveLength(1)
+    })
+
+    it.each(['2025', '2100', 'next'])(
+      'returns 422 for year %s, which has no templates',
+      async (year) => {
+        const server = await createServerWithRepos()
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${getWasteRecordsExportPath}?year=${year}`,
+          ...asServiceMaintainer()
+        })
+
+        await server.stop()
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      }
+    )
   })
 
   describe('scoping', () => {
