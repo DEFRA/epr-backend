@@ -268,8 +268,8 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       expect(lines).toHaveLength(1)
     })
 
-    it.each(['2025', '2100', 'next'])(
-      'returns 422 for year %s, which has no templates',
+    it.each(['2023', '2101', 'next'])(
+      'returns 422 for year %s, which the service does not serve',
       async (year) => {
         const server = await createServerWithRepos()
 
