@@ -1068,12 +1068,13 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await storeReport(context)
 
       const uploadedAt = new Date().toISOString()
-      await context.reportsRepository.markActiveReportsStaleForSummaryLog(
-        context.key.organisationNumber,
-        context.key.registrationNumber,
-        toSummaryLogFileId('sl-new'),
+      await context.reportsRepository.markActiveReportsStaleForSummaryLog({
+        organisationNumber: context.key.organisationNumber,
+        registrationNumber: context.key.registrationNumber,
+        year: YEAR,
+        summaryLogId: toSummaryLogFileId('sl-new'),
         uploadedAt
-      )
+      })
 
       const { response, payload } = await read(
         context.server,
@@ -1119,12 +1120,13 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       await storeReport(context)
 
       const uploadedAt = new Date().toISOString()
-      await context.reportsRepository.markActiveReportsStaleForSummaryLog(
-        context.key.organisationNumber,
-        context.key.registrationNumber,
-        toSummaryLogFileId('sl-new'),
+      await context.reportsRepository.markActiveReportsStaleForSummaryLog({
+        organisationNumber: context.key.organisationNumber,
+        registrationNumber: context.key.registrationNumber,
+        year: YEAR,
+        summaryLogId: toSummaryLogFileId('sl-new'),
         uploadedAt
-      )
+      })
 
       const occurredAt = new Date().toISOString()
       await context.reportsRepository.markActiveReportsStaleForPrnCancellation({

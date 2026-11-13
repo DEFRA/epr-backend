@@ -362,12 +362,13 @@ describe('report routes by natural key', () => {
       })
 
       it('says a stale report is stale, without ids', async () => {
-        await reportsRepository.markActiveReportsStaleForSummaryLog(
-          numbersOf(registration).organisationNumber,
-          numbersOf(registration).registrationNumber,
-          toSummaryLogFileId('sl-2'),
-          '2026-05-01T00:00:00.000Z'
-        )
+        await reportsRepository.markActiveReportsStaleForSummaryLog({
+          organisationNumber: numbersOf(registration).organisationNumber,
+          registrationNumber: numbersOf(registration).registrationNumber,
+          year: YEAR,
+          summaryLogId: toSummaryLogFileId('sl-2'),
+          uploadedAt: '2026-05-01T00:00:00.000Z'
+        })
 
         const response = await server.inject({
           method: 'GET',
@@ -455,12 +456,13 @@ describe('report routes by natural key', () => {
       })
 
       it('refuses to change a stale report, as on /v1', async () => {
-        await reportsRepository.markActiveReportsStaleForSummaryLog(
-          numbersOf(registration).organisationNumber,
-          numbersOf(registration).registrationNumber,
-          toSummaryLogFileId('sl-2'),
-          '2026-05-01T00:00:00.000Z'
-        )
+        await reportsRepository.markActiveReportsStaleForSummaryLog({
+          organisationNumber: numbersOf(registration).organisationNumber,
+          registrationNumber: numbersOf(registration).registrationNumber,
+          year: YEAR,
+          summaryLogId: toSummaryLogFileId('sl-2'),
+          uploadedAt: '2026-05-01T00:00:00.000Z'
+        })
 
         const response = await server.inject({
           method: 'PATCH',

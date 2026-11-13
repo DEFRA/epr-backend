@@ -55,10 +55,11 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  */
 
 /**
- * Fails submission if any report for this registration was submitted since the
- * log's createdAt, closing the validate-to-submit race where a period closes
- * after the operator confirmed the preview. Deliberately blunt: it fires on any
- * submission, not only periods this log touches. See PAE-1686.
+ * Fails submission if any report for this registration and the log's year was
+ * submitted since the log's createdAt, closing the validate-to-submit race
+ * where a period closes after the operator confirmed the preview. Deliberately
+ * blunt within the year: it fires on any submission, not only periods this log
+ * touches.
  *
  * @param {SubmittableSummaryLog} summaryLog
  * @param {SummaryLogId} summaryLogId
@@ -71,15 +72,16 @@ const assertNoReportSubmittedSinceCreation = async (
   reportsService
 ) => {
   const reportSubmittedSinceCreation =
-    await reportsService.hasReportSubmittedSince(
-      summaryLog.organisationNumber,
-      summaryLog.registrationNumber,
-      summaryLog.createdAt
-    )
+    await reportsService.hasReportSubmittedSince({
+      organisationNumber: summaryLog.organisationNumber,
+      registrationNumber: summaryLog.registrationNumber,
+      year: summaryLog.year,
+      since: summaryLog.createdAt
+    })
 
   if (reportSubmittedSinceCreation) {
     throw new PermanentError(
-      `Summary log ${summaryLogId} is stale: a report was submitted for this registration after the summary log was created`
+      `Summary log ${summaryLogId} is stale: a report was submitted for this registration and year after the summary log was created`
     )
   }
 }
@@ -148,6 +150,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
   await onSummaryLogUploaded({
     organisationNumber: summaryLog.organisationNumber,
     registrationNumber: summaryLog.registrationNumber,
+    year: summaryLog.year,
     summaryLogId: fileId,
     periodsRequiringResubmission:
       summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??

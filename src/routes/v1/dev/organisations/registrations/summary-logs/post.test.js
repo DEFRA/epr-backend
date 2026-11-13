@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { toYear } from '#common/helpers/dates/year.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
@@ -21,7 +22,7 @@ import {
 import { devSummaryLogsSubmitPath } from './post.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
-const ACCREDITED_YEAR = 2026
+const ACCREDITED_YEAR = toYear(2026)
 
 const DEV_ENDPOINTS_ON = { featureFlags: { devEndpoints: true } }
 
@@ -423,7 +424,10 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   it('answers 500 and leaves the log submission-failed when the submit step throws', async () => {
     const env = await createEnvironment()
     const minted = beforeTransitionToSubmitting(env, () =>
-      createAndSubmitReport(env.server.app.reportsRepository, env.reportKey)
+      createAndSubmitReport(env.server.app.reportsRepository, {
+        ...env.reportKey,
+        year: ACCREDITED_YEAR
+      })
     )
 
     const response = await submit(

@@ -27,8 +27,7 @@ import {
  * @import { Cadence, CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
+ * @import { HasReportSubmittedSinceParams, PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
  */
 
 /**
@@ -37,7 +36,7 @@ import {
  * service rather than the repository port directly. See PAE-1686.
  *
  * @typedef {object} ReportsService
- * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, since: string) => Promise<boolean>} hasReportSubmittedSince
+ * @property {(params: HasReportSubmittedSinceParams) => Promise<boolean>} hasReportSubmittedSince
  * @property {(params: RegistrationKey) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
@@ -47,12 +46,8 @@ import {
  * @returns {ReportsService}
  */
 export const createReportsService = (reportsRepository) => ({
-  hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
-    reportsRepository.hasReportSubmittedSince(
-      organisationNumber,
-      registrationNumber,
-      since
-    ),
+  hasReportSubmittedSince: (params) =>
+    reportsRepository.hasReportSubmittedSince(params),
 
   findPeriodicReports: (params) =>
     reportsRepository.findPeriodicReports(params),

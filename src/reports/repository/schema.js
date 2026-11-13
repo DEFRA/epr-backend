@@ -241,8 +241,15 @@ export const findReportByIdSchema = Joi.string()
 
 export const markActiveReportsStaleSchema = Joi.object({
   ...registrationKeySchema,
+  year: YEAR_SCHEMA,
   summaryLogId: Joi.string().required(),
   uploadedAt: Joi.string().isoDate().required()
+})
+
+export const hasReportSubmittedSinceSchema = Joi.object({
+  ...registrationKeySchema,
+  year: YEAR_SCHEMA,
+  since: Joi.string().isoDate().required()
 })
 
 export const markActiveReportsStaleForPrnCancellationSchema = Joi.object({

@@ -1,4 +1,3 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import {
   validateMarkActiveReportsStale,
   validateMarkActiveReportsStaleForPrnCancellation,
@@ -18,7 +17,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   MarkSubmittedReportsRequiringResubmissionParams
  * } from './port.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 
@@ -97,30 +96,26 @@ const flagReportsByIdempotencyKey = async (
 }
 
 /**
- * Bulk-marks all active reports not sourced from `summaryLogId` as stale.
- * Skips reports already stale from this SL (retry-safe), and reports already
- * flagged stale by an earlier upload (first trigger wins; the audit trail records every occurrence).
+ * Bulk-marks all active reports of the summary log's year not sourced from
+ * `summaryLogId` as stale. Skips reports already stale from this SL
+ * (retry-safe), and reports already flagged stale by an earlier upload (first
+ * trigger wins; the audit trail records every occurrence).
  *
  * @param {Db} db
- * @param {OrganisationNumber} organisationNumber
- * @param {RegistrationNumber} registrationNumber
- * @param {SummaryLogFileId} summaryLogId
- * @param {string} uploadedAt
+ * @param {import('./port.js').MarkActiveReportsStaleForSummaryLogParams} params
  * @returns {Promise<import('./port.js').MarkReportStaleResult[]>}
  */
 export const performMarkActiveReportsStaleForSummaryLog = async (
   db,
-  organisationNumber,
-  registrationNumber,
-  summaryLogId,
-  uploadedAt
+  params
 ) => {
-  validateMarkActiveReportsStale({
+  const {
     organisationNumber,
     registrationNumber,
+    year,
     summaryLogId,
     uploadedAt
-  })
+  } = validateMarkActiveReportsStale(params)
 
   const summaryLogChanged = { uploadedAt, summaryLogId }
 
@@ -128,6 +123,7 @@ export const performMarkActiveReportsStaleForSummaryLog = async (
     selectFilter: {
       organisationNumber,
       registrationNumber,
+      year,
       'status.currentStatus': { $in: [...ACTIVE_REPORT_STATUSES] },
       'source.summaryLogId': { $ne: summaryLogId },
       'stale.summaryLogChanged': { $exists: false }

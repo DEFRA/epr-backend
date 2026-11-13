@@ -1,5 +1,3 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
-import { toYear } from '#common/helpers/dates/year.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
@@ -14,6 +12,8 @@ import {
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_START_DATE,
   DEFAULT_REPORT_YEAR,
+  NEXT_REPORT_YEAR,
+  NEXT_YEAR_REPORT,
   uniqueOrganisationNumber,
   uniqueRegistrationNumber
 } from './test-data.js'
@@ -247,18 +247,13 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
     })
 
     it('returns separate documents for the same org/registration across different years', async () => {
-      const NEXT_YEAR = toYear(DEFAULT_REPORT_YEAR + 1)
-
       await repository.createReport(
         buildCreateReportParams({ period: MONTHLY_PERIODS.January })
       )
       await repository.createReport(
         buildCreateReportParams({
-          period: MONTHLY_PERIODS.January,
-          year: NEXT_YEAR,
-          startDate: calendarDate(`${NEXT_YEAR}-01-01`),
-          endDate: calendarDate(`${NEXT_YEAR}-01-31`),
-          dueDate: calendarDate(`${NEXT_YEAR}-02-15`)
+          ...NEXT_YEAR_REPORT,
+          period: MONTHLY_PERIODS.January
         })
       )
 
@@ -266,7 +261,7 @@ export const testFindAllPeriodicReportsBehaviour = (it) => {
 
       expect(result).toHaveLength(2)
       expect(result.map((r) => r.year)).toEqual(
-        expect.arrayContaining([DEFAULT_REPORT_YEAR, NEXT_YEAR])
+        expect.arrayContaining([DEFAULT_REPORT_YEAR, NEXT_REPORT_YEAR])
       )
       result.forEach((doc) => {
         expect(doc.organisationNumber).toBe(DEFAULT_ORG_NUMBER)

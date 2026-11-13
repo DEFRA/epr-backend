@@ -1,4 +1,3 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 import {
   createReportSchema,
@@ -9,13 +8,14 @@ import {
   findPeriodicReportsForYearSchema,
   findReportByIdSchema,
   markActiveReportsStaleSchema,
+  hasReportSubmittedSinceSchema,
   markActiveReportsStaleForPrnCancellationSchema,
   markSubmittedReportsRequiringResubmissionSchema,
   markSubmittedReportRequiringResubmissionByOperatorSchema
 } from './schema.js'
 
 /**
- * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, RegistrationKey } from './port.js'
+ * @import { MarkSubmittedReportsRequiringResubmissionParams, MarkSubmittedReportRequiringResubmissionByOperatorParams, MarkActiveReportsStaleForSummaryLogParams } from './port.js'
  */
 
 /**
@@ -130,11 +130,27 @@ export const validateFindReportById = (reportId) => {
 }
 
 /**
- * @param {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }} params
- * @returns {RegistrationKey & { summaryLogId: SummaryLogFileId, uploadedAt: string }}
+ * @param {MarkActiveReportsStaleForSummaryLogParams} params
+ * @returns {MarkActiveReportsStaleForSummaryLogParams}
  */
 export const validateMarkActiveReportsStale = (params) => {
   const { error, value } = markActiveReportsStaleSchema.validate(params, {
+    abortEarly: false
+  })
+
+  if (error) {
+    throw Boom.badRequest(error.message)
+  }
+
+  return value
+}
+
+/**
+ * @param {import('./port.js').HasReportSubmittedSinceParams} params
+ * @returns {import('./port.js').HasReportSubmittedSinceParams}
+ */
+export const validateHasReportSubmittedSince = (params) => {
+  const { error, value } = hasReportSubmittedSinceSchema.validate(params, {
     abortEarly: false
   })
 
