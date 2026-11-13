@@ -1,6 +1,8 @@
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { beforeEach, describe, expect } from 'vitest'
+import { toYear } from '#common/helpers/dates/year.js'
 import {
+  PRN_YEAR,
   buildAccreditationKeys,
   buildAwaitingAcceptancePrn,
   buildCancelledPrn,
@@ -10,6 +12,7 @@ import {
 } from './test-data.js'
 
 /** @import { AccreditationNumbers, AccreditationTonnage, PackagingRecyclingNotesRepository as PrnRepository } from '../port.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
 
@@ -19,13 +22,15 @@ const EXCLUDE_DELETED = { excludeStatuses: [PRN_STATUS.DELETED] }
  *
  * @param {AccreditationTonnage[]} totals
  * @param {AccreditationNumbers} numbers
+ * @param {Year} [year]
  */
-const totalFor = (totals, numbers) =>
+const totalFor = (totals, numbers, year = PRN_YEAR) =>
   totals.find(
     (total) =>
       total.numbers.organisationNumber === numbers.organisationNumber &&
       total.numbers.registrationNumber === numbers.registrationNumber &&
-      total.numbers.accreditationNumber === numbers.accreditationNumber
+      total.numbers.accreditationNumber === numbers.accreditationNumber &&
+      total.numbers.year === year
   )
 
 export const testSumTonnageByAccreditationBehaviour = (it) => {
@@ -66,7 +71,8 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
         numbers: {
           organisationNumber: accreditation.organisationNumber,
           registrationNumber: accreditation.registrationNumber,
-          accreditationNumber: accreditation.accreditationNumber
+          accreditationNumber: accreditation.accreditationNumber,
+          year: PRN_YEAR
         },
         tonnageByStatus: {
           [PRN_STATUS.DRAFT]: 10,
@@ -119,6 +125,27 @@ export const testSumTonnageByAccreditationBehaviour = (it) => {
         [PRN_STATUS.DRAFT]: 10
       })
       expect(totalFor(totals, second)?.tonnageByStatus).toStrictEqual({
+        [PRN_STATUS.DRAFT]: 20
+      })
+    })
+
+    it('names the year of the accreditation the PRNs were raised under', async () => {
+      const accreditation = buildAccreditationKeys()
+      const nextYear = toYear(PRN_YEAR + 1)
+      await repository.create(
+        buildDraftPrn(
+          underAccreditation(
+            { ...accreditation, year: nextYear },
+            { tonnage: 20 }
+          )
+        )
+      )
+
+      const totals = await repository.sumTonnageByAccreditation(EXCLUDE_DELETED)
+
+      expect(
+        totalFor(totals, accreditation, nextYear)?.tonnageByStatus
+      ).toStrictEqual({
         [PRN_STATUS.DRAFT]: 20
       })
     })

@@ -13,7 +13,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
@@ -401,7 +401,7 @@ const loadSubmittedRowStatesByKey = async ({
   summaryLogRowStatesRepository,
   summaryLog
 }) => {
-  const submittedRowStates = await summaryLogRowStatesForRegistration({
+  const submittedRowStates = await summaryLogRowStatesForLedger({
     ...ledgerIdFor(summaryLog),
     ledgerRepository,
     summaryLogRowStatesRepository

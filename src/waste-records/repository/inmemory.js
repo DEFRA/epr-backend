@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
+import { isSameLedger } from '#waste-balances/repository/ledger-schema.js'
 import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
@@ -25,23 +26,14 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
-
-/**
- * @param {SummaryLogRowState} doc
- * @param {RequiredNumbers} ledgerId
- */
-const matchesLedger = (doc, ledgerId) =>
-  doc.organisationNumber === ledgerId.organisationNumber &&
-  doc.registrationNumber === ledgerId.registrationNumber &&
-  doc.accreditationNumber === ledgerId.accreditationNumber
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @param {SummaryLogRowState} doc
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
-  matchesLedger(doc, candidate) &&
+  isSameLedger(doc, candidate) &&
   doc.rowId === candidate.rowId &&
   doc.wasteRecordType === candidate.wasteRecordType
 
@@ -57,7 +49,7 @@ const matchesCommittedState = (doc, candidate) =>
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogFileId} summaryLogId
  * @returns {SummaryLogRowState[]}
  */
@@ -65,7 +57,7 @@ const rowStatesForSummaryLog = (storage, ledgerId, summaryLogId) =>
   structuredClone(
     storage.filter(
       (doc) =>
-        matchesLedger(doc, ledgerId) && doc.summaryLogIds.includes(summaryLogId)
+        isSameLedger(doc, ledgerId) && doc.summaryLogIds.includes(summaryLogId)
     )
   )
 
@@ -104,6 +96,7 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
         organisationNumber: doc.organisationNumber,
         registrationNumber: doc.registrationNumber,
         accreditationNumber: doc.accreditationNumber,
+        year: doc.year,
         wasteRecordType: doc.wasteRecordType,
         processingType: doc.processingType,
         data: doc.data
@@ -190,7 +183,7 @@ const repositoryOver = (storage) => ({
     ),
 
   /**
-   * @param {RequiredNumbers} ledgerId
+   * @param {WasteBalanceLedgerId} ledgerId
    * @param {SummaryLogFileId} summaryLogId
    */
   findWasteRecordStatesForSummaryLog: async (ledgerId, summaryLogId) =>

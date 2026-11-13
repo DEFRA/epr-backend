@@ -122,13 +122,7 @@ const performSumTonnageByAccreditation =
       if (excludeStatuses.includes(status)) {
         continue
       }
-      const { organisationNumber, registrationNumber, accreditationNumber } =
-        prnLedgerId(prn)
-      const numbers = {
-        organisationNumber,
-        registrationNumber,
-        accreditationNumber
-      }
+      const numbers = prnLedgerId(prn)
       const key = JSON.stringify(numbers)
       const total = totals.get(key) ?? { numbers, tonnageByStatus: {} }
       total.tonnageByStatus[status] =

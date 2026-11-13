@@ -2416,6 +2416,23 @@ describe('SummaryLogsValidator', () => {
       expect(fatal.context.previousSummaryLog.id).toBe('log-2')
     })
 
+    it('accepts an upload that leaves out rows submitted for the year before', async () => {
+      await seedSubmittedSummaryLog({
+        ledgerId: { ...FIXTURE_LEDGER, year: toYear(FIXTURE_LEDGER.year - 1) },
+        summaryLogId: 'previous-year-log',
+        number: 1,
+        rows: [{ rowId: 'A' }],
+        summaryLogRowStatesRepository,
+        ledgerRepository
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(sequentialRowRemovedFatal()).toBeUndefined()
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+    })
+
     it('accepts an upload when the registration has never submitted', async () => {
       await validateSummaryLog(summaryLogId)
 

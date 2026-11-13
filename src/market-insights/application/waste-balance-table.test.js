@@ -1,4 +1,4 @@
-import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -350,7 +350,7 @@ const makeOperator = ({
       organisationNumber: toOrganisationNumber(String(orgId)),
       registrationNumber: toRegistrationNumber(`REG-${orgId}`),
       accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
-      year: utcYearOf(validFrom)
+      year: toYear(2026)
     },
     summaryLogId: `log-${orgId}`
   }
@@ -2006,7 +2006,7 @@ describe('buildWasteBalanceTable', () => {
     expect(reported(table)).toEqual([])
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('ACC-500009'),
+        message: expect.stringContaining('ACC-500009 for 2026'),
         event: expect.objectContaining({
           action: 'market_insights_partition_unmatched',
           reference: 'ACC-500009'
