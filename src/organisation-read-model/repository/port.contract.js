@@ -8,7 +8,8 @@ import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organi
 
 /**
  * An organisation the read model serves, described by what the port reads:
- * its name and its numbers. Each registration is approved and served, as a
+ * its name and its numbers. Each registration is approved and served from
+ * its `approvedOn` (`SEED_REGISTRATION_APPROVED_ON` unless given), as a
  * reprocessor unless its `wasteProcessingType` says exporter, and an
  * accreditation number gives it an accreditation for `SEED_ACCREDITATION_YEAR`,
  * approved from 1 July of that year. Each adapter's tests store it in their
@@ -22,6 +23,7 @@ import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organi
  *     accreditationNumber?: AccreditationNumber
  *     wasteProcessingType?: 'reprocessor' | 'exporter'
  *     overseasSites?: OverseasSiteSeed[]
+ *     approvedOn?: string
  *   }>
  * }} OrganisationSeed
  */
@@ -43,6 +45,18 @@ import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organi
  * Stores the organisations so that the repository it returns serves them.
  *
  * @typedef {(organisations: OrganisationSeed[]) => Promise<OrganisationReadRepository>} OrganisationReadRepositoryServing
+ */
+
+/**
+ * The fixture an adapter's tests give `it.extend`, so that the `it` they
+ * pass to the contract provides `organisationReadRepositoryServing`.
+ *
+ * @typedef {{
+ *   organisationReadRepositoryServing: (
+ *     context: any,
+ *     use: (value: OrganisationReadRepositoryServing) => Promise<void>
+ *   ) => Promise<void>
+ * }} OrganisationReadRepositoryServingFixture
  */
 
 /**

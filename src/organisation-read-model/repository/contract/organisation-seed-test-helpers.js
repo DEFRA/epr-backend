@@ -9,6 +9,12 @@ import {
 /** The year of every accreditation a seed gives. */
 export const SEED_ACCREDITATION_YEAR = 2026
 
+/** The day a seeded registration is approved from, unless its seed says otherwise. */
+export const SEED_REGISTRATION_APPROVED_ON = `${SEED_ACCREDITATION_YEAR}-02-01`
+
+// Each test worker counts up from here, so a seed's numbers are unique within
+// a run but change with the order tests run in. Read them from the seed;
+// never hard-code or snapshot them.
 let sequence = 700000
 
 const next = () => {

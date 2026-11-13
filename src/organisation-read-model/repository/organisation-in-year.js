@@ -1,3 +1,4 @@
+import { isOneOf } from '#common/helpers/is-one-of.js'
 import {
   earliestOfYearEndOrDate,
   lastDayOfYear
@@ -32,10 +33,8 @@ const onlyYear = (byYear, year) =>
  */
 const registrationStatusOn = (registration, date) => {
   const status = statusOn(registration.status.timeline, date)
-  return /** @type {readonly (string | undefined)[]} */ (
-    REGISTRATION_STATUSES
-  ).includes(status)
-    ? /** @type {Registration['status']['current']} */ (status)
+  return isOneOf(REGISTRATION_STATUSES, status)
+    ? status
     : registration.status.current
 }
 

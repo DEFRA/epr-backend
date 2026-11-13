@@ -1,4 +1,5 @@
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import { isOneOf } from '#common/helpers/is-one-of.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { lastDayOfYear } from '#common/helpers/dates/year.js'
@@ -663,16 +664,6 @@ function keyedRecords(items, toEntry, keyName, onDrop) {
     onDrop(`${keyName} ${key} is shared by more than one record`)
   }
   return Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
-}
-
-/**
- * @template {string} T
- * @param {readonly T[]} values
- * @param {string | undefined} value
- * @returns {value is T}
- */
-function isOneOf(values, value) {
-  return /** @type {readonly (string | undefined)[]} */ (values).includes(value)
 }
 
 /**

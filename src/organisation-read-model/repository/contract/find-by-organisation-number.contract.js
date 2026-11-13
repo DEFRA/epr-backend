@@ -1,5 +1,6 @@
 import {
   SEED_ACCREDITATION_YEAR,
+  SEED_REGISTRATION_APPROVED_ON,
   nextSeedAccreditationNumber,
   nextSeedOrganisationNumber,
   nextSeedRegistrationNumber,
@@ -121,7 +122,13 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         year: toYear(year)
       })
 
-    const accredited = () => {
+    /**
+     * A registration approved from `approvedOn`, accredited for
+     * `SEED_ACCREDITATION_YEAR`.
+     *
+     * @param {string} [approvedOn]
+     */
+    const accredited = (approvedOn = SEED_REGISTRATION_APPROVED_ON) => {
       const registrationNumber = nextSeedRegistrationNumber()
       return {
         registrationNumber,
@@ -129,7 +136,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           registrations: [
             {
               registrationNumber,
-              accreditationNumber: nextSeedAccreditationNumber()
+              accreditationNumber: nextSeedAccreditationNumber(),
+              approvedOn
             }
           ]
         })
@@ -175,13 +183,13 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
     it('serves no registration approved after the year', async ({
       organisationReadRepositoryServing
     }) => {
-      const { seed } = accredited()
+      const { seed } = accredited(`${SEED_ACCREDITATION_YEAR + 1}-02-01`)
       const repository = await organisationReadRepositoryServing([seed])
 
       const organisation = await findInYear(
         repository,
         seed,
-        SEED_ACCREDITATION_YEAR - 1
+        SEED_ACCREDITATION_YEAR
       )
 
       expect(organisation.registrations).toEqual({})

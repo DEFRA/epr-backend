@@ -11,11 +11,15 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
-import { SEED_ACCREDITATION_YEAR } from './contract/organisation-seed-test-helpers.js'
+import {
+  SEED_ACCREDITATION_YEAR,
+  SEED_REGISTRATION_APPROVED_ON
+} from './contract/organisation-seed-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryServing, OrganisationSeed, OverseasSiteSeed } from './port.contract.js' */
+/** @import { OrganisationReadRepositoryServingFixture, OrganisationSeed, OverseasSiteSeed } from './port.contract.js' */
+/** @typedef {OrganisationSeed['registrations'][number]} SeededRegistration */
 
 /**
  * The overseas-site record a seeded site is stored as: approved from its
@@ -34,67 +38,91 @@ const toStoredSite = ({ name, approvedOn }) => ({
 })
 
 /**
+ * The accreditation a seed's accreditation number gives, as stored: valid for
+ * `SEED_ACCREDITATION_YEAR` from 1 July, and approved.
+ *
+ * @param {NonNullable<SeededRegistration['accreditationNumber']>} accreditationNumber
+ * @param {boolean} exporting
+ */
+const toStoredAccreditation = (accreditationNumber, exporting) =>
+  (exporting ? exporterAccreditation : accreditation)({
+    accreditationNumber,
+    validFrom: `${SEED_ACCREDITATION_YEAR}-07-01`,
+    validTo: `${SEED_ACCREDITATION_YEAR}-12-31`
+  })
+
+/**
+ * A seeded registration as stored, with its accreditation and the
+ * overseas-site records it uses: approved from its `approvedOn`, numbered,
+ * and of the kind it names.
+ *
+ * @param {SeededRegistration} registration
+ */
+const toStoredRegistration = ({
+  registrationNumber,
+  accreditationNumber,
+  wasteProcessingType,
+  overseasSites = [],
+  approvedOn = SEED_REGISTRATION_APPROVED_ON
+}) => {
+  const exporting = wasteProcessingType === 'exporter'
+  const sites = overseasSites.map((site) => ({
+    siteNumber: site.siteNumber,
+    record: toStoredSite(site)
+  }))
+  const storedAccreditation = accreditationNumber
+    ? toStoredAccreditation(accreditationNumber, exporting)
+    : undefined
+  const approved = {
+    registrationNumber,
+    accreditationId: storedAccreditation?.id,
+    validFrom: approvedOn,
+    statusHistory: [
+      { status: 'created', updatedAt: `${approvedOn}T00:00:00.000Z` },
+      { status: 'approved', updatedAt: `${approvedOn}T00:00:00.000Z` }
+    ]
+  }
+  return {
+    registration: exporting
+      ? exporter({
+          ...approved,
+          overseasSites: Object.fromEntries(
+            sites.map(({ siteNumber, record }) => [
+              siteNumber,
+              { overseasSiteId: record.id }
+            ])
+          )
+        })
+      : reprocessor(approved),
+    storedAccreditation,
+    siteRecords: sites.map(({ record }) => record)
+  }
+}
+
+/**
  * The seeded organisation as the organisations collection stores it, and the
- * overseas-site records its exporters use. Each registration is approved,
- * numbered and of the kind it names, and linked to an accreditation approved
- * from 1 July of `SEED_ACCREDITATION_YEAR` when the seed gives an
- * accreditation number.
+ * overseas-site records its exporters use, each registration built by
+ * `toStoredRegistration`.
  *
  * @param {OrganisationSeed} seed
  */
 const toStored = ({ name, organisationNumber, registrations }) => {
-  const linked = registrations.map(
-    ({
-      registrationNumber,
-      accreditationNumber,
-      wasteProcessingType,
-      overseasSites = []
-    }) => {
-      const exporting = wasteProcessingType === 'exporter'
-      const sites = overseasSites.map((site) => ({
-        siteNumber: site.siteNumber,
-        record: toStoredSite(site)
-      }))
-      const held = accreditationNumber
-        ? (exporting ? exporterAccreditation : accreditation)({
-            accreditationNumber,
-            validFrom: `${SEED_ACCREDITATION_YEAR}-07-01`,
-            validTo: `${SEED_ACCREDITATION_YEAR}-12-31`
-          })
-        : undefined
-      return {
-        registration: exporting
-          ? exporter({
-              registrationNumber,
-              accreditationId: held?.id,
-              overseasSites: Object.fromEntries(
-                sites.map(({ siteNumber, record }) => [
-                  siteNumber,
-                  { overseasSiteId: record.id }
-                ])
-              )
-            })
-          : reprocessor({ registrationNumber, accreditationId: held?.id }),
-        accreditation: held,
-        siteRecords: sites.map(({ record }) => record)
-      }
-    }
-  )
+  const stored = registrations.map(toStoredRegistration)
   return {
     organisation: buildOrganisation({
       organisationNumber,
       companyDetails: { name },
-      registrations: linked.map(({ registration }) => registration),
-      accreditations: linked.flatMap(({ accreditation: held }) =>
-        held ? [held] : []
+      registrations: stored.map(({ registration }) => registration),
+      accreditations: stored.flatMap(({ storedAccreditation }) =>
+        storedAccreditation ? [storedAccreditation] : []
       )
     }),
-    siteRecords: linked.flatMap(({ siteRecords }) => siteRecords)
+    siteRecords: stored.flatMap(({ siteRecords }) => siteRecords)
   }
 }
 
 const it = organisationReadIt.extend(
-  /** @type {{ organisationReadRepositoryServing: (context: any, use: (value: OrganisationReadRepositoryServing) => Promise<void>) => Promise<void> }} */ ({
+  /** @type {OrganisationReadRepositoryServingFixture} */ ({
     organisationReadRepositoryServing: async (
       { organisationReadRepositoryWith },
       use
@@ -111,11 +139,7 @@ const it = organisationReadIt.extend(
 )
 
 describe('organisation read repository over MongoDB repositories', () => {
-  testOrganisationReadRepositoryContract(
-    /** @type {OrganisationReadRepositoryContractIt} */ (
-      /** @type {unknown} */ (it)
-    )
-  )
+  testOrganisationReadRepositoryContract(it)
 
   it('dates the status timeline from status changes stored as BSON dates', async ({
     organisationReadRepositoryWith
