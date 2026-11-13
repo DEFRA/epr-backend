@@ -521,7 +521,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   const organisationWithNumberlessRecords = {
-    registrations: [{ registrationNumber: 'REG12345' }, {}],
+    registrations: [{}],
     accreditations: [{}]
   }
 
