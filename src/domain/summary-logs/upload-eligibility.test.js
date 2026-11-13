@@ -51,7 +51,7 @@ describe('checkSummaryLogUploadEligibility', () => {
     'refuses %s, a year with no summary log templates',
     (year) => {
       const result = checkSummaryLogUploadEligibility({
-        registration: buildRegistration({ validFrom: '2024-01-01' }),
+        registration: buildRegistration({ approvedFrom: '2024-01-01' }),
         year: toYear(year),
         latestOpenYear: LATEST_OPEN_YEAR
       })
