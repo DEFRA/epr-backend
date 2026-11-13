@@ -27,9 +27,10 @@ import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organi
  */
 
 /**
- * An exporter's overseas site, served under `siteNumber` with its name. The
- * exporter's accreditation lists it as approved from `approvedOn`, a calendar
- * date, or as pending without one.
+ * An exporter's overseas site, served under `siteNumber` with its name and,
+ * when it has an `approvedOn` calendar date, valid from the start of that day.
+ * The exporter's accreditation lists it as approved from `approvedOn`, or as
+ * pending without one.
  *
  * @typedef {{
  *   siteNumber: string

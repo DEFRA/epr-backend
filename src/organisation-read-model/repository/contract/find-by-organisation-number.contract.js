@@ -227,6 +227,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           )
         )
       ).toEqual({ '001': 'Berlin Reprocessor', '002': 'Hamburg Reprocessor' })
+      expect(registration.overseasSites['001']).toHaveProperty(
+        'validFrom',
+        `${SEED_ACCREDITATION_YEAR}-03-01T00:00:00.000Z`
+      )
+      expect(registration.overseasSites['002']).not.toHaveProperty('validFrom')
       expect(
         registration.accreditations[SEED_ACCREDITATION_YEAR].overseasSites
       ).toEqual({

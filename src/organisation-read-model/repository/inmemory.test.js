@@ -23,8 +23,8 @@ const repositoryOf = (organisations) =>
  * The seeded organisation in the read model's shape: each registration
  * approved and of the kind it names, with an accreditation approved from
  * 1 July of `SEED_ACCREDITATION_YEAR` when the seed gives an accreditation
- * number. An exporter's accreditation lists each of its overseas sites as
- * approved from its `approvedOn`, or pending without one.
+ * number. An exporter's overseas sites are valid from their `approvedOn`, and
+ * its accreditation lists each as approved from then, or pending without one.
  *
  * @param {OrganisationSeed} seed
  * @returns {Organisation}
@@ -54,17 +54,22 @@ const toReadModel = ({ name, organisationNumber, registrations }) =>
             exporting
               ? buildReadExporterRegistration({
                   overseasSites: Object.fromEntries(
-                    overseasSites.map(({ siteNumber, name: siteName }) => [
-                      siteNumber,
-                      {
-                        name: siteName,
-                        address: {
-                          line1: '1 Teststrasse',
-                          townOrCity: 'Berlin',
-                          country: 'Germany'
+                    overseasSites.map(
+                      ({ siteNumber, name: siteName, approvedOn }) => [
+                        siteNumber,
+                        {
+                          name: siteName,
+                          address: {
+                            line1: '1 Teststrasse',
+                            townOrCity: 'Berlin',
+                            country: 'Germany'
+                          },
+                          ...(approvedOn && {
+                            validFrom: new Date(approvedOn).toISOString()
+                          })
                         }
-                      }
-                    ])
+                      ]
+                    )
                   ),
                   accreditations: accreditationNumber
                     ? {
