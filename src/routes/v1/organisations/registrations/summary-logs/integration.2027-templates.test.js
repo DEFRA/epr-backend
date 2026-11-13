@@ -100,15 +100,14 @@ const openYear2027 = () => {
   onTestFinished(() => config.reset('openNextYear'))
 }
 
-const upload = async (
-  env,
-  { summaryLogId, fileId, accredited, year = YEAR },
-  parsed
-) => {
+const upload = async (env, { summaryLogId, fileId }, parsed) => {
   env.fileDataMap[fileId] = parsed
   await env.server.inject({
     method: 'POST',
-    url: buildPostUrl(summaryLogId, { accredited, year }),
+    url: buildPostUrl(summaryLogId, {
+      accredited: env.accredited,
+      year: env.year
+    }),
     payload: createUploadPayload(
       env.organisationId,
       env.registrationId,
@@ -167,8 +166,7 @@ describe('2027 summary logs', () => {
       const env = await setup()
       const ids = {
         summaryLogId: 'summary-2027-exporter',
-        fileId: 'file-2027-exporter',
-        accredited: true
+        fileId: 'file-2027-exporter'
       }
 
       const validated = await upload(env, ids, {
@@ -226,8 +224,7 @@ describe('2027 summary logs', () => {
           env,
           {
             summaryLogId: 'summary-2027-bad-previous-row',
-            fileId: 'file-2027-bad-previous-row',
-            accredited: true
+            fileId: 'file-2027-bad-previous-row'
           },
           {
             meta: meta2027(createWasteBalanceMeta('EXPORTER')),
@@ -255,8 +252,7 @@ describe('2027 summary logs', () => {
         env,
         {
           summaryLogId: 'summary-2027-2026-columns',
-          fileId: 'file-2027-2026-columns',
-          accredited: true
+          fileId: 'file-2027-2026-columns'
         },
         {
           meta: meta2027(createWasteBalanceMeta('EXPORTER')),
@@ -289,9 +285,7 @@ describe('2027 summary logs', () => {
         env,
         {
           summaryLogId: 'summary-2026-2027-template',
-          fileId: 'file-2026-2027-template',
-          accredited: true,
-          year: toYear(2026)
+          fileId: 'file-2026-2027-template'
         },
         {
           meta: meta2027(createWasteBalanceMeta('EXPORTER')),
@@ -317,8 +311,7 @@ describe('2027 summary logs', () => {
         env,
         {
           summaryLogId: 'summary-2027-2026-template',
-          fileId: 'file-2027-2026-template',
-          accredited: true
+          fileId: 'file-2027-2026-template'
         },
         {
           meta: createWasteBalanceMeta('EXPORTER'),
@@ -347,8 +340,7 @@ describe('2027 summary logs', () => {
       })
       const ids = {
         summaryLogId: 'summary-2027-registered-only',
-        fileId: 'file-2027-registered-only',
-        accredited: false
+        fileId: 'file-2027-registered-only'
       }
 
       const validated = await upload(env, ids, {
@@ -416,8 +408,7 @@ describe('2027 summary logs', () => {
       })
       const ids = {
         summaryLogId: 'summary-2027-exporter-registered-only',
-        fileId: 'file-2027-exporter-registered-only',
-        accredited: false
+        fileId: 'file-2027-exporter-registered-only'
       }
 
       const validated = await upload(env, ids, {
@@ -487,8 +478,7 @@ describe('2027 summary logs', () => {
         })
         const ids = {
           summaryLogId: `summary-2027-${reprocessingType}`,
-          fileId: `file-2027-${reprocessingType}`,
-          accredited: true
+          fileId: `file-2027-${reprocessingType}`
         }
 
         const validated = await upload(env, ids, {
