@@ -3,7 +3,6 @@ import {
   findSchemaByWasteRecordType,
   getTemplate
 } from '#domain/summary-logs/table-schemas/index.js'
-import { templateYearOf } from '#domain/summary-logs/template-year.js'
 import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index.js'
@@ -89,7 +88,7 @@ const findIssues = (rows, year) =>
     const schema = /** @type {TableSchema} */ (
       findSchemaByWasteRecordType(
         row.wasteRecordType,
-        getTemplate(templateYearOf(year), row.processingType).tableSchemas
+        getTemplate(year, row.processingType).tableSchemas
       )?.schema
     )
     return issuesForRow(row, schema, rules)

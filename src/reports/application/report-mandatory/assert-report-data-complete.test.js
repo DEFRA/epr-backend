@@ -14,19 +14,16 @@ const receivedWithoutSupplier = {
 }
 
 describe('summariseIncompleteData', () => {
-  it.each([2025, 2026, 2027])(
-    'reads the table schema for a %s report',
-    (year) => {
-      expect(
-        summariseIncompleteData([receivedWithoutSupplier], toYear(year))
-      ).toMatchObject({
-        total: 6,
-        issues: expect.arrayContaining([
-          { sheet: 'Received', rowId: '1001', field: 'SUPPLIER_NAME' }
-        ])
-      })
-    }
-  )
+  it.each([2026, 2027])('reads the table schema for a %s report', (year) => {
+    expect(
+      summariseIncompleteData([receivedWithoutSupplier], toYear(year))
+    ).toMatchObject({
+      total: 6,
+      issues: expect.arrayContaining([
+        { sheet: 'Received', rowId: '1001', field: 'SUPPLIER_NAME' }
+      ])
+    })
+  })
 
   it('fails for a year with no template', () => {
     expect(() =>

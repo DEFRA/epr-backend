@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toYear } from '#common/helpers/dates/year.js'
-import {
-  DEFAULT_TEMPLATE_YEAR,
-  templateYear,
-  templateYearOf
-} from './template-year.js'
+import { DEFAULT_TEMPLATE_YEAR, templateYear } from './template-year.js'
 
 describe('templateYear', () => {
   it('reads the 2027 template version 2027.01 as 2027', () => {
@@ -23,15 +18,5 @@ describe('templateYear', () => {
 
   it('defaults to 2026', () => {
     expect(DEFAULT_TEMPLATE_YEAR).toBe(2026)
-  })
-})
-
-describe('templateYearOf', () => {
-  it.each([
-    [2025, 2026],
-    [2026, 2026],
-    [2027, 2027]
-  ])('reads %s rows on the %s templates', (year, expected) => {
-    expect(templateYearOf(toYear(year))).toBe(expected)
   })
 })
