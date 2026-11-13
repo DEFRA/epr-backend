@@ -85,17 +85,17 @@ const overseasSite = (name, country) => ({
 })
 
 // The year `accredited` holds its second accreditation under.
-const PREVIOUS_YEAR = toYear(DEFAULT_YEAR - 1)
+const NEXT_YEAR = toYear(DEFAULT_YEAR + 1)
 
 /**
  * A reprocessor registration holding `accreditations` by year, the first under
- * `DEFAULT_YEAR` and each after it a year earlier.
+ * `DEFAULT_YEAR` and each after it a year later.
  */
 const accredited = (...accreditations) =>
   reprocessorRegistration({
     accreditations: Object.fromEntries(
       accreditations.map((accreditation, i) => [
-        String(DEFAULT_YEAR - i),
+        String(DEFAULT_YEAR + i),
         accreditation
       ])
     )
@@ -760,8 +760,8 @@ describe('streamCsvExport', () => {
         readModelOrg({
           registrations: {
             [REGISTRATION_NUMBER]: accredited(
-              readModelAccreditation({ accreditationNumber: 'ACC-NEW' }),
-              readModelAccreditation({ accreditationNumber: 'ACC-OLD' })
+              readModelAccreditation({ accreditationNumber: 'ACC-OLD' }),
+              readModelAccreditation({ accreditationNumber: 'ACC-NEW' })
             )
           }
         })
@@ -769,12 +769,12 @@ describe('streamCsvExport', () => {
       seeds: [
         {
           accreditationNumber: 'ACC-OLD',
-          year: PREVIOUS_YEAR,
           summaryLogId: 'sl-old',
           rows: [receivedRowState({ rowId: '1001' })]
         },
         {
           accreditationNumber: 'ACC-NEW',
+          year: NEXT_YEAR,
           summaryLogId: 'sl-new',
           rows: [receivedRowState({ rowId: '2002' })]
         }
@@ -853,7 +853,7 @@ describe('streamCsvExport', () => {
         },
         {
           accreditationNumber: 'ACC-A',
-          year: PREVIOUS_YEAR,
+          year: NEXT_YEAR,
           summaryLogId: 'sl-a',
           rows: [receivedRowState({ rowId: '2002' })]
         }
@@ -873,12 +873,12 @@ describe('streamCsvExport', () => {
       orgs: [readModelOrg()],
       seeds: [
         {
-          summaryLogId: 'sl-this-year',
+          year: NEXT_YEAR,
+          summaryLogId: 'sl-next-year',
           rows: [receivedRowState({ rowId: '2002' })]
         },
         {
-          year: PREVIOUS_YEAR,
-          summaryLogId: 'sl-previous-year',
+          summaryLogId: 'sl-this-year',
           rows: [receivedRowState({ rowId: '1001' })]
         }
       ]
@@ -1166,6 +1166,17 @@ describe('streamCsvExport', () => {
 
     await expect(collect(streamCsvExport(deps))).rejects.toThrow(
       'No UNKNOWN_PROCESSING_TYPE summary log template for 2026'
+    )
+  })
+
+  it("classifies a partition's rows with its year's templates", async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [{ year: toYear(2028), rows: [receivedRowState()] }]
+    })
+
+    await expect(collect(streamCsvExport(deps))).rejects.toThrow(
+      'summary log template for 2028'
     )
   })
 
