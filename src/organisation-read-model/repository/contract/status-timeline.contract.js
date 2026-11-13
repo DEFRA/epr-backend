@@ -229,7 +229,7 @@ export const testStatusTimelineBehaviour = (it) => {
       ])
     })
 
-    it('dates a change recorded before the approval that starts the accreditation no later than validFrom, and keeps it before the approval', async ({
+    it('leaves out a change that a backdated approval overrides', async ({
       organisationReadRepositoryWith
     }) => {
       const stored = organisationAccredited({
@@ -253,14 +253,95 @@ export const testStatusTimelineBehaviour = (it) => {
           .status.timeline
       ).toEqual([
         {
-          status: 'created',
-          at: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-10-14T14:30:47.171Z'
-        },
-        {
           status: 'approved',
           at: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-10-14T14:30:47.204Z'
+        }
+      ])
+    })
+
+    it('leaves out an approval cancelled before its validFrom', async ({
+      organisationReadRepositoryWith
+    }) => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
+      const stored = organisationAccredited({
+        validFrom: '2027-01-01',
+        validTo: '2027-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2026-11-12T10:00:00.000Z' },
+          { status: 'approved', updatedAt: '2026-11-12T10:05:00.000Z' },
+          { status: 'cancelled', updatedAt: '2026-11-15T10:05:00.000Z' }
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027]
+          .status.timeline
+      ).toEqual([
+        {
+          status: 'created',
+          at: '2026-11-12T10:00:00.000Z',
+          updatedAt: '2026-11-12T10:00:00.000Z'
+        },
+        {
+          status: 'cancelled',
+          at: '2026-11-15T10:05:00.000Z',
+          updatedAt: '2026-11-15T10:05:00.000Z'
+        }
+      ])
+    })
+
+    it('dates a reinstatement recorded before validFrom at validFrom', async ({
+      organisationReadRepositoryWith
+    }) => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
+      const stored = organisationAccredited({
+        validFrom: '2027-01-01',
+        validTo: '2027-12-31',
+        statusHistory: [
+          { status: 'created', updatedAt: '2026-11-12T10:00:00.000Z' },
+          { status: 'approved', updatedAt: '2026-11-12T10:05:00.000Z' },
+          { status: 'cancelled', updatedAt: '2026-11-15T10:05:00.000Z' },
+          { status: 'approved', updatedAt: '2026-11-18T10:05:00.000Z' }
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027]
+          .status.timeline
+      ).toEqual([
+        {
+          status: 'created',
+          at: '2026-11-12T10:00:00.000Z',
+          updatedAt: '2026-11-12T10:00:00.000Z'
+        },
+        {
+          status: 'cancelled',
+          at: '2026-11-15T10:05:00.000Z',
+          updatedAt: '2026-11-15T10:05:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2027-01-01T00:00:00.000Z',
+          updatedAt: '2026-11-18T10:05:00.000Z'
         }
       ])
     })
@@ -303,6 +384,85 @@ export const testStatusTimelineBehaviour = (it) => {
           status: 'approved',
           at: '2026-03-30T09:00:00.000Z',
           updatedAt: '2026-03-30T09:00:00.000Z'
+        }
+      ])
+    })
+
+    it('leaves out an approval suspended before its validFrom, so it stands suspended from then', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = organisationAccredited({
+        validFrom: '2026-07-01',
+        statusHistory: [
+          { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+          { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+          { status: 'suspended', updatedAt: '2026-05-01T09:00:00.000Z' }
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
+          .status.timeline
+      ).toEqual([
+        {
+          status: 'created',
+          at: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'suspended',
+          at: '2026-05-01T09:00:00.000Z',
+          updatedAt: '2026-05-01T09:00:00.000Z'
+        }
+      ])
+    })
+
+    it('puts a change recorded as the approval takes effect after the approval', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const stored = organisationAccredited({
+        validFrom: '2026-02-01',
+        statusHistory: [
+          { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+          { status: 'approved', updatedAt: '2026-01-20T09:00:00.000Z' },
+          { status: 'suspended', updatedAt: '2026-02-01T00:00:00.000Z' }
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored]
+      })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
+          .status.timeline
+      ).toEqual([
+        {
+          status: 'created',
+          at: '2026-01-01T09:00:00.000Z',
+          updatedAt: '2026-01-01T09:00:00.000Z'
+        },
+        {
+          status: 'approved',
+          at: '2026-02-01T00:00:00.000Z',
+          updatedAt: '2026-01-20T09:00:00.000Z'
+        },
+        {
+          status: 'suspended',
+          at: '2026-02-01T00:00:00.000Z',
+          updatedAt: '2026-02-01T00:00:00.000Z'
         }
       ])
     })

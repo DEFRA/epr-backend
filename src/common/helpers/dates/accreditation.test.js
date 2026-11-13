@@ -94,7 +94,7 @@ describe('accreditation date helpers', () => {
   })
 
   describe('getStatusHistoryDateTimes', () => {
-    it('should convert updatedAt strings to numeric timestamps', () => {
+    it('dates a stored change from when it was recorded', () => {
       const statusHistory = [
         /** @type {StatusHistoryEntry} */ ({
           status: 'created',
@@ -107,7 +107,20 @@ describe('accreditation date helpers', () => {
       expect(result).toEqual([
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
+        }
+      ])
+    })
+
+    it('dates a read-model change from when it takes effect', () => {
+      const result = getStatusHistoryDateTimes([
+        { status: 'approved', at: '2027-01-01T00:00:00.000Z' }
+      ])
+
+      expect(result).toEqual([
+        {
+          status: 'approved',
+          at: new Date('2027-01-01T00:00:00.000Z').getTime()
         }
       ])
     })
@@ -133,15 +146,15 @@ describe('accreditation date helpers', () => {
       expect(result).toEqual([
         {
           status: 'approved',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'suspended',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         },
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ])
     })
@@ -163,11 +176,11 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         },
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -181,15 +194,15 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         },
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -203,19 +216,19 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'approved',
-          updatedAt: new Date('2025-07-01T00:00:00.000Z').getTime()
+          at: new Date('2025-07-01T00:00:00.000Z').getTime()
         },
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         },
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -229,19 +242,19 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'approved',
-          updatedAt: new Date('2025-07-01T00:00:00.000Z').getTime()
+          at: new Date('2025-07-01T00:00:00.000Z').getTime()
         },
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         },
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -255,7 +268,7 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -269,15 +282,15 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         },
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -291,7 +304,7 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -305,7 +318,7 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'suspended',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -319,15 +332,15 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'approved',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
+          at: new Date('2025-01-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -340,15 +353,15 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'cancelled',
-          updatedAt: new Date('2025-08-01T00:00:00.000Z').getTime()
+          at: new Date('2025-08-01T00:00:00.000Z').getTime()
         },
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -362,11 +375,11 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'cancelled',
-          updatedAt: new Date('2025-08-01T00:00:00.000Z').getTime()
+          at: new Date('2025-08-01T00:00:00.000Z').getTime()
         },
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         }
       ]
 
@@ -380,15 +393,15 @@ describe('accreditation date helpers', () => {
       const statusHistory = [
         {
           status: 'cancelled',
-          updatedAt: new Date('2025-08-01T00:00:00.000Z').getTime()
+          at: new Date('2025-08-01T00:00:00.000Z').getTime()
         },
         {
           status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
+          at: new Date('2025-06-01T00:00:00.000Z').getTime()
         },
         {
           status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
+          at: new Date('2025-03-01T00:00:00.000Z').getTime()
         }
       ]
 

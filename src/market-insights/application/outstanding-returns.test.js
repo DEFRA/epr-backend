@@ -269,6 +269,39 @@ describe('countOutstandingReturns', () => {
     ])
   })
 
+  it('counts nothing for an accreditation cancelled before it starts', async () => {
+    const operator = makeOperator({
+      orgId: 500042,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2025-12-15' }
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([])
+  })
+
+  it('counts every month for an accreditation cancelled and reinstated before it starts', async () => {
+    const operator = makeOperator({
+      orgId: 500043,
+      statusHistory: [
+        ...approvedHistory,
+        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2025-12-15' },
+        { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-20' }
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual([
+      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+    ])
+  })
+
   it('counts nothing for an accreditation cancelled throughout the period', async () => {
     const operator = makeOperator({
       orgId: 500033,

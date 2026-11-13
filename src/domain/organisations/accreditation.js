@@ -105,9 +105,18 @@
  */
 
 /**
- * What deciding whether a date is accredited reads of an accreditation.
+ * A status and when it takes effect, as the read model's timeline holds it.
  *
- * @typedef {StatusHistory & Pick<AccreditationOther, 'validFrom' | 'validTo'>} AccreditationValidity
+ * @typedef {{ status: AccreditationStatus; at: string }} EffectiveStatusEntry
+ */
+
+/**
+ * What deciding whether a date is accredited reads of an accreditation. A
+ * stored change takes effect when it was recorded.
+ *
+ * @typedef {{
+ *  statusHistory: (StatusHistoryEntry | EffectiveStatusEntry)[];
+ * } & Pick<AccreditationOther, 'validFrom' | 'validTo'>} AccreditationValidity
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

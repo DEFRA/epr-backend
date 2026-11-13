@@ -154,11 +154,6 @@ describe('GET /organisations/{organisationNumber}', () => {
         status: 'suspended',
         at: '2026-05-01T09:00:00.000Z',
         updatedAt: '2026-05-01T09:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-07-01T00:00:00.000Z',
-        updatedAt: '2026-02-01T09:00:00.000Z'
       }
     ])
     expect(registration.status.timeline).toEqual([
@@ -260,11 +255,6 @@ describe('GET /organisations/{organisationNumber}', () => {
         status: 'cancelled',
         at: '2026-03-01T15:00:00.000Z',
         updatedAt: '2026-03-01T15:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-07-01T00:00:00.000Z',
-        updatedAt: '2026-02-01T09:00:00.000Z'
       }
     ])
   })
@@ -687,11 +677,6 @@ describe('GET /organisations/{organisationNumber}', () => {
       const registration = body(response).registrations[REPROCESSOR_NUMBER]
       expect(registration.status.current).toBe('approved')
       expect(registration.accreditations[2026].status.timeline).toEqual([
-        {
-          status: 'created',
-          at: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-10-14T14:30:47.171Z'
-        },
         {
           status: 'approved',
           at: '2026-01-01T00:00:00.000Z',

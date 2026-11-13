@@ -470,9 +470,11 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
 }
 
 /**
- * Until ADR-0051's events exist, the approval after the last `created` takes
- * effect from the record's validFrom, anything recorded before it no later than
- * that, and every other change when it was recorded.
+ * Until ADR-0051's events exist, the first approval after the last `created`
+ * takes effect from validFrom, a later one no earlier than that, and every
+ * other change when it was recorded. Each change overrides whatever was
+ * recorded before it from its own `at` onward, so the timeline holds only
+ * the changes that take effect, in order.
  *
  * @param {StatusHistoryEntryOf<string>[]} statusHistory
  * @param {string} [validFrom]
@@ -483,36 +485,46 @@ export function toStatusTimeline(statusHistory, validFrom) {
     .map(({ status, updatedAt }) => ({
       status,
       at: new Date(updatedAt),
-      updatedAt: new Date(updatedAt).toISOString()
+      updatedAt: new Date(updatedAt)
     }))
-    .toSorted(byDate)
-  const lastCreated = recorded.findLastIndex(
-    ({ status }) => status === 'created'
-  )
-  const approvalAfterLastCreated = recorded.findIndex(
-    ({ status }, index) => index > lastCreated && status === 'approved'
-  )
-  if (approvalAfterLastCreated >= 0 && validFrom) {
-    const approvedFrom = new Date(validFrom)
-    for (const entry of recorded.slice(0, approvalAfterLastCreated)) {
-      entry.at = entry.at < approvedFrom ? entry.at : approvedFrom
-    }
-    recorded[approvalAfterLastCreated].at = approvedFrom
+    // A stable sort keeps recorded order among equal times
+    .toSorted(
+      (one, other) => one.updatedAt.getTime() - other.updatedAt.getTime()
+    )
+  if (validFrom) {
+    datesApprovalsFrom(recorded, new Date(validFrom))
   }
-  // A stable sort keeps recorded order among equal times
-  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
-    status,
-    at: at.toISOString(),
-    updatedAt
-  }))
+  return recorded
+    .reduce(
+      (timeline, change) => [
+        ...timeline.filter(({ at }) => at <= change.at),
+        change
+      ],
+      /** @type {typeof recorded} */ ([])
+    )
+    .map(({ status, at, updatedAt }) => ({
+      status,
+      at: at.toISOString(),
+      updatedAt: updatedAt.toISOString()
+    }))
 }
 
 /**
- * @param {{ at: Date }} one
- * @param {{ at: Date }} other
- * @returns {number}
+ * @param {{ status: string, at: Date }[]} recorded - in recorded order
+ * @param {Date} validFrom
  */
-const byDate = (one, other) => one.at.getTime() - other.at.getTime()
+function datesApprovalsFrom(recorded, validFrom) {
+  const lastCreated = recorded.findLastIndex(
+    ({ status }) => status === 'created'
+  )
+  const approvals = recorded.filter(
+    ({ status }, index) => index > lastCreated && status === 'approved'
+  )
+  approvals.forEach((approval, index) => {
+    approval.at =
+      index === 0 || approval.at < validFrom ? validFrom : approval.at
+  })
+}
 
 /**
  * @param {StoredRegistration} registration

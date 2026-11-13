@@ -4,6 +4,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear, yearBounds } from '#common/helpers/dates/year.js'
 import {
   ACCREDITATION_STATUS,
+  ACTIVE_ACCREDITATION_STATUSES,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
@@ -100,14 +101,13 @@ export const validityOf = ({ registration, year }) => {
   )
   const approvedAt = timeline.find(
     ({ status }, index) =>
-      index > lastCreated && status === ACCREDITATION_STATUS.APPROVED
+      index > lastCreated && ACTIVE_ACCREDITATION_STATUSES.has(status)
   )?.at
   return {
     // Latest first, so a change sharing its time with the approval sorts ahead of it
-    statusHistory: timeline.toReversed().map(({ status, at }) => ({
-      status,
-      updatedAt: at
-    })),
+    statusHistory: timeline
+      .toReversed()
+      .map(({ status, at }) => ({ status, at })),
     ...(approvedAt && {
       validFrom:
         calendarDate(approvedAt).localeCompare(start) < 0
