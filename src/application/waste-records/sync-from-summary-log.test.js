@@ -71,7 +71,7 @@ const accreditationNumbered = (accreditationNumber) => ({
  * @type {AccreditationValidity}
  */
 const ACCREDITATION_VALIDITY = {
-  statusHistory: [{ status: 'approved', at: APPROVED_FROM }],
+  statusHistory: [{ status: 'approved', updatedAt: APPROVED_FROM }],
   validFrom: '2026-01-01',
   validTo: '2026-12-31'
 }

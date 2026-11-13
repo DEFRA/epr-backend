@@ -108,9 +108,10 @@ export const validityOf = ({ registration, year }) => {
   )?.at
   return {
     // Latest first, so a change sharing its time with the approval sorts ahead of it
-    statusHistory: timeline
-      .toReversed()
-      .map(({ status, at }) => ({ status, at })),
+    statusHistory: timeline.toReversed().map(({ status, at }) => ({
+      status,
+      updatedAt: at
+    })),
     ...(approvedAt && {
       validFrom:
         calendarDate(approvedAt).localeCompare(start) < 0

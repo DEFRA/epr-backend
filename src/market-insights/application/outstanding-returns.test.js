@@ -26,12 +26,8 @@ import { countOutstandingReturns } from './outstanding-returns.js'
 
 /** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
-/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
-const MAY_TO_AUGUST_2026 = ['2026-05', '2026-06', '2026-07', '2026-08'].map(
-  toYearMonth
-)
 
 /**
  * A status change as the read model times it, taking effect when recorded.
@@ -52,19 +48,6 @@ const APPROVED = {
   updatedAt: '2025-12-01T00:00:00.000Z'
 }
 const APPROVED_TIMELINE = [CREATED, APPROVED]
-
-/**
- * A change recorded before the accreditation starts, which takes effect when
- * it does.
- *
- * @param {string} status
- * @param {string} recordedOn
- */
-const fromStart = (status, recordedOn) => ({
-  status,
-  at: APPROVED.at,
-  updatedAt: new Date(recordedOn).toISOString()
-})
 
 /**
  * An operator accredited for the whole of 2026, holding one registration. With
@@ -139,16 +122,14 @@ const reportParams = ({ operator, period, submissionNumber }) => ({
  *   operators: Organisation[],
  *   submissions?: MonthlyReportRef[],
  *   drafts?: MonthlyReportRef[],
- *   unsubmissions?: MonthlyReportRef[],
- *   months?: YearMonth[]
+ *   unsubmissions?: MonthlyReportRef[]
  * }} options
  */
 const count = async ({
   operators,
   submissions = [],
   drafts = [],
-  unsubmissions = [],
-  months = JANUARY_TO_MARCH_2026
+  unsubmissions = []
 }) => {
   const reportsRepository = createInMemoryReportsRepository()()
   for (const ref of submissions) {
@@ -163,7 +144,7 @@ const count = async ({
   return countOutstandingReturns({
     organisations: operators,
     periodicReports: await reportsRepository.findAllPeriodicReports(),
-    months
+    months: JANUARY_TO_MARCH_2026
   })
 }
 
@@ -264,62 +245,10 @@ describe('countOutstandingReturns', () => {
     expect(outstanding(counts)).toEqual(EVERY_MONTH.slice(1))
   })
 
-  it('still counts an accreditation suspended before it starts, since a suspended accreditation owes its reports', async () => {
+  it('still counts an accreditation suspended throughout the period, since a suspended accreditation owes its reports', async () => {
     const operator = makeOperator({
       orgId: 500041,
-      timeline: [...APPROVED_TIMELINE, fromStart('suspended', '2025-12-15')]
-    })
-
-    const counts = await count({ operators: [operator.organisation] })
-
-    expect(outstanding(counts)).toEqual(EVERY_MONTH)
-  })
-
-  it('counts nothing before a mid-year start for an accreditation suspended before it starts', async () => {
-    const julyStart = '2026-07-01T00:00:00.000Z'
-    const operator = makeOperator({
-      orgId: 500049,
-      timeline: [
-        CREATED,
-        { ...APPROVED, at: julyStart },
-        {
-          status: 'suspended',
-          at: julyStart,
-          updatedAt: '2026-05-01T00:00:00.000Z'
-        }
-      ]
-    })
-
-    const counts = await count({
-      operators: [operator.organisation],
-      months: MAY_TO_AUGUST_2026
-    })
-
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-07', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-08', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
-  })
-
-  it('counts nothing for an accreditation cancelled before it starts', async () => {
-    const operator = makeOperator({
-      orgId: 500042,
-      timeline: [...APPROVED_TIMELINE, fromStart('cancelled', '2025-12-15')]
-    })
-
-    const counts = await count({ operators: [operator.organisation] })
-
-    expect(outstanding(counts)).toEqual([])
-  })
-
-  it('counts every month for an accreditation cancelled and reinstated before it starts', async () => {
-    const operator = makeOperator({
-      orgId: 500043,
-      timeline: [
-        ...APPROVED_TIMELINE,
-        fromStart('cancelled', '2025-12-15'),
-        fromStart('approved', '2025-12-20')
-      ]
+      timeline: [CREATED, changed('suspended', '2025-12-15'), APPROVED]
     })
 
     const counts = await count({ operators: [operator.organisation] })

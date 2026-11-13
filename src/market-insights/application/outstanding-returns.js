@@ -20,7 +20,7 @@ const TONNAGE_BANDS = Object.values(TONNAGE_BAND)
 /**
  * @param {YearMonth} month
  * @param {Material} material
- * @param {TonnageBand} tonnageBand
+ * @param {string} tonnageBand
  */
 const cellKey = (month, material, tonnageBand) =>
   `${month}::${material}::${tonnageBand}`

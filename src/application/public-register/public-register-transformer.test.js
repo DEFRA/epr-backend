@@ -199,7 +199,7 @@ describe('transform', () => {
         reprocessor({
           accreditations: {
             2026: accreditation({
-              prnIssuance: { tonnageBand: /** @type {any} */ (tonnageBand) },
+              prnIssuance: { tonnageBand },
               status: {
                 current: /** @type {any} */ (current),
                 timeline: approvedTimeline

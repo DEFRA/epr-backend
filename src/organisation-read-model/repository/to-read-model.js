@@ -15,17 +15,16 @@ import {
   statusOn
 } from '#organisation-read-model/domain/model.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
-import { toStatusTimeline } from '#organisation-read-model/repository/to-status-timeline.js'
 import { organisationInYear } from './organisation-in-year.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { Accreditation as StoredAccreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -480,6 +479,51 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
     }
   ]
 }
+
+/**
+ * Until ADR-0051's events exist, the approval after the last `created` takes
+ * effect from the record's validFrom, anything recorded before it no later than
+ * that, and every other change when it was recorded.
+ *
+ * @param {StatusHistoryEntryOf<string>[]} statusHistory
+ * @param {string} [validFrom]
+ * @returns {StatusTimeline}
+ */
+export function toStatusTimeline(statusHistory, validFrom) {
+  const recorded = statusHistory
+    .map(({ status, updatedAt }) => ({
+      status,
+      at: new Date(updatedAt),
+      updatedAt: new Date(updatedAt).toISOString()
+    }))
+    .toSorted(byDate)
+  const lastCreated = recorded.findLastIndex(
+    ({ status }) => status === 'created'
+  )
+  const approvalAfterLastCreated = recorded.findIndex(
+    ({ status }, index) => index > lastCreated && status === 'approved'
+  )
+  if (approvalAfterLastCreated >= 0 && validFrom) {
+    const approvedFrom = new Date(validFrom)
+    for (const entry of recorded.slice(0, approvalAfterLastCreated)) {
+      entry.at = entry.at < approvedFrom ? entry.at : approvedFrom
+    }
+    recorded[approvalAfterLastCreated].at = approvedFrom
+  }
+  // A stable sort keeps recorded order among equal times
+  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
+    status,
+    at: at.toISOString(),
+    updatedAt
+  }))
+}
+
+/**
+ * @param {{ at: Date }} one
+ * @param {{ at: Date }} other
+ * @returns {number}
+ */
+const byDate = (one, other) => one.at.getTime() - other.at.getTime()
 
 /**
  * @param {StoredRegistration} registration

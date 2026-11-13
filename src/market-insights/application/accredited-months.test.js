@@ -120,7 +120,7 @@ describe('accreditedMonths', () => {
     expect(monthsOf(partway)).toEqual(['2026-02', '2026-03'])
   })
 
-  it('yields the months of the year an accreditation is for, and none of the next year', () => {
+  it('yields nothing for the months after the year an accreditation is for', () => {
     const lastYear = operatorAccredited(
       [
         then('created', '2024-11-01'),
@@ -132,20 +132,6 @@ describe('accreditedMonths', () => {
       ],
       2025
     )
-    const acrossTheYearEnd = ['2025-12', '2026-01'].map(toYearMonth)
-
-    const months = [
-      ...accreditedMonths({
-        organisations: [lastYear],
-        months: acrossTheYearEnd
-      })
-    ].map(({ month }) => month)
-
-    expect(months).toEqual(['2025-12'])
-  })
-
-  it('yields nothing for the months of a year the registration holds no accreditation for', () => {
-    const lastYear = operatorAccredited(grantedFrom('2025-01-01'), 2025)
 
     expect(monthsOf(lastYear)).toEqual([])
   })
@@ -161,19 +147,6 @@ describe('accreditedMonths', () => {
     ])
 
     expect(monthsOf(backdated)).toEqual(JANUARY_TO_MARCH_2026)
-  })
-
-  it('yields nothing for an accreditation cancelled before it starts', () => {
-    const cancelled = operatorAccredited([
-      ...grantedFrom(),
-      {
-        status: 'cancelled',
-        at: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2025-12-15T00:00:00.000Z'
-      }
-    ])
-
-    expect(monthsOf(cancelled)).toEqual([])
   })
 
   it('yields nothing for an accreditation reverted to draft, then cancelled with its registration', () => {

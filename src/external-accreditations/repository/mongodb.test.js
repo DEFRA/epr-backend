@@ -282,7 +282,7 @@ describe('mongodb external accreditations repository', () => {
       {
         description: 'an unknown tonnage band',
         accreditation: buildExternalAccreditation({
-          prnIssuance: { tonnageBand: /** @type {any} */ ('lots') }
+          prnIssuance: { tonnageBand: 'lots' }
         })
       },
       {

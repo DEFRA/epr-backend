@@ -51,9 +51,9 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  */
 const isCancelledByEndOf = (month, history) =>
   history.find(
-    ({ at }) =>
+    ({ updatedAt }) =>
       toYearMonth(
-        formatLocalDateTime(new Date(at), UK_TIME_ZONE)
+        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
       ).localeCompare(month) <= 0
   )?.status === ACCREDITATION_STATUS.CANCELLED
 
@@ -126,7 +126,7 @@ export function* owedMonthlyReports({
     registration,
     year,
     accreditation
-  } of grantedRegistrations(organisations, years, covers)) {
+  } of grantedRegistrations(organisations, covers)) {
     const owed = owedPeriods(served, years, accreditation)
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports =
