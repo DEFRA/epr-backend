@@ -81,36 +81,6 @@ describe('transformValidationResponse', () => {
       })
     })
 
-    it('carries the years of a template year mismatch', () => {
-      const validation = {
-        issues: [
-          {
-            severity: 'fatal',
-            category: 'technical',
-            message: 'mismatch',
-            code: 'TEMPLATE_YEAR_MISMATCH',
-            context: {
-              actual: 5,
-              expectedYear: 2027,
-              actualYear: 2026
-            }
-          }
-        ]
-      }
-
-      expect(
-        transformValidationResponse(validation).validation.failures
-      ).toEqual([
-        {
-          code: 'TEMPLATE_YEAR_MISMATCH',
-          errorCode: 'TEMPLATE_YEAR_MISMATCH',
-          actual: 5,
-          expectedYear: 2027,
-          actualYear: 2026
-        }
-      ])
-    })
-
     it('transforms fatal issues with only code when no context', () => {
       const validation = {
         issues: [

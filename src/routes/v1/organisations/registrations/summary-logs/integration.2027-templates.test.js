@@ -303,9 +303,8 @@ describe('2027 summary logs', () => {
       expect(validated.validation.failures).toContainEqual(
         expect.objectContaining({
           code: 'TEMPLATE_YEAR_MISMATCH',
-          expectedYear: 2026,
-          actualYear: 2027,
-          actual: 2027.01
+          expected: 2026,
+          actual: 2027
         })
       )
     })
@@ -331,9 +330,8 @@ describe('2027 summary logs', () => {
       expect(validated.validation.failures).toContainEqual(
         expect.objectContaining({
           code: 'TEMPLATE_YEAR_MISMATCH',
-          expectedYear: 2027,
-          actualYear: 2026,
-          actual: 5
+          expected: 2027,
+          actual: 2026
         })
       )
     })

@@ -86,10 +86,7 @@ export const validateMetaSyntax = ({ parsed, year }) => {
       const code = mapJoiErrorToCode(fieldName, detail.type)
       const yearMismatch =
         detail.type === 'templateVersion.yearMismatch'
-          ? {
-              expectedYear: year,
-              actualYear: detail.context?.actualYear
-            }
+          ? { expected: year, actual: detail.context?.actualYear }
           : {}
 
       issues.addFatal(

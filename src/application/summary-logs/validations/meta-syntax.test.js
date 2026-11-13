@@ -504,9 +504,8 @@ describe('validateMetaSyntax', () => {
         message:
           "Invalid meta field 'TEMPLATE_VERSION': must be a template for 2026",
         context: {
-          actual: 2027.01,
-          expectedYear: 2026,
-          actualYear: 2027
+          expected: 2026,
+          actual: 2027
         }
       })
     })
@@ -553,9 +552,8 @@ describe('validateMetaSyntax', () => {
           message:
             "Invalid meta field 'TEMPLATE_VERSION': must be a template for 2027",
           context: {
-            actual: version,
-            expectedYear: 2027,
-            actualYear: 2026,
+            expected: 2027,
+            actual: 2026,
             location: {
               sheet: 'Cover',
               row: 3,

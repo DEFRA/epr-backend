@@ -26,12 +26,6 @@ const transformFatalIssue = (issue) => {
     result.expected = issue.context.expected
   }
 
-  for (const key of ['expectedYear', 'actualYear']) {
-    if (issue.context?.[key] !== undefined) {
-      result[key] = issue.context[key]
-    }
-  }
-
   return result
 }
 
