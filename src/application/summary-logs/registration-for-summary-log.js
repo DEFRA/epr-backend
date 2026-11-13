@@ -38,6 +38,9 @@ const accreditationFor = (organisation, { accreditationNumber }) => {
   if (accreditationNumber === null) {
     return null
   }
+  if (accreditationNumber === undefined) {
+    throw Boom.notFound('Summary log has no accreditation number')
+  }
   const accreditation = organisation.accreditations.find(
     (candidate) => candidate.accreditationNumber === accreditationNumber
   )
@@ -60,6 +63,9 @@ export const registrationForSummaryLog = async (
   organisationAdministrationRepository,
   summaryLog
 ) => {
+  if (summaryLog.registrationNumber === undefined) {
+    throw Boom.notFound('Summary log has no registration number')
+  }
   const organisation = await organisationFor(
     organisationAdministrationRepository,
     summaryLog
