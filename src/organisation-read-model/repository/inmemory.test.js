@@ -4,10 +4,12 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
 import {
+  approvedTimelineFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from './read-model-test-data.js'
+import { SEED_ACCREDITATION_YEAR } from './contract/organisation-seed-test-helpers.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryServing, OrganisationSeed } from './port.contract.js' */
@@ -18,8 +20,8 @@ const repositoryOf = (organisations) =>
 
 /**
  * The seeded organisation in the read model's shape: each registration
- * approved, with an approved accreditation for 2026 when the seed gives an
- * accreditation number.
+ * approved, with an accreditation approved from 1 July of
+ * `SEED_ACCREDITATION_YEAR` when the seed gives an accreditation number.
  *
  * @param {OrganisationSeed} seed
  * @returns {Organisation}
@@ -33,7 +35,17 @@ const toReadModel = ({ name, organisationNumber, registrations }) =>
         registrationNumber,
         buildReadReprocessorRegistration({
           accreditations: accreditationNumber
-            ? { 2026: buildReadAccreditation({ accreditationNumber }) }
+            ? {
+                [SEED_ACCREDITATION_YEAR]: buildReadAccreditation({
+                  accreditationNumber,
+                  status: {
+                    current: 'approved',
+                    timeline: approvedTimelineFrom(
+                      `${SEED_ACCREDITATION_YEAR}-07-01`
+                    )
+                  }
+                })
+              }
             : {}
         })
       ])

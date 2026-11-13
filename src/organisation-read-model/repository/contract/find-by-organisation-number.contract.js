@@ -1,4 +1,5 @@
 import {
+  SEED_ACCREDITATION_YEAR,
   nextSeedAccreditationNumber,
   nextSeedOrganisationNumber,
   nextSeedRegistrationNumber,
@@ -51,10 +52,12 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         registrationNumber
       ])
       expect(
-        Object.values(
-          organisation.registrations[registrationNumber].accreditations
-        ).map((accreditation) => accreditation.accreditationNumber)
-      ).toEqual([accreditationNumber])
+        organisation.registrations[registrationNumber].accreditations
+      ).toEqual({
+        [SEED_ACCREDITATION_YEAR]: expect.objectContaining({
+          accreditationNumber
+        })
+      })
     })
   })
 }

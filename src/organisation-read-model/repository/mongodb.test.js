@@ -7,6 +7,7 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
+import { SEED_ACCREDITATION_YEAR } from './contract/organisation-seed-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -14,8 +15,9 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * The seeded organisation as the organisations collection stores it: each
- * registration approved and numbered, and linked to an approved accreditation
- * when the seed gives an accreditation number.
+ * registration approved and numbered, and linked to an accreditation approved
+ * from 1 July of `SEED_ACCREDITATION_YEAR` when the seed gives an
+ * accreditation number.
  *
  * @param {OrganisationSeed} seed
  */
@@ -23,7 +25,11 @@ const toStored = ({ name, organisationNumber, registrations }) => {
   const linked = registrations.map(
     ({ registrationNumber, accreditationNumber }) => {
       const held = accreditationNumber
-        ? accreditation({ accreditationNumber })
+        ? accreditation({
+            accreditationNumber,
+            validFrom: `${SEED_ACCREDITATION_YEAR}-07-01`,
+            validTo: `${SEED_ACCREDITATION_YEAR}-12-31`
+          })
         : undefined
       return {
         registration: reprocessor({

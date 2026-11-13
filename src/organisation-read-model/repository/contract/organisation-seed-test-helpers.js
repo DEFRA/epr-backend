@@ -6,6 +6,9 @@ import {
 
 /** @import { OrganisationSeed } from '../port.contract.js' */
 
+/** The year of every accreditation a seed gives. */
+export const SEED_ACCREDITATION_YEAR = 2026
+
 let sequence = 700000
 
 const next = () => {
