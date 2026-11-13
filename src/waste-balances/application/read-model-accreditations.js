@@ -91,7 +91,7 @@ const isAccreditationChange = (change) =>
  * from the read model's accreditation for its year. ADR-0044 has an
  * accreditation valid from its approval to the end of its scheme year.
  *
- * @param {LedgerAccreditation} ledgerAccreditation
+ * @param {Pick<LedgerAccreditation, 'registration' | 'year'>} ledgerAccreditation
  * @returns {AccreditationValidity}
  */
 export const validityOf = ({ registration, year }) => {
@@ -107,7 +107,8 @@ export const validityOf = ({ registration, year }) => {
       index > lastCreated && status === ACCREDITATION_STATUS.APPROVED
   )?.at
   return {
-    statusHistory: timeline.map(({ status, at }) => ({
+    // Latest first, so a change sharing its time with the approval sorts ahead of it
+    statusHistory: timeline.toReversed().map(({ status, at }) => ({
       status,
       updatedAt: at
     })),

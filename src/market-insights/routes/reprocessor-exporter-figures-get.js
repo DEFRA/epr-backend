@@ -61,23 +61,19 @@ const reprocessorExporterFiguresRoute = ({ path, action, paramsSchema }) => ({
   /**
    * @param {HapiRequest & {
    *   params: { year: Year, cadence: 'monthly', period: number, nation?: string },
-   *   organisationAdministrationRepository: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository,
+   *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h
    * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
-    const {
-      organisationAdministrationRepository,
-      reportsRepository,
-      logger,
-      params
-    } = request
+    const { organisationReadRepository, reportsRepository, logger, params } =
+      request
 
     const now = new Date()
     const table = await buildReprocessorExporterTable({
-      organisationAdministrationRepository,
+      organisationReadRepository,
       reportsRepository,
       logger,
       year: params.year,

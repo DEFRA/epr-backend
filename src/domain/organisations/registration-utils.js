@@ -3,41 +3,14 @@ import {
   MATERIAL,
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
-import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
-/** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
+/** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material } from '#domain/organisations/model.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
-
-/** @type {Set<RegistrationStatus>} */
-const REPORTABLE_STATUSES = new Set([
-  REGISTRATION_STATUS.APPROVED,
-  REGISTRATION_STATUS.CANCELLED
-])
-
-/**
- * Returns all reportable (approved/cancelled) registrations across all non-test organisations.
- *
- * @param {Organisation[]} orgs
- * @returns {Array<{ org: Organisation, registration: ReportableRegistration }>}
- */
-export function getReportableRegistrations(orgs) {
-  return orgs
-    .filter((org) => !isTestOrganisation(org))
-    .flatMap((org) =>
-      org.registrations
-        .filter((registration) => REPORTABLE_STATUSES.has(registration.status))
-        .map((registration) => ({
-          org,
-          registration: /** @type {ReportableRegistration} */ (registration)
-        }))
-    )
-}
 
 /**
  * Returns the accreditationNumber for the registration's linked accreditation,
@@ -115,29 +88,6 @@ export function resolveMaterial(record) {
     )
   }
   return process
-}
-
-/**
- * Returns the active Accreditation object for a registration by looking up
- * accreditationId in org.accreditations. Only approved/suspended accreditations
- * are returned. Returns null when accreditationId is absent, no match is found,
- * or the matched accreditation is not in an active status.
- *
- * @param {{ accreditationId?: string | null }} registration
- * @param {{ accreditations: Array<{ id: string; status: AccreditationStatus } & Accreditation> }} org
- * @returns {Accreditation | null}
- */
-export function resolveAccreditation(registration, org) {
-  if (!registration.accreditationId) {
-    return null
-  }
-  return (
-    org.accreditations.find(
-      (a) =>
-        a.id === registration.accreditationId &&
-        ACTIVE_ACCREDITATION_STATUSES.has(a.status)
-    ) ?? null
-  )
 }
 
 /**

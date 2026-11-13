@@ -26,6 +26,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import {
@@ -289,19 +290,24 @@ describe(`GET ${marketInsightsNationReprocessorExporterFiguresPath}`, () => {
   beforeAll(async () => {
     const organisationAdministrationRepository =
       createInMemoryOrganisationsRepository()()
+    const served = servedOrganisations()
     const reportsRepository = createInMemoryReportsRepository()()
     for (const { regulator, issuedTonnage } of NATIONS) {
       const operator = await insertAccreditedOperator(
         organisationAdministrationRepository,
         regulator
       )
+      served.add(operator.servedOrganisation)
       await buildSubmittedReport(
         reportsRepository,
         januaryPrns(operator, issuedTonnage)
       )
     }
     server = await createTestServer({
-      repositories: { organisationAdministrationRepository, reportsRepository }
+      repositories: {
+        organisationReadRepository: served.repository(),
+        reportsRepository
+      }
     })
   })
 

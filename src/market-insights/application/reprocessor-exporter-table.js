@@ -4,19 +4,14 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
-import {
-  registrationKey,
-  storedRegistrationKey
-} from '#reports/domain/registration-key.js'
-import {
-  getReportableRegistrations,
-  resolveAccreditation,
-  resolveMaterial
-} from '#domain/organisations/registration-utils.js'
+import { registrationKey } from '#reports/domain/registration-key.js'
+import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import {
   addMeasures,
   figuresContributedTo,
@@ -41,16 +36,16 @@ import { recordOf } from '#common/helpers/record-of.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
- * @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository
+ * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').Material} Material
- * @typedef {import('#domain/organisations/model.js').Organisation} Organisation
+ * @typedef {import('#organisation-read-model/domain/model.js').Organisation} Organisation
  * @typedef {import('#domain/organisations/model.js').RegulatorValue} RegulatorValue
- * @typedef {import('#domain/organisations/registration.js').Registration} Registration
+ * @typedef {import('#organisation-read-model/domain/model.js').Registration} Registration
  * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
- * @typedef {import('#domain/organisations/registration.js').ReportableRegistration} ReportableRegistration
+ * @typedef {import('#market-insights/application/accredited-months.js').RegistrationOfOrganisation} RegistrationOfOrganisation
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedFigures} PublishedFigures
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedTotal} PublishedTotal
@@ -133,25 +128,15 @@ const figureKey = (key, figure) => `${key}::${figure}`
 const latestSubmission = (slot) => selectSubmittedReports(slot).at(-1)
 
 /**
- * The accreditation type a registration reports under. The registration types
- * it as a bare string, though only an accreditation type is ever stored there.
- *
- * @param {Registration} registration
- * @returns {WasteProcessingTypeValue}
- */
-const accreditationTypeOf = (registration) =>
-  /** @type {WasteProcessingTypeValue} */ (registration.wasteProcessingType)
-
-/**
  * @param {Map<string, Measures>} cells
- * @param {ReportableRegistration} registration
+ * @param {Registration} registration
  * @param {YearMonth} month
  * @param {Measures} measures
  */
 const foldIntoCell = (cells, registration, month, measures) => {
-  const accreditationType = accreditationTypeOf(registration)
+  const accreditationType = registration.wasteProcessingType
   const key = cellKey({
-    material: resolveMaterial(registration),
+    material: registration.material,
     accreditationType,
     month
   })
@@ -195,10 +180,10 @@ const measuresFor = (cells, material, accreditationType, month) =>
  * @param {Contribution} contribution
  */
 const figuresOf = ({ month, registration }) => {
-  const accreditationType = accreditationTypeOf(registration)
+  const accreditationType = registration.wasteProcessingType
   return [
     cellKey({
-      material: resolveMaterial(registration),
+      material: registration.material,
       accreditationType,
       month
     }),
@@ -282,8 +267,8 @@ const publishedTotals = (cells, operators, month) =>
   )
 
 /**
- * Whether the registration holds a live accreditation and was submitted to the
- * regulator being published. The regulator a registration was submitted to is
+ * Whether the registration holds a live accreditation for the year and was
+ * submitted to the regulator being published. The regulator a registration was submitted to is
  * the one the report-submissions extract prints, and so the one the England
  * tab is filtered on.
  *
@@ -296,9 +281,15 @@ const publishedTotals = (cells, operators, month) =>
  */
 const publicationCovers =
   (regulator) =>
-  ({ org, registration }) =>
-    resolveAccreditation(registration, org) !== null &&
-    (regulator === undefined || registration.submittedToRegulator === regulator)
+  ({ registration, year }) => {
+    const status = registration.accreditations[year]?.status.current
+    return (
+      status !== undefined &&
+      HELD_ACCREDITATION_STATUSES.has(status) &&
+      (regulator === undefined ||
+        registration.submittedToRegulator.code === regulator)
+    )
+  }
 
 /**
  * Every periodic report folded into its cell: the latest monthly submission of
@@ -308,7 +299,7 @@ const publicationCovers =
  * logged and left out, unless a test organisation filed it.
  *
  * @param {Object} params
- * @param {Organisation[]} params.organisations
+ * @param {Organisation[]} params.organisations - as the organisation read model serves them
  * @param {PeriodicReport[]} params.periodicReports
  * @param {YearMonth[]} params.months - the reporting months to publish
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
@@ -323,15 +314,21 @@ const measuresByCell = ({
   covers
 }) => {
   const registrations = new Map(
-    getReportableRegistrations(organisations).map((entry) => [
-      storedRegistrationKey(entry.org, entry.registration),
-      entry
-    ])
+    reportableRegistrations(organisations).map(
+      ({ organisation, registrationNumber, registration, key }) => [
+        key,
+        {
+          organisationNumber: organisation.organisationNumber,
+          registrationNumber: toRegistrationNumber(registrationNumber),
+          registration
+        }
+      ]
+    )
   )
 
   /**
    * @param {PeriodicReport} periodicReport
-   * @returns {{ org: Organisation, registration: ReportableRegistration } | undefined}
+   * @returns {RegistrationOfOrganisation | undefined}
    */
   const coveredRegistrationFor = (periodicReport) => {
     const key = registrationKey(periodicReport)
@@ -342,7 +339,7 @@ const measuresByCell = ({
       }
       return undefined
     }
-    return covers(entry) ? entry : undefined
+    return covers({ ...entry, year: periodicReport.year }) ? entry : undefined
   }
 
   const served = new Set(months)
@@ -356,7 +353,7 @@ const measuresByCell = ({
     if (covered === undefined) {
       continue
     }
-    const { org, registration } = covered
+    const { registration } = covered
     for (const [period, slot] of Object.entries(
       periodicReport.reports.monthly ?? {}
     )) {
@@ -366,12 +363,11 @@ const measuresByCell = ({
       )
       const report = latestSubmission(slot)
       if (served.has(month) && report !== undefined) {
-        const measures = measuresOf(report, accreditationTypeOf(registration))
+        const measures = measuresOf(report, registration.wasteProcessingType)
         foldIntoCell(cells, registration, month, measures)
         includedReports.push({
           month,
-          org,
-          registration,
+          ...covered,
           figures: figuresContributedTo(measures)
         })
       }
@@ -396,7 +392,7 @@ const measuresByCell = ({
  * something into each of its figures.
  *
  * @param {Object} params
- * @param {OrganisationAdministrationRepository} params.organisationAdministrationRepository
+ * @param {OrganisationReadRepository} params.organisationReadRepository
  * @param {ReportsRepository} params.reportsRepository
  * @param {import('#common/hapi-types.js').TypedLogger} params.logger
  * @param {Year} params.year - the reporting year
@@ -406,7 +402,7 @@ const measuresByCell = ({
  * @returns {Promise<ReprocessorExporterTable>}
  */
 export const buildReprocessorExporterTable = async ({
-  organisationAdministrationRepository,
+  organisationReadRepository,
   reportsRepository,
   logger,
   year,
@@ -415,7 +411,7 @@ export const buildReprocessorExporterTable = async ({
   now
 }) => {
   const [organisations, periodicReports] = await Promise.all([
-    organisationAdministrationRepository.findAll(),
+    organisationReadRepository.findAll(),
     reportsRepository.findPeriodicReportsForYear({ year })
   ])
 

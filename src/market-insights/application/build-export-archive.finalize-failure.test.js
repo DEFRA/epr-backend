@@ -1,7 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { Readable } from 'node:stream'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -29,9 +28,6 @@ const run = () =>
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
-      []
-    )(),
     organisationReadRepository: emptyOrganisationReadRepository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: /** @type {any} */ ({ info: vi.fn(), warn: vi.fn() }),

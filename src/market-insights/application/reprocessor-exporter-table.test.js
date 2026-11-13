@@ -2,16 +2,21 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
-  ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  REGISTRATION_STATUS,
   REGULATOR,
-  REPROCESSING_TYPE,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
@@ -20,9 +25,12 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { noMeasures } from '#market-insights/domain/reprocessor-exporter-figures.js'
 import { buildReprocessorExporterTable } from './reprocessor-exporter-table.js'
 import {
+  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+
+/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const NOW = new Date('2026-04-15T12:00:00.000Z')
 
@@ -31,81 +39,108 @@ const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 // .vite/setup-files.js configures 999999 as a test organisation.
 const TEST_ORG_ID = 999999
 
-const approvedHistory = [
-  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
+/**
+ * A status change as the read model times it, taking effect when recorded.
+ *
+ * @param {string} status
+ * @param {string} at
+ */
+const changed = (status, at) => {
+  const instant = new Date(at).toISOString()
+  return { status, at: instant, updatedAt: instant }
+}
+
+/**
+ * Created in November, approved in December to take effect from `validFrom`.
+ *
+ * @param {string} [validFrom]
+ * @returns {StatusTimeline}
+ */
+const approvedFrom = (validFrom = '2026-01-01') => [
+  changed('created', '2025-11-01'),
+  {
+    status: 'approved',
+    at: new Date(validFrom).toISOString(),
+    updatedAt: '2025-12-01T00:00:00.000Z'
+  }
 ]
 
 /**
- * A 24-hex id the reports store accepts, distinct per prefix and operator.
- *
- * @param {string} prefix - one hex character
- * @param {number} orgId
- */
-const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
-
-/**
- * An accredited operator with one registration.
+ * An accredited operator with one registration, as the read model serves it.
+ * Without an accreditation timeline the registration is registered only; with
+ * `served: false` the registration is not served at all.
  *
  * @param {{
  *   orgId: number,
- *   material?: import('#domain/organisations/model.js').AppliedForMaterial,
- *   glassRecyclingProcess?: import('#domain/organisations/model.js').GlassRecyclingProcess[],
+ *   material?: string,
  *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
  *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
- *   accreditationRegulator?: import('#domain/organisations/model.js').RegulatorValue,
- *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
- *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').AccreditationStatus, updatedAt: string }[]
- *   validFrom?: string
+ *   accreditationTimeline?: StatusTimeline | null,
+ *   year?: number,
+ *   served?: boolean
  * }} options
  */
 const makeOperator = ({
   orgId,
   material = MATERIAL.PLASTIC,
-  glassRecyclingProcess,
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   regulator = REGULATOR.EA,
-  accreditationRegulator = regulator,
-  registrationStatusHistory = approvedHistory,
-  accreditationStatusHistory = approvedHistory,
-  validFrom = '2026-01-01'
+  accreditationTimeline = approvedFrom(),
+  year = 2026,
+  served = true
 }) => {
-  const id = objectIdFor('a', orgId)
-  const registrationId = objectIdFor('b', orgId)
-  const accreditationId = `acc-${orgId}`
-
-  return {
-    id,
-    organisationNumber: toOrganisationNumber(String(orgId)),
-    statusHistory: approvedHistory,
-    registrations: [
-      {
-        id: registrationId,
-        registrationNumber: `REG-${orgId}`,
-        accreditationId,
-        statusHistory: registrationStatusHistory,
-        material,
-        glassRecyclingProcess,
-        wasteProcessingType,
-        reprocessingType: REPROCESSING_TYPE.INPUT,
-        submittedToRegulator: regulator
-      }
-    ],
-    accreditations: [
-      {
-        id: accreditationId,
-        accreditationNumber: `ACC-${orgId}`,
-        status: accreditationStatusHistory.at(-1)?.status,
-        statusHistory: accreditationStatusHistory,
-        validFrom,
-        validTo: '2026-12-31',
-        material,
-        wasteProcessingType,
-        submittedToRegulator: accreditationRegulator
-      }
-    ]
+  const isExporter = wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+  const status = accreditationTimeline && {
+    current: /** @type {'approved' | 'suspended' | 'cancelled'} */ (
+      accreditationTimeline.at(-1)?.status
+    ),
+    timeline: accreditationTimeline
   }
+  const accreditationNumber = toAccreditationNumber(`ACC-${orgId}`)
+  const accreditations = status
+    ? {
+        [year]: isExporter
+          ? buildReadExporterAccreditation({ accreditationNumber, status })
+          : buildReadAccreditation({ accreditationNumber, status })
+      }
+    : {}
+  const common = {
+    material: /** @type {any} */ (material),
+    submittedToRegulator: { code: regulator },
+    validFrom: '2025-12-01',
+    status: {
+      current: /** @type {const} */ ('approved'),
+      timeline: approvedTimelineFrom('2025-12-01')
+    },
+    accreditations
+  }
+
+  return buildReadOrganisation({
+    organisationNumber: toOrganisationNumber(String(orgId)),
+    registrations: served
+      ? {
+          [`REG-${orgId}`]: isExporter
+            ? buildReadExporterRegistration(/** @type {any} */ (common))
+            : buildReadReprocessorRegistration(common)
+        }
+      : {}
+  })
 }
+
+/**
+ * One organisation holding the registrations of several operators.
+ *
+ * @param {ReturnType<typeof makeOperator>} first
+ * @param {...ReturnType<typeof makeOperator>} others
+ */
+const holdingRegistrationsOf = (first, ...others) => ({
+  ...first,
+  registrations: Object.assign(
+    {},
+    first.registrations,
+    ...others.map(({ registrations }) => registrations)
+  )
+})
 
 /**
  * The PRN figures an operator submits. The average price is whatever the
@@ -139,7 +174,7 @@ const prn = (
 const monthlyReport = (operator, period, figures = {}) => ({
   organisationNumber: operator.organisationNumber,
   registrationNumber: toRegistrationNumber(
-    operator.registrations[0].registrationNumber
+    `REG-${operator.organisationNumber}`
   ),
   year: toYear(2026),
   cadence: CADENCE.monthly,
@@ -152,7 +187,7 @@ const monthlyReport = (operator, period, figures = {}) => ({
  * and reports.
  *
  * @param {{
- *   organisations: any[],
+ *   organisations: Organisation[],
  *   reports?: Partial<import('#reports/repository/port.js').CreateReportParams>[],
  *   inFlightResubmissions?: ReturnType<typeof monthlyReport>[],
  *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
@@ -185,9 +220,8 @@ const run = async ({
 
   const logger = { info: vi.fn(), warn: vi.fn() }
   const table = await buildReprocessorExporterTable({
-    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
-      organisations.map((organisation) => partialMock(organisation))
-    )(),
+    organisationReadRepository:
+      createInMemoryOrganisationReadRepository(organisations)(),
     reportsRepository,
     logger: partialMock(logger),
     year: toYear(2026),
@@ -370,8 +404,7 @@ describe('buildReprocessorExporterTable', () => {
   it('publishes an exporter submission under the exporter measures', async () => {
     const operator = makeOperator({
       orgId: 1,
-      material: MATERIAL.GLASS,
-      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
+      material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
     })
     const { table } = await run({
@@ -595,12 +628,27 @@ describe('buildReprocessorExporterTable', () => {
     expect(reported(table)).toEqual([])
   })
 
+  it('leaves out a report of a year the registration holds no accreditation for', async () => {
+    const operator = makeOperator({
+      orgId: 1,
+      year: 2027,
+      accreditationTimeline: approvedFrom('2027-01-01')
+    })
+    const { table, logger } = await run({
+      organisations: [operator],
+      reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
+    })
+
+    expect(reported(table)).toEqual([])
+    expect(logger.warn).not.toHaveBeenCalled()
+  })
+
   it('leaves out the months of an accreditation since cancelled, as the regulator does', async () => {
     const operator = makeOperator({
       orgId: 1,
-      accreditationStatusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-01' }
+      accreditationTimeline: [
+        ...approvedFrom(),
+        changed('cancelled', '2026-03-01')
       ]
     })
     const { table, logger } = await run({
@@ -613,19 +661,14 @@ describe('buildReprocessorExporterTable', () => {
   })
 
   it('names the report it left out when the registration no longer resolves', async () => {
-    const operator = makeOperator({
-      orgId: 1,
-      registrationStatusHistory: [
-        { status: REGISTRATION_STATUS.CREATED, updatedAt: '2025-11-01' }
-      ]
-    })
+    const operator = makeOperator({ orgId: 1, served: false })
     const { table, logger } = await run({
       organisations: [operator],
       reports: [monthlyReport(operator, 1, { prn: prn(10, 0, 1000) })]
     })
 
     expect(reported(table)).toEqual([])
-    const registrationKey = `${operator.organisationNumber}::${operator.registrations[0].registrationNumber}`
+    const registrationKey = `${operator.organisationNumber}::REG-${operator.organisationNumber}`
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(registrationKey),
@@ -666,18 +709,15 @@ describe('buildReprocessorExporterTable', () => {
       const cancelled = makeOperator({
         orgId: 2,
         material: MATERIAL.WOOD,
-        accreditationStatusHistory: [
-          ...approvedHistory,
-          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-01' }
+        accreditationTimeline: [
+          ...approvedFrom(),
+          changed('cancelled', '2026-03-01')
         ]
       })
       const refused = makeOperator({
         orgId: 3,
         material: MATERIAL.STEEL,
-        accreditationStatusHistory: [
-          { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-          { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
-        ]
+        accreditationTimeline: null
       })
 
       const { table } = await run({
@@ -744,32 +784,9 @@ describe('buildReprocessorExporterTable', () => {
       ])
     })
 
-    it('reads the regulator off the registration, as the report-submissions extract does', async () => {
-      const registeredWithEa = makeOperator({
-        orgId: 1,
-        regulator: REGULATOR.EA,
-        accreditationRegulator: REGULATOR.NRW
-      })
-      const { table } = await run({
-        organisations: [registeredWithEa],
-        reports: [
-          monthlyReport(registeredWithEa, 1, { prn: prn(10, 0, 1000) })
-        ],
-        regulator: REGULATOR.EA
-      })
-
-      expect(reported(table)).toEqual([
-        expect.objectContaining({ month: '2026-01', revisedTonnageIssued: 10 })
-      ])
-    })
-
     it('serves four nations that add back up to the UK figures', async () => {
       const operators = Object.values(REGULATOR).map((regulator, index) =>
-        makeOperator({
-          orgId: index + 1,
-          regulator,
-          accreditationRegulator: REGULATOR.EA
-        })
+        makeOperator({ orgId: index + 1, regulator })
       )
       const seeded = {
         organisations: operators,
@@ -850,13 +867,10 @@ describe('buildReprocessorExporterTable', () => {
       )
 
     const cancelledThroughoutFebruary = [
-      ...approvedHistory,
-      { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-20' },
-      {
-        status: ACCREDITATION_STATUS.CANCELLED,
-        updatedAt: '2026-01-20T09:00:00.000Z'
-      },
-      { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+      ...approvedFrom(),
+      changed('suspended', '2026-01-20'),
+      changed('cancelled', '2026-01-20T09:00:00.000Z'),
+      changed('approved', '2026-03-01')
     ]
 
     it('counts every operator owed a report for the month, whether or not it submitted', async () => {
@@ -897,9 +911,9 @@ describe('buildReprocessorExporterTable', () => {
     it('counts a suspended operator, which still owes its reports', async () => {
       const suspended = makeOperator({
         orgId: 1,
-        accreditationStatusHistory: [
-          ...approvedHistory,
-          { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-10' }
+        accreditationTimeline: [
+          ...approvedFrom(),
+          changed('suspended', '2026-01-10')
         ]
       })
 
@@ -911,7 +925,7 @@ describe('buildReprocessorExporterTable', () => {
     it('leaves an operator out of a month its accreditation stood cancelled throughout', async () => {
       const reinstated = makeOperator({
         orgId: 1,
-        accreditationStatusHistory: cancelledThroughoutFebruary
+        accreditationTimeline: cancelledThroughoutFebruary
       })
 
       const { table } = await run({ organisations: [reinstated] })
@@ -925,13 +939,10 @@ describe('buildReprocessorExporterTable', () => {
     it('counts an operator in a month its accreditation was cancelled in and reinstated after, though that month owes no report', async () => {
       const reinstated = makeOperator({
         orgId: 1,
-        accreditationStatusHistory: [
-          ...approvedHistory,
-          {
-            status: ACCREDITATION_STATUS.CANCELLED,
-            updatedAt: '2026-02-10T09:00:00.000Z'
-          },
-          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-10' }
+        accreditationTimeline: [
+          ...approvedFrom(),
+          changed('cancelled', '2026-02-10T09:00:00.000Z'),
+          changed('approved', '2026-03-10')
         ]
       })
 
@@ -947,10 +958,10 @@ describe('buildReprocessorExporterTable', () => {
     it('counts an operator in the month its accreditation was cancelled partway through', async () => {
       const reinstated = makeOperator({
         orgId: 1,
-        accreditationStatusHistory: [
-          ...approvedHistory,
-          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' },
-          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+        accreditationTimeline: [
+          ...approvedFrom(),
+          changed('cancelled', '2026-02-10'),
+          changed('approved', '2026-03-01')
         ]
       })
 
@@ -959,26 +970,11 @@ describe('buildReprocessorExporterTable', () => {
       expect(operatorCounts(table)).toEqual(everyMonth(1))
     })
 
-    it('leaves an operator out of a month it stood cancelled on every day of its accreditation window', async () => {
-      const cancelledBeforeItBegan = makeOperator({
-        orgId: 1,
-        validFrom: '2026-02-15',
-        accreditationStatusHistory: [
-          ...approvedHistory,
-          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' },
-          { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
-        ]
-      })
-
-      const { table } = await run({ organisations: [cancelledBeforeItBegan] })
-
-      expect(operatorCounts(table)).toEqual({
-        '2026-03 plastic reprocessor': 1
-      })
-    })
-
     it('leaves an operator out of a month before its accreditation began, though the figures include its report for that month', async () => {
-      const early = makeOperator({ orgId: 1, validFrom: '2026-02-01' })
+      const early = makeOperator({
+        orgId: 1,
+        accreditationTimeline: approvedFrom('2026-02-01')
+      })
 
       const { table } = await run({
         organisations: [early],
@@ -1001,7 +997,7 @@ describe('buildReprocessorExporterTable', () => {
     it('leaves an operator out of a month it stood cancelled throughout, though the figures include its report for that month', async () => {
       const reinstated = makeOperator({
         orgId: 1,
-        accreditationStatusHistory: cancelledThroughoutFebruary
+        accreditationTimeline: cancelledThroughoutFebruary
       })
 
       const { table } = await run({
@@ -1024,18 +1020,12 @@ describe('buildReprocessorExporterTable', () => {
     it('leaves out an operator whose accreditation the figures leave out', async () => {
       const cancelled = makeOperator({
         orgId: 1,
-        accreditationStatusHistory: [
-          ...approvedHistory,
-          { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-03-01' }
+        accreditationTimeline: [
+          ...approvedFrom(),
+          changed('cancelled', '2026-03-01')
         ]
       })
-      const refused = makeOperator({
-        orgId: 2,
-        accreditationStatusHistory: [
-          { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-          { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
-        ]
-      })
+      const refused = makeOperator({ orgId: 2, accreditationTimeline: null })
 
       const { table } = await run({
         organisations: [cancelled, refused],
@@ -1052,17 +1042,7 @@ describe('buildReprocessorExporterTable', () => {
     it('counts an operator with sites in two nations once in each nation and once in the UK', async () => {
       const englishSite = makeOperator({ orgId: 1, regulator: REGULATOR.EA })
       const scottishSite = makeOperator({ orgId: 2, regulator: REGULATOR.SEPA })
-      const twoNations = {
-        ...englishSite,
-        registrations: [
-          ...englishSite.registrations,
-          ...scottishSite.registrations
-        ],
-        accreditations: [
-          ...englishSite.accreditations,
-          ...scottishSite.accreditations
-        ]
-      }
+      const twoNations = holdingRegistrationsOf(englishSite, scottishSite)
       const englishOnly = makeOperator({ orgId: 3, regulator: REGULATOR.EA })
       const seeded = {
         organisations: [twoNations, englishOnly],
@@ -1071,7 +1051,7 @@ describe('buildReprocessorExporterTable', () => {
           {
             ...monthlyReport(twoNations, 1, { prn: prn(20, 0, 2000) }),
             registrationNumber: toRegistrationNumber(
-              scottishSite.registrations[0].registrationNumber
+              `REG-${scottishSite.organisationNumber}`
             )
           }
         ]
@@ -1102,17 +1082,7 @@ describe('buildReprocessorExporterTable', () => {
     it('counts each operator once in the grand total of its accreditation type, however many materials it reports', async () => {
       const plasticAndWood = makeOperator({ orgId: 1 })
       const woodSite = makeOperator({ orgId: 2, material: MATERIAL.WOOD })
-      const twoMaterials = {
-        ...plasticAndWood,
-        registrations: [
-          ...plasticAndWood.registrations,
-          ...woodSite.registrations
-        ],
-        accreditations: [
-          ...plasticAndWood.accreditations,
-          ...woodSite.accreditations
-        ]
-      }
+      const twoMaterials = holdingRegistrationsOf(plasticAndWood, woodSite)
       const wood = makeOperator({ orgId: 3, material: MATERIAL.WOOD })
 
       const { table } = await run({ organisations: [twoMaterials, wood] })
@@ -1336,17 +1306,10 @@ describe('buildReprocessorExporterTable', () => {
     it('counts each operator once toward each figure of the grand total, however many materials it reports', async () => {
       const plastic = receivingOperator(1)
       const wood = receivingOperator(2, MATERIAL.WOOD)
-      const twoMaterials = {
-        ...plastic.operator,
-        registrations: [
-          ...plastic.operator.registrations,
-          ...wood.operator.registrations
-        ],
-        accreditations: [
-          ...plastic.operator.accreditations,
-          ...wood.operator.accreditations
-        ]
-      }
+      const twoMaterials = holdingRegistrationsOf(
+        plastic.operator,
+        wood.operator
+      )
       const issuing = makeOperator({ orgId: 3, material: MATERIAL.WOOD })
 
       const { table } = await run({
