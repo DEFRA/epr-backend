@@ -141,9 +141,9 @@ export const createInMemoryLedgerRepository = (initialEvents = []) => {
      */
     findLatestInLedgers: async (ledgerIds) =>
       ledgerIds.flatMap((ledgerId) => {
-        const latest = storage
-          .filter((event) => isSameLedger(event, ledgerId))
-          .at(-1)
+        const latest = storage.findLast((event) =>
+          isSameLedger(event, ledgerId)
+        )
         return latest ? [structuredClone(latest)] : []
       }),
 
