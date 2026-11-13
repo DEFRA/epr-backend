@@ -16,58 +16,32 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
 
 describe('csv-columns', () => {
-  const userFixture = {
-    fullName: 'Test User',
-    email: 'test@example.com',
-    phone: '01234567890'
+  const contact = { email: 'test@example.com', fullName: 'Test User' }
+  const readModelStatus = {
+    current: /** @type {const} */ ('approved'),
+    timeline: []
   }
 
-  /** @type {Organisation} */
-  const orgFixture = {
-    id: 'org-1',
-    organisationNumber: toOrganisationNumber('500001'),
-    accreditations: [],
-    registrations: [],
-    companyDetails: { name: 'Acme Ltd' },
-    formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
-    schemaVersion: 1,
-    status: 'active',
-    statusHistory: [{ status: 'approved', updatedAt: new Date('2026-01-01') }],
-    submittedToRegulator: 'ea',
-    submitterContactDetails: userFixture,
-    users: [],
-    version: 1,
-    wasteProcessingTypes: []
-  }
-
-  /** @type {Registration} */
-  const regFixture = {
-    id: 'reg-1',
-    accreditation: null,
-    applicationContactDetails: userFixture,
+  /** @type {ReadModelRegistration} */
+  const reprocessorFixture = {
+    applicationContactDetails: contact,
     approvedPersons: [],
-    formSubmission: { id: 'fs-1', time: new Date('2026-01-01') },
     material: 'plastic',
-    orgName: 'Acme Ltd',
-    site: { address: {}, gridReference: 'TQ123456', siteCapacity: [] },
-    submittedToRegulator: 'ea',
-    submitterContactDetails: userFixture,
-    suppliers: 'Local authority kerbside collections',
+    standingByDate: {},
+    status: readModelStatus,
+    submittedToRegulator: { code: 'ea' },
+    submitterContactDetails: contact,
+    validFrom: '2026-01-01',
     wasteProcessingType: 'reprocessor',
-    registrationNumber: toRegistrationNumber('REG-001'),
-    samplingInspectionPlanPart1FileUploads: [],
-    status: 'approved',
-    statusHistory: [],
-    validFrom: '2026-01-01'
+    reprocessingType: 'input',
+    site: { address: { fullAddress: '1 High St' } },
+    accreditations: {}
   }
 
   // Coerced committed row data, carrying its `processingType`, as the
@@ -178,28 +152,6 @@ describe('csv-columns', () => {
     const dataFieldColumns = buildDataFieldColumns([])
     const dataCol = (name) =>
       METADATA_COLUMNS.length + dataFieldColumns.indexOf(name)
-
-    const contact = { email: 'test@example.com', fullName: 'Test User' }
-    const readModelStatus = {
-      current: /** @type {const} */ ('approved'),
-      timeline: []
-    }
-
-    /** @type {ReadModelRegistration} */
-    const reprocessorFixture = {
-      applicationContactDetails: contact,
-      approvedPersons: [],
-      material: 'plastic',
-      standingByDate: {},
-      status: readModelStatus,
-      submittedToRegulator: { code: 'ea' },
-      submitterContactDetails: contact,
-      validFrom: '2026-01-01',
-      wasteProcessingType: 'reprocessor',
-      reprocessingType: 'input',
-      site: { address: { fullAddress: '1 High St' } },
-      accreditations: {}
-    }
 
     /** @type {ReadModelRegistration} */
     const exporterFixture = {
@@ -466,8 +418,8 @@ describe('csv-columns', () => {
       buildSubmissionHeaderRow(dataFieldColumns).indexOf(name)
 
     const baseInput = {
-      org: orgFixture,
-      registration: regFixture,
+      org: { name: 'Acme Ltd' },
+      registration: reprocessorFixture,
       meta: {
         REGISTRATION_NUMBER: 'REG-001',
         ACCREDITATION_NUMBER: 'ACC-001',
@@ -535,13 +487,11 @@ describe('csv-columns', () => {
     })
 
     it('carries meta values when the registration has since changed', () => {
+      /** @type {ReadModelRegistration} */
+      const changed = { ...reprocessorFixture, material: 'wood' }
       const row = buildSubmissionDataRow({
         ...baseInput,
-        registration: {
-          ...regFixture,
-          registrationNumber: toRegistrationNumber('REG-CHANGED'),
-          material: 'wood'
-        }
+        registration: changed
       })
       expect(row[col('Registration Number')]).toBe('REG-001')
       expect(row[col('Material')]).toBe('plastic')
@@ -622,7 +572,7 @@ describe('csv-columns', () => {
     it('apostrophe-prefixes the organisation name when it begins with a formula trigger', () => {
       const row = buildSubmissionDataRow({
         ...baseInput,
-        org: { ...orgFixture, companyDetails: { name: '=cmd' } }
+        org: { name: '=cmd' }
       })
       expect(row[col('Organisation Name')]).toBe("'=cmd")
     })
