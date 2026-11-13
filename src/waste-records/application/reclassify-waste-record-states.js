@@ -1,8 +1,5 @@
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
-import {
-  getTemplate,
-  hasTemplate
-} from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * @import {WasteRecordState} from './read-summary-log-row-states.js'
@@ -44,9 +41,7 @@ export const reclassifyWasteRecordState = (
   ...rowState,
   classification: classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    hasTemplate(year, rowState.processingType)
-      ? getTemplate(year, rowState.processingType).tableSchemas
-      : {},
+    tableSchemasOf(year, rowState.processingType),
     accreditation,
     overseasSites
   )

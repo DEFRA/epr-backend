@@ -23,7 +23,7 @@ import {
   withNumbers
 } from './test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 const DATABASE_NAME = 'epr-backend'
@@ -391,10 +391,10 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     }
   }
 
-  const tableSchemas = getTemplate(
+  const tableSchemas = tableSchemasOf(
     toYear(2026),
     PROCESSING_TYPES.REPROCESSOR_INPUT
-  ).tableSchemas
+  )
 
   /** @type {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} */
   const currentUpload = {

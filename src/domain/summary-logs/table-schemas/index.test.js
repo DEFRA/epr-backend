@@ -6,7 +6,8 @@ import {
   hasTemplatesForYear,
   findSchemaByWasteRecordType,
   findSchemaForProcessingType,
-  unfilledValuesForYear
+  unfilledValuesForYear,
+  tableSchemasOf
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -18,10 +19,6 @@ import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
 import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
 import { toYear } from '#common/helpers/dates/year.js'
-
-/** @param {string} processingType */
-const tableSchemasOf = (processingType) =>
-  getTemplate(DEFAULT_TEMPLATE_YEAR, processingType).tableSchemas
 
 describe('table-schemas', () => {
   describe('2026 tables', () => {
@@ -36,6 +33,7 @@ describe('table-schemas', () => {
 
     describe('REPROCESSOR_REGISTERED_ONLY', () => {
       const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
         PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
       )
 
@@ -53,7 +51,10 @@ describe('table-schemas', () => {
     })
 
     describe('REPROCESSOR_INPUT', () => {
-      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+      const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.REPROCESSOR_INPUT
+      )
 
       it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
         expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
@@ -91,7 +92,10 @@ describe('table-schemas', () => {
     })
 
     describe('REPROCESSOR_OUTPUT', () => {
-      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_OUTPUT)
+      const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      )
 
       it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
         expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
@@ -107,7 +111,10 @@ describe('table-schemas', () => {
     })
 
     describe('EXPORTER', () => {
-      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.EXPORTER)
+      const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.EXPORTER
+      )
 
       it('has RECEIVED_LOADS_FOR_EXPORT table', () => {
         expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
@@ -120,6 +127,7 @@ describe('table-schemas', () => {
 
     describe('EXPORTER_REGISTERED_ONLY', () => {
       const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
         PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
       )
 
@@ -141,7 +149,10 @@ describe('table-schemas', () => {
     it('returns tableName and schema for a known waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.RECEIVED,
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).not.toBeNull()
@@ -156,7 +167,7 @@ describe('table-schemas', () => {
     it('returns the correct table for exported waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.EXPORTED,
-        tableSchemasOf(PROCESSING_TYPES.EXPORTER)
+        tableSchemasOf(DEFAULT_TEMPLATE_YEAR, PROCESSING_TYPES.EXPORTER)
       )
 
       expect(result).not.toBeNull()
@@ -170,7 +181,10 @@ describe('table-schemas', () => {
     it('returns the correct table for processed waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.PROCESSED,
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).not.toBeNull()
@@ -184,7 +198,10 @@ describe('table-schemas', () => {
     it('returns the correct table for sent on waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.SENT_ON,
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).not.toBeNull()
@@ -198,7 +215,10 @@ describe('table-schemas', () => {
     it('returns null for an unknown waste record type', () => {
       const result = findSchemaByWasteRecordType(
         'unknownType',
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).toBeNull()
@@ -462,6 +482,20 @@ describe('table-schemas', () => {
       expect(() => getTemplate(DEFAULT_TEMPLATE_YEAR, 'UNKNOWN')).toThrow(
         'No UNKNOWN summary log template for 2026'
       )
+    })
+  })
+
+  describe('tableSchemasOf', () => {
+    it("returns the template's table schemas", () => {
+      expect(tableSchemasOf(toYear(2027), PROCESSING_TYPES.EXPORTER)).toBe(
+        EXPORTER_TEMPLATES[2027].tableSchemas
+      )
+    })
+
+    it('throws for a year with no templates', () => {
+      expect(() =>
+        tableSchemasOf(toYear(2028), PROCESSING_TYPES.EXPORTER)
+      ).toThrow('No EXPORTER summary log template for 2028')
     })
   })
 })

@@ -3,7 +3,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import {
   findSchemaByWasteRecordType,
-  getTemplate
+  tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
 import { reportMandatoryPolicyFor } from './index.js'
 
@@ -46,7 +46,7 @@ describe('report-mandatory policy references only real table schemas', () => {
     ({ year, processingType, wasteRecordType, rule }) => {
       const schema = findSchemaByWasteRecordType(
         wasteRecordType,
-        getTemplate(toYear(year), processingType).tableSchemas
+        tableSchemasOf(toYear(year), processingType)
       )?.schema
       expect(schema).toBeDefined()
 

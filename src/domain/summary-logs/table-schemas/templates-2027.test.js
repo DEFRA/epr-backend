@@ -3,10 +3,10 @@ import { describe, expect, it } from 'vitest'
 import { toYear } from '#common/helpers/dates/year.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
-import { getTemplate } from './index.js'
+import { tableSchemasOf } from './index.js'
 
 const tableOf = (year, processingType, tableName) =>
-  getTemplate(toYear(year), processingType).tableSchemas[tableName]
+  tableSchemasOf(toYear(year), processingType)[tableName]
 
 /** @type {[string, string, string[]][]} */
 const NEW_COLUMNS = [
@@ -56,7 +56,7 @@ describe('2027 additional columns', () => {
 
   const unchangedTables = Object.values(PROCESSING_TYPES).flatMap(
     (processingType) =>
-      Object.keys(getTemplate(toYear(2026), processingType).tableSchemas)
+      Object.keys(tableSchemasOf(toYear(2026), processingType))
         .filter(
           (tableName) =>
             !NEW_COLUMNS.some(
@@ -70,10 +70,8 @@ describe('2027 additional columns', () => {
   it.each(Object.values(PROCESSING_TYPES))(
     'has the 2026 %s tables in 2027',
     (processingType) => {
-      expect(
-        Object.keys(getTemplate(toYear(2027), processingType).tableSchemas)
-      ).toEqual(
-        Object.keys(getTemplate(toYear(2026), processingType).tableSchemas)
+      expect(Object.keys(tableSchemasOf(toYear(2027), processingType))).toEqual(
+        Object.keys(tableSchemasOf(toYear(2026), processingType))
       )
     }
   )

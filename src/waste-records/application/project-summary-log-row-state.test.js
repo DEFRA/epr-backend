@@ -7,14 +7,10 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 const overseasSites = /** @type {any} */ (new Map())
-
-/** @param {WasteRecord} record */
-const tableSchemasOf = (record) =>
-  getTemplate(toYear(2026), record.data.processingType).tableSchemas
 
 const accreditation = buildAccreditation({
   validFrom: '2024-01-01',
@@ -41,7 +37,7 @@ describe('projectSummaryLogRowState', () => {
 
     const projected = projectSummaryLogRowState(
       record,
-      tableSchemasOf(record),
+      tableSchemasOf(toYear(2026), record.data.processingType),
       null,
       overseasSites
     )
@@ -76,7 +72,7 @@ describe('projectSummaryLogRowState', () => {
 
     const projected = projectSummaryLogRowState(
       record,
-      tableSchemasOf(record),
+      tableSchemasOf(toYear(2026), record.data.processingType),
       null,
       overseasSites
     )
@@ -99,7 +95,7 @@ describe('projectSummaryLogRowState', () => {
 
     const projected = projectSummaryLogRowState(
       record,
-      tableSchemasOf(record),
+      tableSchemasOf(toYear(2026), record.data.processingType),
       null,
       overseasSites
     )
@@ -124,7 +120,7 @@ describe('projectSummaryLogRowState', () => {
 
     const { data } = projectSummaryLogRowState(
       record,
-      tableSchemasOf(record),
+      tableSchemasOf(toYear(2026), record.data.processingType),
       null,
       overseasSites
     )
@@ -149,7 +145,7 @@ describe('projectSummaryLogRowState', () => {
 
     const projected = projectSummaryLogRowState(
       record,
-      tableSchemasOf(record),
+      tableSchemasOf(toYear(2026), record.data.processingType),
       accreditation,
       overseasSites
     )
@@ -176,7 +172,7 @@ describe('projectSummaryLogRowState', () => {
 
     projectSummaryLogRowState(
       record,
-      tableSchemasOf(record),
+      tableSchemasOf(toYear(2026), record.data.processingType),
       null,
       overseasSites
     )

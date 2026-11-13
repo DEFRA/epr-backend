@@ -1,7 +1,4 @@
-import {
-  getTemplate,
-  hasTemplate
-} from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import {
   WASTE_BALANCE_OUTCOME,
@@ -47,9 +44,7 @@ export const getWasteBalanceClassification = (
 ) => {
   const { outcome, reasons, transactionAmount } = classifyRecordForWasteBalance(
     record,
-    hasTemplate(DEFAULT_TEMPLATE_YEAR, processingType)
-      ? getTemplate(DEFAULT_TEMPLATE_YEAR, processingType).tableSchemas
-      : {},
+    tableSchemasOf(DEFAULT_TEMPLATE_YEAR, processingType),
     accreditation,
     overseasSites
   )

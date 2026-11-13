@@ -12,7 +12,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
@@ -167,16 +167,14 @@ describe('reclassifyWasteRecordStates', () => {
   it.each([
     ['a year with no templates', PROCESSING_TYPES.REPROCESSOR_INPUT, 2028],
     ['an unknown processing type', 'UNKNOWN', 2026]
-  ])('is NOT_APPLICABLE for %s', (_name, processingType, year) => {
-    const [row] = reclassifyWasteRecordStates(
-      [receivedRowState({ processingType })],
-      toYear(year),
-      contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
-    )
-
-    expect(row.classification.outcome).toBe(
-      WASTE_BALANCE_OUTCOME.NOT_APPLICABLE
-    )
+  ])('throws for %s', (_name, processingType, year) => {
+    expect(() =>
+      reclassifyWasteRecordStates(
+        [receivedRowState({ processingType })],
+        toYear(year),
+        contextWith(accreditationCovering('2026-01-01', '2027-01-01'))
+      )
+    ).toThrow(`No ${processingType} summary log template for ${year}`)
   })
 
   it('is NOT_APPLICABLE for every row when the registration has no accreditation', () => {
@@ -215,10 +213,10 @@ const fullPrecisionReceivedRecord = (tonnage) => ({
 })
 
 describe('reclassifying a projected row state preserves the stamped classification', () => {
-  const reprocessorInputTableSchemas = getTemplate(
+  const reprocessorInputTableSchemas = tableSchemasOf(
     toYear(2026),
     PROCESSING_TYPES.REPROCESSOR_INPUT
-  ).tableSchemas
+  )
   const covering = accreditationCovering('2026-01-01', '2027-01-01')
   const fullPrecisionTonnage = 9.126789
   const twoDecimalPlaceTonnage = roundToTwoDecimalPlaces(fullPrecisionTonnage)

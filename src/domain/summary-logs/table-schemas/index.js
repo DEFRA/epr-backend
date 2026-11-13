@@ -7,6 +7,7 @@ import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
 import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {ProcessingType} from '../meta-fields.js' */
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -62,6 +63,17 @@ export const getTemplate = (year, processingType) => {
   }
   return template
 }
+
+/**
+ * The table schemas of the template for a year and processing type. Throws
+ * when there is no template, like {@link getTemplate}.
+ *
+ * @param {Year} year
+ * @param {ProcessingType} processingType
+ * @returns {Record<string, TableSchema>}
+ */
+export const tableSchemasOf = (year, processingType) =>
+  getTemplate(year, processingType).tableSchemas
 
 /**
  * Whether {@link getTemplate} has a template for the year and processing type.

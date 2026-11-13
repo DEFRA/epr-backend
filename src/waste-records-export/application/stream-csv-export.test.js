@@ -1152,23 +1152,21 @@ describe('streamCsvExport', () => {
     expect(cellsOf(out[2])[idx]).toBe('9.5') // bare, not the quoted '"9.5"'
   })
 
-  it('leaves data untouched when no schema matches the processing type', async () => {
+  it('fails on a row whose processing type has no template', async () => {
     const deps = await buildDeps({
       orgs: [readModelOrg()],
       seeds: [
         {
           rows: [
-            receivedRowState({
-              processingType: 'UNKNOWN_PROCESSING_TYPE',
-              data: { SOME_FREE_COLUMN: 'kept' }
-            })
+            receivedRowState({ processingType: 'UNKNOWN_PROCESSING_TYPE' })
           ]
         }
       ]
     })
 
-    const out = await collect(streamCsvExport(deps))
-    expect(out[1]).toContain('kept')
+    await expect(collect(streamCsvExport(deps))).rejects.toThrow(
+      'No UNKNOWN_PROCESSING_TYPE summary log template for 2026'
+    )
   })
 
   it('propagates errors from the row-state read', async () => {

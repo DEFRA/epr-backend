@@ -3,7 +3,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -441,7 +441,7 @@ describe('syncFromSummaryLog', () => {
           accreditationNumber: 'ACC-1',
           year: YEAR
         },
-        tableSchemas: getTemplate(YEAR, PROCESSING_TYPES.EXPORTER).tableSchemas
+        tableSchemas: tableSchemasOf(YEAR, PROCESSING_TYPES.EXPORTER)
       }
     )
   })
