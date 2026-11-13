@@ -74,7 +74,7 @@ describe('toReadModelOrganisations', () => {
     config.reset('openNextYear')
   })
 
-  it('dates each status change at its own time even when the history is stored out of order', async () => {
+  it('dates the changes recorded before validFrom at validFrom, in the order they were recorded, even when the history is stored out of order', async () => {
     const reinstated = accreditation({
       statusHistory: [
         { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
@@ -97,13 +97,18 @@ describe('toReadModelOrganisations', () => {
         updatedAt: '2026-01-01T09:00:00.000Z'
       },
       {
+        status: 'approved',
+        at: '2026-07-01T00:00:00.000Z',
+        updatedAt: '2026-02-01T09:00:00.000Z'
+      },
+      {
         status: 'suspended',
-        at: '2026-03-01T12:00:00.000Z',
+        at: '2026-07-01T00:00:00.000Z',
         updatedAt: '2026-03-01T12:00:00.000Z'
       },
       {
         status: 'cancelled',
-        at: '2026-03-01T15:00:00.000Z',
+        at: '2026-07-01T00:00:00.000Z',
         updatedAt: '2026-03-01T15:00:00.000Z'
       }
     ])
