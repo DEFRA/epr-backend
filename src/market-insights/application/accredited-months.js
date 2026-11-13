@@ -146,8 +146,8 @@ export function* grantedRegistrations(organisations, years, covers) {
     registrationNumber,
     registration
   } of reportableRegistrations(organisations)) {
-    for (const year of years.filter((year) =>
-      Object.hasOwn(registration.accreditations, year)
+    for (const year of years.filter((served) =>
+      Object.hasOwn(registration.accreditations, served)
     )) {
       const accreditation = validityOf({ registration, year })
       const candidate = {
