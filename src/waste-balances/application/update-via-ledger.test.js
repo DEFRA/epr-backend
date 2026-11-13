@@ -13,6 +13,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { tableSchemasWith } from '#waste-balances/domain/table-schemas-test-helpers.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -38,27 +39,21 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 // Excludes on a PRN having been issued rather than on absent data, so an
 // excluded row still carries a real tonnage — the amount the ledger must
 // withhold, and the shape every genuine exclusion reason takes.
-const prnAwareSchema = /** @type {*} */ ({
-  classifyForWasteBalance: (data) =>
-    data.prnIssued
-      ? {
-          outcome: ROW_OUTCOME.EXCLUDED,
-          reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
-        }
-      : {
-          outcome: ROW_OUTCOME.INCLUDED,
-          reasons: [],
-          transactionAmount: data.tonnage
-        }
-})
-
-/** @param {*} schema */
-const exportedTableSchemas = (schema) =>
-  /** @type {*} */ ({
-    EXPORTED_TABLE: { wasteRecordType: WASTE_RECORD_TYPE.EXPORTED, ...schema }
-  })
+/** @type {TableSchema['classifyForWasteBalance']} */
+const prnAwareClassifier = (data) =>
+  data.prnIssued
+    ? {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
+      }
+    : {
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: data.tonnage
+      }
 
 /** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 
 const accreditationId = 'acc-1'
@@ -110,7 +105,7 @@ describe('performUpdateViaLedger', () => {
       ledgerRepository,
       systemLogsRepository
     ).commitSummaryLogSubmittedEvent
-    tableSchemas = exportedTableSchemas(prnAwareSchema)
+    tableSchemas = tableSchemasWith(prnAwareClassifier)
   })
 
   describe('first submission', () => {
@@ -356,12 +351,10 @@ describe('performUpdateViaLedger', () => {
 
   describe('classifier outcome', () => {
     it('treats records with non-INCLUDED outcome as zero contribution', async () => {
-      tableSchemas = exportedTableSchemas({
-        classifyForWasteBalance: () => ({
-          outcome: ROW_OUTCOME.IGNORED,
-          reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
-        })
-      })
+      tableSchemas = tableSchemasWith(() => ({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
+      }))
 
       await performUpdateViaLedger({
         tableSchemas,
