@@ -130,9 +130,7 @@ describe('2027 additional columns', () => {
 
         const { data } = table.rowTransformer({ ...row, ...values })
 
-        for (const [column, value] of Object.entries(values)) {
-          expect(data[column]).toBe(value)
-        }
+        expect(data).toMatchObject(values)
       })
 
       it.each(textColumns)('validates %s as free text', (column) => {
@@ -152,9 +150,7 @@ describe('2027 additional columns', () => {
 
         const { data } = table.rowTransformer({ ...row, ...values })
 
-        for (const column of textColumns) {
-          expect(data[column]).toBeNull()
-        }
+        expect(data).toMatchObject(values)
       })
 
       it('matches the 2026 transformer for the other columns', () => {
