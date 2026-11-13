@@ -18,7 +18,6 @@ const ADMINISTRATION_PORT_MODULES = [
   // Registration and accreditation administration
   'src/overseas-sites/application/process-import-file.js',
   'src/overseas-sites/application/process-import.js',
-  'src/overseas-sites/routes/admin-list.js',
   'src/routes/v1/organisations/accreditation-status-history.js',
   'src/routes/v1/organisations/get-by-id.js',
   'src/routes/v1/organisations/put-by-id.js',
@@ -59,8 +58,6 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/packaging-recycling-notes/routes/list.js',
   'src/routes/organisations/at-natural-keys.js',
   'src/routes/organisations/natural-keys.js',
-  'src/routes/v1/organisations/registrations/summary-logs/list/get.js',
-  'src/routes/v1/organisations/registrations/summary-logs/records/get.js',
   'src/server/queue-consumer/summary-log-commands.js',
   'src/server/queue-consumer/summary-log-handler-deps.js'
 ]

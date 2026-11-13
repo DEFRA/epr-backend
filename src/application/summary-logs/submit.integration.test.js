@@ -425,6 +425,24 @@ describe('submitSummaryLog resubmission flag source', () => {
 })
 
 describe('submitSummaryLog stale flagging', () => {
+  it('marks reports stale only once the summary log is submitted, so a report built in between reads it', async () => {
+    const { deps, summaryLogId, summaryLogsRepository } = await setupSubmit({
+      reportsRepository: createInMemoryReportsRepository()()
+    })
+    const update = vi.spyOn(summaryLogsRepository, 'update')
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    const [submittedOrder] = update.mock.calls.flatMap(([, , changes], i) =>
+      changes.status === SUMMARY_LOG_STATUS.SUBMITTED
+        ? [update.mock.invocationCallOrder[i]]
+        : []
+    )
+    const [markedStaleOrder] = vi.mocked(deps.onSummaryLogUploaded).mock
+      .invocationCallOrder
+    expect(submittedOrder).toBeLessThan(markedStaleOrder)
+  })
+
   it('leaves alone an active report already built from the summary log being submitted', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
     const { deps, summaryLogId, summaryLog, reportKey } = await setupSubmit({
