@@ -1,6 +1,6 @@
 import { formatMaterialResults } from '#application/common/material-aggregation.js'
 import { add } from '#common/helpers/decimal-utils.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { DecimalValue } from '#common/helpers/decimal-utils.js' */
@@ -25,10 +25,11 @@ export const aggregateAvailableBalance = async (
 
   const latestEvents = await ledgerRepository.findLatestInLedgers(
     [...accreditations.values()].map(
-      ({ organisation, registrationNumber, accreditation }) => ({
+      ({ organisation, registrationNumber, accreditation, year }) => ({
         organisationNumber: organisation.organisationNumber,
         registrationNumber,
-        accreditationNumber: accreditation.accreditationNumber
+        accreditationNumber: accreditation.accreditationNumber,
+        year
       })
     )
   )

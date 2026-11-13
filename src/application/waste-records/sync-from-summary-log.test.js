@@ -66,19 +66,19 @@ const accreditationNumbered = (accreditationNumber) => ({
 })
 
 /**
- * The validity the waste balance reads for ACC-1, held for 2023.
+ * The validity the waste balance reads for ACC-1, held for 2026.
  *
  * @type {AccreditationValidity}
  */
 const ACCREDITATION_VALIDITY = {
   statusHistory: [{ status: 'approved', updatedAt: APPROVED_FROM }],
-  validFrom: '2023-01-01',
-  validTo: '2023-12-31'
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31'
 }
 
 /**
  * An organisation as the read model serves it, holding REG-1 and REG-2. REG-1
- * holds ACC-1 for 2023 unless `registration` replaces its accreditations.
+ * holds ACC-1 for 2026 unless `registration` replaces its accreditations.
  *
  * @param {{ registration?: Partial<ReprocessorRegistration | ExporterRegistration> }} [options]
  */
@@ -93,7 +93,7 @@ const organisationWith = ({ registration = {} } = {}) => ({
     },
     'REG-1': {
       wasteProcessingType: 'reprocessor',
-      accreditations: { 2023: accreditationNumbered(ACCREDITATION_NUMBER) },
+      accreditations: { [YEAR]: accreditationNumbered(ACCREDITATION_NUMBER) },
       ...registration
     }
   }
@@ -208,6 +208,13 @@ describe('syncFromSummaryLog', () => {
       exporterInput([
         receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
       ])
+    )
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
+      organisationWith({
+        registration: {
+          accreditations: { 2026: accreditationNumbered(ACCREDITATION_NUMBER) }
+        }
+      })
     )
 
     await makeSync({ extractor })(
@@ -436,6 +443,30 @@ describe('syncFromSummaryLog', () => {
     )
   })
 
+  it('throws when the accreditation with the number is for another year', async () => {
+    const fileId = 'file-other-year'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
+      organisationWith({
+        registration: {
+          accreditations: { 2027: accreditationNumbered(ACCREDITATION_NUMBER) }
+        }
+      })
+    )
+
+    await expect(
+      makeSync({ extractor })(
+        summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2026)),
+        TEST_USER
+      )
+    ).rejects.toThrow('Accreditation not found: ACC-1 for 2026')
+  })
+
   it('resolves overseas sites for exporter waste balance validation', async () => {
     const fileId = 'file-ors'
     const extractor = extractorFor(
@@ -450,7 +481,7 @@ describe('syncFromSummaryLog', () => {
         registration: {
           wasteProcessingType: 'exporter',
           accreditations: {
-            2023: {
+            [YEAR]: {
               ...accreditationNumbered(ACCREDITATION_NUMBER),
               overseasSites: {
                 '001': { status: 'approved', approvedOn: '2024-01-01' },
@@ -541,7 +572,7 @@ describe('syncFromSummaryLog', () => {
         summaryLogFor(fileId, toAccreditationNumber('ACC-MISSING')),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-MISSING')
+    ).rejects.toThrow('Accreditation not found: ACC-MISSING for 2026')
   })
 
   it('throws when the accreditation belongs to another of the organisation’s registrations', async () => {
@@ -558,7 +589,7 @@ describe('syncFromSummaryLog', () => {
         summaryLogFor(fileId, toAccreditationNumber('ACC-2')),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-2')
+    ).rejects.toThrow('Accreditation not found: ACC-2 for 2026')
   })
 
   describe('return value (created/updated counts against the committed head)', () => {
