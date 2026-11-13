@@ -4,6 +4,10 @@ import {
 } from '#waste-balances/domain/waste-balance-classification.js'
 
 /**
+ * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
+ * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
+ * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ * @import {WasteRecord, WasteRecordType} from '#domain/waste-records/model.js'
  * @import {WasteBalanceClassification} from '#waste-balances/domain/waste-balance-classification.js'
  */
 
@@ -14,7 +18,7 @@ import {
  *
  * @typedef {Object} ClassifiedRow
  * @property {string} rowId
- * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
+ * @property {WasteRecordType} wasteRecordType
  * @property {Record<string, any>} data
  * @property {WasteBalanceClassification} classification
  */
@@ -23,10 +27,10 @@ import {
  * Pairs a waste record with its waste-balance classification, retaining the
  * row identity and data alongside.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
- * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} tableSchemas - The table schemas of the record's template
- * @param {import('#domain/organisations/accreditation.js').AccreditationValidity | null} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {WasteRecord} record
+ * @param {Record<string, TableSchema>} tableSchemas - The table schemas of the record's template
+ * @param {AccreditationValidity | null} accreditation
+ * @param {OverseasSitesContext} overseasSites
  * @returns {ClassifiedRow}
  */
 export const classifyWasteRecord = (

@@ -1,9 +1,11 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
-
 /**
- * @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
+ * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
+ * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
+ * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
  */
+import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 
 /**
  * Persists the committed waste-record state of a summary-log submission — one
@@ -19,9 +21,9 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  *
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
- * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
- * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} params.tableSchemas - The table schemas of the summary log's template
- * @param {{ validFrom?: string, validTo?: string } | null} params.accreditation
+ * @param {WasteRecord[]} params.wasteRecords
+ * @param {Record<string, TableSchema>} params.tableSchemas - The table schemas of the summary log's template
+ * @param {AccreditationValidity | null} params.accreditation
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId

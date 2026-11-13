@@ -2,7 +2,11 @@ import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
+ * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
+ * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
+ * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
  * @import {WasteBalanceClassificationReason} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
  */
 
 /**
@@ -45,10 +49,10 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  * template for the summary log's year and processing type. They arrive as
  * context instead of being read back out of the row's own data.
  *
- * @param {Pick<import('#domain/waste-records/model.js').WasteRecord, 'type' | 'data'>} record
- * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} tableSchemas
- * @param {import('#domain/organisations/accreditation.js').AccreditationValidity | null} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {Pick<WasteRecord, 'type' | 'data'>} record
+ * @param {Record<string, TableSchema>} tableSchemas
+ * @param {AccreditationValidity | null} accreditation
+ * @param {OverseasSitesContext} overseasSites
  * @returns {WasteBalanceClassification}
  */
 export const classifyRecordForWasteBalance = (

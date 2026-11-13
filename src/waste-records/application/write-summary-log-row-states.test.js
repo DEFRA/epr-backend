@@ -12,6 +12,7 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 /**
  * @param {{ rowId: string, tonnage: number }} args
@@ -77,6 +78,15 @@ const accreditedLedgerId = withNumbers({
   organisationId: 'org-1',
   registrationId: 'reg-1',
   accreditationId: 'acc-1'
+})
+
+const accreditation = buildAccreditation({
+  validFrom: '2023-01-01',
+  validTo: '2030-12-31',
+  statusHistory: [
+    { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+    { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+  ]
 })
 
 describe('writeSummaryLogRowStates', () => {
@@ -205,10 +215,7 @@ describe('writeSummaryLogRowStates', () => {
       ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-      accreditation: {
-        validFrom: '2023-01-01',
-        validTo: '2030-12-31'
-      },
+      accreditation,
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
       summaryLogId: toSummaryLogFileId('log-A')
@@ -236,10 +243,7 @@ describe('writeSummaryLogRowStates', () => {
       ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
-      accreditation: {
-        validFrom: '2023-01-01',
-        validTo: '2030-12-31'
-      },
+      accreditation,
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
       summaryLogId: toSummaryLogFileId('log-A')

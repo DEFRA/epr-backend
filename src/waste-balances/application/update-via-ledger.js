@@ -1,5 +1,10 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/**
+ * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
+ * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
+ * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
+ * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
+ */
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
@@ -20,8 +25,8 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * state.
  *
  * @param {Object} params
- * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
- * @param {import('#domain/organisations/accreditation.js').AccreditationValidity} params.accreditation
+ * @param {Array<WasteRecord>} params.wasteRecords
+ * @param {AccreditationValidity} params.accreditation
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
@@ -29,7 +34,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
- * @param {Record<string, import('#domain/summary-logs/table-schemas/index.js').TableSchema>} params.tableSchemas - The table schemas of the summary log's template
+ * @param {Record<string, TableSchema>} params.tableSchemas - The table schemas of the summary log's template
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,
