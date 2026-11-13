@@ -2,7 +2,7 @@ import chunk from 'lodash.chunk'
 
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
 import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
   overseasSitesOf,

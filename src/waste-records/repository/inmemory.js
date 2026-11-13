@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
+import { isSameLedger } from '#waste-balances/repository/ledger-schema.js'
 import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
@@ -29,20 +30,10 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
  * @param {SummaryLogRowState} doc
- * @param {WasteBalanceLedgerId} ledgerId
- */
-const matchesLedger = (doc, ledgerId) =>
-  doc.organisationNumber === ledgerId.organisationNumber &&
-  doc.registrationNumber === ledgerId.registrationNumber &&
-  doc.accreditationNumber === ledgerId.accreditationNumber &&
-  doc.year === ledgerId.year
-
-/**
- * @param {SummaryLogRowState} doc
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
-  matchesLedger(doc, candidate) &&
+  isSameLedger(doc, candidate) &&
   doc.rowId === candidate.rowId &&
   doc.wasteRecordType === candidate.wasteRecordType
 
@@ -66,7 +57,7 @@ const rowStatesForSummaryLog = (storage, ledgerId, summaryLogId) =>
   structuredClone(
     storage.filter(
       (doc) =>
-        matchesLedger(doc, ledgerId) && doc.summaryLogIds.includes(summaryLogId)
+        isSameLedger(doc, ledgerId) && doc.summaryLogIds.includes(summaryLogId)
     )
   )
 

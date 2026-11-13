@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { yearSchema } from '#common/validation/year-schema.js'
+import { ledgerIdKeys } from '#waste-balances/repository/ledger-schema.js'
 
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
@@ -82,13 +82,6 @@ const classificationSchema = Joi.object({
   reasons: Joi.array().items(classificationReasonSchema).required(),
   transactionAmount: Joi.number().required()
 })
-
-const ledgerIdKeys = {
-  organisationNumber: Joi.string().required(),
-  registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.string().allow(null).required(),
-  year: yearSchema().required()
-}
 
 const rowStateBaseSchema = Joi.object({
   wasteRecordType: Joi.string()

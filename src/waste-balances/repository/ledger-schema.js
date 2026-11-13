@@ -198,12 +198,53 @@ const prnAcceptedPayloadSchema = prnPayloadSchema.keys({
   obligationYear: Joi.number().integer()
 })
 
-const ledgerIdKeys = {
+export const ledgerIdKeys = Object.freeze({
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().allow(null).required(),
   year: yearSchema().required()
-}
+})
+
+/**
+ * The fields of a `WasteBalanceLedgerId`, in order. Every filter, grouping and
+ * key that names a ledger is built from this list, so a field added to the
+ * ledger id reaches all of them.
+ *
+ * @type {ReadonlyArray<keyof WasteBalanceLedgerId>}
+ */
+export const LEDGER_ID_FIELDS = Object.freeze(
+  /** @type {(keyof WasteBalanceLedgerId)[]} */ (Object.keys(ledgerIdKeys))
+)
+
+/**
+ * @param {WasteBalanceLedgerId} source
+ * @returns {WasteBalanceLedgerId}
+ */
+export const pickLedgerId = (source) =>
+  /** @type {WasteBalanceLedgerId} */ (
+    Object.fromEntries(LEDGER_ID_FIELDS.map((field) => [field, source[field]]))
+  )
+
+/**
+ * @param {WasteBalanceLedgerId} a
+ * @param {WasteBalanceLedgerId} b
+ */
+export const isSameLedger = (a, b) =>
+  LEDGER_ID_FIELDS.every((field) => a[field] === b[field])
+
+/**
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @returns {string}
+ */
+export const ledgerKey = (ledgerId) =>
+  JSON.stringify(LEDGER_ID_FIELDS.map((field) => ledgerId[field]))
+
+/**
+ * A MongoDB `$group` `_id` naming each document's ledger.
+ */
+export const LEDGER_ID_GROUP_KEY = Object.freeze(
+  Object.fromEntries(LEDGER_ID_FIELDS.map((field) => [field, `$${field}`]))
+)
 
 const ledgerEventBaseSchema = Joi.object({
   number: Joi.number().integer().min(1).required(),

@@ -23,6 +23,10 @@ import { createHash } from 'node:crypto'
 
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import {
+  LEDGER_ID_FIELDS,
+  pickLedgerId
+} from '#waste-balances/repository/ledger-schema.js'
+import {
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
 } from './validation.js'
@@ -143,10 +147,7 @@ const hashSummaryLogRowState = (candidate) =>
  * @param {string} contentHash
  */
 const buildIdentityFilter = (candidate, contentHash) => ({
-  organisationNumber: candidate.organisationNumber,
-  registrationNumber: candidate.registrationNumber,
-  accreditationNumber: candidate.accreditationNumber,
-  year: candidate.year,
+  ...pickLedgerId(candidate),
   rowId: candidate.rowId,
   wasteRecordType: candidate.wasteRecordType,
   contentHash
@@ -154,10 +155,7 @@ const buildIdentityFilter = (candidate, contentHash) => ({
 
 const identityKey = (fields) =>
   JSON.stringify([
-    fields.organisationNumber,
-    fields.registrationNumber,
-    fields.accreditationNumber,
-    fields.year,
+    ...LEDGER_ID_FIELDS.map((field) => fields[field]),
     fields.rowId,
     fields.wasteRecordType,
     fields.contentHash
@@ -172,10 +170,7 @@ const identityKey = (fields) =>
  * @param {SummaryLogFileId} summaryLogId
  */
 const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
-  organisationNumber: ledgerId.organisationNumber,
-  registrationNumber: ledgerId.registrationNumber,
-  accreditationNumber: ledgerId.accreditationNumber,
-  year: ledgerId.year,
+  ...pickLedgerId(ledgerId),
   summaryLogIds: summaryLogId
 })
 

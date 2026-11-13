@@ -18,7 +18,11 @@
 
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { LedgerSlotConflictError, LedgerSequenceError } from './ledger-port.js'
-import { LEDGER_EVENT_KIND } from './ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  LEDGER_ID_GROUP_KEY,
+  pickLedgerId
+} from './ledger-schema.js'
 import {
   validateLedgerEventInsert,
   validateLedgerEventRead
@@ -149,17 +153,7 @@ const findDuplicateKeyWriteError = (error) => {
  *
  * @param {WasteBalanceLedgerId} ledgerId
  */
-const ledgerFilter = ({
-  organisationNumber,
-  registrationNumber,
-  accreditationNumber,
-  year
-}) => ({
-  organisationNumber,
-  registrationNumber,
-  accreditationNumber,
-  year
-})
+const ledgerFilter = pickLedgerId
 
 /**
  * @param {Collection} collection
@@ -188,12 +182,7 @@ const performFindLatestInLedgers = (collection) => async (ledgerIds) => {
       { $sort: { number: -1 } },
       {
         $group: {
-          _id: {
-            organisationNumber: '$organisationNumber',
-            registrationNumber: '$registrationNumber',
-            accreditationNumber: '$accreditationNumber',
-            year: '$year'
-          },
+          _id: LEDGER_ID_GROUP_KEY,
           latest: { $first: '$$ROOT' }
         }
       },
@@ -268,12 +257,7 @@ const performFindLatestSubmittedSummaryLogPerLedger =
         { $sort: { number: -1 } },
         {
           $group: {
-            _id: {
-              organisationNumber: '$organisationNumber',
-              registrationNumber: '$registrationNumber',
-              accreditationNumber: '$accreditationNumber',
-              year: '$year'
-            },
+            _id: LEDGER_ID_GROUP_KEY,
             summaryLogId: { $first: '$payload.summaryLogId' }
           }
         },
