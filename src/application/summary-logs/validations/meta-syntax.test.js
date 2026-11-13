@@ -502,7 +502,12 @@ describe('validateMetaSyntax', () => {
       expect(fatals[0]).toMatchObject({
         code: 'TEMPLATE_YEAR_MISMATCH',
         message:
-          "Invalid meta field 'TEMPLATE_VERSION': must be a template for 2026"
+          "Invalid meta field 'TEMPLATE_VERSION': must be a template for 2026",
+        context: {
+          actual: 2027.01,
+          expectedYear: 2026,
+          actualYear: 2027
+        }
       })
     })
 
@@ -549,6 +554,8 @@ describe('validateMetaSyntax', () => {
             "Invalid meta field 'TEMPLATE_VERSION': must be a template for 2027",
           context: {
             actual: version,
+            expectedYear: 2027,
+            actualYear: 2026,
             location: {
               sheet: 'Cover',
               row: 3,

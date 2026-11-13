@@ -46,13 +46,6 @@ export const toThreeDigitId = (value) =>
   String(Number(value)).padStart(THREE_DIGIT_PAD, '0')
 
 /**
- * @param {string | number | null | undefined} value
- * @returns {string | null | undefined}
- */
-export const toText = (value) =>
-  value === null || value === undefined ? value : String(value)
-
-/**
  * Default maximum length for free text string fields
  */
 const DEFAULT_MAX_STRING_LENGTH = 100

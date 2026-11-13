@@ -422,14 +422,14 @@ describe('table-schemas', () => {
     })
 
     it.each([
-      [5, 2027],
-      [2027.01, 2026]
+      [5, 2027, 2026],
+      [2027.01, 2026, 2027]
     ])(
-      'rejects version %s in a %s summary log as a year mismatch',
-      (version, year) => {
+      'rejects version %s in a %s summary log as a year mismatch with a %s template',
+      (version, year, actualYear) => {
         expect(check(version, toYear(year))).toEqual({
           error: 'templateVersion.yearMismatch',
-          context: { year }
+          context: { year, actualYear }
         })
       }
     )

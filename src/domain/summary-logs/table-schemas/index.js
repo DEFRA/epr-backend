@@ -105,7 +105,10 @@ export const checkTemplateVersion = ({ year, processingType, version }) => {
     return { error: 'templateVersion.year' }
   }
   if (versionYear !== year) {
-    return { error: 'templateVersion.yearMismatch', context: { year } }
+    return {
+      error: 'templateVersion.yearMismatch',
+      context: { year, actualYear: versionYear }
+    }
   }
   if (version < template.minVersion) {
     return { error: 'number.min', context: { limit: template.minVersion } }

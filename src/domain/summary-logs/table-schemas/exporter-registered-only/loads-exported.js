@@ -1,7 +1,7 @@
 import Joi from 'joi'
 import {
   LOADS_EXPORTED_FIELDS as FIELDS,
-  LOADS_EXPORTED_FIELDS_2027 as FIELDS_2027,
+  LOADS_EXPORTED_FIELDS_2027,
   ROW_ID_MINIMUMS
 } from './fields.js'
 import {
@@ -14,8 +14,7 @@ import {
   createFreeTextFieldSchema,
   DROPDOWN_PLACEHOLDER,
   MESSAGES,
-  BASEL_CODES,
-  toText
+  BASEL_CODES
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
@@ -80,22 +79,15 @@ export const LOADS_EXPORTED = {
 
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
-  rowTransformer: (rowData, rowIndex) =>
-    LOADS_EXPORTED.rowTransformer(
-      {
-        ...rowData,
-        [FIELDS_2027.EXIT_PORT]: toText(rowData[FIELDS_2027.EXIT_PORT]),
-        [FIELDS_2027.DWT_EXPORT_ID]: toText(rowData[FIELDS_2027.DWT_EXPORT_ID])
-      },
-      rowIndex
-    ),
   requiredHeaders: [
     ...LOADS_EXPORTED.requiredHeaders,
-    ...Object.values(FIELDS_2027)
+    ...Object.values(LOADS_EXPORTED_FIELDS_2027)
   ],
   validationSchema: LOADS_EXPORTED.validationSchema.keys({
-    [FIELDS_2027.PREVIOUS_YEAR_ROW_ID]: createRowIdSchema(
+    [LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.LOADS_EXPORTED
-    ).optional()
+    ).optional(),
+    [LOADS_EXPORTED_FIELDS_2027.EXIT_PORT]: createFreeTextFieldSchema(),
+    [LOADS_EXPORTED_FIELDS_2027.DWT_EXPORT_ID]: createFreeTextFieldSchema()
   })
 }

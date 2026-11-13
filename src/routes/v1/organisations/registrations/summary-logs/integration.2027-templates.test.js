@@ -199,7 +199,7 @@ describe('2027 summary logs', () => {
         data: {
           PREVIOUS_YEAR_ROW_ID: 1500,
           EXIT_PORT: 'Dover',
-          DWT_EXPORT_ID: '987654',
+          DWT_EXPORT_ID: 987654,
           DWT_SUPPLY_ID: 'DWT-2027-00012345'
         },
         classification: { outcome: 'INCLUDED', transactionAmount: 100 }
@@ -301,7 +301,12 @@ describe('2027 summary logs', () => {
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
       expect(validated.validation.failures).toContainEqual(
-        expect.objectContaining({ code: 'TEMPLATE_YEAR_MISMATCH' })
+        expect.objectContaining({
+          code: 'TEMPLATE_YEAR_MISMATCH',
+          expectedYear: 2026,
+          actualYear: 2027,
+          actual: 2027.01
+        })
       )
     })
 
@@ -324,13 +329,18 @@ describe('2027 summary logs', () => {
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
       expect(validated.validation.failures).toContainEqual(
-        expect.objectContaining({ code: 'TEMPLATE_YEAR_MISMATCH' })
+        expect.objectContaining({
+          code: 'TEMPLATE_YEAR_MISMATCH',
+          expectedYear: 2027,
+          actualYear: 2026,
+          actual: 5
+        })
       )
     })
   })
 
   describe('a registered-only reprocessor', () => {
-    it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as text', async () => {
+    it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
       openYear2027()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
@@ -392,7 +402,7 @@ describe('2027 summary logs', () => {
       expect(rows).toEqual([
         expect.objectContaining({
           processingType: 'REPROCESSOR_REGISTERED_ONLY',
-          data: expect.objectContaining({ DWT_SUPPLY_ID: '12345678' })
+          data: expect.objectContaining({ DWT_SUPPLY_ID: 12345678 })
         })
       ])
     })
@@ -457,7 +467,7 @@ describe('2027 summary logs', () => {
           data: expect.objectContaining({
             PREVIOUS_YEAR_ROW_ID: 2500,
             EXIT_PORT: 'Felixstowe',
-            DWT_EXPORT_ID: '555123'
+            DWT_EXPORT_ID: 555123
           })
         })
       ])
@@ -470,7 +480,7 @@ describe('2027 summary logs', () => {
   ])(
     'an accredited $processingType',
     ({ reprocessingType, processingType }) => {
-      it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as text', async () => {
+      it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
         openYear2027()
         const env = await setupWasteBalanceIntegrationEnvironment({
           processingType: 'reprocessor',
@@ -499,7 +509,7 @@ describe('2027 summary logs', () => {
         const rows = await storedRows(env, ledgerIdOf(env), ids.fileId)
         expect(rows.find(({ rowId }) => rowId === '1001')).toMatchObject({
           processingType,
-          data: { DWT_SUPPLY_ID: '12345678' }
+          data: { DWT_SUPPLY_ID: 12345678 }
         })
         expect(rows.find(({ rowId }) => rowId === '1002')?.data).toMatchObject({
           DWT_SUPPLY_ID: null

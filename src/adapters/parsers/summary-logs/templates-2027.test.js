@@ -12,14 +12,14 @@ import { parse, PARSE_DEFAULTS } from './exceljs-parser.js'
 
 const TEMPLATES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../../../data/fixtures/spreadsheet/templates/2027'
+  '../../../data/fixtures/spreadsheet/templates/2027.01'
 )
 
 describe('2027 summary log templates', () => {
   describe.each([
-    { fixture: 'Summary_Log_Exporter.xlsx', processingType: 'EXPORTER' },
+    { fixture: 'summary-log-exporter.xlsx', processingType: 'EXPORTER' },
     {
-      fixture: 'Summary_Log_Reprocessor_Registered_Only.xlsx',
+      fixture: 'summary-log-reprocessor-registered-only.xlsx',
       processingType: 'REPROCESSOR_REGISTERED_ONLY'
     }
   ])('$fixture', ({ fixture, processingType }) => {

@@ -84,6 +84,13 @@ export const validateMetaSyntax = ({ parsed, year }) => {
       }
 
       const code = mapJoiErrorToCode(fieldName, detail.type)
+      const yearMismatch =
+        detail.type === 'templateVersion.yearMismatch'
+          ? {
+              expectedYear: year,
+              actualYear: detail.context?.actualYear
+            }
+          : {}
 
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
@@ -91,7 +98,8 @@ export const validateMetaSyntax = ({ parsed, year }) => {
         code,
         {
           location,
-          actual: metaValues[fieldName]
+          actual: metaValues[fieldName],
+          ...yearMismatch
         }
       )
     }

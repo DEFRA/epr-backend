@@ -27,7 +27,6 @@ export {
   createDateFieldSchema,
   createThreeDigitIdSchema,
   toThreeDigitId,
-  toText,
   createPercentageFieldSchema,
   createFreeTextFieldSchema,
   createEnumFieldSchema

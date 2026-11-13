@@ -125,7 +125,7 @@ describe('2027 additional columns', () => {
       const textColumns = columns.filter((c) => c !== 'PREVIOUS_YEAR_ROW_ID')
       const row = { ROW_ID: 3000 }
 
-      it('stores the placeholder columns as strings', () => {
+      it('stores the placeholder columns as entered', () => {
         const values = Object.fromEntries(
           textColumns.map((column, index) => [column, 12345 + index])
         )
@@ -133,8 +133,18 @@ describe('2027 additional columns', () => {
         const { data } = table.rowTransformer({ ...row, ...values })
 
         for (const [column, value] of Object.entries(values)) {
-          expect(data[column]).toBe(String(value))
+          expect(data[column]).toBe(value)
         }
+      })
+
+      it.each(textColumns)('validates %s as free text', (column) => {
+        const { error } = table.validationSchema.validate({
+          [column]: 'x'.repeat(101)
+        })
+
+        expect(error?.details).toContainEqual(
+          expect.objectContaining({ path: [column] })
+        )
       })
 
       it('keeps empty placeholder columns empty', () => {
