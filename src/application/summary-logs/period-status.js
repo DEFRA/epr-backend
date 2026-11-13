@@ -20,22 +20,15 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {LoadsByReportingPeriod, PeriodStatusByRecordChange, RowDetail, RowIdentity} from '#domain/summary-logs/loads-by-period-status-schema.js' */
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {RecordChange} from './record-change.js' */
 
 /** @typedef {Record<string, TableSchema>} ProcessingTypeSchemas */
-
-/**
- * @typedef {Object} ClassificationContext
- * @property {Accreditation | null} accreditation
- * @property {OverseasSitesContext} overseasSites
- */
 
 /**
  * A single fold entry produced by classifying one record. Each entry is one

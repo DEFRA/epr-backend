@@ -372,10 +372,19 @@ describe('Submission and placeholder tests', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper',
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
+          })
+        ])()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
@@ -391,13 +400,7 @@ describe('Submission and placeholder tests', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: createInMemoryOrganisationReadRepository([
-          servedTestReadOrganisation({
-            wasteProcessingType: 'reprocessor',
-            material: 'paper',
-            accreditationNumber: toAccreditationNumber('ACC-2026-001')
-          })
-        ])(),
+        organisationReadRepository,
         logger: mockLogger
       })
 
@@ -434,14 +437,7 @@ describe('Submission and placeholder tests', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'paper',
-                accreditationNumber: toAccreditationNumber('ACC-2026-001')
-              })
-            ])(),
+          organisationReadRepository: () => organisationReadRepository,
           systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
@@ -817,9 +813,18 @@ describe('Submission and placeholder tests', () => {
         uploadsRepository
       })
 
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper',
+            accreditationNumber: toAccreditationNumber('ACC-PLACEHOLDER-001')
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -836,16 +841,7 @@ describe('Submission and placeholder tests', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'paper',
-                accreditationNumber: toAccreditationNumber(
-                  'ACC-PLACEHOLDER-001'
-                )
-              })
-            ])()
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
