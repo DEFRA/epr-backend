@@ -382,7 +382,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ).toBe(0)
   })
 
-  it('persists closedPeriods for a closed-period load even while the feature is off', async () => {
+  it('no longer populates the deprecated closedPeriods for an upload into a closed period', async () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
     const env = await setupWasteBalanceIntegrationEnvironment({
@@ -392,8 +392,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
     })
     await closeJanuary2026(env)
 
-    // The flag is off (default) at validate time, but closedPeriods must still
-    // be persisted so it survives to submit time when the flag flips on.
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
       'sl-closed-refs',
@@ -401,9 +399,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
       createUploadData([{ rowId: 1001, osrId: 100, exportTonnage: 100 }])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January }
-    ])
+    expect(loadsByReportingPeriod.closedPeriods).toEqual([])
   })
 
   it('records the closed period a load leaves when re-dated outside the accreditation window', async () => {
@@ -445,9 +441,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
       ])
     )
 
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January }
-    ])
     expect(
       loadsByReportingPeriod.closedPeriodLoads.adjusted.balanceAffecting
     ).toEqual({
@@ -508,9 +501,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
       ]
     })
     expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January }
-    ])
   })
 
   it('reverses a counted open-period load re-dated to before the accreditation window', async () => {
@@ -617,36 +607,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
     exportDate: '2026-01-26T00:00:00.000Z',
     wasteRefused: 'Yes'
   }
-
-  it('lists the closed period a refused load is repatriated in', async () => {
-    const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter'
-    })
-    await closeJanuary2026(env)
-    await closeFebruary2026(env)
-
-    await upload(
-      env,
-      'sl-repatriation-original',
-      'file-repatriation-original',
-      createUploadData([refusedJanuaryExport])
-    )
-    await submitAndPoll(env, 'sl-repatriation-original')
-
-    const loadsByReportingPeriod = await uploadAndValidate(
-      env,
-      'sl-repatriation-reupload',
-      'file-repatriation-reupload',
-      createUploadData([
-        { ...refusedJanuaryExport, dateRepatriated: '2026-02-10' }
-      ])
-    )
-
-    expect(loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.January },
-      { year: 2026, cadence: 'monthly', period: MONTHLY_PERIODS.February }
-    ])
-  })
 
   it('classifies a load as closed when only its repatriation date is in a closed period', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({

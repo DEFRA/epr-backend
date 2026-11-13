@@ -156,9 +156,7 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     registrationNumber: summaryLog.registrationNumber,
     summaryLogId: fileId,
     periodsRequiringResubmission:
-      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??
-      summaryLog.loadsByReportingPeriod?.closedPeriods ??
-      []
+      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ?? []
   })
 
   await summaryLogMetrics.recordStatusTransition({
