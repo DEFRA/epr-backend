@@ -8,7 +8,7 @@ import {
 } from '#domain/organisations/model.js'
 
 /**
- * @import {AccreditationStatus, CollatedUser, Organisation, OrganisationStatus, RegistrationStatus} from '#domain/organisations/model.js'
+ * @import {StoredAccreditationStatus, CollatedUser, Organisation, StoredOrganisationStatus, StoredRegistrationStatus} from '#domain/organisations/model.js'
  * @import {Registration} from '#domain/organisations/registration.js'
  * @import {Accreditation} from '#domain/organisations/accreditation.js'
  *
@@ -20,7 +20,7 @@ describe('collateUsers', () => {
    * @param {{
    *   registrations?: Registration[]
    *   accreditations?: Accreditation[]
-   *   status?: OrganisationStatus
+   *   status?: StoredOrganisationStatus
    *   users?: CollatedUser[]
    *   submitterContactDetails?: TestPerson
    * }} [options]
@@ -49,7 +49,7 @@ describe('collateUsers', () => {
   /**
    * @param {{
    *   id?: string
-   *   status: RegistrationStatus
+   *   status: StoredRegistrationStatus
    *   submitterEmail?: string
    *   approvedPersons?: TestPerson[]
    *   applicationContact?: TestPerson
@@ -81,7 +81,7 @@ describe('collateUsers', () => {
   /**
    * @param {{
    *   id?: string
-   *   status: AccreditationStatus
+   *   status: StoredAccreditationStatus
    *   submitterEmail?: string
    *   signatories?: TestPerson[]
    * }} options

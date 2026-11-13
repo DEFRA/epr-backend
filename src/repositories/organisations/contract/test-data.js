@@ -10,7 +10,7 @@ import {
 } from '#domain/organisations/numbers.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {Organisation, OrganisationStatus} from '#domain/organisations/model.js' */
+/** @import {Organisation, StoredOrganisationStatus} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
@@ -224,7 +224,7 @@ const asRead = (org, overrides) => {
     ...org,
     status:
       overrides.status ??
-      /** @type {OrganisationStatus} */ (getCurrentStatus(org))
+      /** @type {StoredOrganisationStatus} */ (getCurrentStatus(org))
   }
 }
 

@@ -11,10 +11,7 @@ import { standingByDate, standingByYear } from './registration-standing.js'
  */
 const changeTo =
   (status) =>
-  (date, time = '00:00') => {
-    const at = `${date}T${time}:00.000Z`
-    return { status, at, updatedAt: at }
-  }
+  (date, time = '00:00') => ({ status, at: `${date}T${time}:00.000Z` })
 
 const createdOn = changeTo('created')
 const approvedOn = changeTo('approved')
@@ -173,10 +170,12 @@ describe('standingByYear', () => {
   const approvedFrom = (date, accreditations = {}) => ({
     status: {
       current: /** @type {const} */ ('approved'),
-      timeline: [approvedOn(date)]
+      lastUpdatedAt: approvedOn(date).at,
+      timeline: /** @type {StatusTimeline<'approved'>} */ ([approvedOn(date)])
     },
     accreditations
   })
+  /** @param {StatusTimeline} timeline */
   const registration = (timeline) => partialMock({ status: { timeline } })
 
   it('covers each year from approval up to the year of the end date', () => {

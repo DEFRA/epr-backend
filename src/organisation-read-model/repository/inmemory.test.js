@@ -3,7 +3,7 @@ import { describe, expect, it as baseIt } from 'vitest'
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
@@ -72,10 +72,7 @@ const toReadAccreditedSites = (sites) =>
  */
 const accreditationFieldsFor = (accreditationNumber) => ({
   accreditationNumber,
-  status: {
-    current: /** @type {const} */ ('approved'),
-    timeline: approvedTimelineFrom(`${SEED_ACCREDITATION_YEAR}-07-01`)
-  }
+  status: approvedStatusFrom(`${SEED_ACCREDITATION_YEAR}-07-01`)
 })
 
 /**
@@ -93,10 +90,7 @@ const toReadRegistration = ({
 }) => {
   const approved = {
     validFrom: approvedOn,
-    status: {
-      current: /** @type {const} */ ('approved'),
-      timeline: approvedTimelineFrom(approvedOn)
-    }
+    status: approvedStatusFrom(approvedOn)
   }
   if (wasteProcessingType === 'exporter') {
     return buildReadExporterRegistration({

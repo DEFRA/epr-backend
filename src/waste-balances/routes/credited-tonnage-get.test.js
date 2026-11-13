@@ -6,7 +6,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -47,16 +47,12 @@ const accreditedFrom2026 = (
   registrationNumber,
   accreditationNumber
 ) => {
-  const approved = {
-    current: /** @type {const} */ ('approved'),
-    timeline: approvedTimelineFrom('2026-01-01')
-  }
+  const approved = approvedStatusFrom('2026-01-01')
   return buildReadOrganisation({
     organisationNumber: toOrganisationNumber(organisationNumber),
     registrations: {
       [registrationNumber]: buildReadReprocessorRegistration({
         material: 'plastic',
-        validFrom: '2026-01-01',
         status: approved,
         standingByDate: {
           2026: { '2026-01-01': { standing: 'accredited' } }

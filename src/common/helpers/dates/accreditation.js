@@ -6,10 +6,10 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {AccreditationValidity, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
-/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
- * @typedef {{ updatedAt: number, status: AccreditationStatus }} StatusHistoryDateTime
+ * @typedef {{ updatedAt: number, status: StoredAccreditationStatus }} StatusHistoryDateTime
  */
 
 /**
@@ -106,7 +106,7 @@ export function isWithinAccreditationDateRange(date, window) {
  *
  * @param {string|Date} date
  * @param {StatusHistoryDateTime[]} statusHistory - descending
- * @returns {AccreditationStatus | undefined}
+ * @returns {StoredAccreditationStatus | undefined}
  */
 export function statusHeldAt(date, statusHistory) {
   return statusHistory.find(

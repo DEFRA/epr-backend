@@ -233,7 +233,7 @@ describe('mongodb external accreditations repository', () => {
             current: 'approved',
             timeline: [
               {
-                status: 'banana',
+                status: /** @type {any} */ ('banana'),
                 at: '2027-01-01T00:00:00.000Z',
                 updatedAt: '2026-12-14T10:31:00.000Z'
               }
@@ -248,7 +248,7 @@ describe('mongodb external accreditations repository', () => {
             current: 'approved',
             timeline: [
               {
-                status: 'created',
+                status: /** @type {any} */ ('created'),
                 at: '2027-01-01T00:00:00.000Z',
                 updatedAt: '2026-12-14T10:31:00.000Z'
               }

@@ -12,7 +12,7 @@ import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
-/** @typedef {import('#domain/organisations/model.js').AccreditationStatus} AccreditationStatus */
+/** @typedef {import('#domain/organisations/model.js').StoredAccreditationStatus} StoredAccreditationStatus */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 
 export const accreditationStatusHistoryPath =
@@ -65,10 +65,10 @@ export const accreditationStatusHistory = {
 
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<
-   *    { fromStatus: AccreditationStatus, toStatus: AccreditationStatus } |
+   *    { fromStatus: StoredAccreditationStatus, toStatus: StoredAccreditationStatus } |
    *    {
-   *      fromStatus: AccreditationStatus,
-   *      toStatus: AccreditationStatus,
+   *      fromStatus: StoredAccreditationStatus,
+   *      toStatus: StoredAccreditationStatus,
    *      validFrom: string,
    *      validTo: string,
    *      accreditationNumber: AccreditationNumber

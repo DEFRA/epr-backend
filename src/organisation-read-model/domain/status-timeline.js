@@ -25,6 +25,16 @@ import { utcYearOf, yearsFromTo } from '#common/helpers/dates/year.js'
  */
 
 /**
+ * When the timeline's first approval takes effect, or none when it has not
+ * been approved.
+ *
+ * @param {StatusChanges} timeline
+ * @returns {string | undefined}
+ */
+export const firstApprovedAt = (timeline) =>
+  timeline.find(({ status }) => status === 'approved')?.at
+
+/**
  * @param {CalendarDateRange} range
  * @returns {Year[]}
  */

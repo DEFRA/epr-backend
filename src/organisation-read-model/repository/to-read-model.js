@@ -16,15 +16,20 @@ import {
 } from '#organisation-read-model/domain/model.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { organisationInYear } from './organisation-in-year.js'
+import {
+  toAccreditationStatusTimeline,
+  toOrganisationStatusTimeline,
+  toRegistrationStatusTimeline
+} from './to-status-timeline.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { Accreditation as StoredAccreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress, AccreditationStatus } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -40,11 +45,16 @@ import { organisationInYear } from './organisation-in-year.js'
  */
 
 /**
- * A registration's accreditation for a year, held outside the REEX database.
+ * A registration's accreditation for a year, held outside the REEX database,
+ * as it is stored: each change carries when it was recorded.
  *
- * @typedef {(ReprocessorAccreditation | ExporterAccreditation) & {
+ * @typedef {(Omit<ReprocessorAccreditation, 'status'> | Omit<ExporterAccreditation, 'status'>) & {
  *   registrationNumber: RegistrationNumber
  *   year: Year
+ *   status: {
+ *     current: AccreditationStatus
+ *     timeline: { status: AccreditationStatus, at: string, updatedAt: string }[]
+ *   }
  * }} ExternalAccreditation
  */
 
@@ -59,8 +69,16 @@ import { organisationInYear } from './organisation-in-year.js'
 const toAccreditationCommon = ({
   registrationNumber: _registrationNumber,
   year: _year,
+  status: { current, timeline },
   ...accreditation
-}) => accreditation
+}) => ({
+  ...accreditation,
+  status: {
+    current,
+    lastUpdatedAt: timeline.at(-1)?.updatedAt,
+    timeline: timeline.map(({ status, at }) => ({ status, at }))
+  }
+})
 
 /**
  * Each registration's external accreditations, keyed by year.
@@ -149,7 +167,7 @@ export async function toReadModelOrganisations(
 export function servesOrganisationOn(stored, date) {
   return isOneOf(
     ORGANISATION_STATUSES,
-    statusOn(toStatusTimeline(stored.statusHistory), date)
+    statusOn(toOrganisationStatusTimeline(stored.statusHistory).timeline, date)
   )
 }
 
@@ -163,8 +181,8 @@ export function servesOrganisationOn(stored, date) {
  * @returns {Organisation | null}
  */
 function toOrganisation(stored, context, externalByRegistration) {
-  const timeline = toStatusTimeline(stored.statusHistory)
-  const status = statusOn(timeline, context.today)
+  const statusTimeline = toOrganisationStatusTimeline(stored.statusHistory)
+  const status = statusOn(statusTimeline.timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
     context.onDrop(
       `Organisation ${stored.organisationNumber} has status ${status} on ${context.today}`
@@ -185,7 +203,7 @@ function toOrganisation(stored, context, externalByRegistration) {
       ),
       tradingName: companyDetails.tradingName
     }),
-    status: { current: status, timeline },
+    status: { current: status, ...statusTimeline },
     submittedToRegulator: { code: stored.submittedToRegulator },
     submitterContactDetails: toContact(stored.submitterContactDetails),
     users: stored.users.map(({ contactId, email, fullName, roles }) => ({
@@ -251,11 +269,14 @@ export function toRegistrationEntry(
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
-  const timeline = toStatusTimeline(registration.statusHistory, validFrom)
   if (!validFrom) {
     onDrop(`Registration ${registrationNumber} has no validFrom`)
     return null
   }
+  const statusTimeline = toRegistrationStatusTimeline(
+    registration.statusHistory,
+    validFrom
+  )
   if (!applicationContactDetails) {
     onDrop(
       `Registration ${registrationNumber} has no application contact details`
@@ -285,7 +306,7 @@ export function toRegistrationEntry(
       ...externalAccreditations
     }).filter(([year]) => Number(year) <= openYear)
   )
-  const registrationStatus = { current: status, timeline }
+  const registrationStatus = { current: status, ...statusTimeline }
 
   /** @type {RegistrationCommon} */
   const common = {
@@ -298,8 +319,7 @@ export function toRegistrationEntry(
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },
-    submitterContactDetails: toContact(registration.submitterContactDetails),
-    validFrom
+    submitterContactDetails: toContact(registration.submitterContactDetails)
   }
 
   const converted =
@@ -461,69 +481,24 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
   }
-  const timeline = toStatusTimeline(
-    accreditation.statusHistory,
-    accreditation.validFrom
-  )
   if (!accreditation.validFrom) {
     onDrop(`Accreditation ${accreditationNumber} has no validFrom`)
     return null
   }
+  const statusTimeline = toAccreditationStatusTimeline(
+    accreditation.statusHistory,
+    accreditation.validFrom
+  )
 
   return [
     String(deriveAccreditationYear(accreditation)),
     {
       accreditationNumber,
       prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
-      status: { current: status, timeline }
+      status: { current: status, ...statusTimeline }
     }
   ]
 }
-
-/**
- * Until ADR-0051's events exist, the approval after the last `created` takes
- * effect from the record's validFrom, anything recorded before it no later than
- * that, and every other change when it was recorded.
- *
- * @param {StatusHistoryEntryOf<string>[]} statusHistory
- * @param {string} [validFrom]
- * @returns {StatusTimeline}
- */
-export function toStatusTimeline(statusHistory, validFrom) {
-  const recorded = statusHistory
-    .map(({ status, updatedAt }) => ({
-      status,
-      at: new Date(updatedAt),
-      updatedAt: new Date(updatedAt).toISOString()
-    }))
-    .toSorted(byDate)
-  const lastCreated = recorded.findLastIndex(
-    ({ status }) => status === 'created'
-  )
-  const approvalAfterLastCreated = recorded.findIndex(
-    ({ status }, index) => index > lastCreated && status === 'approved'
-  )
-  if (approvalAfterLastCreated >= 0 && validFrom) {
-    const approvedFrom = new Date(validFrom)
-    for (const entry of recorded.slice(0, approvalAfterLastCreated)) {
-      entry.at = entry.at < approvedFrom ? entry.at : approvedFrom
-    }
-    recorded[approvalAfterLastCreated].at = approvedFrom
-  }
-  // A stable sort keeps recorded order among equal times
-  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
-    status,
-    at: at.toISOString(),
-    updatedAt
-  }))
-}
-
-/**
- * @param {{ at: Date }} one
- * @param {{ at: Date }} other
- * @returns {number}
- */
-const byDate = (one, other) => one.at.getTime() - other.at.getTime()
 
 /**
  * @param {StoredRegistration} registration

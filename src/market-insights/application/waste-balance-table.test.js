@@ -29,7 +29,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
@@ -526,7 +526,7 @@ const heldOutside = (operator, accreditationNumber, approvedOn) => {
  *
  * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
  * @param {Organisation} organisation
- * @param {AccreditationStatus} status
+ * @param {StoredAccreditationStatus} status
  * @param {StatusHistoryEntry[]} transitions
  * @param {Record<string, { standing: string }>} [standing] - how the change moves the registration's standing, as the read model serves it
  */

@@ -19,16 +19,11 @@ const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 const servedOrganisation = () => {
   const approved = {
     current: /** @type {const} */ ('approved'),
+    lastUpdatedAt: FIXED_DATE.toISOString(),
     timeline: [
       {
-        status: 'created',
-        at: '2026-01-01T00:00:00.000Z',
-        updatedAt: FIXED_DATE.toISOString()
-      },
-      {
-        status: 'approved',
-        at: '2026-01-01T00:00:00.000Z',
-        updatedAt: FIXED_DATE.toISOString()
+        status: /** @type {const} */ ('approved'),
+        at: '2026-01-01T00:00:00.000Z'
       }
     ]
   }

@@ -6,7 +6,7 @@ import {
 import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
-/** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**
@@ -37,19 +37,26 @@ export const nextReadAccreditationNumber = () => {
 }
 
 /**
- * A created then approved timeline, both recorded and taking effect at the
- * start of `approvedAt`, so it is oldest first for any date.
+ * A timeline approved from the start of `approvedAt`.
  *
  * @param {string} approvedAt - a calendar date, such as '2026-02-01'
- * @returns {StatusTimeline}
+ * @returns {StatusTimeline<'approved'>}
  */
-export const approvedTimelineFrom = (approvedAt) => {
-  const at = new Date(approvedAt).toISOString()
-  return [
-    { status: 'created', at, updatedAt: at },
-    { status: 'approved', at, updatedAt: at }
-  ]
-}
+export const approvedTimelineFrom = (approvedAt) => [
+  { status: 'approved', at: new Date(approvedAt).toISOString() }
+]
+
+/**
+ * An approved status, approved and recorded from the start of `approvedAt`.
+ *
+ * @param {string} approvedAt - a calendar date, such as '2026-02-01'
+ * @returns {Status<'approved'>}
+ */
+export const approvedStatusFrom = (approvedAt) => ({
+  current: 'approved',
+  lastUpdatedAt: new Date(approvedAt).toISOString(),
+  timeline: approvedTimelineFrom(approvedAt)
+})
 
 const contact = {
   email: 'luke.skywalker@starwars.com',
@@ -64,7 +71,7 @@ const contact = {
 export const buildReadAccreditation = (overrides = {}) => ({
   accreditationNumber: nextReadAccreditationNumber(),
   prnIssuance: { tonnageBand: 'over_10000' },
-  status: { current: 'approved', timeline: approvedTimelineFrom('2026-07-01') },
+  status: approvedStatusFrom('2026-07-01'),
   ...overrides
 })
 
@@ -111,13 +118,9 @@ const withStanding = (registration) => {
 const commonRegistrationDefaults = () => ({
   applicationContactDetails: contact,
   approvedPersons: [contact],
-  status: {
-    current: /** @type {const} */ ('approved'),
-    timeline: approvedTimelineFrom('2026-02-01')
-  },
+  status: approvedStatusFrom('2026-02-01'),
   submittedToRegulator: { code: /** @type {const} */ ('ea') },
   submitterContactDetails: contact,
-  validFrom: '2026-02-01',
   accreditations: {}
 })
 
@@ -167,7 +170,7 @@ export const buildReadExporterRegistration = (overrides = {}) =>
 export const buildReadOrganisation = (overrides = {}) => ({
   organisationNumber: nextReadOrganisationNumber(),
   name: 'ACME ltd',
-  status: { current: 'approved', timeline: approvedTimelineFrom('2026-01-15') },
+  status: approvedStatusFrom('2026-01-15'),
   submittedToRegulator: { code: 'ea' },
   submitterContactDetails: contact,
   users: [],
@@ -198,15 +201,11 @@ export const buildReadApprovedOrganisation = ({
   standingByDate,
   overrides = {}
 } = {}) => {
-  const approved = {
-    current: /** @type {const} */ ('approved'),
-    timeline: approvedTimelineFrom(validFrom)
-  }
+  const approved = approvedStatusFrom(validFrom)
   return buildReadOrganisation({
     organisationNumber,
     registrations: {
       [`REG${organisationNumber}`]: buildReadReprocessorRegistration({
-        validFrom,
         status: approved,
         standingByDate,
         accreditations: {

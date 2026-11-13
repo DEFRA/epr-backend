@@ -20,7 +20,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   organisationNumber: OrganisationNumber
  *   registeredAddress?: OrganisationAddress
  *   registrations: Record<string, Registration>
- *   status: Status<'created' | 'approved' | 'active' | 'rejected'>
+ *   status: Status<OrganisationStatus>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
  *   tradingName?: string
@@ -38,10 +38,9 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   material: 'aluminium' | 'fibre' | 'glass_re_melt' | 'glass_other' | 'paper' | 'plastic'
  *     | 'steel' | 'wood'
  *   standingByDate: StandingByYear
- *   status: Status<'approved' | 'cancelled'>
+ *   status: Status<RegistrationStatus>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
- *   validFrom: string
  * }} RegistrationCommon
  *
  * @typedef {RegistrationCommon & {
@@ -67,7 +66,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * @typedef {{
  *   accreditationNumber: AccreditationNumber
  *   prnIssuance: { tonnageBand: string }
- *   status: Status<'approved' | 'suspended' | 'cancelled'>
+ *   status: Status<AccreditationStatus>
  * }} AccreditationCommon
  *
  * @typedef {AccreditationCommon} ReprocessorAccreditation
@@ -121,21 +120,30 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * Every status change, oldest first, each `at` the ISO 8601 datetime it takes
- * effect and `updatedAt` the one it was recorded. Nothing requires two changes
- * to happen at different times, so changes that share a time keep the order
- * they were recorded in.
+ * effect. Nothing requires two changes to happen at different times, so
+ * changes that share a time keep the order they were recorded in.
  *
- * @typedef {{ status: string, at: string, updatedAt: string }[]} StatusTimeline
+ * @template {string} [S=string]
+ * @typedef {{ status: S, at: string }[]} StatusTimeline
  */
 
 /**
- * The status today, and the timeline it is read from.
+ * The status today, the timeline it is read from, and when the timeline's
+ * last change was recorded.
  *
  * @template {string} S
- * @typedef {{ current: S, timeline: StatusTimeline }} Status
+ * @typedef {{ current: S, lastUpdatedAt: string | undefined, timeline: StatusTimeline<S> }} Status
  */
 
-/** @type {readonly Organisation['status']['current'][]} */
+/**
+ * The statuses the read model serves for each record.
+ *
+ * @typedef {'created' | 'approved' | 'active' | 'rejected'} OrganisationStatus
+ * @typedef {'approved' | 'cancelled'} RegistrationStatus
+ * @typedef {'approved' | 'suspended' | 'cancelled'} AccreditationStatus
+ */
+
+/** @type {readonly OrganisationStatus[]} */
 export const ORGANISATION_STATUSES = Object.freeze([
   'created',
   'approved',
@@ -143,10 +151,10 @@ export const ORGANISATION_STATUSES = Object.freeze([
   'rejected'
 ])
 
-/** @type {readonly Registration['status']['current'][]} */
+/** @type {readonly RegistrationStatus[]} */
 export const REGISTRATION_STATUSES = Object.freeze(['approved', 'cancelled'])
 
-/** @type {readonly AccreditationCommon['status']['current'][]} */
+/** @type {readonly AccreditationStatus[]} */
 export const ACCREDITATION_STATUSES = Object.freeze([
   'approved',
   'suspended',

@@ -128,21 +128,10 @@ const servedOrganisation = buildReadOrganisation({
   organisationNumber: organisation.organisationNumber,
   registrations: {
     [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration({
-      validFrom: '2024-02-01',
       status: {
         current: 'approved',
-        timeline: [
-          {
-            status: 'created',
-            at: '2024-01-01T09:00:00.000Z',
-            updatedAt: '2024-01-01T09:00:00.000Z'
-          },
-          {
-            status: 'approved',
-            at: '2024-02-01T00:00:00.000Z',
-            updatedAt: '2024-02-01T09:00:00.000Z'
-          }
-        ]
+        lastUpdatedAt: '2024-02-01T09:00:00.000Z',
+        timeline: [{ status: 'approved', at: '2024-02-01T00:00:00.000Z' }]
       },
       standingByDate: {
         2024: { '2024-02-01': { standing: 'registeredOnly' } },

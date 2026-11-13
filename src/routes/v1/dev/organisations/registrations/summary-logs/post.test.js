@@ -192,7 +192,10 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
       for (const registration of Object.values(
         organisation?.registrations ?? {}
       )) {
-        registration.validFrom = '2025-01-01'
+        registration.status = {
+          ...registration.status,
+          timeline: [{ status: 'approved', at: '2025-01-01T00:00:00.000Z' }]
+        }
       }
       return organisation
     })
