@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 
+import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { organisationYears } from '#organisation-read-model/domain/organisation-years.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { config } from '#root/config.js'
 import {
@@ -286,6 +288,58 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
           )
         ).toEqual(['2026', '2027'])
       })
+    })
+
+    /**
+     * @todo this belongs on the organisation and years routes, but no route
+     * test reads through this repository yet, so it repeats the years
+     * route's call. Move it there once route tests can.
+     */
+    describe('the years it serves accreditations for', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-10') })
+      })
+
+      afterEach(() => {
+        vi.useRealTimers()
+        config.reset('openNextYear')
+      })
+
+      it.for([
+        { description: 'open', openNextYear: true },
+        { description: 'closed', openNextYear: false }
+      ])(
+        'are all years the organisation is listed for, while next year is $description',
+        async ({ openNextYear }, { organisationReadRepositoryWith }) => {
+          config.set('openNextYear', openNextYear)
+          const granted2026 = accreditation()
+          const stored = buildOrganisation({
+            registrations: [reprocessor({ accreditationId: granted2026.id })],
+            accreditations: [granted2026]
+          })
+          const repository = await organisationReadRepositoryWith({
+            organisations: [stored],
+            externalAccreditations: [
+              buildExternalAccreditation({
+                registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+              })
+            ]
+          })
+
+          const organisation = await findOrganisation(
+            repository,
+            stored.organisationNumber
+          )
+          const listed = organisationYears(organisation, lastOpenDay())
+          const unlisted = Object.keys(
+            organisation.registrations[REPROCESSOR_NUMBER].accreditations
+          )
+            .map(Number)
+            .filter((year) => !listed.includes(toYear(year)))
+
+          expect(unlisted).toStrictEqual([])
+        }
+      )
     })
 
     it('gives the site address parts without a town, and as submitted, when ingest could not find its town', async ({
