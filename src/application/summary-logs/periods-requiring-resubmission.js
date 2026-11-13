@@ -339,6 +339,8 @@ export const withPeriodsRequiringResubmission = async ({
 
   return {
     ...loadsByReportingPeriod,
+    // Deprecated but still in the response contract, so emptied rather than
+    // dropped; the gate above has already used the candidates in memory.
     closedPeriods: [],
     periodsRequiringResubmission
   }
