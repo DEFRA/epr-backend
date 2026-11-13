@@ -272,9 +272,11 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       })
     })
 
-    // Belongs on the organisation and years routes, but no route test reads
-    // through this repository yet, so it repeats the years route's call.
-    // Move it there once route tests can.
+    /**
+     * @todo this belongs on the organisation and years routes, but no route
+     * test reads through this repository yet, so it repeats the years
+     * route's call. Move it there once route tests can.
+     */
     describe('the years it serves accreditations for', () => {
       beforeEach(() => {
         vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-10') })
