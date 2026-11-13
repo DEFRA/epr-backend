@@ -21,8 +21,21 @@ import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organi
  *     registrationNumber: RegistrationNumber
  *     accreditationNumber?: AccreditationNumber
  *     wasteProcessingType?: 'reprocessor' | 'exporter'
+ *     overseasSites?: OverseasSiteSeed[]
  *   }>
  * }} OrganisationSeed
+ */
+
+/**
+ * An exporter's overseas site, served under `siteNumber` with its name. The
+ * exporter's accreditation lists it as approved from `approvedOn`, a calendar
+ * date, or as pending without one.
+ *
+ * @typedef {{
+ *   siteNumber: string
+ *   name: string
+ *   approvedOn?: string
+ * }} OverseasSiteSeed
  */
 
 /**

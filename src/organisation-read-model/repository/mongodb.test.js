@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb'
+
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it as organisationReadIt } from '#vite/fixtures/organisation-read-mongo.js'
 import {
@@ -13,11 +15,28 @@ import { SEED_ACCREDITATION_YEAR } from './contract/organisation-seed-test-helpe
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryServing, OrganisationSeed } from './port.contract.js' */
+/** @import { OrganisationReadRepositoryContractIt, OrganisationReadRepositoryServing, OrganisationSeed, OverseasSiteSeed } from './port.contract.js' */
 
 /**
- * The seeded organisation as the organisations collection stores it: each
- * registration approved, numbered and of the kind it names, and linked to an accreditation approved
+ * The overseas-site record a seeded site is stored as: approved from its
+ * `approvedOn`, or pending without one.
+ *
+ * @param {OverseasSiteSeed} site
+ */
+const toStoredSite = ({ name, approvedOn }) => ({
+  id: new ObjectId().toString(),
+  name,
+  country: 'Germany',
+  address: { line1: '1 Teststrasse', townOrCity: 'Berlin' },
+  ...(approvedOn && { validFrom: new Date(approvedOn) }),
+  createdAt: new Date(),
+  updatedAt: new Date()
+})
+
+/**
+ * The seeded organisation as the organisations collection stores it, and the
+ * overseas-site records its exporters use. Each registration is approved,
+ * numbered and of the kind it names, and linked to an accreditation approved
  * from 1 July of `SEED_ACCREDITATION_YEAR` when the seed gives an
  * accreditation number.
  *
@@ -25,8 +44,17 @@ const { buildOrganisation } = createOrganisationBuilders()
  */
 const toStored = ({ name, organisationNumber, registrations }) => {
   const linked = registrations.map(
-    ({ registrationNumber, accreditationNumber, wasteProcessingType }) => {
+    ({
+      registrationNumber,
+      accreditationNumber,
+      wasteProcessingType,
+      overseasSites = []
+    }) => {
       const exporting = wasteProcessingType === 'exporter'
+      const sites = overseasSites.map((site) => ({
+        siteNumber: site.siteNumber,
+        record: toStoredSite(site)
+      }))
       const held = accreditationNumber
         ? (exporting ? exporterAccreditation : accreditation)({
             accreditationNumber,
@@ -39,21 +67,30 @@ const toStored = ({ name, organisationNumber, registrations }) => {
           ? exporter({
               registrationNumber,
               accreditationId: held?.id,
-              overseasSites: {}
+              overseasSites: Object.fromEntries(
+                sites.map(({ siteNumber, record }) => [
+                  siteNumber,
+                  { overseasSiteId: record.id }
+                ])
+              )
             })
           : reprocessor({ registrationNumber, accreditationId: held?.id }),
-        accreditation: held
+        accreditation: held,
+        siteRecords: sites.map(({ record }) => record)
       }
     }
   )
-  return buildOrganisation({
-    organisationNumber,
-    companyDetails: { name },
-    registrations: linked.map(({ registration }) => registration),
-    accreditations: linked.flatMap(({ accreditation: held }) =>
-      held ? [held] : []
-    )
-  })
+  return {
+    organisation: buildOrganisation({
+      organisationNumber,
+      companyDetails: { name },
+      registrations: linked.map(({ registration }) => registration),
+      accreditations: linked.flatMap(({ accreditation: held }) =>
+        held ? [held] : []
+      )
+    }),
+    siteRecords: linked.flatMap(({ siteRecords }) => siteRecords)
+  }
 }
 
 const it = organisationReadIt.extend(
@@ -62,9 +99,13 @@ const it = organisationReadIt.extend(
       { organisationReadRepositoryWith },
       use
     ) => {
-      await use((seeds) =>
-        organisationReadRepositoryWith({ organisations: seeds.map(toStored) })
-      )
+      await use((seeds) => {
+        const stored = seeds.map(toStored)
+        return organisationReadRepositoryWith({
+          organisations: stored.map(({ organisation }) => organisation),
+          overseasSites: stored.flatMap(({ siteRecords }) => siteRecords)
+        })
+      })
     }
   })
 )

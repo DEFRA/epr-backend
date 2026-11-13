@@ -1,6 +1,5 @@
 import { describe, expect, it as baseIt } from 'vitest'
 
-import { toYear } from '#common/helpers/dates/year.js'
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
 import {
@@ -22,8 +21,10 @@ const repositoryOf = (organisations) =>
 
 /**
  * The seeded organisation in the read model's shape: each registration
- * approved and of the kind it names, with an accreditation approved from 1 July of
- * `SEED_ACCREDITATION_YEAR` when the seed gives an accreditation number.
+ * approved and of the kind it names, with an accreditation approved from
+ * 1 July of `SEED_ACCREDITATION_YEAR` when the seed gives an accreditation
+ * number. An exporter's accreditation lists each of its overseas sites as
+ * approved from its `approvedOn`, or pending without one.
  *
  * @param {OrganisationSeed} seed
  * @returns {Organisation}
@@ -34,7 +35,12 @@ const toReadModel = ({ name, organisationNumber, registrations }) =>
     organisationNumber,
     registrations: Object.fromEntries(
       registrations.map(
-        ({ registrationNumber, accreditationNumber, wasteProcessingType }) => {
+        ({
+          registrationNumber,
+          accreditationNumber,
+          wasteProcessingType,
+          overseasSites = []
+        }) => {
           const exporting = wasteProcessingType === 'exporter'
           const accreditationFields = {
             accreditationNumber,
@@ -47,10 +53,42 @@ const toReadModel = ({ name, organisationNumber, registrations }) =>
             registrationNumber,
             exporting
               ? buildReadExporterRegistration({
+                  overseasSites: Object.fromEntries(
+                    overseasSites.map(({ siteNumber, name: siteName }) => [
+                      siteNumber,
+                      {
+                        name: siteName,
+                        address: {
+                          line1: '1 Teststrasse',
+                          townOrCity: 'Berlin',
+                          country: 'Germany'
+                        }
+                      }
+                    ])
+                  ),
                   accreditations: accreditationNumber
                     ? {
                         [SEED_ACCREDITATION_YEAR]:
-                          buildReadExporterAccreditation(accreditationFields)
+                          buildReadExporterAccreditation({
+                            ...accreditationFields,
+                            overseasSites: Object.fromEntries(
+                              overseasSites.map(
+                                ({ siteNumber, approvedOn }) => [
+                                  siteNumber,
+                                  approvedOn
+                                    ? {
+                                        status: /** @type {const} */ (
+                                          'approved'
+                                        ),
+                                        approvedOn
+                                      }
+                                    : {
+                                        status: /** @type {const} */ ('pending')
+                                      }
+                                ]
+                              )
+                            )
+                          })
                       }
                     : {}
                 })
@@ -101,18 +139,6 @@ describe('in-memory organisation read repository', () => {
       expect(
         await repository.findByOrganisationNumber(
           organisation.organisationNumber
-        )
-      ).toStrictEqual(organisation)
-    })
-
-    it('from findByOrganisationNumber for a year, as they are already as they stood in that year', async () => {
-      const organisation = held()
-      const repository = repositoryOf([organisation])
-
-      expect(
-        await repository.findByOrganisationNumber(
-          organisation.organisationNumber,
-          { year: toYear(2027) }
         )
       ).toStrictEqual(organisation)
     })

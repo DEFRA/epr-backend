@@ -48,11 +48,17 @@ export const overseasSites = [approvedSite, pendingSite]
 /**
  * @param {OrganisationReadRepository} repository
  * @param {string} organisationNumber
+ * @param {import('../port.js').FindByOrganisationNumberOptions} [options]
  * @returns {Promise<Organisation>}
  */
-export const findOrganisation = async (repository, organisationNumber) => {
+export const findOrganisation = async (
+  repository,
+  organisationNumber,
+  options
+) => {
   const organisation = await repository.findByOrganisationNumber(
-    toOrganisationNumber(organisationNumber)
+    toOrganisationNumber(organisationNumber),
+    options
   )
   expect(organisation).not.toBeNull()
   return /** @type {Organisation} */ (organisation)

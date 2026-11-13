@@ -1,10 +1,7 @@
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
-import {
-  earliestOfYearEndOrDate,
-  lastDayOfYear
-} from '#common/helpers/dates/year.js'
+import { lastDayOfYear } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   accreditationsForRegistration,
@@ -17,7 +14,7 @@ import {
   statusOn
 } from '#organisation-read-model/domain/model.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
-import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
+import { organisationInYear } from './organisation-in-year.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
@@ -139,77 +136,8 @@ export async function toReadModelOrganisations(
     .map((organisation) =>
       year === undefined
         ? organisation
-        : organisationInYear(organisation, year, context)
+        : organisationInYear(organisation, year, context.today)
     )
-}
-
-/**
- * The entry of `byYear` for `year`, or none when it has none for it.
- * @template T
- * @param {Record<string, T>} byYear
- * @param {Year} year
- * @returns {Record<string, T>}
- */
-const onlyYear = (byYear, year) =>
-  Object.hasOwn(byYear, year) ? { [year]: byYear[year] } : {}
-
-/**
- * The registration's status on `date`, or its current status when it had no
- * served status then, as with one approved later in the year asked for.
- *
- * @param {Registration} registration
- * @param {CalendarDate} date
- * @returns {Registration['status']['current']}
- */
-const registrationStatusOn = (registration, date) => {
-  const status = statusOn(registration.status.timeline, date)
-  return isOneOf(REGISTRATION_STATUSES, status)
-    ? status
-    : registration.status.current
-}
-
-/**
- * The organisation as it stood in `year`: registrations approved at any point
- * in it, each with only that year's accreditation and status dates.
- * Organisation and registration statuses are those on the earlier of the end
- * of `year` and `context.today`.
- *
- * @param {Organisation} organisation
- * @param {Year} year
- * @param {Context} context
- * @returns {Organisation}
- */
-const organisationInYear = (organisation, year, context) => {
-  const statusesAsOfDate = earliestOfYearEndOrDate(year, context.today)
-  const endOfYear = lastDayOfYear(year)
-  const registrations = Object.entries(organisation.registrations)
-    .filter(([, registration]) =>
-      approvedYears(registration.status.timeline, endOfYear).includes(year)
-    )
-    .map(([number, registration]) => [
-      number,
-      {
-        ...registration,
-        status: {
-          ...registration.status,
-          current: registrationStatusOn(registration, statusesAsOfDate)
-        },
-        accreditations: onlyYear(registration.accreditations, year),
-        standingByDate: onlyYear(registration.standingByDate, year)
-      }
-    ])
-
-  return {
-    ...organisation,
-    status: {
-      ...organisation.status,
-      current: /** @type {Organisation['status']['current']} */ (
-        statusOn(organisation.status.timeline, statusesAsOfDate) ??
-          organisation.status.current
-      )
-    },
-    registrations: Object.fromEntries(registrations)
-  }
 }
 
 /**
