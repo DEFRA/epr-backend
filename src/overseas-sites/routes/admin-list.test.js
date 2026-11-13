@@ -1,32 +1,28 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
-import { ObjectId } from 'mongodb'
 
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  EXPORTER_ACCREDITATION_NUMBER,
-  exporter,
-  exporterAccreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  nextReadAccreditationNumber
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
 
-const { buildOrganisation } = createOrganisationBuilders()
-
 const ALPHA_REGISTRATION = 'R26EX5001180042PL'
 const BETA_REGISTRATION = 'R26EX5001180043PL'
-
-const now = new Date('2026-01-01T00:00:00.000Z')
+const REPROCESSOR_REGISTRATION = 'R26ER5001180044PL'
+const ACCREDITATION_NUMBER = nextReadAccreditationNumber()
 
 const fullSite = {
-  id: new ObjectId().toString(),
   name: 'Alpha Reprocessor',
-  country: 'France',
   address: {
+    country: 'France',
     line1: '1 Rue de Test',
     line2: 'Zone 2',
     townOrCity: 'Paris',
@@ -34,69 +30,47 @@ const fullSite = {
     postcode: '75001'
   },
   coordinates: '48.8566,2.3522',
-  validFrom: new Date('2025-04-01T00:00:00.000Z'),
-  createdAt: now,
-  updatedAt: now
+  validFrom: '2025-04-01T00:00:00.000Z'
 }
 
 const minimalSite = {
-  id: new ObjectId().toString(),
   name: 'Beta Reprocessor',
-  country: 'Germany',
-  address: { line1: '2 Teststrasse', townOrCity: 'Berlin' },
-  createdAt: now,
-  updatedAt: now
+  address: { country: 'Germany', line1: '2 Teststrasse', townOrCity: 'Berlin' }
 }
 
 const thirdSite = {
-  id: new ObjectId().toString(),
   name: 'Gamma Reprocessor',
-  country: 'Spain',
-  address: { line1: '3 Calle Mayor', townOrCity: 'Madrid' },
-  createdAt: now,
-  updatedAt: now
+  address: { country: 'Spain', line1: '3 Calle Mayor', townOrCity: 'Madrid' }
 }
 
-const sites = [fullSite, minimalSite, thirdSite]
-
-const accredited = exporterAccreditation()
-
-const createdIn2026 = [
-  { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' }
-]
-
-/** An accredited exporter holding ORS 001 and 002, and a reprocessor. */
-const accreditedOrganisation = buildOrganisation({
-  statusHistory: createdIn2026,
-  registrations: [
-    exporter({
-      registrationNumber: ALPHA_REGISTRATION,
-      accreditationId: accredited.id,
-      overseasSites: {
-        '002': { overseasSiteId: minimalSite.id },
-        '001': { overseasSiteId: fullSite.id }
-      }
+/** An exporter accredited for 2026 holding ORS 001 and 002, and a reprocessor. */
+const accreditedOrganisation = buildReadOrganisation({
+  registrations: {
+    [ALPHA_REGISTRATION]: buildReadExporterRegistration({
+      accreditations: {
+        2026: buildReadExporterAccreditation({
+          accreditationNumber: ACCREDITATION_NUMBER
+        })
+      },
+      overseasSites: { '002': minimalSite, '001': fullSite }
     }),
-    reprocessor()
-  ],
-  accreditations: [accredited]
+    [REPROCESSOR_REGISTRATION]: buildReadReprocessorRegistration()
+  }
 })
 
 /** A registered-only exporter holding ORS 003. */
-const registeredOnlyOrganisation = buildOrganisation({
-  statusHistory: createdIn2026,
-  registrations: [
-    exporter({
-      registrationNumber: BETA_REGISTRATION,
-      overseasSites: { '003': { overseasSiteId: thirdSite.id } }
+const registeredOnlyOrganisation = buildReadOrganisation({
+  registrations: {
+    [BETA_REGISTRATION]: buildReadExporterRegistration({
+      overseasSites: { '003': thirdSite }
     })
-  ]
+  }
 })
 
 const fullRow = {
   orgId: Number(accreditedOrganisation.organisationNumber),
   registrationNumber: ALPHA_REGISTRATION,
-  accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
+  accreditationNumber: ACCREDITATION_NUMBER,
   orsId: '001',
   packagingWasteCategory: 'plastic',
   destinationCountry: 'France',
@@ -113,7 +87,7 @@ const fullRow = {
 const minimalRow = {
   orgId: Number(accreditedOrganisation.organisationNumber),
   registrationNumber: ALPHA_REGISTRATION,
-  accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
+  accreditationNumber: ACCREDITATION_NUMBER,
   orsId: '002',
   packagingWasteCategory: 'plastic',
   destinationCountry: 'Germany',
@@ -150,10 +124,8 @@ const registeredOnlyRow = {
 const serverOver = (organisationReadRepository) =>
   createTestServer({ repositories: { organisationReadRepository } })
 
-const serverWith = async (organisations) =>
-  serverOver(
-    await organisationReadRepositoryOf(organisations, { overseasSites: sites })
-  )
+const serverWith = (organisations) =>
+  serverOver(createInMemoryOrganisationReadRepository(organisations))
 
 const list = (server, query = '') =>
   server.inject({
