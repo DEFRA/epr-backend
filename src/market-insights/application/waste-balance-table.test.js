@@ -1955,6 +1955,29 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
+  describe('a row whose processing type has no template', () => {
+    const operator = makeOperator({ orgId: 500012 })
+
+    it('fails rather than leaving the row out', async () => {
+      await expect(
+        run({
+          organisations: [operator.organisation],
+          submissions: [
+            {
+              ...operator,
+              rows: [
+                {
+                  ...receivedRow('row-1', '2026-03-10', 50),
+                  processingType: 'UNKNOWN'
+                }
+              ]
+            }
+          ]
+        })
+      ).rejects.toThrow('No UNKNOWN summary log template for 2026')
+    })
+  })
+
   describe('a month after the window', () => {
     const operator = makeOperator({ orgId: 500012 })
 

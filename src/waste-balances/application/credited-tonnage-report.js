@@ -172,6 +172,7 @@ export const buildCreditedTonnageReport = async ({
         ledgerId,
         summaryLogId
       ),
+      ledgerAccreditation.year,
       {
         accreditation: validityOf(ledgerAccreditation),
         overseasSites: overseasSitesOf(ledgerAccreditation)

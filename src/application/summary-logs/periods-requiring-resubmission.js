@@ -22,6 +22,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {OrsDetails} from '#overseas-sites/application/get-ors-details-map.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
@@ -45,17 +46,24 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
  * share one shape.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
+ * @param {Record<string, TableSchema>} tableSchemas
  * @param {Accreditation | null} accreditation
  * @param {OverseasSitesContext} overseasSites
  * @returns {ReportableWasteRecordState[]}
  */
-const toNewHeadRowStates = (wasteRecords, accreditation, overseasSites) =>
+const toNewHeadRowStates = (
+  wasteRecords,
+  tableSchemas,
+  accreditation,
+  overseasSites
+) =>
   wasteRecords.map((wasteRecord) => ({
     wasteRecordType: /** @type {WasteRecordType} */ (
       wasteRecord.wasteRecordType
     ),
     data: projectSummaryLogRowState(
       wasteRecord.record,
+      tableSchemas,
       accreditation,
       overseasSites
     ).data
@@ -242,6 +250,7 @@ const logPeriodOutcome = (
  * @param {PeriodRef[]} params.closedPeriods
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {Record<string, TableSchema>} params.tableSchemas - The table schemas of the summary log's template
  * @param {Registration | undefined} params.registration
  * @param {OverseasSitesContext} params.overseasSites
  * @param {ReportsService} params.reportsService
@@ -258,6 +267,7 @@ const computePeriodsRequiringResubmission = async ({
   closedPeriods,
   periodicReports,
   wasteRecords,
+  tableSchemas,
   registration,
   overseasSites,
   reportsService,
@@ -277,6 +287,7 @@ const computePeriodsRequiringResubmission = async ({
     registration,
     newHeadRowStates: toNewHeadRowStates(
       wasteRecords,
+      tableSchemas,
       registration.accreditation ?? null,
       overseasSites
     ),
@@ -309,9 +320,10 @@ const computePeriodsRequiringResubmission = async ({
  * A failure propagates so the queue retries the validation rather than
  * guessing a verdict.
  *
- * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
+ * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'tableSchemas' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
  *   wasteRecords: ValidatedWasteRecord[] | null,
+ *   tableSchemas: Record<string, TableSchema> | undefined,
  *   summaryLog: SubmittedSummaryLog
  * }} params
  * @returns {Promise<LoadsByReportingPeriod | null>}
@@ -319,6 +331,7 @@ const computePeriodsRequiringResubmission = async ({
 export const withPeriodsRequiringResubmission = async ({
   loadsByReportingPeriod,
   wasteRecords,
+  tableSchemas,
   summaryLog,
   ...params
 }) => {
@@ -330,8 +343,10 @@ export const withPeriodsRequiringResubmission = async ({
     await computePeriodsRequiringResubmission({
       ...params,
       closedPeriods: loadsByReportingPeriod.closedPeriods,
-      // classifyLoads yields a loadsByReportingPeriod only for present records.
+      // classifyLoads yields a loadsByReportingPeriod only for present records
+      // and table schemas.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
+      tableSchemas: /** @type {Record<string, TableSchema>} */ (tableSchemas),
       ledgerId: ledgerIdFor(summaryLog)
     })
 

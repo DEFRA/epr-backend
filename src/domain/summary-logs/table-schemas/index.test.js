@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   checkTemplateVersion,
   getTemplate,
+  hasTemplate,
+  hasTemplatesForYear,
   findSchemaByWasteRecordType,
   findSchemaForProcessingType,
-  unfilledValuesForYear
+  unfilledValuesForYear,
+  tableSchemasOf
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -15,13 +18,7 @@ import { REPROCESSOR_INPUT_TEMPLATES } from './reprocessor-input/index.js'
 import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
 import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
-/** @import {Year} from '#common/helpers/dates/year.js' */
-
-const YEAR_2027 = /** @type {Year} */ (2027)
-
-/** @param {string} processingType */
-const tableSchemasOf = (processingType) =>
-  getTemplate(DEFAULT_TEMPLATE_YEAR, processingType).tableSchemas
+import { toYear } from '#common/helpers/dates/year.js'
 
 describe('table-schemas', () => {
   describe('2026 tables', () => {
@@ -36,6 +33,7 @@ describe('table-schemas', () => {
 
     describe('REPROCESSOR_REGISTERED_ONLY', () => {
       const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
         PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
       )
 
@@ -53,7 +51,10 @@ describe('table-schemas', () => {
     })
 
     describe('REPROCESSOR_INPUT', () => {
-      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+      const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.REPROCESSOR_INPUT
+      )
 
       it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
         expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
@@ -91,7 +92,10 @@ describe('table-schemas', () => {
     })
 
     describe('REPROCESSOR_OUTPUT', () => {
-      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_OUTPUT)
+      const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      )
 
       it('has RECEIVED_LOADS_FOR_REPROCESSING table', () => {
         expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_REPROCESSING')
@@ -107,7 +111,10 @@ describe('table-schemas', () => {
     })
 
     describe('EXPORTER', () => {
-      const tableSchemas = tableSchemasOf(PROCESSING_TYPES.EXPORTER)
+      const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
+        PROCESSING_TYPES.EXPORTER
+      )
 
       it('has RECEIVED_LOADS_FOR_EXPORT table', () => {
         expect(tableSchemas).toHaveProperty('RECEIVED_LOADS_FOR_EXPORT')
@@ -120,6 +127,7 @@ describe('table-schemas', () => {
 
     describe('EXPORTER_REGISTERED_ONLY', () => {
       const tableSchemas = tableSchemasOf(
+        DEFAULT_TEMPLATE_YEAR,
         PROCESSING_TYPES.EXPORTER_REGISTERED_ONLY
       )
 
@@ -141,7 +149,10 @@ describe('table-schemas', () => {
     it('returns tableName and schema for a known waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.RECEIVED,
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).not.toBeNull()
@@ -156,7 +167,7 @@ describe('table-schemas', () => {
     it('returns the correct table for exported waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.EXPORTED,
-        tableSchemasOf(PROCESSING_TYPES.EXPORTER)
+        tableSchemasOf(DEFAULT_TEMPLATE_YEAR, PROCESSING_TYPES.EXPORTER)
       )
 
       expect(result).not.toBeNull()
@@ -170,7 +181,10 @@ describe('table-schemas', () => {
     it('returns the correct table for processed waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.PROCESSED,
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).not.toBeNull()
@@ -184,7 +198,10 @@ describe('table-schemas', () => {
     it('returns the correct table for sent on waste record type', () => {
       const result = findSchemaByWasteRecordType(
         WASTE_RECORD_TYPE.SENT_ON,
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).not.toBeNull()
@@ -198,7 +215,10 @@ describe('table-schemas', () => {
     it('returns null for an unknown waste record type', () => {
       const result = findSchemaByWasteRecordType(
         'unknownType',
-        tableSchemasOf(PROCESSING_TYPES.REPROCESSOR_INPUT)
+        tableSchemasOf(
+          DEFAULT_TEMPLATE_YEAR,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        )
       )
 
       expect(result).toBeNull()
@@ -302,16 +322,28 @@ describe('table-schemas', () => {
     })
 
     it('throws for a year with no templates', () => {
-      expect(() => unfilledValuesForYear(YEAR_2027)).toThrow(
-        'No summary log templates for 2027'
+      expect(() => unfilledValuesForYear(toYear(2028))).toThrow(
+        'No summary log templates for 2028'
       )
     })
   })
 
   describe('templates by year', () => {
-    it('has no templates for 2027', () => {
-      expect(() => getTemplate(YEAR_2027, PROCESSING_TYPES.EXPORTER)).toThrow()
+    it('has no templates for 2028', () => {
+      expect(() =>
+        getTemplate(toYear(2028), PROCESSING_TYPES.EXPORTER)
+      ).toThrow()
     })
+
+    it.each(Object.values(PROCESSING_TYPES))(
+      'has a 2027 %s template accepting only version 2027.01',
+      (processingType) => {
+        expect(getTemplate(toYear(2027), processingType)).toMatchObject({
+          minVersion: 2027.01,
+          maxVersion: 2027.01
+        })
+      }
+    )
 
     it.each([
       [PROCESSING_TYPES.EXPORTER, 5, EXPORTER_TEMPLATES],
@@ -337,6 +369,28 @@ describe('table-schemas', () => {
     )
   })
 
+  describe('hasTemplate', () => {
+    it.each([
+      [2026, PROCESSING_TYPES.EXPORTER, true],
+      [2027, PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY, true],
+      [2028, PROCESSING_TYPES.EXPORTER, false],
+      [2026, 'UNKNOWN', false]
+    ])('is %s %s: %s', (year, processingType, expected) => {
+      expect(hasTemplate(toYear(year), processingType)).toBe(expected)
+    })
+  })
+
+  describe('hasTemplatesForYear', () => {
+    it.each([
+      [2025, false],
+      [2026, true],
+      [2027, true],
+      [2028, false]
+    ])('for %s is %s', (year, expected) => {
+      expect(hasTemplatesForYear(toYear(year))).toBe(expected)
+    })
+  })
+
   describe('checkTemplateVersion', () => {
     const check = (version, year = DEFAULT_TEMPLATE_YEAR) =>
       checkTemplateVersion({
@@ -356,22 +410,49 @@ describe('table-schemas', () => {
       })
     })
 
+    it('accepts version 2027.01 for 2027', () => {
+      expect(check(2027.01, toYear(2027))).toBeNull()
+    })
+
+    it.each([2027.02, 2027.1])(
+      'rejects version %s for 2027 with the maximum',
+      (version) => {
+        expect(check(version, toYear(2027))).toEqual({
+          error: 'number.max',
+          context: { limit: 2027.01 }
+        })
+      }
+    )
+
+    it('rejects a version below the 2027 minimum with the minimum', () => {
+      expect(check(2027, toYear(2027))).toEqual({
+        error: 'number.min',
+        context: { limit: 2027.01 }
+      })
+    })
+
     it('rejects a version for a year with no template', () => {
-      expect(check(2027.01, YEAR_2027)).toEqual({
+      expect(check(2028.01, toYear(2028))).toEqual({
         error: 'templateVersion.year'
       })
     })
 
     it('rejects a version for a year with no template before the year mismatch', () => {
-      expect(check(2027.01)).toEqual({ error: 'templateVersion.year' })
+      expect(check(2028.01)).toEqual({ error: 'templateVersion.year' })
     })
 
-    it('rejects a version whose year is not the summary log year', () => {
-      expect(check(5, YEAR_2027)).toEqual({
-        error: 'templateVersion.yearMismatch',
-        context: { year: YEAR_2027 }
-      })
-    })
+    it.each([
+      [5, 2027, 2026],
+      [2027.01, 2026, 2027]
+    ])(
+      'rejects version %s in a %s summary log as a year mismatch with a %s template',
+      (version, year, actualYear) => {
+        expect(check(version, toYear(year))).toEqual({
+          error: 'templateVersion.yearMismatch',
+          context: { year, actualYear }
+        })
+      }
+    )
 
     it('rejects an unknown processing type as having no template', () => {
       expect(
@@ -392,15 +473,29 @@ describe('table-schemas', () => {
     })
 
     it('throws for a year with no templates', () => {
-      expect(() => getTemplate(YEAR_2027, PROCESSING_TYPES.EXPORTER)).toThrow(
-        'No EXPORTER summary log template for 2027'
-      )
+      expect(() =>
+        getTemplate(toYear(2028), PROCESSING_TYPES.EXPORTER)
+      ).toThrow('No EXPORTER summary log template for 2028')
     })
 
     it('throws for an unknown processing type', () => {
       expect(() => getTemplate(DEFAULT_TEMPLATE_YEAR, 'UNKNOWN')).toThrow(
         'No UNKNOWN summary log template for 2026'
       )
+    })
+  })
+
+  describe('tableSchemasOf', () => {
+    it("returns the template's table schemas", () => {
+      expect(tableSchemasOf(toYear(2027), PROCESSING_TYPES.EXPORTER)).toBe(
+        EXPORTER_TEMPLATES[2027].tableSchemas
+      )
+    })
+
+    it('throws for a year with no templates', () => {
+      expect(() =>
+        tableSchemasOf(toYear(2028), PROCESSING_TYPES.EXPORTER)
+      ).toThrow('No EXPORTER summary log template for 2028')
     })
   })
 })
