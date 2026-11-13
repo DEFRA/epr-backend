@@ -27,6 +27,8 @@ export function toStatusTimeline(statusHistory, validFrom) {
   if (validFrom) {
     datesFromValidFrom(recorded, new Date(validFrom))
   }
+  // Dropping every later entry before appending is what keeps the timeline
+  // sorted once changes are redated
   return recorded
     .reduce(
       (timeline, change) => [

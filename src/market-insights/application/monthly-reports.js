@@ -126,7 +126,7 @@ export function* owedMonthlyReports({
     registration,
     year,
     accreditation
-  } of grantedRegistrations(organisations, covers)) {
+  } of grantedRegistrations(organisations, years, covers)) {
     const owed = owedPeriods(served, years, accreditation)
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports =

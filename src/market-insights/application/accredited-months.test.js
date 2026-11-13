@@ -120,7 +120,7 @@ describe('accreditedMonths', () => {
     expect(monthsOf(partway)).toEqual(['2026-02', '2026-03'])
   })
 
-  it('yields nothing for the months after the year an accreditation is for', () => {
+  it('yields the months of the year an accreditation is for, and none of the next year', () => {
     const lastYear = operatorAccredited(
       [
         then('created', '2024-11-01'),
@@ -132,6 +132,20 @@ describe('accreditedMonths', () => {
       ],
       2025
     )
+    const acrossTheYearEnd = ['2025-12', '2026-01'].map(toYearMonth)
+
+    const months = [
+      ...accreditedMonths({
+        organisations: [lastYear],
+        months: acrossTheYearEnd
+      })
+    ].map(({ month }) => month)
+
+    expect(months).toEqual(['2025-12'])
+  })
+
+  it('yields nothing for the months of a year the registration holds no accreditation for', () => {
+    const lastYear = operatorAccredited(grantedFrom('2025-01-01'), 2025)
 
     expect(monthsOf(lastYear)).toEqual([])
   })
