@@ -398,12 +398,6 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_LEDGER_YEAR_BACKFILL'
-    },
-    wasteRecordsExportYear: {
-      doc: 'Feature Flag: Show a Year column in the waste records export, naming the year of each row',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_WASTE_RECORDS_EXPORT_YEAR'
     }
   },
   formSubmissionOverrides: {

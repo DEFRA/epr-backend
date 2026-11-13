@@ -20,7 +20,6 @@ import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */
-/** @import {Year} from '#common/helpers/dates/year.js' */
 
 const FORMULA_INJECTION_PREFIX = /^[=+\-@]/
 
@@ -81,27 +80,6 @@ export const METADATA_COLUMNS = Object.freeze([
 export const METADATA_COL_INDEX = Object.freeze(
   Object.fromEntries(METADATA_COLUMNS.map((name, i) => [name, i]))
 )
-
-const YEAR_COLUMN_INDEX = METADATA_COL_INDEX['Accreditation Number'] + 1
-
-/**
- * The metadata prefix with the year after the accreditation number, or as it
- * stands when the export does not show the year.
- *
- * @template T
- * @param {ReadonlyArray<T>} metadata
- * @param {T} year
- * @param {boolean} showYear
- * @returns {T[]}
- */
-const withYear = (metadata, year, showYear) =>
-  showYear
-    ? [
-        ...metadata.slice(0, YEAR_COLUMN_INDEX),
-        year,
-        ...metadata.slice(YEAR_COLUMN_INDEX)
-      ]
-    : [...metadata]
 
 // Both fields are already rendered in the metadata prefix:
 //   ROW_ID            -> 'Row ID'
@@ -164,11 +142,10 @@ export const buildDataFieldColumns = (observedKeys) => {
  * data-field columns.
  *
  * @param {string[]} dataFieldColumns
- * @param {{ showYear?: boolean }} [options]
  * @returns {string[]}
  */
-export const buildHeaderRow = (dataFieldColumns, { showYear = false } = {}) => [
-  ...withYear(METADATA_COLUMNS, 'Year', showYear),
+export const buildHeaderRow = (dataFieldColumns) => [
+  ...METADATA_COLUMNS,
   ...dataFieldColumns
 ]
 
@@ -219,8 +196,6 @@ const overseasSiteOf = (registration, orsId) =>
  * @property {string} rowId
  * @property {RowClassification} classification - The row's waste-balance classification.
  * @property {{ submittedAt: string } | null | undefined} summaryLogEntry
- * @property {Year} year - The year of the row's ledger.
- * @property {boolean} [showYear]
  * @property {string[]} dataFieldColumns
  */
 
@@ -251,13 +226,10 @@ export const buildDataRow = ({
   rowId,
   classification,
   summaryLogEntry,
-  year,
-  showYear = false,
   dataFieldColumns
 }) => {
   const site = overseasSiteOf(registration, data.OSR_ID)
 
-  /** @type {(string | number)[]} */
   const metadata = [
     uppercaseString(registration.submittedToRegulator.code),
     org.name,
@@ -274,10 +246,9 @@ export const buildDataRow = ({
     site?.name ?? ''
   ]
 
-  return [
-    ...withYear(metadata, year, showYear),
-    ...buildDataCells(data, dataFieldColumns)
-  ].map(sanitiseFormulaInjection)
+  return [...metadata, ...buildDataCells(data, dataFieldColumns)].map(
+    sanitiseFormulaInjection
+  )
 }
 
 /**

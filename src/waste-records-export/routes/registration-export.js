@@ -57,8 +57,7 @@ export const registrationWasteRecordsExportByNumber = {
           ledgerRepository: request.ledgerRepository,
           summaryLogsRepository: request.summaryLogsRepository,
           organisation,
-          registrationNumber,
-          showYear: request.config.get('featureFlags.wasteRecordsExportYear')
+          registrationNumber
         })
       )
       .type('text/csv; charset=utf-8')

@@ -87,15 +87,13 @@ const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
  * @param {{
  *   organisations?: Organisation[],
  *   seeds?: LedgerSeed[],
- *   summaryLogs?: SummaryLogWithId[],
- *   config?: Record<string, any>
+ *   summaryLogs?: SummaryLogWithId[]
  * }} [options]
  */
 const createServerWithRepos = async ({
   organisations = [],
   seeds = [],
-  summaryLogs = [],
-  config = {}
+  summaryLogs = []
 } = {}) => {
   /** @param {LedgerSeed} seed */
   const ledgerIdOf = (seed) => ({
@@ -148,8 +146,7 @@ const createServerWithRepos = async ({
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => ledgerRepository,
       summaryLogsRepository: () => summaryLogsRepository
-    },
-    config
+    }
   })
 }
 
@@ -189,23 +186,6 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       // Header includes well-known metadata column names
       expect(lines[0]).toContain('Organisation Name')
       expect(lines[0]).toContain('Regulator')
-      expect(lines[0].split(',')).not.toContain('Year')
-    })
-
-    it('shows the Year column when its feature flag is on', async () => {
-      const server = await createServerWithRepos({
-        config: { featureFlags: { wasteRecordsExportYear: true } }
-      })
-
-      const response = await server.inject({
-        method: 'GET',
-        url: getWasteRecordsExportPath,
-        ...asServiceMaintainer()
-      })
-
-      await server.stop()
-
-      expect(response.payload.split('\n')[0].split(',')).toContain('Year')
     })
 
     it('streams a header row plus one data row for a single waste record', async () => {
