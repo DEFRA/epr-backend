@@ -30,7 +30,7 @@ import {
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { ExporterRegistration, Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */
 /** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
 
@@ -153,6 +153,24 @@ describe('findByOrganisationNumber', () => {
       },
       accreditations: {}
     })
+  })
+
+  it('gives an overseas site the time it is valid from, when it has one', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const stored = buildOrganisation({ registrations: [exporter()] })
+    const repository = await organisationReadRepositoryWith({
+      organisations: [stored],
+      overseasSites
+    })
+
+    const { overseasSites: sites } = /** @type {ExporterRegistration} */ (
+      (await findOrganisation(repository, stored.organisationNumber))
+        .registrations[EXPORTER_NUMBER]
+    )
+
+    expect(sites['001'].validFrom).toBe('2026-01-01T00:00:00.000Z')
+    expect(sites['002']).not.toHaveProperty('validFrom')
   })
 
   it("records on an exporter's accreditation whether each overseas site is approved", async ({

@@ -146,7 +146,8 @@ export const approvedOverseasSite = {
     postcode: '10115',
     country: 'Germany'
   },
-  coordinates: '52.5200,13.4050'
+  coordinates: '52.5200,13.4050',
+  validFrom: '2026-01-01T00:00:00.000Z'
 }
 
 export const pendingOverseasSite = {

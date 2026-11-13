@@ -14,9 +14,7 @@ import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/r
 import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
 /** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */
@@ -281,8 +279,8 @@ export const buildSubmissionHeaderRow = (dataFieldColumns) => [
 
 /**
  * @typedef {Object} BuildSubmissionDataRowInput
- * @property {Organisation} org
- * @property {Registration} registration
+ * @property {Pick<ReadModelOrganisation, 'name'>} org
+ * @property {Pick<ReadModelRegistration, 'submittedToRegulator'>} registration
  * @property {SummaryLogMeta | undefined} meta - The submission's stored cover sheet.
  * @property {string} submittedAt
  * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.
@@ -311,8 +309,8 @@ export const buildSubmissionDataRow = ({
   dataFieldColumns
 }) => {
   const metadata = [
-    uppercaseString(registration.submittedToRegulator),
-    org.companyDetails.name,
+    uppercaseString(registration.submittedToRegulator.code),
+    org.name,
     metaText(meta?.REGISTRATION_NUMBER),
     materialFromSpreadsheet(meta?.MATERIAL) ?? '',
     data.processingType,
