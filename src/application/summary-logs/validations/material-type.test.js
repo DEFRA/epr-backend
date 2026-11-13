@@ -1,8 +1,21 @@
 import { validateMaterialType } from './material-type.js'
 import {
   VALIDATION_CATEGORY,
+  VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
+import { materialFromSpreadsheet } from '#domain/summary-logs/stored-meta.js'
+
+/** @import {Registration} from '#organisation-read-model/domain/model.js' */
+
+/**
+ * A registration the read model serves with this material.
+ *
+ * @param {string} material
+ * @returns {Pick<Registration, 'material'>}
+ */
+const registeredAs = (material) =>
+  /** @type {Pick<Registration, 'material'>} */ ({ material })
 
 const mockLoggerInfo = vi.fn()
 
@@ -17,35 +30,6 @@ describe('validateMaterialType', () => {
     vi.resetAllMocks()
   })
 
-  it('returns fatal business error when registration has invalid material', () => {
-    const parsed = {
-      meta: {
-        REGISTRATION_NUMBER: { value: 'REG12345' },
-        MATERIAL: { value: 'Aluminium' }
-      }
-    }
-    const registration = {
-      material: 'invalid-material'
-    }
-
-    const result = validateMaterialType({
-      parsed,
-      registration,
-      loggingContext: 'test'
-    })
-
-    expect(result.isValid()).toBe(false)
-    expect(result.isFatal()).toBe(true)
-
-    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals).toHaveLength(1)
-    expect(fatals[0].message).toBe(
-      'Invalid summary log: registration has invalid material'
-    )
-    expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context?.actual).toBe('invalid-material')
-  })
-
   it('returns fatal business error when materials do not match', () => {
     const parsed = {
       meta: {
@@ -56,9 +40,7 @@ describe('validateMaterialType', () => {
         }
       }
     }
-    const registration = {
-      material: 'plastic'
-    }
+    const registration = registeredAs('plastic')
 
     const result = validateMaterialType({
       parsed,
@@ -97,9 +79,7 @@ describe('validateMaterialType', () => {
           MATERIAL: { value: spreadsheetMaterial }
         }
       }
-      const registration = {
-        material: registrationMaterial
-      }
+      const registration = registeredAs(registrationMaterial)
 
       const result = validateMaterialType({
         parsed,
@@ -127,9 +107,7 @@ describe('validateMaterialType', () => {
         MATERIAL: { value: spreadsheet }
       }
     }
-    const reg = {
-      material: registration
-    }
+    const reg = registeredAs(registration)
 
     const result = validateMaterialType({
       parsed,
@@ -140,167 +118,44 @@ describe('validateMaterialType', () => {
     expect(result.isValid()).toBe(true)
   })
 
-  describe('glass material validation', () => {
-    describe('registration-only operators', () => {
-      it.each([
-        ['Glass_remelt', ['glass_re_melt']],
-        ['Glass_other', ['glass_other']]
-      ])(
-        'passes when %s matches registration glassRecyclingProcess %s',
-        (spreadsheetMaterial, glassRecyclingProcess) => {
-          const parsed = {
-            meta: {
-              MATERIAL: { value: spreadsheetMaterial }
-            }
-          }
-          const registration = {
-            material: 'glass',
-            glassRecyclingProcess
-          }
+  describe('glass', () => {
+    it.each([
+      ['Glass_remelt', 'glass_re_melt'],
+      ['Glass_other', 'glass_other']
+    ])('passes when %s is uploaded against %s', (spreadsheet, material) => {
+      const result = validateMaterialType({
+        parsed: { meta: { MATERIAL: { value: spreadsheet } } },
+        registration: registeredAs(material),
+        loggingContext: 'test'
+      })
 
-          const result = validateMaterialType({
-            parsed,
-            registration,
-            loggingContext: 'test'
-          })
-
-          expect(result.isValid()).toBe(true)
-        }
-      )
-
-      it.each([
-        ['Glass_remelt', ['glass_other']],
-        ['Glass_other', ['glass_re_melt']]
-      ])(
-        'fails when %s does not match registration glassRecyclingProcess %s',
-        (spreadsheetMaterial, glassRecyclingProcess) => {
-          const parsed = {
-            meta: {
-              MATERIAL: { value: spreadsheetMaterial }
-            }
-          }
-          const registration = {
-            material: 'glass',
-            glassRecyclingProcess
-          }
-
-          const result = validateMaterialType({
-            parsed,
-            registration,
-            loggingContext: 'test'
-          })
-
-          expect(result.isValid()).toBe(false)
-        }
-      )
-
-      it.each([
-        ['Glass_remelt', 'plastic'],
-        ['Glass_other', 'plastic']
-      ])(
-        'fails when %s is uploaded against non-glass registration (%s)',
-        (spreadsheetMaterial, registrationMaterial) => {
-          const parsed = {
-            meta: {
-              MATERIAL: { value: spreadsheetMaterial }
-            }
-          }
-          const registration = {
-            material: registrationMaterial
-          }
-
-          const result = validateMaterialType({
-            parsed,
-            registration,
-            loggingContext: 'test'
-          })
-
-          expect(result.isValid()).toBe(false)
-        }
-      )
+      expect(result.isValid()).toBe(true)
     })
 
-    describe('accredited operators (via associated registration)', () => {
-      it.each([
-        ['Glass_remelt', ['glass_re_melt']],
-        ['Glass_other', ['glass_other']]
-      ])(
-        'passes when %s matches registration glassRecyclingProcess %s',
-        (spreadsheetMaterial, glassRecyclingProcess) => {
-          const parsed = {
-            meta: {
-              MATERIAL: { value: spreadsheetMaterial }
-            }
+    it.each([
+      ['Glass_remelt', 'glass_other'],
+      ['Glass_other', 'glass_re_melt'],
+      ['Glass_remelt', 'plastic'],
+      ['Plastic', 'glass_re_melt']
+    ])(
+      'fails when %s is uploaded against %s, naming both materials',
+      (spreadsheet, material) => {
+        const result = validateMaterialType({
+          parsed: { meta: { MATERIAL: { value: spreadsheet } } },
+          registration: registeredAs(material),
+          loggingContext: 'test'
+        })
+
+        const [fatal] = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+        expect(fatal).toMatchObject({
+          code: VALIDATION_CODE.MATERIAL_MISMATCH,
+          context: {
+            expected: materialFromSpreadsheet(spreadsheet),
+            actual: material
           }
-          const registration = {
-            material: 'glass',
-            glassRecyclingProcess,
-            accreditationId: 'acc-123'
-          }
-
-          const result = validateMaterialType({
-            parsed,
-            registration,
-            loggingContext: 'test'
-          })
-
-          expect(result.isValid()).toBe(true)
-        }
-      )
-
-      it.each([
-        ['Glass_remelt', ['glass_other']],
-        ['Glass_other', ['glass_re_melt']]
-      ])(
-        'fails when %s does not match registration glassRecyclingProcess %s',
-        (spreadsheetMaterial, glassRecyclingProcess) => {
-          const parsed = {
-            meta: {
-              MATERIAL: { value: spreadsheetMaterial }
-            }
-          }
-          const registration = {
-            material: 'glass',
-            glassRecyclingProcess,
-            accreditationId: 'acc-123'
-          }
-
-          const result = validateMaterialType({
-            parsed,
-            registration,
-            loggingContext: 'test'
-          })
-
-          expect(result.isValid()).toBe(false)
-        }
-      )
-
-      it.each([
-        ['Glass_remelt', 'aluminium'],
-        ['Glass_other', 'aluminium']
-      ])(
-        'fails when %s is uploaded against non-glass registration (%s)',
-        (spreadsheetMaterial, registrationMaterial) => {
-          const parsed = {
-            meta: {
-              MATERIAL: { value: spreadsheetMaterial }
-            }
-          }
-          const registration = {
-            material: registrationMaterial,
-            accreditationId: 'acc-123'
-          }
-
-          const result = validateMaterialType({
-            parsed,
-            registration,
-            loggingContext: 'test'
-          })
-
-          expect(result.isValid()).toBe(false)
-        }
-      )
-    })
+        })
+      }
+    )
   })
 
   it('categorizes material mismatch as fatal business error', () => {
@@ -309,9 +164,7 @@ describe('validateMaterialType', () => {
         MATERIAL: { value: 'Plastic' }
       }
     }
-    const registration = {
-      material: 'aluminium'
-    }
+    const registration = registeredAs('aluminium')
 
     const result = validateMaterialType({
       parsed,
@@ -331,9 +184,7 @@ describe('validateMaterialType', () => {
         MATERIAL: { value: 'Plastic' } // No location provided
       }
     }
-    const registration = {
-      material: 'steel'
-    }
+    const registration = registeredAs('steel')
 
     const result = validateMaterialType({
       parsed,
@@ -358,7 +209,7 @@ describe('validateMaterialType', () => {
           }
         }
       }
-      const registration = { material: 'aluminium' }
+      const registration = registeredAs('aluminium')
 
       const result = validateMaterialType({
         parsed,
@@ -387,7 +238,7 @@ describe('validateMaterialType', () => {
           MATERIAL: { value: null }
         }
       }
-      const registration = { material: 'aluminium' }
+      const registration = registeredAs('aluminium')
 
       const result = validateMaterialType({
         parsed,
@@ -406,7 +257,7 @@ describe('validateMaterialType', () => {
       const parsed = {
         meta: {}
       }
-      const registration = { material: 'aluminium' }
+      const registration = registeredAs('aluminium')
 
       const result = validateMaterialType({
         parsed,
@@ -427,7 +278,7 @@ describe('validateMaterialType', () => {
           MATERIAL: { value: 'NotARealMaterial' }
         }
       }
-      const registration = { material: 'aluminium' }
+      const registration = registeredAs('aluminium')
 
       const result = validateMaterialType({
         parsed,

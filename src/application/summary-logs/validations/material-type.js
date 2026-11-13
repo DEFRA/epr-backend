@@ -4,10 +4,7 @@ import {
   VALIDATION_CODE
 } from '#common/enums/validation.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import {
-  GLASS_PROCESS_MAP,
-  MATERIAL_MAP
-} from '#domain/summary-logs/stored-meta.js'
+import { materialFromSpreadsheet } from '#domain/summary-logs/stored-meta.js'
 import {
   buildMetaFieldLocation,
   extractMetaField,
@@ -15,45 +12,16 @@ import {
 } from './helpers.js'
 
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
-
-const VALID_REGISTRATION_MATERIALS = Object.values(MATERIAL_MAP)
-
-const validateGlassRecyclingProcess = ({
-  issues,
-  spreadsheetMaterial,
-  registration,
-  location
-}) => {
-  const requiredGlassProcess = GLASS_PROCESS_MAP[spreadsheetMaterial]
-
-  if (!requiredGlassProcess) {
-    return
-  }
-
-  const { glassRecyclingProcess } = registration
-
-  if (!glassRecyclingProcess?.includes(requiredGlassProcess)) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Glass recycling process does not match registration',
-      VALIDATION_CODE.MATERIAL_MISMATCH,
-      {
-        location,
-        expected: requiredGlassProcess,
-        actual: glassRecyclingProcess
-      }
-    )
-  }
-}
+/** @import {Registration} from '#organisation-read-model/domain/model.js' */
 
 /**
- * Validates that the material in the spreadsheet matches the registration's material type
- *
- * Uses functional validation pattern with helper functions instead of classes
+ * Validates that the material in the spreadsheet matches the registration's
+ * material. A glass spreadsheet names its recycling process, which the read
+ * model's material carries.
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure from the parser
- * @param {Object} params.registration - The registration object from the organisations repository
+ * @param {Pick<Registration, 'material'>} params.registration
  * @param {string} params.loggingContext - Logging context message
  * @returns {ValidationIssuesCollector} validation issues with any issues found
  */
@@ -64,7 +32,7 @@ export const validateMaterialType = ({
 }) => {
   const issues = createValidationIssues()
 
-  const { material: appliedForMaterial } = registration
+  const { material: registeredMaterial } = registration
 
   const materialField = extractMetaField(
     parsed,
@@ -77,7 +45,9 @@ export const validateMaterialType = ({
     SUMMARY_LOG_META_FIELDS.MATERIAL
   )
 
-  if (!spreadsheetMaterial || !MATERIAL_MAP[spreadsheetMaterial]) {
+  const expectedMaterial = materialFromSpreadsheet(spreadsheetMaterial)
+
+  if (!expectedMaterial) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Material is required and must be a recognised material type',
@@ -90,22 +60,7 @@ export const validateMaterialType = ({
     return issues
   }
 
-  if (!VALID_REGISTRATION_MATERIALS.includes(appliedForMaterial)) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has invalid material',
-      VALIDATION_CODE.MATERIAL_DATA_INVALID,
-      {
-        expected: VALID_REGISTRATION_MATERIALS,
-        actual: appliedForMaterial
-      }
-    )
-    return issues
-  }
-
-  const expectedMaterial = MATERIAL_MAP[spreadsheetMaterial]
-
-  if (expectedMaterial !== appliedForMaterial) {
+  if (expectedMaterial !== registeredMaterial) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Material does not match registration material',
@@ -113,21 +68,14 @@ export const validateMaterialType = ({
       {
         location,
         expected: expectedMaterial,
-        actual: appliedForMaterial
+        actual: registeredMaterial
       }
     )
     return issues
   }
 
-  validateGlassRecyclingProcess({
-    issues,
-    spreadsheetMaterial,
-    registration,
-    location
-  })
-
   logValidationSuccess(
-    `Validated material: ${loggingContext}, spreadsheetMaterial=${spreadsheetMaterial}, appliedForMaterial=${appliedForMaterial}`
+    `Validated material: ${loggingContext}, spreadsheetMaterial=${spreadsheetMaterial}, registeredMaterial=${registeredMaterial}`
   )
 
   return issues

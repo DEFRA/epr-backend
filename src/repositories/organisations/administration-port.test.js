@@ -14,6 +14,7 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/common/hapi-types.js',
   'src/non-prod-data-reset/mongodb.plugin.js',
   'src/repositories/form-submissions/mongodb.plugin.js',
+  'src/server/queue-consumer/queue-consumer.plugin.js',
 
   // Registration and accreditation administration
   'src/overseas-sites/application/process-import-file.js',
@@ -41,15 +42,11 @@ const ADMINISTRATION_PORT_MODULES = [
 
   // Domain code that still reads the legacy organisation shape. Each leaves
   // this list once it reads through the organisation read repository.
-  'src/application/summary-logs/registration-for-summary-log.js',
-  'src/application/summary-logs/validate.js',
   'src/overseas-sites/routes/accreditation-list.js',
   'src/overseas-sites/routes/registration-list.js',
   'src/packaging-recycling-notes/routes/list.js',
   'src/routes/organisations/at-natural-keys.js',
-  'src/routes/organisations/natural-keys.js',
-  'src/server/queue-consumer/summary-log-commands.js',
-  'src/server/queue-consumer/summary-log-handler-deps.js'
+  'src/routes/organisations/natural-keys.js'
 ]
 
 const productionModules = () =>

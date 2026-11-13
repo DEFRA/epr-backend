@@ -15,7 +15,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -383,7 +382,6 @@ describe('Submission and placeholder tests', () => {
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationAdministrationRepository,
         organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
@@ -391,8 +389,7 @@ describe('Submission and placeholder tests', () => {
         logger: mockLogger,
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
-        ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        )
       })
 
       const syncWasteRecords = syncFromSummaryLog({
@@ -823,7 +820,6 @@ describe('Submission and placeholder tests', () => {
         ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationAdministrationRepository,
         organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
@@ -832,8 +828,7 @@ describe('Submission and placeholder tests', () => {
         logger: mockLogger,
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
-        ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        )
       })
       server = await createTestServer({
         repositories: {

@@ -12,7 +12,6 @@ import {
   MAX_ACTUAL_LENGTH
 } from './validate.js'
 import { createEmptyLoadValidity } from './load-counts.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -368,7 +367,6 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
 describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
-  let organisationAdministrationRepository
   let summaryLogRowStatesRepository
   let ledgerRepository
   let validateSummaryLog
@@ -376,64 +374,91 @@ describe('SummaryLogsValidator', () => {
   let summaryLogId
   let summaryLog
 
+  /** The registration the read model serves, keyed by its number. */
+  let served
+
+  const serve = () =>
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue({
+      organisationNumber: FIXTURE_LEDGER.organisationNumber,
+      registrations: { [served.registrationNumber]: served.registration }
+    })
+
   /**
-   * The read model serves the registration with one accreditation for a year,
-   * approved from `approvedAt`.
+   * The registration's accreditations: one for `year`, approved from
+   * `approvedAt` and holding `status` today.
    *
-   * @param {{ registrationNumber?: string, wasteProcessingType?: string, accreditationNumber?: string, year: string, approvedAt: string, overseasSites?: Record<string, any> }} params
+   * @param {{ accreditationNumber?: string, year: string, approvedAt: string, status?: string, overseasSites?: Record<string, any> }} params
    */
-  const givenReadModelAccreditation = ({
-    registrationNumber = 'REG12345',
-    wasteProcessingType = 'reprocessor',
+  const accreditationsFor = ({
     accreditationNumber = 'ACC12345',
     year,
     approvedAt,
+    status = 'approved',
     overseasSites = {}
   }) => {
     const at = new Date(approvedAt).toISOString()
-    organisationReadRepository.findByOrganisationNumber.mockResolvedValue({
-      organisationNumber: FIXTURE_LEDGER.organisationNumber,
-      registrations: {
-        [registrationNumber]: {
-          wasteProcessingType,
-          accreditations: {
-            [year]: {
-              accreditationNumber,
-              status: {
-                current: 'approved',
-                timeline: [{ status: 'approved', at, updatedAt: at }]
-              },
-              overseasSites
-            }
-          }
-        }
+    return {
+      [year]: {
+        accreditationNumber,
+        status: {
+          current: status,
+          timeline: [{ status: 'approved', at, updatedAt: at }]
+        },
+        overseasSites
       }
-    })
+    }
   }
 
   /**
-   * The stored organisation holds the registration, and its accreditation
-   * when it has one. The read model serves that accreditation for the year of
-   * its `validFrom`, approved from then.
+   * The read model serves the registration's accreditations as given,
+   * replacing those it served.
+   *
+   * @param {Parameters<typeof accreditationsFor>[0] & { wasteProcessingType?: string }} params
+   */
+  const givenReadModelAccreditation = ({
+    wasteProcessingType = served.registration.wasteProcessingType,
+    ...accreditation
+  }) => {
+    served.registration = {
+      ...served.registration,
+      wasteProcessingType,
+      accreditations: accreditationsFor(accreditation)
+    }
+    serve()
+  }
+
+  /**
+   * The read model serves the registration, and its accreditation for the year
+   * of the accreditation's `validFrom`, approved from then. Glass names its
+   * recycling process, as the read model does.
    *
    * @param {Record<string, any>} registration
    */
-  const givenRegistration = ({ accreditation, ...registration }) => {
-    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
-      {
-        registrations: [{ overseasSites: {}, ...registration }],
-        accreditations: accreditation ? [accreditation] : []
+  const givenRegistration = ({
+    registrationNumber,
+    wasteProcessingType,
+    reprocessingType,
+    material,
+    glassRecyclingProcess,
+    accreditation
+  }) => {
+    served = {
+      registrationNumber,
+      registration: {
+        wasteProcessingType,
+        ...(reprocessingType && { reprocessingType }),
+        ...(wasteProcessingType === 'exporter' && { overseasSites: {} }),
+        material: material === 'glass' ? glassRecyclingProcess[0] : material,
+        accreditations: accreditation
+          ? accreditationsFor({
+              accreditationNumber: accreditation.accreditationNumber,
+              year: accreditation.validFrom.slice(0, 4),
+              approvedAt: accreditation.validFrom
+            })
+          : {}
       }
-    )
-    if (accreditation) {
-      givenReadModelAccreditation({
-        registrationNumber: registration.registrationNumber,
-        wasteProcessingType: registration.wasteProcessingType,
-        accreditationNumber: accreditation.accreditationNumber,
-        year: accreditation.validFrom.slice(0, 4),
-        approvedAt: accreditation.validFrom
-      })
     }
+    serve()
   }
 
   beforeEach(async () => {
@@ -448,9 +473,6 @@ describe('SummaryLogsValidator', () => {
       })
     }
 
-    organisationAdministrationRepository = {
-      findByOrganisationNumber: vi.fn()
-    }
     organisationReadRepository = { findByOrganisationNumber: vi.fn() }
     givenRegistration({
       id: 'reg-123',
@@ -504,9 +526,6 @@ describe('SummaryLogsValidator', () => {
     validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
-      organisationAdministrationRepository: /** @type {any} */ (
-        organisationAdministrationRepository
-      ),
       organisationReadRepository: /** @type {any} */ (
         organisationReadRepository
       ),
@@ -515,7 +534,6 @@ describe('SummaryLogsValidator', () => {
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
   })
@@ -725,78 +743,17 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
-  it.each([
-    {
-      missing: 'organisation',
-      stored: null,
-      message: 'Organisation with number 500000 not found'
-    },
-    {
-      missing: 'registration',
-      stored: { registrations: [], accreditations: [] },
-      message: 'Registration with number REG12345 not found'
-    },
-    {
-      missing: 'accreditation',
-      stored: {
-        registrations: [{ registrationNumber: 'REG12345' }],
-        accreditations: []
-      },
-      message: 'Accreditation with number ACC12345 not found'
-    }
-  ])(
-    'marks the summary log invalid when no $missing holds its number',
-    async ({ stored, message }) => {
-      summaryLog.organisationNumber = '500000'
-      organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
-        stored
-      )
-
-      await validateSummaryLog(summaryLogId).catch((err) => err)
-
-      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
-        'summary-log-123',
-        1,
-        expect.objectContaining({
-          status: SUMMARY_LOG_STATUS.INVALID,
-          validation: expect.objectContaining({
-            issues: [
-              {
-                severity: 'fatal',
-                category: 'technical',
-                message,
-                code: 'VALIDATION_SYSTEM_ERROR'
-              }
-            ]
-          })
-        })
-      )
-    }
-  )
-
   it('validates against the accreditation holding the summary log number', async () => {
     summaryLog.accreditationNumber = 'ACC99999'
-    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
-      {
-        registrations: [
-          {
-            registrationNumber: 'REG12345',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            material: 'aluminium'
-          }
-        ],
-        accreditations: [
-          { accreditationNumber: 'ACC12345' },
-          { accreditationNumber: 'ACC99999' }
-        ]
-      }
-    )
-    givenReadModelAccreditation({
-      accreditationNumber: 'ACC99999',
-      year: '2026',
-      approvedAt: '2026-01-01'
-    })
+    served.registration.accreditations = {
+      ...accreditationsFor({ year: '2025', approvedAt: '2025-01-01' }),
+      ...accreditationsFor({
+        accreditationNumber: 'ACC99999',
+        year: '2026',
+        approvedAt: '2026-01-01'
+      })
+    }
+    serve()
 
     await validateSummaryLog(summaryLogId)
 
@@ -815,29 +772,29 @@ describe('SummaryLogsValidator', () => {
   it.each([
     {
       missing: 'organisation',
-      served: null,
-      message: 'Organisation not found: 500123'
+      organisation: null,
+      message: 'Organisation with number 500123 not found'
     },
     {
       missing: 'registration',
-      served: { organisationNumber: '500123', registrations: {} },
-      message: 'Registration not found: REG12345'
+      organisation: { organisationNumber: '500123', registrations: {} },
+      message: 'Registration with number REG12345 not found'
     },
     {
       missing: 'accreditation',
-      served: {
+      organisation: {
         organisationNumber: '500123',
         registrations: {
           REG12345: { wasteProcessingType: 'reprocessor', accreditations: {} }
         }
       },
-      message: 'Accreditation not found: ACC12345'
+      message: 'Accreditation with number ACC12345 not found'
     }
   ])(
     'marks the summary log invalid when the read model does not serve its $missing',
-    async ({ served, message }) => {
+    async ({ organisation, message }) => {
       organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
-        served
+        organisation
       )
 
       await validateSummaryLog(summaryLogId)
@@ -1157,9 +1114,6 @@ describe('SummaryLogsValidator', () => {
     const brokenValidate = createSummaryLogsValidator({
       logger,
       summaryLogsRepository: brokenRepository,
-      organisationAdministrationRepository: /** @type {any} */ (
-        organisationAdministrationRepository
-      ),
       organisationReadRepository: /** @type {any} */ (
         organisationReadRepository
       ),
@@ -1168,7 +1122,6 @@ describe('SummaryLogsValidator', () => {
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
 
@@ -1208,9 +1161,6 @@ describe('SummaryLogsValidator', () => {
     const validateWithBrokenReports = createSummaryLogsValidator({
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
-      organisationAdministrationRepository: /** @type {any} */ (
-        organisationAdministrationRepository
-      ),
       organisationReadRepository: /** @type {any} */ (
         organisationReadRepository
       ),
@@ -1219,7 +1169,6 @@ describe('SummaryLogsValidator', () => {
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
       }),
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
 
@@ -1246,9 +1195,6 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       // Should NOT fetch registration (Level 2 meta business validation skipped)
-      expect(
-        organisationAdministrationRepository.findByOrganisationNumber
-      ).not.toHaveBeenCalled()
       expect(
         organisationReadRepository.findByOrganisationNumber
       ).not.toHaveBeenCalled()
@@ -1328,7 +1274,7 @@ describe('SummaryLogsValidator', () => {
 
       // Should fetch registration (Level 2 ran)
       expect(
-        organisationAdministrationRepository.findByOrganisationNumber
+        organisationReadRepository.findByOrganisationNumber
       ).toHaveBeenCalled()
 
       // Should have data syntax errors

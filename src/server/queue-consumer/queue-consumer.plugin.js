@@ -69,6 +69,8 @@ export const commandQueueConsumerPlugin = {
         ? {
             orsImportsRepository: server.app.orsImportsRepository,
             overseasSitesRepository: server.app.overseasSitesRepository,
+            organisationAdministrationRepository:
+              server.app.organisationAdministrationRepository,
             uploadsRepository,
             systemLogsRepository: server.app.systemLogsRepository
           }
