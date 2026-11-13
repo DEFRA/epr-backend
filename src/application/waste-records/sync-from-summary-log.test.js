@@ -59,9 +59,8 @@ const accreditationNumbered = (accreditationNumber) => ({
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
     current: 'approved',
-    timeline: [
-      { status: 'approved', at: APPROVED_FROM, updatedAt: APPROVED_FROM }
-    ]
+    lastUpdatedAt: APPROVED_FROM,
+    timeline: [{ status: 'approved', at: APPROVED_FROM }]
   }
 })
 

@@ -1,4 +1,4 @@
-/** @import {AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
+/** @import {StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
 /** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
 
 /**
@@ -14,7 +14,7 @@
  */
 
 /**
- * @typedef {StatusHistoryEntryOf<AccreditationStatus>} StatusHistoryEntry
+ * @typedef {StatusHistoryEntryOf<StoredAccreditationStatus>} StatusHistoryEntry
  */
 
 /**
@@ -25,7 +25,7 @@
  */
 
 /**
- * @typedef {StatusHistoryOf<AccreditationStatus>} StatusHistory
+ * @typedef {StatusHistoryOf<StoredAccreditationStatus>} StatusHistory
  */
 
 /**
@@ -85,7 +85,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber;
- *  status: Extract<AccreditationStatus, 'approved'|'suspended'>;
+ *  status: StoredAccreditationStatus;
  *  validFrom: string;
  *  validTo: string
  * }} AccreditationApproved
@@ -94,7 +94,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber | null;
- *  status: Extract<AccreditationStatus, 'created'|'rejected'|'cancelled'>;
+ *  status: StoredAccreditationStatus;
  *  validFrom?: string;
  *  validTo?: string
  * }} AccreditationOther

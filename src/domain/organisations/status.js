@@ -5,7 +5,7 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 
-/** @import { AccreditationStatus, RegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus, StoredRegistrationStatus } from '#domain/organisations/model.js' */
 
 const VALID_ORG_TRANSITIONS = {
   [ORGANISATION_STATUS.CREATED]: [
@@ -23,7 +23,7 @@ const VALID_ORG_TRANSITIONS = {
 // Registrations cannot be suspended (PAE-1705): a registration is either live
 // or terminated, so approved -> cancelled is direct and there is no suspended
 // node at all.
-/** @type {Record<RegistrationStatus, RegistrationStatus[]>} */
+/** @type {Record<StoredRegistrationStatus, StoredRegistrationStatus[]>} */
 const VALID_REG_TRANSITIONS = {
   [REGISTRATION_STATUS.CREATED]: [
     REGISTRATION_STATUS.APPROVED,
@@ -40,7 +40,7 @@ const VALID_REG_TRANSITIONS = {
 // Accreditations keep suspension and may only reach cancelled via suspended
 // (ADR 0042). The registration-cancellation cascade bypasses this table by
 // design — cancelling a registration force-cancels its linked accreditation.
-/** @type {Record<AccreditationStatus, AccreditationStatus[]>} */
+/** @type {Record<StoredAccreditationStatus, StoredAccreditationStatus[]>} */
 const VALID_ACC_TRANSITIONS = {
   [ACCREDITATION_STATUS.CREATED]: [
     ACCREDITATION_STATUS.APPROVED,

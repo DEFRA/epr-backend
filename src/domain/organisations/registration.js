@@ -1,6 +1,6 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
-/** @import {AppliedForMaterial, GlassRecyclingProcess, RegistrationStatus, RegulatorValue, ReprocessingType, TimeScale, User, WastePermitType, WasteProcessingTypeValue} from '#domain/organisations/model.js' */
+/** @import {AppliedForMaterial, GlassRecyclingProcess, StoredRegistrationStatus, RegulatorValue, ReprocessingType, TimeScale, User, WastePermitType, WasteProcessingTypeValue} from '#domain/organisations/model.js' */
 /** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
@@ -125,7 +125,7 @@
  * — required (min 1) for a reprocessor, forbidden for an exporter. Not
  * modelled as a discriminated union here — `?` is the pragmatic JSDoc
  * approximation.
- * @typedef {{ id: string } & StatusHistoryOf<RegistrationStatus> & {
+ * @typedef {{ id: string } & StatusHistoryOf<StoredRegistrationStatus> & {
  *  accreditation: Accreditation | null;
  *  accreditationId?: string;
  *  applicationContactDetails: User;
@@ -155,7 +155,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: RegistrationNumber;
- *  status: Extract<RegistrationStatus, 'approved'>;
+ *  status:StoredRegistrationStatus;
  *  validFrom: string;
  * }} RegistrationApproved
  */
@@ -163,7 +163,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: RegistrationNumber | null;
- *  status: Extract<RegistrationStatus, 'created'|'rejected'|'cancelled'>;
+ *  status: StoredRegistrationStatus;
  *  validFrom?: string;
  * }} RegistrationOther
  */
@@ -178,7 +178,7 @@
  * carries its registration number and validFrom.
  * @typedef {RegistrationBase & {
  *  registrationNumber: RegistrationNumber;
- *  status: Extract<RegistrationStatus, 'approved'|'cancelled'>;
+ *  status: Extract<StoredRegistrationStatus, 'approved'|'cancelled'>;
  *  validFrom: string;
  * }} ReportableRegistration
  */

@@ -2,6 +2,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
+import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -108,22 +109,17 @@ const servesAccreditedReport = (registration, year) => {
 
 /**
  * The day the year's accreditation took effect: its validFrom, which the read
- * model dates the approval after its last re-creation at. An approval before a
- * re-creation does not count.
+ * model dates its approval at.
  *
  * @param {Registration} registration
  * @param {Year} year
  * @returns {CalendarDate | undefined}
  */
 export const accreditedFrom = (registration, year) => {
-  const timeline = registration.accreditations[year]?.status.timeline ?? []
-  const lastCreated = timeline.findLastIndex(
-    ({ status }) => status === 'created'
+  const approvedAt = firstApprovedAt(
+    registration.accreditations[year]?.status.timeline ?? []
   )
-  const approval = timeline
-    .slice(lastCreated + 1)
-    .find(({ status }) => status === 'approved')
-  return approval && calendarDate(approval.at)
+  return approvedAt === undefined ? undefined : calendarDate(approvedAt)
 }
 
 /**

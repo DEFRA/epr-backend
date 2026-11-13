@@ -8,7 +8,7 @@ import { registrationStatusHistoryPayloadSchema } from './registration-status-hi
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
-/** @typedef {import('#domain/organisations/model.js').RegistrationStatus} RegistrationStatus */
+/** @typedef {import('#domain/organisations/model.js').StoredRegistrationStatus} StoredRegistrationStatus */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 export const registrationStatusHistoryPath =
@@ -29,10 +29,10 @@ export const registrationStatusHistory = {
 
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<
-   *    { fromStatus: RegistrationStatus, toStatus: RegistrationStatus } |
+   *    { fromStatus: StoredRegistrationStatus, toStatus: StoredRegistrationStatus } |
    *    {
-   *      fromStatus: RegistrationStatus,
-   *      toStatus: RegistrationStatus,
+   *      fromStatus: StoredRegistrationStatus,
+   *      toStatus: StoredRegistrationStatus,
    *      validFrom: string,
    *      registrationNumber: RegistrationNumber
    *    }

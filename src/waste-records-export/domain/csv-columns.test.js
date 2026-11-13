@@ -25,6 +25,7 @@ describe('csv-columns', () => {
   const contact = { email: 'test@example.com', fullName: 'Test User' }
   const readModelStatus = {
     current: /** @type {const} */ ('approved'),
+    lastUpdatedAt: undefined,
     timeline: []
   }
 
@@ -37,7 +38,6 @@ describe('csv-columns', () => {
     status: readModelStatus,
     submittedToRegulator: { code: 'ea' },
     submitterContactDetails: contact,
-    validFrom: '2026-01-01',
     wasteProcessingType: 'reprocessor',
     reprocessingType: 'input',
     site: { address: { fullAddress: '1 High St' } },

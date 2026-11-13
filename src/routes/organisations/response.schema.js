@@ -58,20 +58,23 @@ const overseasSitesViewSchema = Joi.object()
 const accreditedOverseasSitesViewSchema =
   accreditedOverseasSitesSchema.required()
 
-const statusTimelineSchema = Joi.array()
-  .items(
-    Joi.object({
-      at: isoDateTime.required().description('When the change takes effect.'),
-      updatedAt: isoDateTime
-        .required()
-        .description('When the change was recorded.'),
-      status: Joi.string().required()
-    })
-  )
-  .description(
-    'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
-  )
-  .required()
+/**
+ * @param {readonly string[]} statuses
+ */
+const statusTimelineSchema = (statuses) =>
+  Joi.array()
+    .items(
+      Joi.object({
+        at: isoDateTime.required().description('When the change takes effect.'),
+        status: Joi.string()
+          .valid(...statuses)
+          .required()
+      })
+    )
+    .description(
+      'Every status change, oldest first. Changes that share a time are in the order they were recorded.'
+    )
+    .required()
 
 /**
  * @param {readonly string[]} statuses
@@ -81,7 +84,10 @@ const statusSchema = (statuses) =>
     current: Joi.string()
       .valid(...statuses)
       .required(),
-    timeline: statusTimelineSchema
+    lastUpdatedAt: isoDateTime.description(
+      'When the last change in the timeline was recorded.'
+    ),
+    timeline: statusTimelineSchema(statuses)
   }).required()
 
 const accreditationCommon = {
@@ -137,8 +143,7 @@ const registrationCommon = {
   material: materialSchema.required(),
   standingByDate: standingByDateSchema,
   status: statusSchema(REGISTRATION_STATUSES),
-  submittedToRegulator: regulatorSchema,
-  validFrom: isoDate.required()
+  submittedToRegulator: regulatorSchema
 }
 
 const registrationViewSchema = Joi.alternatives().try(

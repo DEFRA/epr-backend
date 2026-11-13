@@ -14,7 +14,7 @@ const YEAR = toYear(2026)
 const accreditation = {
   accreditationNumber: toAccreditationNumber('A26ER5001180114PL'),
   prnIssuance: { tonnageBand: 'up_to_500' },
-  status: { current: 'suspended', timeline: [] }
+  status: { current: 'suspended', lastUpdatedAt: undefined, timeline: [] }
 }
 
 /**

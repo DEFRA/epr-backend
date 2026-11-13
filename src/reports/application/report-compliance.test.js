@@ -10,7 +10,7 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration,
@@ -33,11 +33,7 @@ const registeredOnlyOrg = () =>
   buildReadOrganisation({
     registrations: {
       REG1: buildReadReprocessorRegistration({
-        validFrom: '2026-01-01',
-        status: {
-          current: 'approved',
-          timeline: approvedTimelineFrom('2026-01-01')
-        },
+        status: approvedStatusFrom('2026-01-01'),
         standingByDate: {
           2026: { '2026-01-01': { standing: 'registeredOnly' } }
         }
@@ -465,11 +461,7 @@ describe('generateReportCompliance', () => {
       buildReadOrganisation({
         registrations: {
           [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-            validFrom: '2026-01-01',
-            status: {
-              current: 'approved',
-              timeline: approvedTimelineFrom('2026-01-01')
-            },
+            status: approvedStatusFrom('2026-01-01'),
             standingByDate: {
               2026:
                 accreditedFrom === '2026-01-01'
@@ -481,10 +473,7 @@ describe('generateReportCompliance', () => {
             },
             accreditations: {
               2026: buildReadAccreditation({
-                status: {
-                  current: 'approved',
-                  timeline: approvedTimelineFrom(accreditedFrom)
-                }
+                status: approvedStatusFrom(accreditedFrom)
               })
             }
           })

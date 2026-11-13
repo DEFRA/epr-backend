@@ -12,7 +12,7 @@ import {
   UnauthorisedTransitionError
 } from './model.js'
 
-/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
 /** @import {PrnStatus} from './model.js' */
 
 describe('PRN_STATUS_TRANSITIONS', () => {
@@ -187,10 +187,10 @@ describe('transitionRefusal', () => {
 })
 
 describe('issuanceRefusal', () => {
-  /** @type {AccreditationStatus[]} */
+  /** @type {StoredAccreditationStatus[]} */
   const issuableStatuses = ['approved', 'created', 'rejected']
 
-  /** @type {AccreditationStatus[]} */
+  /** @type {StoredAccreditationStatus[]} */
   const blockedStatuses = ['suspended', 'cancelled']
 
   it.each(issuableStatuses)(

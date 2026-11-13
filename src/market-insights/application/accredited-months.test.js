@@ -14,7 +14,7 @@ import { accreditedMonths } from './accredited-months.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
@@ -24,7 +24,7 @@ const granted = [
 ]
 
 /**
- * @param {AccreditationStatus} status
+ * @param {StoredAccreditationStatus} status
  * @param {string} updatedAt
  */
 const then = (status, updatedAt) => ({ status, updatedAt })
@@ -33,7 +33,7 @@ const then = (status, updatedAt) => ({ status, updatedAt })
  * An organisation holding one reprocessor registration and its accreditation.
  *
  * @param {{
- *   statusHistory?: { status: AccreditationStatus, updatedAt: string }[],
+ *   statusHistory?: { status: StoredAccreditationStatus, updatedAt: string }[],
  *   validFrom?: string,
  *   validTo?: string
  * }} [accreditation]

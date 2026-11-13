@@ -3,12 +3,12 @@
  */
 
 /** @import {AppliedForMaterial, Material, TonnageBand} from '#domain/organisations/model.js' */
-/** @import {Organisation, Registration, StatusTimeline} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData, ReportComplianceEntry} from '#reports/application/report-compliance.js' */
 
+import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 import {
-  ACCREDITATION_STATUS,
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   WASTE_PROCESSING_TYPE
@@ -61,23 +61,6 @@ function buildReportComplianceFields(periods, submittedDates) {
 }
 
 /**
- * @param {StatusTimeline} timeline
- * @returns {string | undefined}
- */
-const firstApprovedAt = (timeline) =>
-  timeline.find(({ status }) => status === ACCREDITATION_STATUS.APPROVED)?.at
-
-/**
- * @param {StatusTimeline} timeline
- * @returns {string | undefined}
- */
-const lastRecordedAt = (timeline) =>
-  timeline
-    .map(({ updatedAt }) => updatedAt)
-    .toSorted((one, other) => one.localeCompare(other))
-    .at(-1)
-
-/**
  * @param {Organisation} organisation
  * @param {string} registrationNumber
  * @param {Registration} registration
@@ -91,7 +74,6 @@ function transformRegAcc(
   reportComplianceFields
 ) {
   const accreditation = registration.accreditations[currentUtcYear()]
-  const timeline = accreditation?.status.timeline ?? []
   return {
     type: capitalize(registration.wasteProcessingType),
     businessName: organisation.name,
@@ -118,8 +100,10 @@ function transformRegAcc(
     tonnageBand: formatTonnageBand(
       /** @type {TonnageBand} */ (accreditation?.prnIssuance.tonnageBand)
     ),
-    activeDate: formatDate(firstApprovedAt(timeline)),
-    dateLastChanged: formatDate(lastRecordedAt(timeline)),
+    activeDate: formatDate(
+      firstApprovedAt(accreditation?.status.timeline ?? [])
+    ),
+    dateLastChanged: formatDate(accreditation?.status.lastUpdatedAt),
     ...reportComplianceFields
   }
 }

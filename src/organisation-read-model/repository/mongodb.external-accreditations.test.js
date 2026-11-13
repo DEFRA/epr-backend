@@ -8,6 +8,7 @@ import {
   ACCREDITATION_NUMBER,
   APPROVED_SITE_ID,
   EXPORTER_NUMBER,
+  GRANTED_AT,
   MISSING_SITE_ID,
   REPROCESSOR_NUMBER,
   accreditation,
@@ -31,20 +32,19 @@ const externalAccreditation2027 = {
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
     current: 'approved',
-    timeline: [
-      {
-        status: 'approved',
-        at: '2027-01-01T00:00:00.000Z',
-        updatedAt: '2026-12-14T10:31:00.000Z'
-      }
-    ]
+    lastUpdatedAt: '2026-12-14T10:31:00.000Z',
+    timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
   }
 }
 
 const storedAccreditation2026 = {
   accreditationNumber: ACCREDITATION_NUMBER,
   prnIssuance: { tonnageBand: 'over_10000' },
-  status: { current: 'approved', timeline: approvedTimeline('2026-07-01') }
+  status: {
+    current: 'approved',
+    lastUpdatedAt: GRANTED_AT,
+    timeline: approvedTimeline('2026-07-01')
+  }
 }
 
 /** A reprocessor holding a stored 2026 accreditation. */

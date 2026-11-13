@@ -26,18 +26,17 @@ const siteAddress = {
 }
 
 /**
- * @param {string} status
+ * @template {string} S
+ * @param {S} status
  * @param {string} at
- * @param {string} [updatedAt]
- * @returns {StatusTimeline[number]}
+ * @returns {{ status: S, at: string }}
  */
-const change = (status, at, updatedAt = at) => ({ status, at, updatedAt })
+const change = (status, at) => ({ status, at })
 
-/** @type {StatusTimeline} */
-const approvedTimeline = [
-  change('created', '2025-11-03T09:00:00.000Z'),
-  change('approved', '2026-01-01T00:00:00.000Z', '2026-01-05T09:12:00.000Z')
-]
+/** @type {StatusTimeline<'approved'>} */
+const approvedTimeline = [change('approved', '2026-01-01T00:00:00.000Z')]
+
+const APPROVAL_RECORDED_AT = '2026-01-05T09:12:00.000Z'
 
 /**
  * @param {Partial<AccreditationCommon>} [overrides]
@@ -46,7 +45,11 @@ const approvedTimeline = [
 const accreditation = (overrides = {}) => ({
   accreditationNumber: /** @type {any} */ ('A26ER5000010001PL'),
   prnIssuance: { tonnageBand: 'up_to_10000' },
-  status: { current: 'approved', timeline: approvedTimeline },
+  status: {
+    current: 'approved',
+    lastUpdatedAt: APPROVAL_RECORDED_AT,
+    timeline: approvedTimeline
+  },
   ...overrides
 })
 
@@ -57,7 +60,11 @@ const accreditation = (overrides = {}) => ({
 const reprocessor = (overrides = {}) =>
   partialMock({
     material: 'plastic',
-    status: { current: 'approved', timeline: approvedTimeline },
+    status: {
+      current: 'approved',
+      lastUpdatedAt: APPROVAL_RECORDED_AT,
+      timeline: approvedTimeline
+    },
     submittedToRegulator: { code: 'ea' },
     wasteProcessingType: 'reprocessor',
     site: { address: siteAddress },
@@ -72,7 +79,11 @@ const reprocessor = (overrides = {}) =>
 const exporter = (overrides = {}) =>
   partialMock({
     material: 'aluminium',
-    status: { current: 'approved', timeline: approvedTimeline },
+    status: {
+      current: 'approved',
+      lastUpdatedAt: APPROVAL_RECORDED_AT,
+      timeline: approvedTimeline
+    },
     submittedToRegulator: { code: 'nrw' },
     wasteProcessingType: 'exporter',
     overseasSites: {},
@@ -202,6 +213,7 @@ describe('transform', () => {
               prnIssuance: { tonnageBand },
               status: {
                 current: /** @type {any} */ (current),
+                lastUpdatedAt: APPROVAL_RECORDED_AT,
                 timeline: approvedTimeline
               }
             })
@@ -240,6 +252,7 @@ describe('transform', () => {
           2026: accreditation({
             status: {
               current: 'approved',
+              lastUpdatedAt: '2026-03-30T09:00:00.000Z',
               timeline: [
                 change('approved', '2026-02-01T00:00:00.000Z'),
                 change('cancelled', '2026-03-10T09:00:00.000Z'),
@@ -261,6 +274,7 @@ describe('transform', () => {
           2026: accreditation({
             status: {
               current: 'suspended',
+              lastUpdatedAt: '2026-02-01T00:00:00.000Z',
               timeline: [change('suspended', '2026-02-01T00:00:00.000Z')]
             }
           })
@@ -278,12 +292,9 @@ describe('transform', () => {
           2026: accreditation({
             status: {
               current: 'suspended',
+              lastUpdatedAt: '2026-03-20T09:00:00.000Z',
               timeline: [
-                change(
-                  'approved',
-                  '2026-01-01T00:00:00.000Z',
-                  '2026-03-20T09:00:00.000Z'
-                ),
+                change('approved', '2026-01-01T00:00:00.000Z'),
                 change('suspended', '2026-03-01T09:00:00.000Z')
               ]
             }

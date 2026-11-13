@@ -74,11 +74,12 @@ describe('toReadModelOrganisations', () => {
     config.reset('openNextYear')
   })
 
-  it('dates each status change at its own time even when the history is stored out of order', async () => {
+  it('sorts changes by when they were recorded, even when the history is stored out of order', async () => {
     const reinstated = accreditation({
+      validFrom: '2026-01-01',
       statusHistory: [
-        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
-        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+        { status: 'created', updatedAt: '2025-12-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2025-12-15T09:00:00.000Z' },
         { status: 'cancelled', updatedAt: '2026-03-01T15:00:00.000Z' },
         { status: 'suspended', updatedAt: '2026-03-01T12:00:00.000Z' }
       ]
@@ -91,26 +92,9 @@ describe('toReadModelOrganisations', () => {
     )
 
     expect(registration.accreditations[2026].status.timeline).toEqual([
-      {
-        status: 'created',
-        at: '2026-01-01T09:00:00.000Z',
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: 'suspended',
-        at: '2026-03-01T12:00:00.000Z',
-        updatedAt: '2026-03-01T12:00:00.000Z'
-      },
-      {
-        status: 'cancelled',
-        at: '2026-03-01T15:00:00.000Z',
-        updatedAt: '2026-03-01T15:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-07-01T00:00:00.000Z',
-        updatedAt: '2026-02-01T09:00:00.000Z'
-      }
+      { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
+      { status: 'suspended', at: '2026-03-01T12:00:00.000Z' },
+      { status: 'cancelled', at: '2026-03-01T15:00:00.000Z' }
     ])
   })
 
@@ -215,17 +199,9 @@ describe('toReadModelOrganisations', () => {
     )
 
     expect(registration.status.current).toBe('approved')
-    expect(registration.accreditations[2026].status.timeline).toEqual([
-      {
-        status: 'created',
-        at: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-10-14T14:30:47.171Z'
-      },
-      {
-        status: 'approved',
-        at: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-10-14T14:30:47.204Z'
-      }
-    ])
+    expect(registration.accreditations[2026].status).toMatchObject({
+      lastUpdatedAt: '2026-10-14T14:30:47.204Z',
+      timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+    })
   })
 })
