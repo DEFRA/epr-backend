@@ -17,6 +17,7 @@ import {
 } from './base.js'
 import {
   dateRequiredWhenApprovedOrSuspended,
+  notBeforeMinYear,
   requiredWhenApprovedOrSuspended,
   whenExporter,
   whenMaterial,
@@ -52,7 +53,7 @@ export const accreditationSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(ACCREDITATION_STATUS))
     .forbidden(),
-  validFrom: dateRequiredWhenApprovedOrSuspended(),
+  validFrom: notBeforeMinYear(dateRequiredWhenApprovedOrSuspended()),
   validTo: dateRequiredWhenApprovedOrSuspended(),
   accreditationNumber: normalisedAccreditationNumberSchema.when(
     'status',

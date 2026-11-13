@@ -22,6 +22,7 @@ import { yearlyMetricsSchema } from './metrics.js'
 import {
   CURRENT_SCHEMA_VERSION,
   dateRequiredWhenApproved,
+  notBeforeMinYear,
   requiredForExporterOptionalForReprocessor,
   requiredForReprocessor,
   requiredForReprocessorOptionalForExporter,
@@ -80,7 +81,7 @@ export const registrationSchema = Joi.object({
     requiredWhenApproved
   ),
   reprocessingType: makeReprocessingTypeSchema(requiredWhenApproved),
-  validFrom: dateRequiredWhenApproved(),
+  validFrom: notBeforeMinYear(dateRequiredWhenApproved()),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),

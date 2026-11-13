@@ -450,6 +450,34 @@ describe('PUT /v1/organisations/{id}', () => {
     )
   })
 
+  it.for(['registrations', 'accreditations'])(
+    'rejects a validFrom before 2024 on %s',
+    async (collection) => {
+      const org = await createOrganisation()
+      const [first, ...others] = org[collection]
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: {
+            ...org,
+            [collection]: [{ ...first, validFrom: '2015-03-01' }, ...others]
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(JSON.parse(response.payload).message).toBe(
+        `Invalid organisation data: ${collection}.0.validFrom: must be in 2024 or later`
+      )
+    }
+  )
+
   testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => {
