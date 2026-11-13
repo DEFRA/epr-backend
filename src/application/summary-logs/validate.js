@@ -1,4 +1,6 @@
 /** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
+import Boom from '@hapi/boom'
+
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -40,6 +42,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
@@ -86,23 +89,47 @@ const extractSummaryLog = async ({
 }
 
 /**
- * The accreditation a summary log is validated against: the one it stored,
- * or none for a registered-only summary log.
+ * The accreditation a summary log is validated against: the one holding its
+ * number, or none for a registered-only summary log.
  *
+ * @param {Organisation} organisation
+ * @param {SubmittedSummaryLog} summaryLog
+ * @returns {Registration['accreditation']}
+ */
+const accreditationFor = (organisation, { accreditationNumber }) => {
+  if (accreditationNumber === null) {
+    return null
+  }
+  const accreditation = organisation.accreditations.find(
+    (candidate) => candidate.accreditationNumber === accreditationNumber
+  )
+  if (!accreditation) {
+    throw Boom.notFound(
+      `Accreditation with number ${accreditationNumber} not found`
+    )
+  }
+  return accreditation
+}
+
+/**
  * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SubmittedSummaryLog} summaryLog
- * @returns {Promise<Registration['accreditation']>}
+ * @returns {Promise<Organisation>}
  */
-const accreditationFor = async (
+const organisationFor = async (
   organisationAdministrationRepository,
-  { organisationId, accreditationId }
+  { organisationNumber }
 ) => {
-  return accreditationId === null
-    ? null
-    : organisationAdministrationRepository.findAccreditationById(
-        organisationId,
-        accreditationId
-      )
+  const organisation =
+    await organisationAdministrationRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  if (!organisation) {
+    throw Boom.notFound(
+      `Organisation with number ${organisationNumber} not found`
+    )
+  }
+  return organisation
 }
 
 /**
@@ -120,17 +147,22 @@ const fetchRegistration = async ({
   loggingContext,
   logger
 }) => {
-  const currentRegistration =
-    await organisationAdministrationRepository.findRegistrationById(
-      summaryLog.organisationId,
-      summaryLog.registrationId
+  const organisation = await organisationFor(
+    organisationAdministrationRepository,
+    summaryLog
+  )
+  const currentRegistration = organisation.registrations.find(
+    (candidate) =>
+      candidate.registrationNumber === summaryLog.registrationNumber
+  )
+  if (!currentRegistration) {
+    throw Boom.notFound(
+      `Registration with number ${summaryLog.registrationNumber} not found`
     )
+  }
   const registration = {
     ...currentRegistration,
-    accreditation: await accreditationFor(
-      organisationAdministrationRepository,
-      summaryLog
-    )
+    accreditation: accreditationFor(organisation, summaryLog)
   }
 
   logger.info({
