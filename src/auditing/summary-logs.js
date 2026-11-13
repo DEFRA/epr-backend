@@ -6,8 +6,6 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  *
  * @typedef {{
  *   summaryLogId: string
- *   organisationId: string
- *   registrationId: string
  *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  *   accreditationNumber: AccreditationNumber | null | undefined

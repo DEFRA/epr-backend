@@ -206,7 +206,6 @@ const insertValidatingLog = async (
  */
 const submitValidatedLog = async (request, submitPayload, deps) => {
   const { summaryLogsRepository } = request
-  const { organisationId, registrationId } = request.params
   const { summaryLogId } = submitPayload
 
   const transition =
@@ -229,8 +228,6 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     summaryLogKeyOf(transition.summaryLog)
   await auditSummaryLogSubmit(request, {
     summaryLogId,
-    organisationId,
-    registrationId,
     organisationNumber,
     registrationNumber,
     accreditationNumber
