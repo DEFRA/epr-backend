@@ -1,7 +1,6 @@
 import Joi from 'joi'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { hasTemplatesForYear } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * The year an export covers when the caller names none, until every caller
@@ -10,13 +9,9 @@ import { hasTemplatesForYear } from '#domain/summary-logs/table-schemas/index.js
 const DEFAULT_EXPORT_YEAR = 2026
 
 /**
- * The export's `?year=`: a year with summary log templates, since no other
- * year can hold waste records.
+ * The export's `?year=`. A year with no waste records exports the header row
+ * alone.
  */
 export const exportYearQuery = Joi.object({
-  year: yearSchema()
-    .custom((year, helpers) =>
-      hasTemplatesForYear(year) ? year : helpers.error('any.invalid')
-    )
-    .default(DEFAULT_EXPORT_YEAR)
+  year: yearSchema().default(DEFAULT_EXPORT_YEAR)
 })
