@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import {
+  findSchemaByWasteRecordType,
+  tableSchemasOf
+} from '#domain/summary-logs/table-schemas/index.js'
 import { reportMandatoryPolicyFor } from './index.js'
 
 /**
@@ -19,29 +23,32 @@ const POPULATED_TEMPLATES = [
  * Flattens each populated policy into one case per rule so a drifted field name
  * fails in isolation with a readable label.
  */
-const ruleCases = POPULATED_TEMPLATES.flatMap((processingType) => {
-  const policy = reportMandatoryPolicyFor(processingType) ?? {}
-  return Object.entries(policy).flatMap(([wasteRecordType, rules]) =>
-    rules.map((rule) => ({ processingType, wasteRecordType, rule }))
-  )
-})
+const ruleCases = [2026, 2027].flatMap((year) =>
+  POPULATED_TEMPLATES.flatMap((processingType) => {
+    const policy = reportMandatoryPolicyFor(processingType) ?? {}
+    return Object.entries(policy).flatMap(([wasteRecordType, rules]) =>
+      rules.map((rule) => ({ year, processingType, wasteRecordType, rule }))
+    )
+  })
+)
 
 // Guards the schema-sourced layout the engine depends on. Two invariants: the
 // rule's `(processingType, wasteRecordType)` pair must resolve to a real schema
-// (the engine casts the lookup to non-null and dereferences `sheetName` and
-// `unfilledValues`, so a rule keyed under an unregistered record type would 500
-// the request), and every required field must be a real column (a phantom field
-// would report `columnIndex: -1`, which the integration tests miss because they
-// assert the column index only as an opaque number).
+// in every year's template (the engine casts the lookup to non-null and
+// dereferences `sheetName` and `unfilledValues`, so a rule keyed under an
+// unregistered record type would 500 the request), and every required field
+// must be a real column (a phantom field would report `columnIndex: -1`, which
+// the integration tests miss because they assert the column index only as an
+// opaque number).
 describe('report-mandatory policy references only real table schemas', () => {
   it.each(ruleCases)(
-    '$processingType/$wasteRecordType $rule.requiredBy',
-    ({ processingType, wasteRecordType, rule }) => {
-      const schema = findSchemaForProcessingType(
-        processingType,
-        wasteRecordType
-      )
-      expect(schema).not.toBeNull()
+    '$year $processingType/$wasteRecordType $rule.requiredBy',
+    ({ year, processingType, wasteRecordType, rule }) => {
+      const schema = findSchemaByWasteRecordType(
+        wasteRecordType,
+        tableSchemasOf(toYear(year), processingType)
+      )?.schema
+      expect(schema).toBeDefined()
 
       for (const field of rule.requiredFields) {
         expect(schema?.requiredHeaders).toContain(field)

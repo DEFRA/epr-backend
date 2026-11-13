@@ -30,6 +30,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {ReclassificationContext} from '#waste-records/application/reclassify-waste-record-states.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {LedgerAccreditation} from '#waste-balances/application/read-model-accreditations.js' */
 
 /**
@@ -113,11 +114,12 @@ const sortEntriesByAccreditationNumberAndYear = (a, b) =>
  * sites as they stand at export time.
  *
  * @param {WasteRecordState} rowState
+ * @param {Year} year - the partition's year
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState['classification']}
  */
-const recomputedClassification = (rowState, context) =>
-  reclassifyWasteRecordState(rowState, context).classification
+const recomputedClassification = (rowState, year, context) =>
+  reclassifyWasteRecordState(rowState, year, context).classification
 
 /** @type {ReclassificationContext} */
 const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }
@@ -191,7 +193,11 @@ async function* streamPartitionRows({
         data: coerceForExport(rowState),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
-        classification: recomputedClassification(rowState, context),
+        classification: recomputedClassification(
+          rowState,
+          ledgerId.year,
+          context
+        ),
         summaryLogEntry,
         dataFieldColumns
       })

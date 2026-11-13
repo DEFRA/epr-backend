@@ -13,6 +13,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { tableSchemasWith } from '#waste-balances/domain/table-schemas-test-helpers.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -38,25 +39,21 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 // Excludes on a PRN having been issued rather than on absent data, so an
 // excluded row still carries a real tonnage — the amount the ledger must
 // withhold, and the shape every genuine exclusion reason takes.
-const prnAwareSchema = /** @type {*} */ ({
-  classifyForWasteBalance: (data) =>
-    data.prnIssued
-      ? {
-          outcome: ROW_OUTCOME.EXCLUDED,
-          reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
-        }
-      : {
-          outcome: ROW_OUTCOME.INCLUDED,
-          reasons: [],
-          transactionAmount: data.tonnage
-        }
-})
-
-vi.mock('#domain/summary-logs/table-schemas/index.js', () => ({
-  findSchemaForProcessingType: vi.fn()
-}))
+/** @type {TableSchema['classifyForWasteBalance']} */
+const prnAwareClassifier = (data) =>
+  data.prnIssued
+    ? {
+        outcome: ROW_OUTCOME.EXCLUDED,
+        reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
+      }
+    : {
+        outcome: ROW_OUTCOME.INCLUDED,
+        reasons: [],
+        transactionAmount: data.tonnage
+      }
 
 /** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 
 const accreditationId = 'acc-1'
@@ -99,6 +96,7 @@ describe('performUpdateViaLedger', () => {
   let ledgerRepository
   let systemLogsRepository
   let commitSummaryLogSubmittedEvent
+  let tableSchemas
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
@@ -107,9 +105,7 @@ describe('performUpdateViaLedger', () => {
       ledgerRepository,
       systemLogsRepository
     ).commitSummaryLogSubmittedEvent
-    const { findSchemaForProcessingType } =
-      await import('#domain/summary-logs/table-schemas/index.js')
-    vi.mocked(findSchemaForProcessingType).mockReturnValue(prnAwareSchema)
+    tableSchemas = tableSchemasWith(prnAwareClassifier)
   })
 
   describe('first submission', () => {
@@ -120,6 +116,7 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -148,6 +145,7 @@ describe('performUpdateViaLedger', () => {
   describe('subsequent submission', () => {
     it('computes delta from previous creditTotal', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
@@ -162,6 +160,7 @@ describe('performUpdateViaLedger', () => {
       })
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 80 }),
@@ -197,6 +196,7 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -223,6 +223,7 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: records,
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -245,6 +246,7 @@ describe('performUpdateViaLedger', () => {
       const appendSpy = vi.spyOn(ledgerRepository, 'appendEvents')
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -264,6 +266,7 @@ describe('performUpdateViaLedger', () => {
   describe('audit emission', () => {
     it('inserts one system-log entry covering the submission', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
@@ -299,6 +302,7 @@ describe('performUpdateViaLedger', () => {
 
     it("lists the entry in its organisation's system log", async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -325,6 +329,7 @@ describe('performUpdateViaLedger', () => {
         ).commitSummaryLogSubmittedEvent
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent: auditlessSubmit,
@@ -346,18 +351,13 @@ describe('performUpdateViaLedger', () => {
 
   describe('classifier outcome', () => {
     it('treats records with non-INCLUDED outcome as zero contribution', async () => {
-      const { findSchemaForProcessingType } =
-        await import('#domain/summary-logs/table-schemas/index.js')
-      vi.mocked(findSchemaForProcessingType).mockReturnValue(
-        /** @type {*} */ ({
-          classifyForWasteBalance: () => ({
-            outcome: ROW_OUTCOME.IGNORED,
-            reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
-          })
-        })
-      )
+      tableSchemas = tableSchemasWith(() => ({
+        outcome: ROW_OUTCOME.IGNORED,
+        reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
+      }))
 
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -376,6 +376,7 @@ describe('performUpdateViaLedger', () => {
   describe('actor attribution', () => {
     it('stamps createdBy with the submitter id, name and email', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -396,6 +397,7 @@ describe('performUpdateViaLedger', () => {
 
     it('omits name when the submitter has none, keeping the email distinct', async () => {
       await performUpdateViaLedger({
+        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
         accreditation,
         commitSummaryLogSubmittedEvent,
@@ -423,6 +425,7 @@ describe('performUpdateViaLedger', () => {
     it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
       const submit = (summaryLogId, tonnage) =>
         performUpdateViaLedger({
+          tableSchemas,
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
           accreditation,
           commitSummaryLogSubmittedEvent,
