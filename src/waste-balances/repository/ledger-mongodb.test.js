@@ -200,6 +200,30 @@ describe('MongoDB ledger repository', () => {
     testLedgerRepositoryContract(it)
   })
 
+  it('reads events stored without a year as part of the ledger, and appends after them', async (/** @type {*} */ {
+    mongoClient,
+    ledgerRepository
+  }) => {
+    const repository = ledgerRepository()
+    const first = buildLedgerEvent({ number: 1 })
+    await repository.appendEvents([first])
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME)
+      .updateMany({}, { $unset: { year: '' } })
+
+    await repository.appendEvents([buildLedgerEvent({ number: 2 })])
+
+    const events = await repository.findAllInLedger(first)
+    expect(events.map(({ number, year }) => ({ number, year }))).toEqual([
+      { number: 1, year: undefined },
+      { number: 2, year: first.year }
+    ])
+    expect(await repository.findLatestInLedger(first)).toMatchObject({
+      number: 2
+    })
+  })
+
   describe('appendEvents error translation', () => {
     it('rethrows non-conflict MongoDB errors unchanged', async () => {
       const upstream = new Error('connection lost')

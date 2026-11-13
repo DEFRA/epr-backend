@@ -28,6 +28,7 @@ import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
 import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
+import { uploadCallbackAuthPlugin } from '#plugins/auth/upload-callback-auth-plugin.js'
 import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
@@ -47,9 +48,8 @@ import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
-import { runNaturalKeyFormatDiagnostic } from '#natural-key-format-diagnostic/run.js'
-import { runPrnSiteAddressDiagnostic } from '#prn-site-address-diagnostic/run.js'
 import { runSummaryLogScopeBackfill } from '#summary-log-scope-backfill/run.js'
+import { runLedgerYearBackfill } from '#ledger-year-backfill/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -199,6 +199,7 @@ async function createServer(options = {}) {
       plugin: externalApiAuthPlugin.plugin,
       options: { config }
     },
+    uploadCallbackAuthPlugin,
     authFailureLogger,
     boomErrorLogger,
     externalApiErrorFormatter
@@ -228,9 +229,8 @@ async function createServer(options = {}) {
     void runFormsDataMigration(startedServer)
     void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
-    void runNaturalKeyFormatDiagnostic(startedServer)
-    void runPrnSiteAddressDiagnostic(startedServer)
     void runSummaryLogScopeBackfill(startedServer)
+    void runLedgerYearBackfill(startedServer)
   })
 
   return server

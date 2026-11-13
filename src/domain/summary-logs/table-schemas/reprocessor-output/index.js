@@ -2,13 +2,16 @@ import { RECEIVED_LOADS_FOR_REPROCESSING } from './received-loads-for-reprocessi
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
 import { SENT_ON_LOADS } from './sent-on-loads.js'
 
-export const MIN_TEMPLATE_VERSION = 5
-
 /**
- * Table schemas for REPROCESSOR_OUTPUT processing type
+ * REPROCESSOR_OUTPUT summary log templates by year
  */
-export const TABLE_SCHEMAS = {
-  RECEIVED_LOADS_FOR_REPROCESSING,
-  REPROCESSED_LOADS,
-  SENT_ON_LOADS
+export const REPROCESSOR_OUTPUT_TEMPLATES = {
+  2026: {
+    minVersion: 5,
+    tableSchemas: {
+      RECEIVED_LOADS_FOR_REPROCESSING,
+      REPROCESSED_LOADS,
+      SENT_ON_LOADS
+    }
+  }
 }

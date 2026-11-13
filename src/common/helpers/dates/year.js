@@ -81,3 +81,11 @@ export function earliestOfYearEndOrDate(year, date) {
   const { end } = yearBounds(year)
   return end.localeCompare(date) < 0 ? end : date
 }
+
+/**
+ * @param {Year} year
+ * @returns {CalendarDate} last calendar date of the year
+ */
+export function lastDayOfYear(year) {
+  return yearBounds(year).end
+}

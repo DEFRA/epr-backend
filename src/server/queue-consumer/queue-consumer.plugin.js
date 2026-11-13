@@ -40,6 +40,7 @@ export const commandQueueConsumerPlugin = {
   dependencies: [
     'summaryLogsRepository',
     'organisationsRepository',
+    'organisationReadRepository',
     'wasteBalanceService',
     'uploadsRepository',
     'reportsRepository',

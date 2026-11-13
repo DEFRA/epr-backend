@@ -25,6 +25,7 @@ import {
   renderTab
 } from './published-workbook-test-helpers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
@@ -34,6 +35,7 @@ const insertAccreditedOperator =
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
@@ -42,8 +44,8 @@ const FIRST_FIGURE_COLUMN = 3
 
 /**
  * @typedef {Pick<ReturnType<typeof readParamsFor>,
- *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationAdministrationRepository' | 'organisationReadRepository' | 'reportsRepository'
- * >} Register
+ *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationReadRepository' | 'reportsRepository' | 'served'
+ * > & { organisationAdministrationRepository: OrganisationAdministrationRepository }} Register
  */
 
 /** @returns {Register} */
@@ -51,14 +53,17 @@ const emptyRegister = () => {
   const {
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationAdministrationRepository,
     organisationReadRepository,
-    reportsRepository
+    reportsRepository,
+    served
   } = readParamsFor([])
   return {
+    served,
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationAdministrationRepository,
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
+      []
+    )(),
     organisationReadRepository,
     reportsRepository
   }
@@ -129,15 +134,17 @@ const seedOperator = async (
   {
     organisationAdministrationRepository,
     summaryLogRowStatesRepository,
-    ledgerRepository
+    ledgerRepository,
+    served
   },
   { material, regulator = REGULATOR.EA, validFrom, rows = [] }
 ) => {
-  const { ledgerId } = await insertAccreditedOperator(
+  const { ledgerId, servedOrganisation } = await insertAccreditedOperator(
     organisationAdministrationRepository,
     regulator,
     { material, validFrom }
   )
+  served.add(servedOrganisation)
   const summaryLogId = `log-${ledgerId.registrationId}`
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(

@@ -1,0 +1,16 @@
+# Images the test fixtures start with testcontainers. Kept here so Renovate
+# updates them, and so CI can pull them before the tests need them.
+# mongo is never pulled: mongodb-memory-server runs the mongod binary of the
+# same version, and the profile keeps it out of `docker compose pull`.
+services:
+  mongo:
+    image: mongo:7.0.28@sha256:4510cf3d7050003e958745adb25d2deb3fb907430716162d9cc1a92eda2a6047
+    profiles: [mongod-binary-version]
+  floci:
+    image: hectorvent/floci:1.5.5@sha256:c969cb48fcfae0eff3f4a4647b7772cd975e633cae7468e45abaf2d2eae18558
+  aws-cli:
+    image: amazon/aws-cli:2.37.11@sha256:d55d5b391f1cc0d428a05eb07408bb1a730d7df9f656008f1117ed5e13b0c083
+  redis:
+    image: redis:8.0.6-alpine3.21@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4
+  cdp-uploader:
+    image: defradigital/cdp-uploader:1.31.0@sha256:bdb3930bd8182b389bd3e030b1dff03d60085f71119b7d9760de1fecf27fe2c6

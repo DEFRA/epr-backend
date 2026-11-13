@@ -30,9 +30,7 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/forms-submission-data/migration/migration-delta-calculator.js',
   'src/forms-submission-data/migration/migration-orchestrator.js',
   'src/forms-submission-data/migration/organisation-persistence.js',
-  'src/natural-key-format-diagnostic/run.js',
   'src/non-prod-data-reset/mongodb.js',
-  'src/prn-site-address-diagnostic/run.js',
   'src/repositories/form-submissions/mongodb.js',
   'src/routes/v1/dev/form-submissions/migrate/post.js',
   'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
@@ -45,17 +43,13 @@ const ADMINISTRATION_PORT_MODULES = [
   // Domain code that still reads the legacy organisation shape. Each leaves
   // this list once it reads through the organisation read repository.
   'src/application/summary-logs/classify-and-persist.js',
-  'src/application/summary-logs/submit.js',
   'src/application/summary-logs/validate.js',
   'src/application/waste-records/resolve-overseas-sites.js',
-  'src/application/waste-records/sync-from-summary-log.js',
   'src/overseas-sites/routes/accreditation-list.js',
   'src/overseas-sites/routes/registration-list.js',
   'src/packaging-recycling-notes/routes/list.js',
   'src/routes/organisations/at-natural-keys.js',
   'src/routes/organisations/natural-keys.js',
-  'src/routes/v1/organisations/registrations/summary-logs/list/get.js',
-  'src/routes/v1/organisations/registrations/summary-logs/records/get.js',
   'src/server/queue-consumer/summary-log-commands.js',
   'src/server/queue-consumer/summary-log-handler-deps.js'
 ]

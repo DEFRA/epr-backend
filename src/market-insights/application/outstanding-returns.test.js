@@ -2,21 +2,17 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 import {
-  ACCREDITATION_STATUS,
   MATERIAL,
-  REGISTRATION_STATUS,
-  REPROCESSING_TYPE,
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  buildAccreditation,
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
-import { partialMock } from '#test/type-helpers.js'
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
@@ -28,18 +24,30 @@ import {
 } from '#domain/organisations/numbers.js'
 import { countOutstandingReturns } from './outstanding-returns.js'
 
-/** @import { AppliedForMaterial, Organisation, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+/** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
-/** @type {StatusHistoryEntry[]} */
-const approvedHistory = [
-  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
-]
+/**
+ * A status change as the read model times it, taking effect when recorded.
+ *
+ * @param {string} status
+ * @param {string} at - `YYYY-MM-DD` or an ISO date-time
+ */
+const changed = (status, at) => {
+  const instant = new Date(at).toISOString()
+  return { status, at: instant, updatedAt: instant }
+}
 
-const { buildReadOrganisation } = createOrganisationBuilders()
+/** Created in November, approved in December to take effect on 1 January. */
+const CREATED = changed('created', '2025-11-01')
+const APPROVED = {
+  status: 'approved',
+  at: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2025-12-01T00:00:00.000Z'
+}
+const APPROVED_TIMELINE = [CREATED, APPROVED]
 
 /**
  * An operator accredited for the whole of 2026, holding one registration. With
@@ -47,10 +55,9 @@ const { buildReadOrganisation } = createOrganisationBuilders()
  *
  * @param {{
  *   orgId: number,
- *   material?: AppliedForMaterial,
+ *   material?: Material,
  *   tonnageBand?: TonnageBand,
- *   statusHistory?: StatusHistoryEntry[],
- *   validity?: { validFrom?: string, validTo?: string },
+ *   timeline?: StatusTimeline,
  *   registeredOnly?: boolean
  * }} options
  */
@@ -58,40 +65,36 @@ const makeOperator = ({
   orgId,
   material = MATERIAL.PLASTIC,
   tonnageBand = TONNAGE_BAND.UP_TO_500,
-  statusHistory = approvedHistory,
-  validity = { validFrom: '2026-01-01', validTo: '2026-12-31' },
+  timeline = APPROVED_TIMELINE,
   registeredOnly = false
 }) => {
-  const accreditation = buildAccreditation({
-    ...validity,
+  const registrationNumber = toRegistrationNumber(`REG-${orgId}`)
+  const current = /** @type {'approved' | 'suspended' | 'cancelled'} */ (
+    timeline.at(-1)?.status
+  )
+  const accreditation = buildReadAccreditation({
     accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
-    material,
-    glassRecyclingProcess: null,
-    statusHistory,
-    prnIssuance: { ...buildAccreditation().prnIssuance, tonnageBand }
+    prnIssuance: { tonnageBand },
+    status: { current, timeline }
   })
-  const registration = buildRegistration({
-    registrationNumber: `REG-${orgId}`,
-    material,
-    glassRecyclingProcess: null,
-    reprocessingType: REPROCESSING_TYPE.INPUT,
-    statusHistory: [
-      { status: REGISTRATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
-    ],
-    validFrom: '2025-12-01',
-    ...(!registeredOnly && { accreditationId: accreditation.id })
-  })
+  const organisationNumber = toOrganisationNumber(String(orgId))
 
   return {
     organisation: buildReadOrganisation({
-      organisationNumber: toOrganisationNumber(String(orgId)),
-      registrations: [partialMock(registration)],
-      accreditations: registeredOnly ? [] : [accreditation]
+      organisationNumber,
+      registrations: {
+        [registrationNumber]: buildReadReprocessorRegistration({
+          material: /** @type {any} */ (material),
+          validFrom: '2025-12-01',
+          status: {
+            current: 'approved',
+            timeline: approvedTimelineFrom('2025-12-01')
+          },
+          accreditations: registeredOnly ? {} : { 2026: accreditation }
+        })
+      }
     }),
-    reportRef: {
-      organisationNumber: toOrganisationNumber(String(orgId)),
-      registrationNumber: toRegistrationNumber(registration.registrationNumber)
-    }
+    reportRef: { organisationNumber, registrationNumber }
   }
 }
 
@@ -139,9 +142,7 @@ const count = async ({
     await buildUnsubmittedReport(reportsRepository, reportParams(ref))
   }
   return countOutstandingReturns({
-    organisations: await (
-      await organisationReadRepositoryOf(operators)
-    )().findAll(),
+    organisations: operators,
     periodicReports: await reportsRepository.findAllPeriodicReports(),
     months: JANUARY_TO_MARCH_2026
   })
@@ -160,6 +161,16 @@ const outstanding = (counts) =>
         .map(([tonnageBand, n]) => ({ month, material, tonnageBand, n }))
     )
   )
+
+const EVERY_MONTH = [
+  { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+  { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
+  { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+]
+
+const JANUARY_ONLY = [
+  { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
+]
 
 describe('countOutstandingReturns', () => {
   it('carries a cell for every month served, material and tonnage band, at zero when nothing is owed', async () => {
@@ -184,11 +195,7 @@ describe('countOutstandingReturns', () => {
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH)
   })
 
   it('does not count a month the operator has submitted for', async () => {
@@ -199,10 +206,7 @@ describe('countOutstandingReturns', () => {
       submissions: [{ operator, period: 1 }]
     })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH.slice(1))
   })
 
   it('treats a resubmitted month the same as one submitted once', async () => {
@@ -216,10 +220,7 @@ describe('countOutstandingReturns', () => {
       ]
     })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH.slice(1))
   })
 
   it('still counts a month whose report is a draft never submitted', async () => {
@@ -230,11 +231,7 @@ describe('countOutstandingReturns', () => {
       drafts: [{ operator, period: 1 }]
     })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH)
   })
 
   it('does not count a month whose report was submitted and then unsubmitted, as the public register does', async () => {
@@ -245,37 +242,24 @@ describe('countOutstandingReturns', () => {
       unsubmissions: [{ operator, period: 1 }]
     })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH.slice(1))
   })
 
-  it('still counts an accreditation suspended throughout the period, since a suspended accreditation owes its reports', async () => {
+  it('still counts an accreditation suspended before it starts, since a suspended accreditation owes its reports', async () => {
     const operator = makeOperator({
       orgId: 500041,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2025-12-15' }
-      ]
+      timeline: [CREATED, changed('suspended', '2025-12-15')]
     })
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH)
   })
 
   it('counts nothing for an accreditation cancelled before it starts', async () => {
     const operator = makeOperator({
       orgId: 500042,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2025-12-15' }
-      ]
+      timeline: [CREATED, changed('cancelled', '2025-12-15')]
     })
 
     const counts = await count({ operators: [operator.organisation] })
@@ -286,58 +270,22 @@ describe('countOutstandingReturns', () => {
   it('counts every month for an accreditation cancelled and reinstated before it starts', async () => {
     const operator = makeOperator({
       orgId: 500043,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2025-12-15' },
-        { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-20' }
+      timeline: [
+        CREATED,
+        changed('cancelled', '2025-12-15'),
+        { ...APPROVED, updatedAt: '2025-12-20T00:00:00.000Z' }
       ]
     })
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH)
   })
 
   it('counts nothing for an accreditation cancelled throughout the period', async () => {
     const operator = makeOperator({
       orgId: 500033,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-01-01' }
-      ]
-    })
-
-    const counts = await count({ operators: [operator.organisation] })
-
-    expect(outstanding(counts)).toEqual([])
-  })
-
-  it('counts nothing for an accreditation rejected before the period, though it carries validity dates', async () => {
-    const operator = makeOperator({
-      orgId: 500042,
-      statusHistory: [
-        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-        { status: ACCREDITATION_STATUS.REJECTED, updatedAt: '2025-11-20' }
-      ]
-    })
-
-    const counts = await count({ operators: [operator.organisation] })
-
-    expect(outstanding(counts)).toEqual([])
-  })
-
-  it('counts nothing for an approved accreditation since reverted to draft and stripped of its dates', async () => {
-    const operator = makeOperator({
-      orgId: 500045,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
-      ],
-      validity: {}
+      timeline: [...APPROVED_TIMELINE, changed('cancelled', '2026-01-01')]
     })
 
     const counts = await count({ operators: [operator.organisation] })
@@ -348,23 +296,11 @@ describe('countOutstandingReturns', () => {
   it('counts nothing for an accreditation reverted to draft, then cancelled with its registration', async () => {
     const operator = makeOperator({
       orgId: 500050,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' },
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' }
-      ]
-    })
-
-    const counts = await count({ operators: [operator.organisation] })
-
-    expect(outstanding(counts)).toEqual([])
-  })
-
-  it('counts nothing for an accreditation still awaiting a decision, though it carries validity dates', async () => {
-    const operator = makeOperator({
-      orgId: 500043,
-      statusHistory: [
-        { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' }
+      timeline: [
+        CREATED,
+        changed('approved', '2025-12-01'),
+        changed('created', '2026-02-01'),
+        changed('cancelled', '2026-02-10')
       ]
     })
 
@@ -376,95 +312,69 @@ describe('countOutstandingReturns', () => {
   it('still counts the months an accreditation held before its cancellation', async () => {
     const operator = makeOperator({
       orgId: 500044,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-01' }
-      ]
+      timeline: [...APPROVED_TIMELINE, changed('cancelled', '2026-02-01')]
     })
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(JANUARY_ONLY)
   })
 
   it('counts nothing for the month an accreditation was cancelled in, whose report falls due after the cancellation', async () => {
     const operator = makeOperator({
       orgId: 500046,
-      statusHistory: [
-        ...approvedHistory,
-        {
-          status: ACCREDITATION_STATUS.CANCELLED,
-          updatedAt: '2026-02-10T09:00:00.000Z'
-        }
+      timeline: [
+        ...APPROVED_TIMELINE,
+        changed('cancelled', '2026-02-10T09:00:00.000Z')
       ]
     })
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(JANUARY_ONLY)
   })
 
   it('counts nothing for a month an accreditation was cancelled on its last day', async () => {
     const operator = makeOperator({
       orgId: 500047,
-      statusHistory: [
-        ...approvedHistory,
-        {
-          status: ACCREDITATION_STATUS.CANCELLED,
-          updatedAt: '2026-02-28T15:00:00.000Z'
-        }
+      timeline: [
+        ...APPROVED_TIMELINE,
+        changed('cancelled', '2026-02-28T15:00:00.000Z')
       ]
     })
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(JANUARY_ONLY)
   })
 
   it('still counts a month when the cancellation falls in the next month on the UK calendar, though not in UTC', async () => {
     const operator = makeOperator({
       orgId: 500050,
-      statusHistory: [
-        ...approvedHistory,
-        {
-          status: ACCREDITATION_STATUS.CANCELLED,
-          updatedAt: '2026-03-31T23:30:00.000Z'
-        }
+      timeline: [
+        ...APPROVED_TIMELINE,
+        changed('cancelled', '2026-03-31T23:30:00.000Z')
       ]
     })
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH)
   })
 
   it('still counts a month whose cancellation was reversed before the month ended', async () => {
     const operator = makeOperator({
       orgId: 500048,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.CANCELLED, updatedAt: '2026-02-10' },
-        { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-02-20' }
+      timeline: [
+        ...APPROVED_TIMELINE,
+        changed('cancelled', '2026-02-10'),
+        changed('approved', '2026-02-20')
       ]
     })
 
     const counts = await count({ operators: [operator.organisation] })
 
-    expect(outstanding(counts)).toEqual([
-      { month: '2026-01', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-02', material: 'plastic', tonnageBand: 'up_to_500', n: 1 },
-      { month: '2026-03', material: 'plastic', tonnageBand: 'up_to_500', n: 1 }
-    ])
+    expect(outstanding(counts)).toEqual(EVERY_MONTH)
   })
 
   it('counts nothing for a registered-only operator, which reports quarterly', async () => {

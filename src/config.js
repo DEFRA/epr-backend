@@ -3,9 +3,11 @@ import convictFormatWithValidator from 'convict-format-with-validator'
 
 import { convictValidateMongoUri } from '#common/helpers/convict/validate-mongo-uri.js'
 import { convictValidateDecemberWasteWindowBound } from '#common/helpers/convict/validate-december-waste-window-bound.js'
+import { convictValidateHex256BitKey } from '#common/helpers/convict/validate-hex-256-bit-key.js'
 
 convict.addFormat(convictValidateMongoUri)
 convict.addFormat(convictValidateDecemberWasteWindowBound)
+convict.addFormat(convictValidateHex256BitKey)
 convict.addFormats(convictFormatWithValidator)
 
 const isProduction = process.env.NODE_ENV === 'production'
@@ -238,6 +240,13 @@ const baseConfig = {
       format: String,
       default: 're-ex-overseas-sites',
       env: 'CDP_UPLOADER_S3_BUCKET_ORS'
+    },
+    callbackHmacKey: {
+      doc: 'HMAC-SHA256 key for signing CDP Uploader callback URLs; generate with openssl rand -hex 32',
+      format: 'hex-256-bit-key',
+      sensitive: true,
+      default: null,
+      env: 'CDP_UPLOADER_CALLBACK_HMAC_KEY'
     }
   },
   regulator: {
@@ -285,7 +294,7 @@ const baseConfig = {
       oidcWellKnownConfigurationUrl: {
         doc: 'Entra OIDC .well-known configuration URL',
         format: String,
-        env: 'ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL',
+        env: 'ENTRA_OIDC_WELL_KNOWN_URL',
         default:
           'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration'
       },
@@ -383,6 +392,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOG_SCOPE_BACKFILL'
+    },
+    ledgerYearBackfill: {
+      doc: 'Feature Flag: Let the startup backfill write the year onto ledger events and row states stored without one, rather than only reporting them',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_LEDGER_YEAR_BACKFILL'
     }
   },
   formSubmissionOverrides: {
@@ -516,7 +531,7 @@ const baseConfig = {
     }
   },
   openNextYear: {
-    doc: 'Serve next year as well as this one, so data for it can be checked before it starts. Lower environments only',
+    doc: 'Serve next year as well as this one, so data for it can be checked before it starts. Refused in prod',
     format: Boolean,
     default: false,
     env: 'OPEN_NEXT_YEAR'
@@ -531,16 +546,25 @@ const baseConfig = {
   }
 }
 
-const config = convict(baseConfig)
-
-config.validate({ allowed: 'strict' })
+/**
+ * @param {string} cdpEnvironment
+ */
+const isProd = (cdpEnvironment) => cdpEnvironment === 'prod'
 
 function getConfig(overrides = {}) {
   const cfg = convict(baseConfig)
   cfg.load(overrides)
+  cfg.validate({ allowed: 'strict' })
+
+  if (isProd(cfg.get('cdpEnvironment')) && cfg.get('openNextYear')) {
+    throw new Error('OPEN_NEXT_YEAR must not be true when ENVIRONMENT is prod')
+  }
+
   return cfg
 }
 
-const isProductionEnvironment = () => config.get('cdpEnvironment') === 'prod'
+const config = getConfig()
+
+const isProductionEnvironment = () => isProd(config.get('cdpEnvironment'))
 const isLocalEnvironment = () => config.get('cdpEnvironment') === 'local'
 export { config, getConfig, isLocalEnvironment, isProductionEnvironment }

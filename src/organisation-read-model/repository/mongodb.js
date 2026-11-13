@@ -23,7 +23,7 @@ export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
  * @param {StoredOrganisation[]} stored
  * @returns {Promise<ExternalAccreditation[]>}
  */
-export const findExternalAccreditations = (db, stored) =>
+const findExternalAccreditations = (db, stored) =>
   /** @type {Collection<ExternalAccreditation>} */ (
     db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
   )
@@ -55,7 +55,7 @@ export const findExternalAccreditations = (db, stored) =>
  */
 export const createOrganisationReadRepository = (db) => {
   return (dependencies) => ({
-    findByOrganisationNumber: async (organisationNumber) => {
+    findByOrganisationNumber: async (organisationNumber, { year } = {}) => {
       const stored = await findOne(db, {
         orgId: storedOrgId(organisationNumber)
       })
@@ -65,7 +65,8 @@ export const createOrganisationReadRepository = (db) => {
       const [organisation] = await toReadModelOrganisations(
         [stored],
         await findExternalAccreditations(db, [stored]),
-        dependencies
+        dependencies,
+        year
       )
       return organisation ?? null
     },

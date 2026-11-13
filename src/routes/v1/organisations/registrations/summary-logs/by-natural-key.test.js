@@ -1,5 +1,10 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -35,6 +40,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
+import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
@@ -61,6 +67,27 @@ const organisation = buildOrganisation({
 })
 
 const { organisationNumber } = organisation
+
+/** The organisation as the read model serves it. */
+const servedOrganisation = buildReadOrganisation({
+  organisationNumber,
+  registrations: {
+    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      standingByDate: {
+        [YEAR]: {
+          '2026-02-01': { standing: 'registeredOnly' },
+          '2026-07-01': { standing: 'accredited' }
+        }
+      },
+      accreditations: {
+        [YEAR]: buildReadAccreditation({
+          accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+        })
+      }
+    })
+  }
+})
 const registeredOnlyLog = {
   registrationId: registeredOnlyRegistration.id,
   accreditationId: null,
@@ -96,19 +123,20 @@ const uploadAddresses = [
 
 const redirect = { redirectUrl: 'https://frontend.test/redirect' }
 
-const uploadCompleted = {
+/** @param {string} uploadRegistrationId */
+const uploadCompletedFor = (uploadRegistrationId) => ({
   uploadStatus: 'ready',
   form: {
     summaryLogUpload: {
       fileId: 'file-uploaded',
       filename: 'summary-log.xlsx',
       fileStatus: 'complete',
-      s3Bucket: 'test-bucket',
-      s3Key: 'test-key'
+      s3Bucket: 're-ex-summary-logs',
+      s3Key: `/organisations/${organisation.id}/registrations/${uploadRegistrationId}/upload-1/file-uploaded`
     }
   },
   numberOfRejectedFiles: 0
-}
+})
 
 describe('summary-log routes by natural key', () => {
   setupAuthContext()
@@ -129,8 +157,8 @@ describe('summary-log routes by natural key', () => {
       repositories: {
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([partialMock(organisation)]),
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          servedOrganisation
         ]),
         summaryLogsRepository: () => summaryLogsRepository,
         uploadsRepository
@@ -209,7 +237,7 @@ describe('summary-log routes by natural key', () => {
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
           organisationId: organisation.id,
           registrationId: registration.id,
-          callbackUrl: `${config.get('appBaseUrl')}${uploads}/${summaryLogId}/upload-completed`
+          callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
         })
       })
 
@@ -218,8 +246,8 @@ describe('summary-log routes by natural key', () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: `${uploads}/${summaryLogId}/upload-completed`,
-          payload: uploadCompleted
+          url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
+          payload: uploadCompletedFor(registration.id)
         })
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -316,8 +344,10 @@ describe('summary-log routes by natural key', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
-      payload: uploadCompleted
+      url: signedCallback(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
+      ),
+      payload: uploadCompletedFor(accreditedRegistration.id)
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -334,8 +364,10 @@ describe('summary-log routes by natural key', () => {
 
     await server.inject({
       method: 'POST',
-      url: `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
-      payload: uploadCompleted
+      url: signedCallback(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
+      ),
+      payload: uploadCompletedFor(accreditedRegistration.id)
     })
 
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -476,8 +508,10 @@ describe('summary-log routes by natural key', () => {
     [
       'completing an upload under a registration with no accreditation',
       'POST',
-      `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`,
-      uploadCompleted
+      signedCallback(
+        `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
+      ),
+      uploadCompletedFor(registeredOnlyRegistration.id)
     ],
     [
       'reading under an unknown registration',
@@ -575,8 +609,6 @@ describe('summary-log routes by natural key', () => {
 
       expect(auditSummaryLogDownload).toHaveBeenCalledWith(expect.anything(), {
         summaryLogId: fileId,
-        organisationId: organisation.id,
-        registrationId: registeredOnlyRegistration.id,
         organisationNumber,
         registrationNumber: registeredOnlyLog.registrationNumber,
         accreditationNumber: null

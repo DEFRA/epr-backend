@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -7,6 +8,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { partialMock } from '#test/type-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -15,9 +17,12 @@ const organisation = buildOrganisation({
   registrations: [reprocessor({ id: 'reg-456' })]
 })
 const organisationId = organisation.id
+const uploadedKey = `/organisations/${organisationId}/registrations/reg-456/upload-1/file-1`
 
 const buildPostUrl = (summaryLogId) =>
-  `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+  signedCallback(
+    `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+  )
 
 describe('POST upload-completed validation', () => {
   // Mock OIDC servers needed for server startup, but we inject credentials directly
@@ -31,8 +36,8 @@ describe('POST upload-completed validation', () => {
         summaryLogsRepository: createInMemorySummaryLogsRepository(),
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([partialMock(organisation)]),
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          buildReadOrganisationWithNumbersOf(organisation)
         ])
       }
     })
@@ -77,8 +82,8 @@ describe('POST upload-completed validation', () => {
           summaryLogUpload: {
             filename: 'test.xlsx',
             fileStatus: 'complete',
-            s3Bucket: 'bucket',
-            s3Key: 'key'
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey
           }
         }
       }
@@ -99,8 +104,8 @@ describe('POST upload-completed validation', () => {
           summaryLogUpload: {
             fileId: 'file-123',
             fileStatus: 'complete',
-            s3Bucket: 'bucket',
-            s3Key: 'key'
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey
           }
         }
       }
@@ -121,8 +126,8 @@ describe('POST upload-completed validation', () => {
           summaryLogUpload: {
             fileId: 'file-123',
             filename: 'test.xlsx',
-            s3Bucket: 'bucket',
-            s3Key: 'key'
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey
           }
         }
       }
@@ -144,8 +149,8 @@ describe('POST upload-completed validation', () => {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'invalid-status',
-            s3Bucket: 'bucket',
-            s3Key: 'key'
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey
           }
         }
       }
@@ -167,7 +172,7 @@ describe('POST upload-completed validation', () => {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'complete',
-            s3Key: 'key'
+            s3Key: uploadedKey
           }
         }
       }
@@ -189,7 +194,7 @@ describe('POST upload-completed validation', () => {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'complete',
-            s3Bucket: 'bucket'
+            s3Bucket: 're-ex-summary-logs'
           }
         }
       }
@@ -211,8 +216,8 @@ describe('POST upload-completed validation', () => {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'complete',
-            s3Bucket: 'bucket',
-            s3Key: 'key'
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey
           }
         }
       }
@@ -231,8 +236,8 @@ describe('POST upload-completed validation', () => {
             fileId: 'file-999',
             filename: 'virus.xlsx',
             fileStatus: 'rejected',
-            s3Bucket: 'bucket',
-            s3Key: 'key'
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey
           }
         }
       }
@@ -251,8 +256,8 @@ describe('POST upload-completed validation', () => {
             fileId: 'file-888',
             filename: 'test.xlsx',
             fileStatus: 'complete',
-            s3Bucket: 'bucket',
-            s3Key: 'key',
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey,
             contentType: 'application/xlsx',
             contentLength: 12345,
             checksumSha256: 'abc123'
@@ -279,8 +284,8 @@ describe('POST upload-completed validation', () => {
             fileId: 'file-777',
             filename: 'test.xlsx',
             fileStatus: 'complete',
-            s3Bucket: 'bucket',
-            s3Key: 'key'
+            s3Bucket: 're-ex-summary-logs',
+            s3Key: uploadedKey
           }
         },
         numberOfRejectedFiles: 0

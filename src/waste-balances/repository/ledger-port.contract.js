@@ -7,6 +7,7 @@ import { testFindAllInLedgerBehaviour } from './ledger-contract/findAllInLedger.
 import { testFindLatestSubmittedSummaryLogPerLedgerBehaviour } from './ledger-contract/findLatestSubmittedSummaryLogPerLedger.contract.js'
 import { testDeleteAllInLedgerBehaviour } from './ledger-contract/deleteAllInLedger.contract.js'
 import { testNumbersBehaviour } from './ledger-contract/numbers.contract.js'
+import { testYearBehaviour } from './ledger-contract/year.contract.js'
 
 export const testLedgerRepositoryContract = (it) => {
   testAppendEventsBehaviour(it)
@@ -18,4 +19,5 @@ export const testLedgerRepositoryContract = (it) => {
   testFindLatestSubmittedSummaryLogPerLedgerBehaviour(it)
   testDeleteAllInLedgerBehaviour(it)
   testNumbersBehaviour(it)
+  testYearBehaviour(it)
 }

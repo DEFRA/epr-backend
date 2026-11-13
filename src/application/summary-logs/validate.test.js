@@ -18,6 +18,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -38,7 +39,8 @@ const FIXTURE_LEDGER = {
   accreditationId: 'acc-123',
   organisationNumber: toOrganisationNumber('500123'),
   registrationNumber: toRegistrationNumber('REG12345'),
-  accreditationNumber: toAccreditationNumber('ACC12345')
+  accreditationNumber: toAccreditationNumber('ACC12345'),
+  year: toYear(2026)
 }
 
 /**
@@ -269,6 +271,7 @@ describe('SummaryLogsValidator', () => {
       organisationNumber: FIXTURE_LEDGER.organisationNumber,
       registrationNumber: FIXTURE_LEDGER.registrationNumber,
       accreditationNumber: FIXTURE_LEDGER.accreditationNumber,
+      year: FIXTURE_LEDGER.year,
       file: {
         id: 'file-123',
         name: 'test.xlsx',

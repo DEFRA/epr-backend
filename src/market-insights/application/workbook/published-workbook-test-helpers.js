@@ -4,9 +4,8 @@ import ExcelJS from 'exceljs'
 import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
@@ -15,7 +14,6 @@ import { frameOf } from './cells.js'
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { TabContents } from './cells.js' */
 
 const PUBLISHED_WORKBOOK = path.join(
@@ -37,23 +35,20 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
 
 /**
  * What the shared read is given for a period, over an empty register, taken
- * when the published figures were. Tests seed the register through
- * `organisationAdministrationRepository`, which the read model reads back on every read.
+ * when the published figures were. Organisations added to `served` are seen
+ * by every later read of `organisationReadRepository`.
  *
  * @param {YearMonth[]} months
- * @returns {ReadMarketInsightsFiguresParams & { organisationAdministrationRepository: OrganisationsRepository }}
+ * @returns {ReadMarketInsightsFiguresParams & { served: ReturnType<typeof servedOrganisations> }}
  */
 export const readParamsFor = (months) => {
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository([])()
+  const served = servedOrganisations()
   return {
+    served,
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationAdministrationRepository,
-    organisationReadRepository: organisationReadRepositoryOver(
-      organisationAdministrationRepository
-    ),
+    organisationReadRepository: served.repository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
     year: toYear(2026),

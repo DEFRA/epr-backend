@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { toYear } from '#common/helpers/dates/year.js'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -29,44 +30,73 @@ const TEST_USER = {
   scope: ['some-scope']
 }
 
+const YEAR = toYear(2026)
+
 // The numbers the mocked organisation record gives org-1/reg-1.
 const LEDGER_ID = {
   organisationNumber: toOrganisationNumber('500001'),
   registrationNumber: toRegistrationNumber('REG-1'),
-  accreditationNumber: null
+  accreditationNumber: null,
+  year: YEAR
 }
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500001')
 const REGISTRATION_NUMBER = toRegistrationNumber('REG-1')
 const ACCREDITATION_NUMBER = toAccreditationNumber('ACC-1')
 
-const ACCREDITATION = {
-  id: 'acc-1',
-  accreditationNumber: 'ACC-1',
+const APPROVED_FROM = '2023-01-01T00:00:00.000Z'
+
+/** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/domain/model.js' */
+
+/**
+ * @param {AccreditationNumber} accreditationNumber
+ * @returns {AccreditationCommon}
+ */
+const accreditationNumbered = (accreditationNumber) => ({
+  accreditationNumber,
+  prnIssuance: { tonnageBand: 'up_to_500' },
+  status: {
+    current: 'approved',
+    timeline: [
+      { status: 'approved', at: APPROVED_FROM, updatedAt: APPROVED_FROM }
+    ]
+  }
+})
+
+/**
+ * The validity the waste balance reads for ACC-1, held for 2023.
+ *
+ * @type {AccreditationValidity}
+ */
+const ACCREDITATION_VALIDITY = {
+  statusHistory: [{ status: 'approved', at: APPROVED_FROM }],
   validFrom: '2023-01-01',
-  validTo: '2023-12-31',
-  statusHistory: []
+  validTo: '2023-12-31'
 }
 
 /**
- * @param {{ registration?: object, accreditations?: object[] }} [options]
+ * An organisation as the read model serves it, holding REG-1 and REG-2. REG-1
+ * holds ACC-1 for 2023 unless `registration` replaces its accreditations.
+ *
+ * @param {{ registration?: Partial<ReprocessorRegistration | ExporterRegistration> }} [options]
  */
-const organisationWith = ({ registration = {}, accreditations } = {}) => ({
-  id: 'org-1',
-  orgId: 500001,
-  registrations: [
-    { id: 'reg-2', registrationNumber: 'REG-2', overseasSites: {} },
-    {
-      id: 'reg-1',
-      registrationNumber: 'REG-1',
-      overseasSites: {},
+const organisationWith = ({ registration = {} } = {}) => ({
+  organisationNumber: ORGANISATION_NUMBER,
+  registrations: {
+    'REG-2': {
+      wasteProcessingType: 'reprocessor',
+      accreditations: {
+        2022: accreditationNumbered(toAccreditationNumber('ACC-2'))
+      }
+    },
+    'REG-1': {
+      wasteProcessingType: 'reprocessor',
+      accreditations: { 2023: accreditationNumbered(ACCREDITATION_NUMBER) },
       ...registration
     }
-  ],
-  accreditations: accreditations ?? [
-    { id: 'acc-2', accreditationNumber: 'ACC-2' },
-    ACCREDITATION
-  ]
+  }
 })
 
 /**
@@ -76,11 +106,12 @@ const organisationWith = ({ registration = {}, accreditations } = {}) => ({
  * @param {string} fileId
  * @param {import('#domain/organisations/numbers.js').AccreditationNumber | null} [accreditationNumber]
  */
-const summaryLogFor = (fileId, accreditationNumber = null) => ({
+const summaryLogFor = (fileId, accreditationNumber = null, year = YEAR) => ({
   file: { id: fileId, uri: `s3://test-bucket/${fileId}` },
   organisationNumber: ORGANISATION_NUMBER,
   registrationNumber: REGISTRATION_NUMBER,
-  accreditationNumber
+  accreditationNumber,
+  year
 })
 
 const reprocessorInput = (rows) =>
@@ -117,8 +148,7 @@ const receivedRow = (rowNumber, rowId, date, weight) => ({
 
 describe('syncFromSummaryLog', () => {
   let wasteBalanceService
-  let organisationAdministrationRepository
-  let overseasSitesRepository
+  let organisationReadRepository
   let summaryLogRowStatesRepository
   let ledgerRepository
 
@@ -130,19 +160,15 @@ describe('syncFromSummaryLog', () => {
       submitSummaryLog: vi.fn(),
       commitSummaryLogSubmittedEvent: vi.fn()
     }
-    organisationAdministrationRepository = {
+    organisationReadRepository = {
       findByOrganisationNumber: vi.fn().mockResolvedValue(organisationWith())
-    }
-    overseasSitesRepository = {
-      findByIds: vi.fn().mockResolvedValue([])
     }
   })
 
   const makeSync = (overrides = {}) =>
     /** @type {any} */ (syncFromSummaryLog)({
       wasteBalanceService,
-      organisationAdministrationRepository,
-      overseasSitesRepository,
+      organisationReadRepository,
       summaryLogRowStatesRepository,
       ledgerRepository,
       ...overrides
@@ -175,7 +201,7 @@ describe('syncFromSummaryLog', () => {
     ).toBe(true)
   })
 
-  it('stores the organisation, registration and accreditation numbers on each row state', async () => {
+  it('stores the organisation, registration and accreditation numbers and the year on each row state', async () => {
     const fileId = 'file-numbers'
     const extractor = extractorFor(
       fileId,
@@ -185,7 +211,7 @@ describe('syncFromSummaryLog', () => {
     )
 
     await makeSync({ extractor })(
-      summaryLogFor(fileId, ACCREDITATION_NUMBER),
+      summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2026)),
       TEST_USER
     )
 
@@ -198,7 +224,8 @@ describe('syncFromSummaryLog', () => {
     expect(rowState).toMatchObject({
       organisationNumber: '500001',
       registrationNumber: 'REG-1',
-      accreditationNumber: 'ACC-1'
+      accreditationNumber: 'ACC-1',
+      year: 2026
     })
   })
 
@@ -396,13 +423,14 @@ describe('syncFromSummaryLog', () => {
       ]),
       {
         user: TEST_USER,
-        accreditation: ACCREDITATION,
+        accreditation: ACCREDITATION_VALIDITY,
         overseasSites: {},
         summaryLogId: fileId,
         ledgerId: {
           organisationNumber: '500001',
           registrationNumber: 'REG-1',
-          accreditationNumber: 'ACC-1'
+          accreditationNumber: 'ACC-1',
+          year: YEAR
         }
       }
     )
@@ -417,14 +445,19 @@ describe('syncFromSummaryLog', () => {
       ])
     )
 
-    const validFrom = new Date('2024-01-01')
-    overseasSitesRepository = {
-      findByIds: vi.fn().mockResolvedValue([{ id: 'site-aaa', validFrom }])
-    }
-    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
       organisationWith({
         registration: {
-          overseasSites: { '001': { overseasSiteId: 'site-aaa' } }
+          wasteProcessingType: 'exporter',
+          accreditations: {
+            2023: {
+              ...accreditationNumbered(ACCREDITATION_NUMBER),
+              overseasSites: {
+                '001': { status: 'approved', approvedOn: '2024-01-01' },
+                '002': { status: 'pending' }
+              }
+            }
+          }
         }
       })
     )
@@ -437,7 +470,10 @@ describe('syncFromSummaryLog', () => {
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        overseasSites: { '001': { validFrom } }
+        overseasSites: {
+          '001': { validFrom: new Date('2024-01-01') },
+          '002': { validFrom: null }
+        }
       })
     )
   })
@@ -458,7 +494,8 @@ describe('syncFromSummaryLog', () => {
       {
         organisationNumber: '500001',
         registrationNumber: 'REG-1',
-        accreditationNumber: null
+        accreditationNumber: null,
+        year: YEAR
       },
       { summaryLogId: fileId, creditTotal: 0 },
       expect.objectContaining({ id: TEST_USER.id, email: TEST_USER.email })
@@ -468,9 +505,7 @@ describe('syncFromSummaryLog', () => {
   it('throws when no organisation holds the organisation number', async () => {
     const fileId = 'file-no-org'
     const extractor = extractorFor(fileId, reprocessorInput([]))
-    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
-      null
-    )
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue(null)
 
     await expect(
       makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
@@ -507,6 +542,23 @@ describe('syncFromSummaryLog', () => {
         TEST_USER
       )
     ).rejects.toThrow('Accreditation not found: ACC-MISSING')
+  })
+
+  it('throws when the accreditation belongs to another of the organisation’s registrations', async () => {
+    const fileId = 'file-other-registration'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+
+    await expect(
+      makeSync({ extractor })(
+        summaryLogFor(fileId, toAccreditationNumber('ACC-2')),
+        TEST_USER
+      )
+    ).rejects.toThrow('Accreditation not found: ACC-2')
   })
 
   describe('return value (created/updated counts against the committed head)', () => {

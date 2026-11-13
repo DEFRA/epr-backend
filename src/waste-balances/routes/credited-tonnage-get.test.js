@@ -1,31 +1,29 @@
-import { ObjectId } from 'mongodb'
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainerRead } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import {
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { creditedTonnageGetPath } from './credited-tonnage-get.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-
-const { buildOrganisationWithRegistration } = createOrganisationBuilders()
 
 const SUMMARY_LOG_ID = 'sl-credited-1'
 
@@ -37,16 +35,41 @@ const injectReport = (server, credentials) =>
   })
 
 /**
- * The read model serves only an approved registration.
+ * An organisation the read model serves with one input reprocessor for
+ * plastic, approved and accredited from 1 January 2026.
  *
- * @param {Record<string, any>} registration
+ * @param {string} organisationNumber
+ * @param {string} registrationNumber
+ * @param {string} accreditationNumber
  */
-const approvedFrom2026 = (registration) => {
-  registration.validFrom = '2026-01-01'
-  registration.statusHistory = [
-    { status: 'created', updatedAt: '2025-11-01' },
-    { status: 'approved', updatedAt: '2026-01-01' }
-  ]
+const accreditedFrom2026 = (
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+) => {
+  const approved = {
+    current: /** @type {const} */ ('approved'),
+    timeline: approvedTimelineFrom('2026-01-01')
+  }
+  return buildReadOrganisation({
+    organisationNumber: toOrganisationNumber(organisationNumber),
+    registrations: {
+      [registrationNumber]: buildReadReprocessorRegistration({
+        material: 'plastic',
+        validFrom: '2026-01-01',
+        status: approved,
+        standingByDate: {
+          2026: { '2026-01-01': { standing: 'accredited' } }
+        },
+        accreditations: {
+          2026: buildReadAccreditation({
+            accreditationNumber: toAccreditationNumber(accreditationNumber),
+            status: approved
+          })
+        }
+      })
+    }
+  })
 }
 
 /**
@@ -167,38 +190,17 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
   })
 
   it('returns a credited-tonnage row derived from an accreditation latest submission', async () => {
-    const accreditationId = new ObjectId().toString()
-    const registration = buildRegistration({
-      accreditationId,
-      registrationNumber: toRegistrationNumber('REG500123'),
-      wasteProcessingType: 'reprocessor',
-      reprocessingType: 'input',
-      material: 'plastic'
-    })
-    const org = buildOrganisationWithRegistration(
-      partialMock(registration),
-      'approved'
-    )
-    org.organisationNumber = toOrganisationNumber('500123')
-
-    const linkedRegistration = org.registrations[0]
-    approvedFrom2026(linkedRegistration)
-    const linkedAccreditation = org.accreditations[0]
-    linkedAccreditation.validFrom = '2026-01-01'
-    linkedAccreditation.validTo = '2026-12-31'
-    linkedAccreditation.accreditationNumber = toAccreditationNumber('ACC500123')
-    const ledgerId = {
-      organisationId: org.id,
-      registrationId: linkedRegistration.id,
-      accreditationId: linkedAccreditation.id,
-      organisationNumber: org.organisationNumber,
-      registrationNumber: toRegistrationNumber('REG500123'),
-      accreditationNumber: linkedAccreditation.accreditationNumber
-    }
-
+    const org = accreditedFrom2026('500123', 'REG500123', 'ACC500123')
     const server = await serverWithFebruarySubmission({
-      organisationReadRepository: await organisationReadRepositoryOf([org]),
-      ledgerId
+      organisationReadRepository: createInMemoryOrganisationReadRepository([
+        org
+      ]),
+      ledgerId: {
+        organisationNumber: org.organisationNumber,
+        registrationNumber: toRegistrationNumber('REG500123'),
+        accreditationNumber: toAccreditationNumber('ACC500123'),
+        year: toYear(2026)
+      }
     })
 
     const response = await injectReport(server, asServiceMaintainerRead())
@@ -233,41 +235,16 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
   })
 
   it('returns rows for an accreditation held outside re-ex and known only by its number', async () => {
-    const registrationNumber = toRegistrationNumber('REG500124')
-    const accreditationNumber = toAccreditationNumber('ACC-EXT-500124')
-    const registration = buildRegistration({
-      registrationNumber,
-      wasteProcessingType: 'reprocessor',
-      reprocessingType: 'input',
-      material: 'plastic'
-    })
-    const org = buildOrganisationWithRegistration(partialMock(registration))
-    org.organisationNumber = toOrganisationNumber('500124')
-    approvedFrom2026(org.registrations[0])
-
-    const externalAccreditation = buildExternalAccreditation({
-      registrationNumber,
-      year: toYear(2026),
-      accreditationNumber,
-      status: {
-        current: 'approved',
-        timeline: [
-          {
-            status: 'approved',
-            at: '2026-01-01T00:00:00.000Z',
-            updatedAt: '2026-01-01T00:00:00.000Z'
-          }
-        ]
-      }
-    })
+    const org = accreditedFrom2026('500124', 'REG500124', 'ACC-EXT-500124')
     const server = await serverWithFebruarySubmission({
-      organisationReadRepository: await organisationReadRepositoryOf([org], {
-        externalAccreditations: [externalAccreditation]
-      }),
+      organisationReadRepository: createInMemoryOrganisationReadRepository([
+        org
+      ]),
       ledgerId: {
         organisationNumber: org.organisationNumber,
-        registrationNumber,
-        accreditationNumber
+        registrationNumber: toRegistrationNumber('REG500124'),
+        accreditationNumber: toAccreditationNumber('ACC-EXT-500124'),
+        year: toYear(2026)
       }
     })
 

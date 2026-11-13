@@ -2,7 +2,6 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import {
-  ACCREDITATION_STATUS,
   MATERIAL,
   REGULATOR,
   TONNAGE_MONITORING_MATERIALS,
@@ -10,24 +9,19 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import {
+  approvedTimelineFrom,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  servedOrganisations
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import {
-  createAccreditedOperatorInserter,
-  storedMaterial
-} from '#vite/helpers/insert-accredited-operator.js'
-import {
-  buildAccreditation,
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import { partialMock } from '#test/type-helpers.js'
+import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
+import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import {
-  reportKeyOf,
-  uniqueRegistrationNumber
-} from '#reports/repository/contract/test-data.js'
+import { uniqueRegistrationNumber } from '#reports/repository/contract/test-data.js'
 import { frameOf } from './cells.js'
 import { addNationFigures } from './nation-figures-tab.js'
 import {
@@ -39,15 +33,14 @@ import {
 } from './published-workbook-test-helpers.js'
 
 const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation } = organisationBuilders
 const insertAccreditedOperator =
   createAccreditedOperatorInserter(organisationBuilders)
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */
@@ -62,56 +55,83 @@ const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 const renderWith = (name, contents) =>
   renderTab((workbook) => addNationFigures(workbook, name, contents))
 
-const approvedHistory = [
-  { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2025-11-01' },
-  { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2025-12-01' }
+/**
+ * A status change as the read model times it, taking effect when recorded.
+ *
+ * @param {string} status
+ * @param {string} at
+ */
+const changed = (status, at) => {
+  const instant = new Date(at).toISOString()
+  return { status, at: instant, updatedAt: instant }
+}
+
+/**
+ * Created in November, approved in December to take effect from `validFrom`.
+ *
+ * @param {string} [validFrom]
+ * @returns {StatusTimeline}
+ */
+const approvedFrom = (validFrom = '2026-01-01') => [
+  changed('created', '2025-11-01'),
+  {
+    status: 'approved',
+    at: new Date(validFrom).toISOString(),
+    updatedAt: '2025-12-01T00:00:00.000Z'
+  }
 ]
 
 /**
- * An exporter accredited for the rest of 2026. The organisations fixture
- * approves only reprocessors, so an exporter is built here for a register to
- * start with.
+ * An exporter accredited for the rest of 2026, as the read model serves it.
  *
- * @param {{ material: Material, regulator?: RegulatorValue, validFrom?: string, statusHistory?: { status: AccreditationStatus, updatedAt: string }[] }} options
+ * @param {{ material: Material, regulator?: RegulatorValue, timeline?: StatusTimeline }} options
  */
 const accreditedExporter = ({
   material,
   regulator = REGULATOR.EA,
-  validFrom = '2026-01-01',
-  statusHistory = approvedHistory
+  timeline = approvedFrom()
 }) => {
-  const accredited = {
-    ...storedMaterial(material),
-    wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-    submittedToRegulator: regulator,
-    statusHistory
-  }
   const registrationNumber = uniqueRegistrationNumber()
-  const accreditation = buildAccreditation({
-    ...accredited,
-    accreditationNumber: toAccreditationNumber(`ACC-${registrationNumber}`),
-    validFrom,
-    validTo: '2026-12-31'
-  })
-  const registration = buildRegistration({
-    ...accredited,
-    accreditationId: accreditation.id,
-    registrationNumber,
-    validFrom: '2025-12-01'
-  })
-  const organisation = buildOrganisation({
-    registrations: [registration],
-    accreditations: [accreditation]
+  const organisation = buildReadOrganisation({
+    registrations: {
+      [registrationNumber]: buildReadExporterRegistration({
+        material: /** @type {any} */ (material),
+        submittedToRegulator: { code: regulator },
+        validFrom: '2025-12-01',
+        status: {
+          current: 'approved',
+          timeline: approvedTimelineFrom('2025-12-01')
+        },
+        accreditations: {
+          2026: buildReadExporterAccreditation({
+            accreditationNumber: toAccreditationNumber(
+              `ACC-${registrationNumber}`
+            ),
+            status: {
+              current: /** @type {'approved' | 'suspended' | 'cancelled'} */ (
+                timeline.at(-1)?.status
+              ),
+              timeline
+            }
+          })
+        }
+      })
+    }
   })
   return {
     organisation,
-    operator: { reportKey: reportKeyOf(organisation, registration) }
+    operator: {
+      reportKey: {
+        organisationNumber: organisation.organisationNumber,
+        registrationNumber
+      }
+    }
   }
 }
 
 /**
  * @typedef {Object} Register
- * @property {OrganisationsRepository} organisationAdministrationRepository
+ * @property {ReturnType<typeof servedOrganisations>} served
  * @property {OrganisationReadRepository} organisationReadRepository
  * @property {ReportsRepository} reportsRepository
  */
@@ -123,15 +143,13 @@ const accreditedExporter = ({
  * @returns {Register}
  */
 const newRegister = (exporters = []) => {
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository(
-      exporters.map(({ organisation }) => partialMock(organisation))
-    )()
+  const served = servedOrganisations()
+  for (const { organisation } of exporters) {
+    served.add(organisation)
+  }
   return {
-    organisationAdministrationRepository,
-    organisationReadRepository: organisationReadRepositoryOver(
-      organisationAdministrationRepository
-    ),
+    served,
+    organisationReadRepository: served.repository(),
     reportsRepository: createInMemoryReportsRepository()()
   }
 }
@@ -142,15 +160,15 @@ const newRegister = (exporters = []) => {
  * @param {Register} register
  * @param {AccreditedFor & { regulator?: RegulatorValue }} operator
  */
-const seedOperator = (
-  { organisationAdministrationRepository },
-  { regulator, ...accreditedFor }
-) =>
-  insertAccreditedOperator(
-    organisationAdministrationRepository,
+const seedOperator = async ({ served }, { regulator, ...accreditedFor }) => {
+  const inserted = await insertAccreditedOperator(
+    createInMemoryOrganisationsRepository()(),
     regulator,
     accreditedFor
   )
+  served.add(inserted.servedOrganisation)
+  return inserted
+}
 
 /**
  * Submits the operator's monthly report for one month of 2026.
@@ -547,14 +565,11 @@ describe("a redacted UK tab's row with no operator accredited", () => {
   it('shows "[c]" for every figure of the row where either of its tables holds data', async () => {
     const cancelledThroughoutFebruary = accreditedExporter({
       material: MATERIAL.ALUMINIUM,
-      statusHistory: [
-        ...approvedHistory,
-        { status: ACCREDITATION_STATUS.SUSPENDED, updatedAt: '2026-01-20' },
-        {
-          status: ACCREDITATION_STATUS.CANCELLED,
-          updatedAt: '2026-01-20T09:00:00.000Z'
-        },
-        { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-03-01' }
+      timeline: [
+        ...approvedFrom(),
+        changed('suspended', '2026-01-20'),
+        changed('cancelled', '2026-01-20T09:00:00.000Z'),
+        changed('approved', '2026-03-01')
       ]
     })
     const register = newRegister([cancelledThroughoutFebruary])
@@ -647,7 +662,7 @@ describe("a UK or England tab's materials", () => {
     const register = newRegister([
       accreditedExporter({
         material: MATERIAL.ALUMINIUM,
-        validFrom: '2026-03-01'
+        timeline: approvedFrom('2026-03-01')
       })
     ])
 

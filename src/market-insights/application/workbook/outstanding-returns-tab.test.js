@@ -9,7 +9,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'
@@ -33,7 +33,6 @@ const insertAccreditedOperator =
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
@@ -67,7 +66,7 @@ const BAND_LABELLED = {
 
 /**
  * @typedef {{
- *   organisationAdministrationRepository: OrganisationsRepository,
+ *   served: ReturnType<typeof servedOrganisations>,
  *   organisationReadRepository: OrganisationReadRepository,
  *   reportsRepository: ReportsRepository
  * }} Register
@@ -75,13 +74,10 @@ const BAND_LABELLED = {
 
 /** @returns {Register} */
 const emptyRegister = () => {
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository()()
+  const served = servedOrganisations()
   return {
-    organisationAdministrationRepository,
-    organisationReadRepository: organisationReadRepositoryOver(
-      organisationAdministrationRepository
-    ),
+    served,
+    organisationReadRepository: served.repository(),
     reportsRepository: createInMemoryReportsRepository()()
   }
 }
@@ -94,14 +90,15 @@ const emptyRegister = () => {
  * @param {AccreditedFor & { regulator?: RegulatorValue, submitted?: number[] }} operator
  */
 const seedOperator = async (
-  { organisationAdministrationRepository, reportsRepository },
+  { served, reportsRepository },
   { regulator = REGULATOR.EA, submitted = [], ...accreditedFor }
 ) => {
-  const { reportKey } = await insertAccreditedOperator(
-    organisationAdministrationRepository,
+  const { reportKey, servedOrganisation } = await insertAccreditedOperator(
+    createInMemoryOrganisationsRepository()(),
     regulator,
     accreditedFor
   )
+  served.add(servedOrganisation)
   for (const period of submitted) {
     await buildSubmittedReport(reportsRepository, {
       ...reportKey,

@@ -5,7 +5,11 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('createSentOnLoadsSchema', () => {
   const ROW_ID_MINIMUM = 4000
-  const stubTransformer = () => {}
+  const stubTransformer = () => ({
+    wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+    rowId: '',
+    data: {}
+  })
   const schema = createSentOnLoadsSchema(ROW_ID_MINIMUM, stubTransformer)
 
   describe('structure', () => {

@@ -1,4 +1,3 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { config } from '#root/config.js'
@@ -6,13 +5,9 @@ import { organisationYearsResponseSchema } from './response.schema.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
   body,
-  createAccreditedOrganisationBuilder,
+  buildAccreditedOrganisation,
   useViewServer
 } from './organisation-view-test-helpers.js'
-
-const organisationBuilders = createOrganisationBuilders()
-const buildAccreditedOrganisation =
-  createAccreditedOrganisationBuilder(organisationBuilders)
 
 describe('GET /organisations/{organisationNumber}/years', () => {
   setupAuthContext()

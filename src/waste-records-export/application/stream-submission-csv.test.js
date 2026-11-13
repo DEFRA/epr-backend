@@ -18,6 +18,7 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 
 /** @import { SummaryLogRowState } from '#waste-records/repository/schema.js' */
 /** @import { SubmissionCsvInput } from './stream-submission-csv.js' */
@@ -39,6 +40,7 @@ const rowState = (overrides = {}) => ({
   organisationNumber: toOrganisationNumber('500001'),
   registrationNumber: toRegistrationNumber('REG-001'),
   accreditationNumber: null,
+  year: DEFAULT_YEAR,
   rowId: '1001',
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
@@ -58,8 +60,8 @@ const rowState = (overrides = {}) => ({
  */
 const input = (overrides = {}) =>
   /** @type {SubmissionCsvInput} */ ({
-    org: { id: 'org-1', companyDetails: { name: 'Acme Ltd' } },
-    registration: { id: 'reg-1', submittedToRegulator: 'ea' },
+    org: { name: 'Acme Ltd' },
+    registration: { submittedToRegulator: { code: 'ea' } },
     meta: {
       REGISTRATION_NUMBER: 'REG-001',
       ACCREDITATION_NUMBER: 'ACC-001',

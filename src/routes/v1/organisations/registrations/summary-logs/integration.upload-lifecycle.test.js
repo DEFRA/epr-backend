@@ -98,7 +98,7 @@ describe('Summary logs upload lifecycle', () => {
     it('should log completion with file location', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=test-bucket, s3Key=path/to/${filename}`,
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=re-ex-summary-logs, s3Key=/organisations/${organisationId}/registrations/${registrationId}/${fileId}/${filename}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -166,7 +166,7 @@ describe('Summary logs upload lifecycle', () => {
             kind: 'accredited',
             accreditationNumber: 'ACC-123'
           },
-          year: 2025
+          year: 2026
         })
       })
 

@@ -52,6 +52,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Pull test container images in the background
+        run: nohup docker compose -f .vite/fixtures/compose.yml pull --quiet > /dev/null 2>&1 &
+
       - name: Test and Scan
         uses: DEFRA/epr-re-ex-service/.github/actions/test-and-scan@main
         with:

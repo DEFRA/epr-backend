@@ -1,8 +1,6 @@
 import Boom from '@hapi/boom'
-import {
-  organisationReadRepositoryOf,
-  organisationReadRepositoryFrom
-} from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
 import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import {
@@ -73,8 +71,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
             createInMemorySummaryLogsRepository()(mockLogger),
           organisationAdministrationRepository:
             createInMemoryOrganisationsRepository([organisation]),
-          organisationReadRepository: await organisationReadRepositoryOf([
-            organisation
+          organisationReadRepository: createInMemoryOrganisationReadRepository([
+            buildReadOrganisationWithNumbersOf(organisation)
           ]),
           uploadsRepository
         }
@@ -190,8 +188,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
           organisationAdministrationRepository: organisationsRepositoryFactory,
-          organisationReadRepository:
-            await organisationReadRepositoryFrom(repository),
+          organisationReadRepository: createInMemoryOrganisationReadRepository(
+            [linkedOrganisation, otherOrganisation].map(
+              buildReadOrganisationWithNumbersOf
+            )
+          ),
           uploadsRepository: createInMemoryUploadsRepository()
         }
       })
