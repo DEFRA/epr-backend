@@ -101,6 +101,16 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
   })
 
   describe('findByOrganisationNumber for a year', () => {
+    // Statuses for a year are judged as of the earlier of its end and today,
+    // so today is fixed after every year these tests ask for has started.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     /**
      * @param {OrganisationReadRepository} repository
      * @param {OrganisationSeed} seed
