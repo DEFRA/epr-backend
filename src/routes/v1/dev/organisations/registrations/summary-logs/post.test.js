@@ -178,6 +178,53 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(balance?.amount ?? 0).toBe(0)
   })
 
+  it('refuses 2025, which has no templates, as the upload route would, storing nothing', async () => {
+    const env = await createEnvironment()
+    const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
+    const { organisationReadRepository } = env
+    const findByOrganisationNumber =
+      organisationReadRepository.findByOrganisationNumber
+    vi.spyOn(
+      organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockImplementation(async (...args) => {
+      const organisation = await findByOrganisationNumber(...args)
+      for (const registration of Object.values(
+        organisation?.registrations ?? {}
+      )) {
+        registration.validFrom = '2025-01-01'
+      }
+      return organisation
+    })
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
+      { year: 2025 }
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload).message).toBe(
+      'There are no summary log templates for 2025'
+    )
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('answers not found when the read model has no such registration', async () => {
+    const env = await createEnvironment()
+    vi.spyOn(
+      env.organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockResolvedValue(null)
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
   it('stores the year given in the URL, resolves accreditationId from the payload, and stores the numbers', async () => {
     const env = await createEnvironment()
 

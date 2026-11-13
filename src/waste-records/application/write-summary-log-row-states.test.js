@@ -9,6 +9,10 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 /**
  * @param {{ rowId: string, tonnage: number }} args
@@ -76,6 +80,15 @@ const accreditedLedgerId = withNumbers({
   accreditationId: 'acc-1'
 })
 
+const accreditation = buildAccreditation({
+  validFrom: '2023-01-01',
+  validTo: '2030-12-31',
+  statusHistory: [
+    { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
+    { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
+  ]
+})
+
 describe('writeSummaryLogRowStates', () => {
   let summaryLogRowStatesRepository
 
@@ -86,6 +99,10 @@ describe('writeSummaryLogRowStates', () => {
 
   it('writes a row state per record under the registered-only ledger', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf(
+        toYear(2026),
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      ),
       summaryLogRowStatesRepository,
       wasteRecords: [
         buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 }),
@@ -115,6 +132,10 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf(
+        toYear(2026),
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
       accreditation: null,
@@ -133,6 +154,10 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores weight quantities coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf(
+        toYear(2026),
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
       accreditation: null,
@@ -151,6 +176,10 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages so round-each-then-sum no longer drifts from sum-then-round', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf(
+        toYear(2026),
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      ),
       summaryLogRowStatesRepository,
       wasteRecords: [
         buildReceivedRecord({ rowId: '1', tonnage: 1.005 }),
@@ -180,12 +209,13 @@ describe('writeSummaryLogRowStates', () => {
 
   it('writes the row states under the supplied accreditation ledger', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf(
+        toYear(2026),
+        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-      accreditation: {
-        validFrom: '2023-01-01',
-        validTo: '2030-12-31'
-      },
+      accreditation,
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
       summaryLogId: toSummaryLogFileId('log-A')
@@ -207,12 +237,13 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stamps the missing field on a row excluded for incomplete data', async () => {
     await writeSummaryLogRowStates({
+      tableSchemas: tableSchemasOf(
+        toYear(2026),
+        PROCESSING_TYPES.REPROCESSOR_INPUT
+      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
-      accreditation: {
-        validFrom: '2023-01-01',
-        validTo: '2030-12-31'
-      },
+      accreditation,
       ledgerId: withNumbers(accreditedLedgerId),
       overseasSites,
       summaryLogId: toSummaryLogFileId('log-A')
@@ -236,6 +267,10 @@ describe('writeSummaryLogRowStates', () => {
   it('is idempotent — re-running the same submission adds no duplicate', async () => {
     const submit = () =>
       writeSummaryLogRowStates({
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
         summaryLogRowStatesRepository,
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
         accreditation: null,

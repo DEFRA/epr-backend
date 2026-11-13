@@ -2,7 +2,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { toYear } from '#common/helpers/dates/year.js'
+import { nextYear, toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
@@ -56,6 +56,7 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { AppliedForMaterial, StoredRegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
@@ -520,14 +521,17 @@ export const buildGetUrl = (summaryLogId) =>
 
 /**
  * @param {string} summaryLogId
- * @param {{ accredited?: boolean }} [options]
+ * @param {{ accredited?: boolean, year?: Year }} [options]
  */
-export const buildPostUrl = (summaryLogId, { accredited = true } = {}) =>
+export const buildPostUrl = (
+  summaryLogId,
+  { accredited = true, year = UPLOAD_YEAR } = {}
+) =>
   signedCallback(
     uploadCompletedPath({
       organisationNumber: TEST_ORGANISATION_NUMBER,
       registrationNumber: TEST_REGISTRATION_NUMBER,
-      year: UPLOAD_YEAR,
+      year,
       accredited,
       summaryLogId
     })
@@ -758,6 +762,7 @@ export const createTestInfrastructure = async (
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
+ *   year?: Year,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
  */
@@ -771,7 +776,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   registrationId = new ObjectId().toString(),
   reportsRepository = createInMemoryReportsRepository()(),
   accredited = true,
-  accreditationValidFrom = VALID_FROM,
+  year = UPLOAD_YEAR,
+  accreditationValidFrom = `${year}-01-01`,
   config
 } = {}) => {
   const accreditationId = 'ACC-123'
@@ -787,7 +793,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     reprocessingType,
     material,
     accredited,
-    accreditationValidFrom
+    accreditationValidFrom,
+    accreditationValidTo: `${year}-12-31`
   })
   testOrg.id = organisationId
   const organisationReadRepository = createInMemoryOrganisationReadRepository([
@@ -921,7 +928,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     organisationNumber: TEST_ORGANISATION_NUMBER,
     registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
     accreditationNumber: accredited ? TEST_ACCREDITATION_NUMBER : null,
-    year: UPLOAD_YEAR,
+    year,
     accredited,
     fileDataMap,
     ledgerRepository,
@@ -1006,6 +1013,7 @@ export const servedTestAccreditation = (overrides) =>
  * @param {string} options.material
  * @param {boolean} [options.accredited] - When false, builds a registered-only registration (no accreditation, quarterly cadence)
  * @param {string} [options.accreditationValidFrom] - The date the accreditation's window opens
+ * @param {string} [options.accreditationValidTo] - The date the accreditation's window closes
  * @returns {Object} Test organisation with registrations and accreditations
  */
 export const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
@@ -1018,7 +1026,8 @@ const buildComplexTestOrg = ({
   reprocessingType,
   material,
   accredited = true,
-  accreditationValidFrom = VALID_FROM
+  accreditationValidFrom = VALID_FROM,
+  accreditationValidTo = VALID_TO
 }) => {
   const registration = {
     id: registrationId,
@@ -1049,7 +1058,7 @@ const buildComplexTestOrg = ({
             id: accreditationId,
             accreditationNumber: TEST_ACCREDITATION_NUMBER,
             validFrom: accreditationValidFrom,
-            validTo: VALID_TO,
+            validTo: accreditationValidTo,
             material,
             submittedToRegulator: 'ea',
             site: {
@@ -1068,8 +1077,8 @@ const buildComplexTestOrg = ({
 /**
  * The organisation `buildComplexTestOrg` builds, as the read model serves it:
  * its registration under the test keys, approved from `VALID_FROM`, and its
- * accreditation for `UPLOAD_YEAR` when accredited, approved from
- * `accreditationValidFrom`.
+ * accreditation for the year of `accreditationValidFrom` when accredited,
+ * approved from `accreditationValidFrom`.
  *
  * @param {{
  *   processingType: string,
@@ -1103,12 +1112,15 @@ const buildComplexTestReadOrg = ({
       }
     ]
   })
-  const standingInUploadYear = !accredited
-    ? { [VALID_FROM]: { standing: 'registeredOnly' } }
-    : accreditationValidFrom === VALID_FROM
-      ? { [VALID_FROM]: { standing: 'accredited' } }
+  const accreditationYear = utcYearOf(accreditationValidFrom)
+  const startOfAccreditationYear = `${accreditationYear}-01-01`
+  const followingYear = nextYear(accreditationYear)
+  const standingInAccreditationYear = !accredited
+    ? { [startOfAccreditationYear]: { standing: 'registeredOnly' } }
+    : accreditationValidFrom === startOfAccreditationYear
+      ? { [startOfAccreditationYear]: { standing: 'accredited' } }
       : {
-          [VALID_FROM]: { standing: 'registeredOnly' },
+          [startOfAccreditationYear]: { standing: 'registeredOnly' },
           [accreditationValidFrom]: { standing: 'accredited' }
         }
   const accreditation = buildReadAccreditation({
@@ -1119,9 +1131,9 @@ const buildComplexTestReadOrg = ({
     material: /** @type {any} */ (material),
     status: approvedFrom(VALID_FROM),
     standingByDate: /** @type {any} */ ({
-      [UPLOAD_YEAR]: standingInUploadYear,
-      [UPLOAD_YEAR + 1]: {
-        [`${UPLOAD_YEAR + 1}-01-01`]: { standing: 'registeredOnly' }
+      [accreditationYear]: standingInAccreditationYear,
+      [followingYear]: {
+        [`${followingYear}-01-01`]: { standing: 'registeredOnly' }
       }
     })
   }
@@ -1153,7 +1165,7 @@ const buildComplexTestReadOrg = ({
               : {},
             accreditations: accredited
               ? {
-                  [UPLOAD_YEAR]: buildReadExporterAccreditation({
+                  [accreditationYear]: buildReadExporterAccreditation({
                     ...accreditation,
                     overseasSites: {
                       100: { status: 'approved', approvedOn: VALID_FROM },
@@ -1169,7 +1181,9 @@ const buildComplexTestReadOrg = ({
         : buildReadReprocessorRegistration({
             ...common,
             reprocessingType: /** @type {any} */ (reprocessingType),
-            accreditations: accredited ? { [UPLOAD_YEAR]: accreditation } : {}
+            accreditations: accredited
+              ? { [accreditationYear]: accreditation }
+              : {}
           })
     }
   })

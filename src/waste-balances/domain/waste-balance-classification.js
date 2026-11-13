@@ -1,8 +1,12 @@
-import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
+ * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
+ * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
+ * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
  * @import {WasteBalanceClassificationReason} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
  */
 
 /**
@@ -41,24 +45,23 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  * holds the fields the balance needs to read it — and only an INCLUDED row
  * contributes tonnage.
  *
- * The processing type names the template the record reports under, and so
- * selects the table schema. It is a property of the registration rather than of
- * the row, so it arrives as context instead of being read back out of the row's
- * own data.
+ * The table schemas are those of the template the record reports under: the
+ * template for the summary log's year and processing type. They arrive as
+ * context instead of being read back out of the row's own data.
  *
- * @param {Pick<import('#domain/waste-records/model.js').WasteRecord, 'type' | 'data'>} record
- * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
- * @param {import('#domain/organisations/accreditation.js').AccreditationValidity | null} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {Pick<WasteRecord, 'type' | 'data'>} record
+ * @param {Record<string, TableSchema>} tableSchemas
+ * @param {AccreditationValidity | null} accreditation
+ * @param {OverseasSitesContext} overseasSites
  * @returns {WasteBalanceClassification}
  */
 export const classifyRecordForWasteBalance = (
   record,
-  processingType,
+  tableSchemas,
   accreditation,
   overseasSites
 ) => {
-  const schema = findSchemaForProcessingType(processingType, record.type)
+  const schema = findSchemaByWasteRecordType(record.type, tableSchemas)?.schema
 
   if (!accreditation || !schema?.classifyForWasteBalance) {
     return {

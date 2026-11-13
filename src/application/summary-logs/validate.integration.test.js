@@ -10,7 +10,7 @@ import {
 } from '#domain/organisations/model.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -1208,7 +1208,7 @@ describe('SummaryLogsValidator integration', () => {
     })
 
     it('should capture cell errors from every sheet, not just the first', async () => {
-      const { tableSchemas } = getTemplate(
+      const tableSchemas = tableSchemasOf(
         DEFAULT_TEMPLATE_YEAR,
         PROCESSING_TYPES.EXPORTER
       )
