@@ -3,7 +3,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
-import Boom from '@hapi/boom'
+import { VALIDATION_CODE } from '#common/enums/validation.js'
 
 import {
   createSummaryLogsValidator,
@@ -221,6 +221,20 @@ describe('SummaryLogsValidator', () => {
   let summaryLogId
   let summaryLog
 
+  /**
+   * The stored organisation holds the registration, and its accreditation
+   * when it has one.
+   *
+   * @param {Record<string, any>} registration
+   */
+  const givenRegistration = ({ accreditation, ...registration }) =>
+    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
+      {
+        registrations: [{ overseasSites: {}, ...registration }],
+        accreditations: accreditation ? [accreditation] : []
+      }
+    )
+
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
     summaryLogRowStatesRepository =
@@ -234,32 +248,25 @@ describe('SummaryLogsValidator', () => {
     }
 
     organisationAdministrationRepository = {
-      findByOrganisationNumber: vi.fn().mockResolvedValue({
-        registrations: [{ registrationNumber: 'REG12345', overseasSites: {} }]
-      }),
-      findRegistrationById: vi.fn().mockResolvedValue({
-        id: 'reg-123',
-        registrationNumber: 'REG12345',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'input',
-        material: 'aluminium',
-        validFrom: '2025-01-01T00:00:00.000Z',
-        accreditation: {
-          accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01T00:00:00.000Z',
-          validTo: '2025-12-31T23:59:59.999Z',
-          statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-          ]
-        }
-      }),
-      findAccreditationById: vi.fn(
-        async () =>
-          (await organisationAdministrationRepository.findRegistrationById())
-            .accreditation
-      )
+      findByOrganisationNumber: vi.fn()
     }
+    givenRegistration({
+      id: 'reg-123',
+      registrationNumber: 'REG12345',
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
+      material: 'aluminium',
+      validFrom: '2025-01-01T00:00:00.000Z',
+      accreditation: {
+        accreditationNumber: 'ACC12345',
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z',
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+        ]
+      }
+    })
 
     summaryLogId = 'summary-log-123'
 
@@ -422,24 +429,22 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should persist ACCREDITATION_NUMBER from spreadsheet when present', async () => {
-    organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-      {
-        id: 'reg-123',
-        registrationNumber: 'REG12345',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'input',
-        material: 'aluminium',
-        accreditation: {
-          accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01T00:00:00.000Z',
-          validTo: '2025-12-31T23:59:59.999Z',
-          statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-          ]
-        }
+    givenRegistration({
+      id: 'reg-123',
+      registrationNumber: 'REG12345',
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
+      material: 'aluminium',
+      accreditation: {
+        accreditationNumber: 'ACC12345',
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z',
+        statusHistory: [
+          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+        ]
       }
-    )
+    })
 
     summaryLogExtractor.extract.mockResolvedValue(
       buildExtractedData({
@@ -515,28 +520,114 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
-  it('should update status as expected when registration not found', async () => {
-    organisationAdministrationRepository.findRegistrationById.mockRejectedValue(
-      Boom.notFound('Registration with id reg-123 not found')
+  it.each([
+    {
+      missing: 'organisation',
+      stored: null,
+      message: 'Organisation with number 500000 not found'
+    },
+    {
+      missing: 'registration',
+      stored: { registrations: [], accreditations: [] },
+      message: 'Registration with number REG12345 not found'
+    },
+    {
+      missing: 'accreditation',
+      stored: {
+        registrations: [{ registrationNumber: 'REG12345' }],
+        accreditations: []
+      },
+      message: 'Accreditation with number ACC12345 not found'
+    }
+  ])(
+    'marks the summary log invalid when no $missing holds its number',
+    async ({ stored, message }) => {
+      summaryLog.organisationNumber = '500000'
+      organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
+        stored
+      )
+
+      await validateSummaryLog(summaryLogId).catch((err) => err)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-log-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.INVALID,
+          validation: expect.objectContaining({
+            issues: [
+              {
+                severity: 'fatal',
+                category: 'technical',
+                message,
+                code: 'VALIDATION_SYSTEM_ERROR'
+              }
+            ]
+          })
+        })
+      )
+    }
+  )
+
+  it('validates against the accreditation holding the summary log number', async () => {
+    summaryLog.accreditationNumber = 'ACC99999'
+    organisationAdministrationRepository.findByOrganisationNumber.mockResolvedValue(
+      {
+        registrations: [
+          {
+            registrationNumber: 'REG12345',
+            wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
+            material: 'aluminium'
+          }
+        ],
+        accreditations: [
+          { accreditationNumber: 'ACC12345' },
+          { accreditationNumber: 'ACC99999' }
+        ]
+      }
     )
 
-    await validateSummaryLog(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId)
+
+    const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+    expect(updateCall.validation.issues).toContainEqual(
+      expect.objectContaining({
+        code: VALIDATION_CODE.ACCREDITATION_MISMATCH,
+        context: expect.objectContaining({
+          expected: 'ACC99999',
+          actual: 'ACC12345'
+        })
+      })
+    )
+  })
+
+  it('validates a registered-only summary log against no accreditation', async () => {
+    summaryLog.accreditationId = null
+    summaryLog.accreditationNumber = null
+
+    await validateSummaryLog(summaryLogId)
+
+    const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+    expect(updateCall.validation.issues).toContainEqual(
+      expect.objectContaining({
+        code: VALIDATION_CODE.ACCREDITATION_UNEXPECTED
+      })
+    )
+  })
+
+  it('validates a summary log that holds numbers but no database ids', async () => {
+    delete summaryLog.organisationId
+    delete summaryLog.registrationId
+    delete summaryLog.accreditationId
+
+    await validateSummaryLog(summaryLogId)
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
       expect.objectContaining({
-        status: SUMMARY_LOG_STATUS.INVALID,
-        validation: expect.objectContaining({
-          issues: [
-            {
-              severity: 'fatal',
-              category: 'technical',
-              message: 'Registration with id reg-123 not found',
-              code: 'VALIDATION_SYSTEM_ERROR'
-            }
-          ]
-        })
+        status: SUMMARY_LOG_STATUS.VALIDATED
       })
     )
   })
@@ -630,7 +721,6 @@ describe('SummaryLogsValidator', () => {
   it('should use error code from SpreadsheetValidationError when provided', async () => {
     const { SpreadsheetValidationError } =
       await import('#adapters/parsers/summary-logs/exceljs-parser.js')
-    const { VALIDATION_CODE } = await import('#common/enums/validation.js')
 
     summaryLogExtractor.extract.mockRejectedValue(
       new SpreadsheetValidationError(
@@ -811,7 +901,7 @@ describe('SummaryLogsValidator', () => {
 
       // Should NOT fetch registration (Level 2 meta business validation skipped)
       expect(
-        organisationAdministrationRepository.findRegistrationById
+        organisationAdministrationRepository.findByOrganisationNumber
       ).not.toHaveBeenCalled()
 
       // Should have meta syntax error only
@@ -889,7 +979,7 @@ describe('SummaryLogsValidator', () => {
 
       // Should fetch registration (Level 2 ran)
       expect(
-        organisationAdministrationRepository.findRegistrationById
+        organisationAdministrationRepository.findByOrganisationNumber
       ).toHaveBeenCalled()
 
       // Should have data syntax errors
@@ -982,25 +1072,23 @@ describe('SummaryLogsValidator', () => {
 
     it('sets IGNORED outcome for Reprocessor Input loads with dates outside accreditation range', async () => {
       // Mock registration with 2025 date range
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
@@ -1037,25 +1125,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const reprocessedHeaders = [
         'ROW_ID',
@@ -1104,25 +1190,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS with dates outside accreditation range', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const sentOnHeaders = [
         'ROW_ID',
@@ -1199,24 +1283,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for EXPORTER loads with dates outside accreditation range', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'exporter',
+        material: 'paper',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'exporter',
-          material: 'paper',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -1382,24 +1464,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in EXPORTER)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'exporter',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'exporter',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -1463,25 +1543,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (RECEIVED_LOADS_FOR_REPROCESSING in REPROCESSOR_OUTPUT)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
@@ -1515,25 +1593,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for REPROCESSED_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const reprocessedHeaders = [
         'ROW_ID',
@@ -1610,25 +1686,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in REPROCESSOR_OUTPUT)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const sentOnHeaders = [
         'ROW_ID',
@@ -1708,25 +1782,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Input', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -1783,25 +1855,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('does not set IGNORED outcome when no date field is found', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -1858,25 +1928,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('completes validation for REPROCESSOR_OUTPUT when date field is empty', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
@@ -1899,24 +1967,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('completes validation for EXPORTER sent-on loads when date field is empty', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'exporter',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'exporter',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -2006,25 +2072,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('should not record row outcome metrics for non-waste-balance table rows', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
           validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+          validTo: '2025-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const reprocessedHeaders = [
         'ROW_ID',
@@ -2274,6 +2338,17 @@ describe('SummaryLogsValidator', () => {
     it('resolves the previous submission on the accreditation the summary log was uploaded against', async () => {
       summaryLog.accreditationId = 'acc-1'
       summaryLog.accreditationNumber = 'ACC-1'
+      givenRegistration({
+        registrationNumber: 'REG12345',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: { accreditationNumber: 'ACC-1' }
+      })
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: buildMeta({ ACCREDITATION_NUMBER: { value: 'ACC-1' } }),
+        data: {}
+      })
 
       await seedSubmittedSummaryLog({
         ledgerId: {
