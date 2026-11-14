@@ -11,7 +11,11 @@ const leaksStateUndetected = new Set([
   'src/waste-records/application/project-summary-log-row-state.test.js'
 ])
 
-const testSupport = /\.contract\.js$|test-helpers/
+const testSupport =
+  /\.contract\.js$|test-helpers|^\.vite\/(fixtures|helpers)\/|^src\/test\//
+
+/** Sets `MONGO_URI` before every use, so a stale value cannot leak. */
+const trustedTestSupport = new Set(['.vite/fixtures/mongo.js'])
 
 const aliases = Object.entries(
   JSON.parse(readFileSync('package.json', 'utf8')).imports
@@ -35,7 +39,11 @@ const testSupportImportsOf = (file) =>
   ]
     .map(([, from, dynamic]) => resolveImport(file, from ?? dynamic))
     .filter(
-      (target) => target && testSupport.test(target) && existsSync(target)
+      (target) =>
+        target &&
+        testSupport.test(target) &&
+        !trustedTestSupport.has(target) &&
+        existsSync(target)
     )
 
 const reachesLeak = (file, seen = new Set()) => {
@@ -52,16 +60,16 @@ const reachesLeak = (file, seen = new Set()) => {
 const needsIsolation = (file) =>
   leaksStateUndetected.has(file) || reachesLeak(file)
 
-const testFiles = globSync('{src,.vite}/**/*.test.js')
+const appTestFiles = '{src,.vite}/**/*.test.js'
+
+export const testFilePatterns = [appTestFiles, 'scripts/**/*.test.mjs']
 
 /**
- * Test files that mock modules or change config, env or globals, directly or
- * through a shared contract or test helper, keep a fresh module graph per
- * file; the rest share one per worker.
+ * Test files that neither mock modules nor change config, env or globals,
+ * directly or through a shared contract or test helper, so they can share one
+ * module graph per worker. Every other test file, including one created after
+ * the config loaded (in watch mode), keeps a fresh module graph per file.
  */
-export const isolatedTestFiles = [
-  ...testFiles.filter(needsIsolation),
-  'scripts/**/*.test.mjs'
-]
-
-export const sharedTestFiles = testFiles.filter((file) => !needsIsolation(file))
+export const sharedTestFiles = globSync(appTestFiles).filter(
+  (file) => !needsIsolation(file)
+)

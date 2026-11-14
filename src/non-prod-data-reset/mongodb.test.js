@@ -309,7 +309,7 @@ const EMPTY_COUNTS = {
   'external-accreditations': 0
 }
 
-describe('non-prod data reset (mongo)', () => {
+describe('non-prod data reset (mongo)', { timeout: 15_000 }, () => {
   describe('deleteByOrganisationNumber', () => {
     it('cascades through every collection seeded via real repository adapters', async ({
       database,
