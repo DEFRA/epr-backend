@@ -5,10 +5,10 @@
 /** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
 
 /**
- * A summary log as an upload stores it, holding the database id of the
- * accreditation it was uploaded for beside its number.
+ * A summary log as it is stored. One uploaded for an accreditation the
+ * organisation read model holds outside this service has no accreditation id.
  *
- * @typedef {SummaryLog & { accreditationId: string | null }} NewSummaryLog
+ * @typedef {SummaryLog & { accreditationId?: string | null }} NewSummaryLog
  */
 
 /**
