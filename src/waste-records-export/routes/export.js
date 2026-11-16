@@ -1,10 +1,10 @@
-import Joi from 'joi'
-
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
+import { exportYearQuery } from './year-query.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
@@ -16,16 +16,17 @@ export const getWasteRecordsExportPath = '/v1/admin/waste-records/export.csv'
 const ISO_MILLISECOND_SUFFIX_LENGTH = 5
 
 /**
+ * @param {Year} year
  * @returns {string}
  */
-const buildFilename = () => {
+const buildFilename = (year) => {
   // ISO is `YYYY-MM-DDTHH:MM:SS.sssZ`; we want second precision and `:` swapped
   // for `-` so the name is filesystem-safe.
   const stamp = new Date()
     .toISOString()
     .slice(0, -ISO_MILLISECOND_SUFFIX_LENGTH)
     .replaceAll(':', '-')
-  return `waste-records-${stamp}Z.csv`
+  return `waste-records-${year}-${stamp}Z.csv`
 }
 
 export const wasteRecordsExportRoute = {
@@ -36,11 +37,12 @@ export const wasteRecordsExportRoute = {
     tags: ['api', 'admin'],
     validate: {
       // A single registration's export is served by natural key.
-      query: Joi.object({})
+      query: exportYearQuery
     }
   },
   /**
    * @param {HapiRequest & {
+   *   query: { year: Year },
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   ledgerRepository: WasteBalanceLedgerRepository,
    *   summaryLogsRepository: SummaryLogsRepository
@@ -51,7 +53,8 @@ export const wasteRecordsExportRoute = {
       organisationReadRepository: request.organisationReadRepository,
       summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
       ledgerRepository: request.ledgerRepository,
-      summaryLogsRepository: request.summaryLogsRepository
+      summaryLogsRepository: request.summaryLogsRepository,
+      year: request.query.year
     })
 
     return h
@@ -59,7 +62,7 @@ export const wasteRecordsExportRoute = {
       .type('text/csv; charset=utf-8')
       .header(
         'Content-Disposition',
-        `attachment; filename="${buildFilename()}"`
+        `attachment; filename="${buildFilename(request.query.year)}"`
       )
   }
 }
