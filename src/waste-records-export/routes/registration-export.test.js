@@ -21,6 +21,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
@@ -29,6 +30,7 @@ const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 const REGISTRATION_ID = 'reg-1'
 const REGISTRATION_NUMBER = 'R26ER5000000002PA'
 const FILE_ID = 'file-1'
+const FILE_ID_2027 = 'file-2027'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
 
 const REGISTERED_ONLY_LEDGER = {
@@ -41,6 +43,11 @@ const REGISTERED_ONLY_LEDGER = {
   year: DEFAULT_YEAR
 }
 
+const REGISTERED_ONLY_LEDGER_2027 = {
+  ...REGISTERED_ONLY_LEDGER,
+  year: toYear(2027)
+}
+
 // The export reads the organisation read model alone.
 const readsLegacy = () =>
   Promise.reject(new Error('read the legacy repository'))
@@ -50,11 +57,11 @@ const legacyOrganisationsRepository = {
   findByOrganisationNumber: readsLegacy
 }
 
-const receivedRowState = () => ({
-  rowId: '1001',
+const receivedRowState = (rowId = '1001', dateReceived = '2026-02-01') => ({
+  rowId,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-  data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01' },
+  data: { DATE_RECEIVED_FOR_REPROCESSING: dateReceived },
   classification: {
     outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
     reasons: [],
@@ -83,6 +90,10 @@ const createServer = async ({
     buildLedgerEvent({
       ...REGISTERED_ONLY_LEDGER,
       payload: { summaryLogId: FILE_ID, creditTotal: 0 }
+    }),
+    buildLedgerEvent({
+      ...REGISTERED_ONLY_LEDGER_2027,
+      payload: { summaryLogId: FILE_ID_2027, creditTotal: 0 }
     })
   ])
 } = {}) => {
@@ -103,6 +114,11 @@ const createServer = async ({
     [receivedRowState()],
     toSummaryLogFileId(FILE_ID)
   )
+  await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+    REGISTERED_ONLY_LEDGER_2027,
+    [receivedRowState('2001', '2027-02-01')],
+    toSummaryLogFileId(FILE_ID_2027)
+  )
 
   return createTestServer({
     repositories: {
@@ -115,7 +131,10 @@ const createServer = async ({
       summaryLogsRepository: () => ({
         findAll: vi
           .fn()
-          .mockResolvedValue([submittedLog(FILE_ID, SUBMITTED_AT)])
+          .mockResolvedValue([
+            submittedLog(FILE_ID, SUBMITTED_AT),
+            submittedLog(FILE_ID_2027, SUBMITTED_AT)
+          ])
       })
     }
   })
@@ -144,6 +163,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     expect(lines[0]).toContain('Organisation Name')
     expect(lines[1]).toContain('Acme Ltd')
     expect(lines[1]).toContain('1001')
+    expect(response.payload).not.toContain('2001')
   })
 
   it('names the download by registration number, year and the moment of export', async () => {
@@ -185,7 +205,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const lines = response.payload.split('\n').filter((line) => line !== '')
-    expect(lines).toHaveLength(1)
+    expect(lines).toHaveLength(2)
+    expect(lines[1]).toContain('2001')
+    expect(response.payload).not.toContain('1001')
   })
 
   it('serves a header-only CSV for a year with no waste records', async () => {

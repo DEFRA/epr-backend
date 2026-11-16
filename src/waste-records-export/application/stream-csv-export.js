@@ -5,7 +5,6 @@ import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisati
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   findSchemaByWasteRecordType,
-  hasTemplate,
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -84,12 +83,10 @@ export const coerceForExport = (
   year
 ) => {
   const withProcessingType = { ...data, processingType }
-  const schema = hasTemplate(year, processingType)
-    ? findSchemaByWasteRecordType(
-        wasteRecordType,
-        tableSchemasOf(year, processingType)
-      )?.schema
-    : null
+  const schema = findSchemaByWasteRecordType(
+    wasteRecordType,
+    tableSchemasOf(year, processingType)
+  )?.schema
   return schema
     ? coerceRowData(withProcessingType, schema).data
     : withProcessingType

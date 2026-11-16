@@ -4,7 +4,7 @@ import { yearSchema } from '#common/validation/year-schema.js'
 
 /**
  * The year an export covers when the caller names none, until every caller
- * passes one (PAE-2277).
+ * passes one.
  */
 const DEFAULT_EXPORT_YEAR = 2026
 

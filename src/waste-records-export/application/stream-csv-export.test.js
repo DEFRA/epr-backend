@@ -1,4 +1,5 @@
 import {
+  coerceForExport,
   streamCsvExport,
   streamCsvExportToReadable
 } from './stream-csv-export.js'
@@ -1281,5 +1282,32 @@ describe('streamCsvExportToReadable', () => {
     const [header] = await collect(streamCsvExport(deps))
 
     expect(header).not.toContain('ONLY_NEXT_YEAR')
+  })
+})
+
+describe('coerceForExport', () => {
+  const receivedRow = {
+    data: { DWT_SUPPLY_ID: 12345 },
+    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED
+  }
+
+  it.each([
+    [toYear(2026), 12345],
+    [toYear(2027), '12345']
+  ])("coerces a row's data with the %s template", (year, expected) => {
+    expect(coerceForExport(receivedRow, year).DWT_SUPPLY_ID).toBe(expected)
+  })
+
+  it("exports as stored a row of a type the year's template has no table for", () => {
+    expect(
+      coerceForExport(
+        { ...receivedRow, wasteRecordType: WASTE_RECORD_TYPE.EXPORTED },
+        toYear(2026)
+      )
+    ).toEqual({
+      DWT_SUPPLY_ID: 12345,
+      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+    })
   })
 })

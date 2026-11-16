@@ -10,6 +10,7 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
@@ -28,6 +29,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 
@@ -75,6 +77,7 @@ const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
  * @typedef {Object} LedgerSeed
  * @property {string} [registrationNumber] - defaults to `buildRegistration`'s
  * @property {string} [summaryLogId]
+ * @property {Year} [year]
  * @property {SummaryLogRowStateEntry[]} [rows]
  */
 
@@ -102,7 +105,7 @@ const createServerWithRepos = async ({
       seed.registrationNumber ?? 'REG-reg-1'
     ),
     accreditationNumber: null,
-    year: DEFAULT_YEAR
+    year: seed.year ?? DEFAULT_YEAR
   })
 
   const ledgerRepository = createInMemoryLedgerRepository(
@@ -252,7 +255,19 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
     it("serves only the given year's records", async () => {
       const server = await createServerWithRepos({
         organisations: [organisationWith()],
-        seeds: [{ rows: [receivedRowState()] }]
+        seeds: [
+          { rows: [receivedRowState()] },
+          {
+            summaryLogId: 'sl-2027',
+            year: toYear(2027),
+            rows: [
+              receivedRowState({
+                rowId: '2001',
+                data: { DATE_RECEIVED_FOR_REPROCESSING: '2027-02-01' }
+              })
+            ]
+          }
+        ]
       })
 
       const response = await server.inject({
@@ -265,7 +280,9 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const lines = response.payload.split('\n').filter((line) => line !== '')
-      expect(lines).toHaveLength(1)
+      expect(lines).toHaveLength(2)
+      expect(lines[1]).toContain('2001')
+      expect(response.payload).not.toContain('1001')
     })
 
     it.each(['2023', '2101', 'next'])(
