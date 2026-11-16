@@ -610,17 +610,19 @@ describe('removeTestOrganisationData', () => {
     expect(await countEverywhere(db, UNHELD_YEAR)).toEqual(NOTHING)
   })
 
-  it("skips an organisation when another organisation's record cites one it would remove", async () => {
-    await db.collection('waste-balance-events').insertOne(
-      buildLedgerEvent({
-        ...OPERATOR_UNHELD,
-        number: 2,
-        payload: {
-          summaryLogId: toSummaryLogFileId('unheld-file'),
-          creditTotal: 1
-        }
-      })
-    )
+  it("skips an organisation when another organisation's record cites one it would remove, naming each such record", async () => {
+    const { insertedId } = await db
+      .collection('waste-balance-events')
+      .insertOne(
+        buildLedgerEvent({
+          ...OPERATOR_UNHELD,
+          number: 2,
+          payload: {
+            summaryLogId: toSummaryLogFileId('unheld-file'),
+            creditTotal: 1
+          }
+        })
+      )
 
     const result = await run(false)
 
@@ -634,7 +636,8 @@ describe('removeTestOrganisationData', () => {
     })
     expect(logger.error).toHaveBeenCalledWith({
       message:
-        'Skipping test organisation 999999: records outside the test organisations cite a summary log or PRN it would remove: events=1 rowStates=0 reports=0'
+        'Skipping test organisation 999999: records outside the test organisations cite a summary log or PRN it would remove: events=1 rowStates=0 reports=0' +
+        `; events id=${insertedId} organisationNumber=100234 registrationNumber=OPERATOR-REG accreditationNumber=OPERATOR-ACC year=2026`
     })
   })
 

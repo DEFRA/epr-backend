@@ -5,7 +5,7 @@ import { RECORD_KINDS } from '../mongodb.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-/** @import { Ledger, RecordCounts, SourceIds, TestOrganisationRecords, UnnumberedSummaryLogs } from '../mongodb.js' */
+/** @import { Citation, CitingKind, Ledger, RecordCounts, SourceIds, TestOrganisationRecords, UnnumberedSummaryLogs } from '../mongodb.js' */
 
 export const REMOVAL_ACTION = 'test-organisation-data-removal'
 
@@ -52,7 +52,7 @@ export const REMOVAL_ACTION = 'test-organisation-data-removal'
  * @property {TypedLogger} logger
  */
 
-/** @param {Ledger} ledger */
+/** @param {Partial<Ledger>} ledger - partial for a citing record, which may hold no numbers */
 export const describeLedger = ({
   organisationNumber,
   registrationNumber,
@@ -66,6 +66,20 @@ export const describeCounts = (counts) =>
   Object.entries(counts)
     .map(([kind, count]) => `${kind}=${count}`)
     .join(' ')
+
+/** @param {Citation[]} citations */
+const describeCitations = (citations) => {
+  /** @type {Record<CitingKind, number>} */
+  const counts = { events: 0, rowStates: 0, reports: 0 }
+  for (const { kind } of citations) {
+    counts[kind]++
+  }
+  const each = citations.map(
+    ({ kind, id, ...numbers }) =>
+      `; ${kind} id=${id} ${describeLedger(numbers)}`
+  )
+  return `${describeCounts(counts)}${each.join('')}`
+}
 
 /** @returns {RecordCounts} */
 const noRecords = () => ({
@@ -244,14 +258,14 @@ const removeFromOrganisation = async (
     return
   }
 
-  const citations = await records.countCitationsOutside(
+  const citations = await records.findCitationsOutside(
     organisationNumber,
     unnumbered?.summaryLogIds ?? [],
     [...dependencies.testOrganisationNumbers]
   )
-  if (holdsAny(citations)) {
+  if (citations.length > 0) {
     logger.error({
-      message: `Skipping test organisation ${organisationNumber}: records outside the test organisations cite a summary log or PRN it would remove: ${describeCounts(citations)}`
+      message: `Skipping test organisation ${organisationNumber}: records outside the test organisations cite a summary log or PRN it would remove: ${describeCitations(citations)}`
     })
     result.skipped++
     return
