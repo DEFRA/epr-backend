@@ -8,9 +8,7 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -105,7 +103,7 @@ export const validityOf = ({ registration, year }) => {
  * The approval date of each overseas site an exporter's accreditation lists,
  * by the site's key, as classification reads it.
  *
- * @param {LedgerAccreditation} ledgerAccreditation
+ * @param {Pick<LedgerAccreditation, 'registration' | 'year'>} ledgerAccreditation
  * @returns {OverseasSitesContext}
  */
 export const overseasSitesOf = ({ registration, year }) =>
@@ -123,60 +121,17 @@ export const overseasSitesOf = ({ registration, year }) =>
   )
 
 /**
- * The accreditation a summary log's numbers and year name, as the read model
- * serves it, or none for a registered-only summary log.
+ * What classifying a row reads of its accreditation, none for a
+ * registered-only summary log. Only an accredited exporter's overseas sites
+ * are checked.
  *
- * @param {OrganisationReadRepository} organisationReadRepository
- * @param {{ organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, accreditationNumber: AccreditationNumber | null, year: Year }} numbers
- * @returns {Promise<LedgerAccreditation | null>}
- */
-export const ledgerAccreditationFor = async (
-  organisationReadRepository,
-  { organisationNumber, registrationNumber, accreditationNumber, year }
-) => {
-  const organisation =
-    await organisationReadRepository.findByOrganisationNumber(
-      organisationNumber
-    )
-  if (!organisation) {
-    throw new Error(`Organisation not found: ${organisationNumber}`)
-  }
-  if (!Object.hasOwn(organisation.registrations, registrationNumber)) {
-    throw new Error(`Registration not found: ${registrationNumber}`)
-  }
-  if (accreditationNumber === null) {
-    return null
-  }
-
-  const ledgerAccreditation = indexByLedger([organisation], {
-    includeTestOrganisations: true
-  }).get(
-    ledgerKey({
-      organisationNumber,
-      registrationNumber,
-      accreditationNumber,
-      year
-    })
-  )
-  if (!ledgerAccreditation) {
-    throw new Error(
-      `Accreditation not found: ${accreditationNumber} for ${year}`
-    )
-  }
-  return ledgerAccreditation
-}
-
-/**
- * What classifying a row reads of its accreditation. Only an accredited
- * exporter's overseas sites are checked.
- *
- * @param {LedgerAccreditation | null} ledgerAccreditation
+ * @param {{ registration: ReadModelRegistration, year: Year | null }} accreditationYear
  * @returns {ClassificationContext}
  */
-export const classificationContextOf = (ledgerAccreditation) =>
-  ledgerAccreditation
-    ? {
-        accreditation: validityOf(ledgerAccreditation),
-        overseasSites: overseasSitesOf(ledgerAccreditation)
+export const classificationContextOf = ({ registration, year }) =>
+  year === null
+    ? { accreditation: null, overseasSites: ORS_VALIDATION_DISABLED }
+    : {
+        accreditation: validityOf({ registration, year }),
+        overseasSites: overseasSitesOf({ registration, year })
       }
-    : { accreditation: null, overseasSites: ORS_VALIDATION_DISABLED }

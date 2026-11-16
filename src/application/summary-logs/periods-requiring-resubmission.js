@@ -1,25 +1,24 @@
-import { getOrsDetailsMap } from '#overseas-sites/application/get-ors-details-map.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
+import { orsDetailsOf } from '#reports/domain/ors-details.js'
 import { latestSubmitted } from '#reports/domain/build-calendar-periods.js'
 import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
 import { diffReports } from '#reports/domain/resubmission/reported-data-equivalence.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
+import { reportOperatorCategory } from '#reports/domain/operator-category.js'
 import { ledgerIdFor } from './ledger-id.js'
 
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 /** @import {PeriodicReport, Report, ReportPerPeriod} from '#reports/repository/port.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {ReportableWasteRecordState} from '#reports/domain/aggregation/aggregate-report-detail.js' */
 /** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
-/** @import {OrsDetails} from '#overseas-sites/application/get-ors-details-map.js' */
+/** @import {OrsDetails} from '#reports/domain/ors-details.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
@@ -113,26 +112,21 @@ const aggregatePeriodFigures = (
 
 /**
  * @param {object} params
- * @param {Registration} params.registration
+ * @param {SummaryLogRegistration} params.registration
  * @param {ReportableWasteRecordState[]} params.newHeadRowStates
- * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteBalanceLedgerId} params.ledgerId
- * @returns {Promise<FiguresContext>}
+ * @returns {FiguresContext}
  */
-const buildFiguresContext = async ({
+const buildFiguresContext = ({
   registration,
   newHeadRowStates,
-  overseasSitesRepository,
   summaryLogRowStatesRepository,
   ledgerId
 }) => ({
   newHeadRowStates,
-  operatorCategory: getOperatorCategory(registration),
-  orsDetailsMap: await getOrsDetailsMap(
-    overseasSitesRepository,
-    registration.overseasSites
-  ),
+  operatorCategory: reportOperatorCategory(registration),
+  orsDetailsMap: orsDetailsOf(registration),
   ledgerId,
   summaryLogRowStatesRepository
 })
@@ -248,10 +242,9 @@ const logPeriodOutcome = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {Record<string, TableSchema>} params.tableSchemas - The table schemas of the summary log's template
- * @param {Registration | undefined} params.registration
+ * @param {SummaryLogRegistration | undefined} params.registration
  * @param {ClassificationContext | undefined} params.classificationContext
  * @param {ReportsService} params.reportsService
- * @param {OverseasSitesRepository} params.overseasSitesRepository
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
@@ -268,7 +261,6 @@ const computePeriodsRequiringResubmission = async ({
   registration,
   classificationContext,
   reportsService,
-  overseasSitesRepository,
   summaryLogRowStatesRepository,
   ledgerId
 }) => {
@@ -280,14 +272,13 @@ const computePeriodsRequiringResubmission = async ({
     throw new Error('Closed periods without a registration')
   }
 
-  const context = await buildFiguresContext({
+  const context = buildFiguresContext({
     registration,
     newHeadRowStates: toNewHeadRowStates(
       wasteRecords,
       tableSchemas,
       classificationContext
     ),
-    overseasSitesRepository,
     summaryLogRowStatesRepository,
     ledgerId
   })

@@ -103,8 +103,6 @@ describe('summaryLogCommandHandlers', () => {
         expect(createSummaryLogsValidator).toHaveBeenCalledWith({
           logger: deps.logger,
           summaryLogsRepository: deps.summaryLogsRepository,
-          organisationAdministrationRepository:
-            deps.organisationAdministrationRepository,
           reportsService: deps.reportsService,
           summaryLogExtractor: deps.summaryLogExtractor
         })

@@ -1,9 +1,8 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
-import { CADENCE } from '#reports/domain/cadence.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { classifyByPeriodStatus } from './period-status.js'
+import { reportOperatorCategory } from '#reports/domain/operator-category.js'
+import { reportingCadenceOf } from './registration-for-summary-log.js'
 import { classifyRecordChanges } from './classify-record-changes.js'
 import {
   countByValidity,
@@ -13,7 +12,7 @@ import {
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
@@ -43,7 +42,7 @@ export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
  * @param {Record<string, TableSchema> | undefined} params.tableSchemas - The template's table schemas
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {ClassificationContext} [params.classificationContext]
- * @param {Registration} [params.registration]
+ * @param {SummaryLogRegistration} [params.registration]
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
  * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
@@ -92,11 +91,9 @@ export const classifyLoads = ({
         submittedRowStatesByKey,
         recordChanges,
         periodicReports,
-        cadence: isRegistrationAccredited(registration)
-          ? CADENCE.monthly
-          : CADENCE.quarterly,
+        cadence: reportingCadenceOf(registration),
         tableSchemas,
-        operatorCategory: getOperatorCategory(registration),
+        operatorCategory: reportOperatorCategory(registration),
         classificationContext
       })
     : null
@@ -114,7 +111,7 @@ export const classifyLoads = ({
  * misclassified as open.
  *
  * @param {Object} params
- * @param {Registration} [params.registration]
+ * @param {SummaryLogRegistration} [params.registration]
  * @param {string} params.status
  * @param {SubmittedSummaryLog} params.summaryLog
  * @param {ReportsService} params.reportsService
