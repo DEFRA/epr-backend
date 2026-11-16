@@ -30,7 +30,7 @@ const describeUnnumbered = ({
 
 /** @param {StartedServer} server */
 const runRemoval = async (server) => {
-  const isDryRun = !config.get('featureFlags.testOrganisationWholeDataRemoval')
+  const isDryRun = !config.get('featureFlags.testOrganisationDataRemoval')
 
   const { removed, unnumbered, skipped, failed, auditFailed } =
     await removeTestOrganisationData(

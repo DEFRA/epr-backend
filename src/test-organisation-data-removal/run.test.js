@@ -95,7 +95,7 @@ describe('runTestOrganisationDataRemoval', () => {
     await runTestOrganisationDataRemoval(server)
 
     expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.testOrganisationWholeDataRemoval'
+      'featureFlags.testOrganisationDataRemoval'
     )
     expect(removeTestOrganisationData).toHaveBeenCalledWith(expect.anything(), {
       isDryRun: true
