@@ -444,12 +444,52 @@ describe('removeTestOrganisationData', () => {
     )
   })
 
-  it('finds nothing left to remove on a second run', async () => {
+  it('removes and audits nothing on a second run', async () => {
     await run(false)
+    const audits = await db.collection('system-logs').countDocuments({})
 
     const result = await run(false)
 
-    expect(result.removed).toEqual([])
+    expect(result).toEqual({
+      removed: [],
+      undecided: 0,
+      skipped: 0,
+      failed: 0,
+      auditFailed: 0
+    })
+    expect(await db.collection('system-logs').countDocuments({})).toBe(audits)
+  })
+
+  it('finishes on the next run a removal that stopped partway', async () => {
+    const records = createTestOrganisationRecords(db)
+    const first = await run(false, {
+      records: {
+        ...records,
+        remove: (kind, ledger) =>
+          kind === 'prns'
+            ? Promise.reject(new Error('stopped'))
+            : records.remove(kind, ledger)
+      }
+    })
+    expect(first.failed).toBe(4)
+    expect(await countEverywhere(db, UNHELD)).toEqual({
+      ...NOTHING,
+      prns: 1,
+      summaryLogs: 1
+    })
+
+    const second = await run(false)
+
+    expect(second).toEqual(
+      expect.objectContaining({ skipped: 0, failed: 0, auditFailed: 0 })
+    )
+    expect(second.removed).toContainEqual({
+      ledger: UNHELD,
+      counts: { ...NOTHING, prns: 1, summaryLogs: 1 },
+      sources: { summaryLogIds: ['unheld-log'], prnIds: [expect.any(String)] }
+    })
+    expect(await countEverywhere(db, UNHELD)).toEqual(NOTHING)
+    expect(await countEverywhere(db, UNHELD_YEAR)).toEqual(NOTHING)
   })
 
   it('skips an organisation when a record it would keep cites one it would remove', async () => {
