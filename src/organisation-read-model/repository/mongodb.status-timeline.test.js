@@ -131,7 +131,7 @@ describe('status timeline', () => {
     })
   })
 
-  it('serves when the last change was recorded, even when an approval from a later validFrom takes effect after it', async ({
+  it('serves when the last change was recorded, even when it takes effect later, at validFrom', async ({
     organisationReadRepositoryWith
   }) => {
     const stored = organisationAccredited({
@@ -156,8 +156,8 @@ describe('status timeline', () => {
     ).toMatchObject({
       lastUpdatedAt: '2025-12-20T09:00:00.000Z',
       timeline: [
-        { status: 'suspended', at: '2025-12-20T09:00:00.000Z' },
-        { status: 'approved', at: '2026-01-01T00:00:00.000Z' }
+        { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
+        { status: 'suspended', at: '2026-01-01T00:00:00.000Z' }
       ]
     })
   })
@@ -274,6 +274,39 @@ describe('status timeline', () => {
         { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
         { status: 'cancelled', at: '2026-03-10T09:00:00.000Z' },
         { status: 'approved', at: '2026-03-30T09:00:00.000Z' }
+      ]
+    })
+  })
+
+  it('dates a cancellation recorded before validFrom at validFrom, after the approval', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const stored = organisationAccredited({
+      validFrom: '2026-07-01',
+      statusHistory: [
+        { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2026-05-01T09:00:00.000Z' },
+        { status: 'cancelled', updatedAt: '2026-05-01T10:00:00.000Z' }
+      ]
+    })
+    const repository = await organisationReadRepositoryWith({
+      organisations: [stored]
+    })
+
+    const organisation = await findOrganisation(
+      repository,
+      stored.organisationNumber
+    )
+
+    expect(
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+    ).toMatchObject({
+      lastUpdatedAt: '2026-05-01T10:00:00.000Z',
+      timeline: [
+        { status: 'approved', at: '2026-07-01T00:00:00.000Z' },
+        { status: 'suspended', at: '2026-07-01T00:00:00.000Z' },
+        { status: 'cancelled', at: '2026-07-01T00:00:00.000Z' }
       ]
     })
   })
