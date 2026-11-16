@@ -634,7 +634,7 @@ describe('removeTestOrganisationData', () => {
     })
     expect(logger.error).toHaveBeenCalledWith({
       message:
-        "Skipping test organisation 999999: other organisations' records cite a summary log or PRN it would remove: events=1 rowStates=0 reports=0"
+        'Skipping test organisation 999999: records outside the test organisations cite a summary log or PRN it would remove: events=1 rowStates=0 reports=0'
     })
   })
 
@@ -687,6 +687,32 @@ describe('removeTestOrganisationData', () => {
       )
     }
   )
+
+  it("removes a test organisation whose records another test organisation's records cite", async () => {
+    const otherTest = {
+      ...UNHELD,
+      organisationNumber: toOrganisationNumber('888888'),
+      registrationNumber: toRegistrationNumber('OTHER-TEST-REG'),
+      accreditationNumber: toAccreditationNumber('OTHER-TEST-ACC')
+    }
+    await db.collection('waste-balance-events').insertOne(
+      buildLedgerEvent({
+        ...otherTest,
+        payload: {
+          summaryLogId: toSummaryLogFileId('unheld-file'),
+          creditTotal: 1
+        }
+      })
+    )
+
+    const result = await run(false, {
+      testOrganisationNumbers: [TEST_ORGANISATION, otherTest.organisationNumber]
+    })
+
+    expect(result.skipped).toBe(0)
+    expect(await countEverywhere(db, UNHELD)).toEqual(NOTHING)
+    expect(await countEverywhere(db, otherTest)).toEqual(NOTHING)
+  })
 
   it('removes a ledger with no year', async () => {
     const { year: _, ...yearless } = HELD

@@ -39,7 +39,7 @@ export const REMOVAL_ACTION = 'test-organisation-data-removal'
  * @typedef {Object} RemovalResult
  * @property {RemovedLedger[]} removed - each ledger removed (would be, on a dry run)
  * @property {RemovedUnnumberedSummaryLogs[]} unnumbered - each organisation's summary logs removed from under its database id (would be, on a dry run)
- * @property {number} skipped - organisations left whole, because another organisation's record cites one they would remove
+ * @property {number} skipped - organisations left whole, because a record outside the test organisations cites one they would remove
  * @property {number} failed - organisations, ledgers or unnumbered summary logs not fully removed; retried on the next run
  * @property {number} auditFailed - ledgers removed but not audited
  */
@@ -246,11 +246,12 @@ const removeFromOrganisation = async (
 
   const citations = await records.countCitationsOutside(
     organisationNumber,
-    unnumbered?.summaryLogIds ?? []
+    unnumbered?.summaryLogIds ?? [],
+    [...dependencies.testOrganisationNumbers]
   )
   if (holdsAny(citations)) {
     logger.error({
-      message: `Skipping test organisation ${organisationNumber}: other organisations' records cite a summary log or PRN it would remove: ${describeCounts(citations)}`
+      message: `Skipping test organisation ${organisationNumber}: records outside the test organisations cite a summary log or PRN it would remove: ${describeCounts(citations)}`
     })
     result.skipped++
     return

@@ -55,7 +55,7 @@ import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repositor
  * @typedef {Object} TestOrganisationRecords
  * @property {(organisationNumber: OrganisationNumber) => Promise<Ledger[]>} findLedgers - every ledger the organisation's records are stored under
  * @property {(organisationNumber: OrganisationNumber) => Promise<UnnumberedSummaryLogs | undefined>} findUnnumberedSummaryLogs - undefined when there are none
- * @property {(organisationNumber: OrganisationNumber, unnumberedSummaryLogIds: string[]) => Promise<CitationCounts>} countCitationsOutside - other organisations' records, by kind, that were derived from the organisation's summary logs or PRNs
+ * @property {(organisationNumber: OrganisationNumber, unnumberedSummaryLogIds: string[], testOrganisationNumbers: OrganisationNumber[]) => Promise<CitationCounts>} countCitationsOutside - records outside the test organisations, by kind, that were derived from the organisation's summary logs or PRNs
  * @property {(ledger: Ledger) => Promise<SourceIds>} findSourceIds - the ids of the ledger's summary logs and PRNs
  * @property {(kind: RecordKind, ledger: Ledger) => Promise<number>} count
  * @property {(kind: RecordKind, ledger: Ledger) => Promise<number>} remove - counting those removed
@@ -210,16 +210,16 @@ const findUnnumberedSummaryLogs = async (db, organisationNumber) => {
 /**
  * @param {Db} db
  * @param {RecordKind} kind
- * @param {OrganisationNumber} organisationNumber
+ * @param {OrganisationNumber[]} testOrganisationNumbers
  * @param {Filter<Document>} citing
  */
-const countOutside = (db, kind, organisationNumber, citing) =>
+const countOutside = (db, kind, testOrganisationNumbers, citing) =>
   collection(db, kind).countDocuments({
     $and: [
       citing,
       {
         [COLLECTIONS[kind].fields.organisationNumber]: {
-          $ne: organisationNumber
+          $nin: testOrganisationNumbers
         }
       }
     ]
@@ -229,12 +229,14 @@ const countOutside = (db, kind, organisationNumber, citing) =>
  * @param {Db} db
  * @param {OrganisationNumber} organisationNumber
  * @param {string[]} unnumberedSummaryLogIds
+ * @param {OrganisationNumber[]} testOrganisationNumbers
  * @returns {Promise<CitationCounts>}
  */
 const countCitationsOutside = async (
   db,
   organisationNumber,
-  unnumberedSummaryLogIds
+  unnumberedSummaryLogIds,
+  testOrganisationNumbers
 ) => {
   const fileIds = await distinctIn(
     db,
@@ -254,16 +256,16 @@ const countCitationsOutside = async (
     '_id'
   )
   const [events, rowStates, reports] = await Promise.all([
-    countOutside(db, 'events', organisationNumber, {
+    countOutside(db, 'events', testOrganisationNumbers, {
       $or: [
         { 'payload.summaryLogId': { $in: fileIds } },
         { 'payload.prnId': { $in: prnIds } }
       ]
     }),
-    countOutside(db, 'rowStates', organisationNumber, {
+    countOutside(db, 'rowStates', testOrganisationNumbers, {
       summaryLogIds: { $in: fileIds }
     }),
-    countOutside(db, 'reports', organisationNumber, {
+    countOutside(db, 'reports', testOrganisationNumbers, {
       $or: [
         { 'source.summaryLogId': { $in: fileIds } },
         { 'stale.summaryLogChanged.summaryLogId': { $in: fileIds } },
@@ -301,8 +303,17 @@ export const createTestOrganisationRecords = (db) => ({
   findUnnumberedSummaryLogs: (organisationNumber) =>
     findUnnumberedSummaryLogs(db, organisationNumber),
 
-  countCitationsOutside: (organisationNumber, unnumberedSummaryLogIds) =>
-    countCitationsOutside(db, organisationNumber, unnumberedSummaryLogIds),
+  countCitationsOutside: (
+    organisationNumber,
+    unnumberedSummaryLogIds,
+    testOrganisationNumbers
+  ) =>
+    countCitationsOutside(
+      db,
+      organisationNumber,
+      unnumberedSummaryLogIds,
+      testOrganisationNumbers
+    ),
 
   findSourceIds: async (ledger) => ({
     summaryLogIds: await distinctIn(
