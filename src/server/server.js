@@ -50,6 +50,7 @@ import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runSummaryLogScopeBackfill } from '#summary-log-scope-backfill/run.js'
 import { runLedgerYearBackfill } from '#ledger-year-backfill/run.js'
+import { runTestOrganisationDataRemoval } from '#test-organisation-data-removal/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -231,6 +232,7 @@ async function createServer(options = {}) {
     void runReconcileStalePrnProjections(startedServer)
     void runSummaryLogScopeBackfill(startedServer)
     void runLedgerYearBackfill(startedServer)
+    void runTestOrganisationDataRemoval(startedServer)
   })
 
   return server
