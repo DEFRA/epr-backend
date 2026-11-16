@@ -64,36 +64,52 @@ import {
  */
 
 /**
+ * An external accreditation with no status changes is dropped.
+ *
  * @param {ExternalAccreditation} externalAccreditation
- * @returns {ReprocessorAccreditation | ExporterAccreditation}
+ * @param {OnDrop} onDrop
+ * @returns {[string, ReprocessorAccreditation | ExporterAccreditation] | null}
  */
-const toAccreditationCommon = ({
-  registrationNumber: _registrationNumber,
-  year: _year,
-  status: { current, timeline },
-  ...accreditation
-}) => ({
-  ...accreditation,
-  status: {
-    current,
-    lastUpdatedAt: lastRecordedAt(timeline),
-    timeline: timeline.map(({ status, at }) => ({ status, at }))
+const toAccreditationEntryOfYear = (
+  { registrationNumber, year, status: { current, timeline }, ...accreditation },
+  onDrop
+) => {
+  const lastUpdatedAt = lastRecordedAt(timeline)
+  if (lastUpdatedAt === undefined) {
+    onDrop(
+      `Registration ${registrationNumber} external accreditation year ${year} has no status changes`
+    )
+    return null
   }
-})
+  return [
+    String(year),
+    {
+      ...accreditation,
+      status: {
+        current,
+        lastUpdatedAt,
+        timeline: timeline.map(({ status, at }) => ({ status, at }))
+      }
+    }
+  ]
+}
 
 /**
  * Each registration's external accreditations, keyed by year.
  *
  * @param {ExternalAccreditation[]} externalAccreditations
+ * @param {OnDrop} onDrop
  * @returns {ExternalAccreditationsByRegistration}
  */
-const byRegistrationAndYear = (externalAccreditations) =>
+const byRegistrationAndYear = (externalAccreditations, onDrop) =>
   new Map(
     [...Map.groupBy(externalAccreditations, (a) => a.registrationNumber)].map(
       ([registrationNumber, held]) => [
         registrationNumber,
         Object.fromEntries(
-          held.map((a) => [String(a.year), toAccreditationCommon(a)])
+          held
+            .map((a) => toAccreditationEntryOfYear(a, onDrop))
+            .filter((entry) => entry !== null)
         )
       ]
     )
@@ -147,7 +163,10 @@ export async function toReadModelOrganisations(
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
     today: toCalendarDate(new Date())
   }
-  const externalByRegistration = byRegistrationAndYear(externalAccreditations)
+  const externalByRegistration = byRegistrationAndYear(
+    externalAccreditations,
+    context.onDrop
+  )
   return stored
     .map((organisation) =>
       toOrganisation(organisation, context, externalByRegistration)
@@ -278,6 +297,12 @@ export function toRegistrationEntry(
     registration.statusHistory,
     validFrom
   )
+  if (!statusTimeline) {
+    onDrop(
+      `Registration ${registrationNumber} has no status change since it was last created`
+    )
+    return null
+  }
   if (!applicationContactDetails) {
     onDrop(
       `Registration ${registrationNumber} has no application contact details`
@@ -490,6 +515,12 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
     accreditation.statusHistory,
     accreditation.validFrom
   )
+  if (!statusTimeline) {
+    onDrop(
+      `Accreditation ${accreditationNumber} has no status change since it was last created`
+    )
+    return null
+  }
 
   return [
     String(deriveAccreditationYear(accreditation)),

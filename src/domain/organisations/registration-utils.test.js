@@ -369,7 +369,7 @@ describe('isRegistrationActiveInYear', () => {
         {
           status: {
             current: 'approved',
-            lastUpdatedAt: undefined,
+            lastUpdatedAt: '2025-01-01T00:00:00.000Z',
             timeline: []
           }
         },

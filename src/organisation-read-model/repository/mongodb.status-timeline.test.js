@@ -4,6 +4,7 @@ import { it } from '#vite/fixtures/organisation-read-mongo.js'
 import { config } from '#root/config.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
+  ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,
   accreditation,
   findOrganisation,
@@ -439,6 +440,62 @@ describe('status timeline', () => {
         { status: 'approved', at },
         { status: 'active', at }
       ]
+    })
+  })
+
+  it('leaves out and logs a registration whose approval is dated before it was created', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const stored = buildOrganisation({
+      registrations: [
+        registrationWith([
+          { status: 'created', updatedAt: '2026-03-01T09:00:00.000Z' },
+          { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' }
+        ])
+      ]
+    })
+    const logger = { warn: vi.fn() }
+    const repository = await organisationReadRepositoryWith({
+      organisations: [stored],
+      logger
+    })
+
+    const organisation = await findOrganisation(
+      repository,
+      stored.organisationNumber
+    )
+
+    expect(organisation.registrations).toStrictEqual({})
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: `Registration ${REPROCESSOR_NUMBER} has no status change since it was last created`
+    })
+  })
+
+  it('leaves out and logs an accreditation whose approval is dated before it was created', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const stored = organisationAccredited({
+      statusHistory: [
+        { status: 'created', updatedAt: '2026-03-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' }
+      ]
+    })
+    const logger = { warn: vi.fn() }
+    const repository = await organisationReadRepositoryWith({
+      organisations: [stored],
+      logger
+    })
+
+    const organisation = await findOrganisation(
+      repository,
+      stored.organisationNumber
+    )
+
+    expect(
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations
+    ).toStrictEqual({})
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: `Accreditation ${ACCREDITATION_NUMBER} has no status change since it was last created`
     })
   })
 

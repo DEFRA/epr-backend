@@ -94,29 +94,39 @@ export const lastRecordedAt = (changes) =>
     .at(-1)
 
 /**
- * The timeline of the changes, and when the last of them was recorded.
+ * The timeline of the changes, and when the last of them was recorded, or
+ * null when there are none.
  *
  * @template {string} S
  * @param {Change<S>[]} changes - oldest first
- * @returns {Omit<Status<S>, 'current'>}
+ * @returns {Omit<Status<S>, 'current'> | null}
  */
-const toTimelineStatus = (changes) => ({
-  lastUpdatedAt: lastRecordedAt(changes),
-  timeline: changes.map(({ status, at }) => ({
-    status,
-    at: at.toISOString()
-  }))
-})
+const toTimelineStatus = (changes) => {
+  const lastUpdatedAt = lastRecordedAt(changes)
+  return lastUpdatedAt === undefined
+    ? null
+    : {
+        lastUpdatedAt,
+        timeline: changes.map(({ status, at }) => ({
+          status,
+          at: at.toISOString()
+        }))
+      }
+}
 
 /**
  * Every change to an organisation, each when it was recorded, oldest first.
+ * Never empty: the read model serves every stored organisation status, and a
+ * stored history always has an entry.
  *
  * @param {StatusHistoryEntryOf<StoredOrganisationStatus>[]} statusHistory
  * @returns {Omit<Status<OrganisationStatus>, 'current'>}
  */
 export const toOrganisationStatusTimeline = (statusHistory) =>
-  toTimelineStatus(
-    servedOnly(inRecordedOrder(statusHistory), ORGANISATION_STATUSES)
+  /** @type {Omit<Status<OrganisationStatus>, 'current'>} */ (
+    toTimelineStatus(
+      servedOnly(inRecordedOrder(statusHistory), ORGANISATION_STATUSES)
+    )
   )
 
 /**
@@ -125,7 +135,7 @@ export const toOrganisationStatusTimeline = (statusHistory) =>
  *
  * @param {StatusHistoryEntryOf<StoredRegistrationStatus>[]} statusHistory
  * @param {string} validFrom
- * @returns {Omit<Status<RegistrationStatus>, 'current'>}
+ * @returns {Omit<Status<RegistrationStatus>, 'current'> | null}
  */
 export const toRegistrationStatusTimeline = (statusHistory, validFrom) =>
   toTimelineStatus(
@@ -141,7 +151,7 @@ export const toRegistrationStatusTimeline = (statusHistory, validFrom) =>
  *
  * @param {StatusHistoryEntryOf<StoredAccreditationStatus>[]} statusHistory
  * @param {string} validFrom
- * @returns {Omit<Status<AccreditationStatus>, 'current'>}
+ * @returns {Omit<Status<AccreditationStatus>, 'current'> | null}
  */
 export const toAccreditationStatusTimeline = (statusHistory, validFrom) =>
   toTimelineStatus(
