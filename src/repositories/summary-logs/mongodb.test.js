@@ -5,7 +5,10 @@ import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { summaryLogFactory } from './contract/test-data.js'
+import {
+  summaryLogFactory,
+  withoutAccreditationId
+} from './contract/test-data.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -14,6 +17,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
@@ -408,6 +412,149 @@ describe('MongoDB summary logs repository', () => {
         '1000',
         '1001'
       ])
+    })
+  })
+
+  describe('a summary log that records no accreditation', () => {
+    /**
+     * Production holds two summary logs stored before accreditations were
+     * recorded. The insert schema refuses that shape, so the document has to be
+     * seeded straight into the collection.
+     *
+     * @param {MongoClient} mongoClient
+     * @param {object} summaryLog
+     */
+    const insertUnrecorded = async (mongoClient, summaryLog) => {
+      const id = toSummaryLogId(`unrecorded-${randomUUID()}`)
+
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection('summary-logs')
+        .insertOne(
+          /** @type {object} */ ({
+            _id: id,
+            version: 1,
+            ...withoutAccreditationId(
+              /** @type {{ accreditationId?: string | null }} */ (summaryLog)
+            )
+          })
+        )
+
+      return id
+    }
+
+    const aRegistration = () => ({
+      organisationId: `org-${randomUUID()}`,
+      registrationId: `reg-${randomUUID()}`
+    })
+
+    it('is not found by id or by file id', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const summaryLog = summaryLogFactory.validated(aRegistration())
+      const id = await insertUnrecorded(mongoClient, summaryLog)
+
+      expect(await summaryLogsRepository.findById(id)).toBeNull()
+      expect(
+        await summaryLogsRepository.findByFileId(summaryLog.file.id)
+      ).toBeNull()
+    })
+
+    it('is not found by its registration, whichever accreditation the key names', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const summaryLog = summaryLogFactory.submitted(aRegistration())
+      await insertUnrecorded(mongoClient, summaryLog)
+      const { organisationNumber, registrationNumber } = summaryLog
+
+      for (const key of [
+        { organisationNumber, registrationNumber },
+        { organisationNumber, registrationNumber, accreditationNumber: null }
+      ]) {
+        expect(await summaryLogsRepository.findLatestSubmitted(key)).toBeNull()
+        expect(await summaryLogsRepository.findAll(key)).toEqual([])
+      }
+    })
+
+    it('does not hide a recorded log holding the same file', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const unrecorded = summaryLogFactory.submitted(aRegistration())
+      await insertUnrecorded(mongoClient, unrecorded)
+      await summaryLogsRepository.insert(
+        toSummaryLogId(`recorded-${randomUUID()}`),
+        summaryLogFactory.submitted({
+          ...aRegistration(),
+          file: unrecorded.file
+        })
+      )
+
+      const found = await summaryLogsRepository.findByFileId(unrecorded.file.id)
+      const download = await summaryLogsRepository.getDownloadUrlByFileId(
+        unrecorded.file.id
+      )
+
+      expect(found?.summaryLog.accreditationNumber).toBeNull()
+      expect(found?.summaryLog).not.toHaveProperty('accreditationId')
+      expect(download.accreditationNumber).toBeNull()
+    })
+
+    it('cannot be submitted', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const id = await insertUnrecorded(
+        mongoClient,
+        summaryLogFactory.validated(aRegistration())
+      )
+
+      await expect(
+        summaryLogsRepository.transitionToSubmittingExclusive(id)
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
+    })
+
+    it('has no download to sign', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const id = await insertUnrecorded(
+        mongoClient,
+        summaryLogFactory.submitted(aRegistration())
+      )
+
+      await expect(
+        summaryLogsRepository.getDownloadUrl(id)
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
+    })
+
+    it('blocks a registered-only submission while it is submitting in the same year', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const ids = aRegistration()
+      await insertUnrecorded(
+        mongoClient,
+        summaryLogFactory.submitting({ ...ids, year: toYear(2026) })
+      )
+      const registeredOnlyId = toSummaryLogId(`registered-only-${randomUUID()}`)
+      await summaryLogsRepository.insert(
+        registeredOnlyId,
+        summaryLogFactory.validated({
+          ...ids,
+          year: toYear(2026),
+          accreditationId: null
+        })
+      )
+
+      const registeredOnly =
+        await summaryLogsRepository.transitionToSubmittingExclusive(
+          registeredOnlyId
+        )
+
+      expect(registeredOnly.success).toBe(false)
     })
   })
 })
