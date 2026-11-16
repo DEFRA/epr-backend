@@ -1,10 +1,12 @@
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import { randomUUID } from 'node:crypto'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   buildReadAccreditation,
   buildReadOrganisation,
-  buildReadOrganisationWithNumbersOf,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
 
@@ -13,22 +15,14 @@ import { StatusCodes } from 'http-status-codes'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   ACCREDITATION_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  reprocessor
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { partialMock } from '#test/type-helpers.js'
 import { signedCallback } from '#test/upload-callback.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 const mockRecordStatusTransition = vi.fn()
 
@@ -70,19 +64,15 @@ const uploadCompletedPath = (year, summaryLogId) =>
 const uploadCompletedUrl = (year, summaryLogId) =>
   signedCallback(uploadCompletedPath(year, summaryLogId))
 
-const testOrganisation = buildOrganisation({
-  id: organisationId,
-  organisationNumber,
-  registrations: [reprocessor({ id: registrationId })]
-})
-
-const createTestOrganisationsRepository = () =>
-  createInMemoryOrganisationsRepository([partialMock(testOrganisation)])()
-
-/** The organisation the read model serves for `testOrganisation`. */
+/** Held by the read model alone: no legacy organisations are stored. */
 const testReadOrganisationRepository = () =>
   createInMemoryOrganisationReadRepository([
-    buildReadOrganisationWithNumbersOf(testOrganisation)
+    buildReadOrganisation({
+      organisationNumber,
+      registrations: {
+        [registrationNumber]: buildReadReprocessorRegistration()
+      }
+    })
   ])
 
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs/{year}/{summaryLogId}/upload-completed', () => {
@@ -97,9 +87,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
     summaryLogsRepository = summaryLogsRepositoryFactory(createMockLogger())
 
-    const organisationAdministrationRepository =
-      createTestOrganisationsRepository()
-
     summaryLogsWorker = {
       validate: vi.fn()
     }
@@ -107,8 +94,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
-        organisationAdministrationRepository: () =>
-          organisationAdministrationRepository,
         organisationReadRepository: testReadOrganisationRepository()
       },
       workers: {
@@ -127,7 +112,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     await server.stop()
   })
 
-  it('stores the year from the path, no accreditation, and the numbers', async () => {
+  it('stores the year from the path, no accreditation, and the numbers, without database ids', async () => {
     const summaryLogId = randomUUID()
 
     const response = await server.inject({
@@ -140,13 +125,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
       status: SUMMARY_LOG_STATUS.VALIDATING,
-      organisationId,
-      registrationId,
       year: 2026,
       organisationNumber,
       registrationNumber,
       accreditationNumber: null
     })
+    expect(stored.summaryLog).not.toHaveProperty('organisationId')
+    expect(stored.summaryLog).not.toHaveProperty('registrationId')
     expect(stored.summaryLog.validatedAgainstSummaryLogId).toBeDefined()
 
     expect(summaryLogsWorker.validate).toHaveBeenCalledWith(summaryLogId)
@@ -156,28 +141,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   describe('when the path names an accreditation', () => {
-    // Held by the read model alone, as an accreditation held outside this
-    // service is: the stored organisation has no accreditation for 2027.
+    // 2027 is held outside this service; the read model serves it alike.
     const EXTERNAL_ACCREDITATION_NUMBER =
       toAccreditationNumber('A27ER5001180041PL')
-    const accreditedOrganisationId = '507f1f77bcf86cd799439013'
-    const accreditedRegistrationId = '507f1f77bcf86cd799439014'
-    const accredited = accreditation()
-    const accreditedOrganisation = buildOrganisation({
-      id: accreditedOrganisationId,
-      registrations: [
-        reprocessor({
-          id: accreditedRegistrationId,
-          accreditationId: accredited.id
-        })
-      ],
-      accreditations: [accredited]
-    })
-    const unnumbered = accreditation({ accreditationNumber: undefined })
-    const unnumberedOrganisation = buildOrganisation({
-      registrations: [reprocessor({ accreditationId: unnumbered.id })],
-      accreditations: [unnumbered]
-    })
+    const accreditedOrganisationNumber = toOrganisationNumber('500124')
 
     let accreditedServer
     let accreditedSummaryLogsRepository
@@ -188,20 +155,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditedSummaryLogsRepository =
         accreditedSummaryLogsRepositoryFactory(createMockLogger())
 
-      const accreditedOrganisationsRepository =
-        createInMemoryOrganisationsRepository([
-          partialMock(accreditedOrganisation),
-          partialMock(unnumberedOrganisation)
-        ])()
-
       accreditedServer = await createTestServer({
         repositories: {
           summaryLogsRepository: accreditedSummaryLogsRepositoryFactory,
-          organisationAdministrationRepository: () =>
-            accreditedOrganisationsRepository,
           organisationReadRepository: createInMemoryOrganisationReadRepository([
             buildReadOrganisation({
-              organisationNumber: accreditedOrganisation.organisationNumber,
+              organisationNumber: accreditedOrganisationNumber,
               registrations: {
                 [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
                   accreditations: {
@@ -215,8 +174,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
                   }
                 })
               }
-            }),
-            buildReadOrganisationWithNumbersOf(unnumberedOrganisation)
+            })
           ])
         },
         workers: {
@@ -237,19 +195,15 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditedServer.inject({
         method: 'POST',
         url: signedCallback(
-          `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/${year}/summary-log/${summaryLogId}/upload-completed`
+          `/organisations/${accreditedOrganisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/${year}/summary-log/${summaryLogId}/upload-completed`
         ),
         payload: {
           uploadStatus: 'ready',
-          metadata: {
-            organisationId: accreditedOrganisationId,
-            registrationId: accreditedRegistrationId
-          },
           form: {
             summaryLogUpload: createFileDetails({
               fileId: `file-accredited-${summaryLogId}`,
               s3Key: uploadedKeyFor(
-                accreditedOrganisation.organisationNumber,
+                accreditedOrganisationNumber,
                 REPROCESSOR_NUMBER
               )
             })
@@ -288,24 +242,28 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         await accreditedSummaryLogsRepository.findById(summaryLogId)
       ).toBeNull()
     })
+  })
 
-    it('finds no accreditation without a number, and stores nothing', async () => {
+  it.each([
+    ['an organisation', '500999', registrationNumber],
+    ['a registration', organisationNumber, 'R26ER5001189999PL']
+  ])(
+    'returns 404 for %s the read model does not hold, and stores nothing',
+    async (_, pathOrganisation, pathRegistration) => {
       const summaryLogId = randomUUID()
 
-      const response = await accreditedServer.inject({
+      const response = await server.inject({
         method: 'POST',
         url: signedCallback(
-          `/organisations/${unnumberedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+          `/organisations/${pathOrganisation}/registrations/${pathRegistration}/summary-logs/2026/${summaryLogId}/upload-completed`
         ),
-        payload: createCompletePayload('file-unnumbered')
+        payload: createCompletePayload('file-unknown-registration')
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-      expect(
-        await accreditedSummaryLogsRepository.findById(summaryLogId)
-      ).toBeNull()
-    })
-  })
+      expect(await summaryLogsRepository.findById(summaryLogId)).toBeNull()
+    }
+  )
 
   it('stores a preprocessing summary log without validating when the file is still pending', async () => {
     const summaryLogId = randomUUID()
@@ -378,28 +336,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
-  it('completes an upload started under the registration ids, before uploads moved to numbers', async () => {
-    const summaryLogId = randomUUID()
-
-    const response = await server.inject({
-      method: 'POST',
-      url: uploadCompletedUrl(2026, summaryLogId),
-      payload: {
-        ...createCompletePayload(),
-        form: {
-          summaryLogUpload: createFileDetails({
-            s3Key: uploadedKeyFor(organisationId, registrationId)
-          })
-        }
-      }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
-    const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
-    expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
-    expect(summaryLogsWorker.validate).toHaveBeenCalledWith(summaryLogId)
-  })
-
   describe('when the upload is not where this registration sends its uploads', () => {
     it.for([
       {
@@ -418,9 +354,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         s3Key: uploadedKeyFor(organisationNumber, 'R26ER5001189999PL')
       },
       {
-        description: 'another registration, by its ids',
+        description: 'the registration ids uploads were placed under before',
         s3Bucket: 're-ex-summary-logs',
-        s3Key: uploadedKeyFor(organisationId, '507f1f77bcf86cd799439099')
+        s3Key: uploadedKeyFor(organisationId, registrationId)
       }
     ])(
       'refuses $description, rejects the summary log without the file, and logs an error',
@@ -544,9 +480,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const insertError = new Error('Database connection failed')
 
     beforeAll(async () => {
-      const organisationAdministrationRepository =
-        createTestOrganisationsRepository()
-
       failingServer = await createTestServer({
         repositories: {
           summaryLogsRepository: () => ({
@@ -556,8 +489,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               throw insertError
             }
           }),
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
           organisationReadRepository: testReadOrganisationRepository()
         },
         workers: {

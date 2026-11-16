@@ -39,21 +39,6 @@ export const summaryLogUploadPath = ({
   )
 
 /**
- * Where summary log uploads started before they moved to numbers were placed.
- * Remove once none can still be in flight.
- *
- * @param {{ organisationId: string, registrationId: string }} ids
- * @returns {UploadPath}
- */
-export const idBasedSummaryLogUploadPath = ({
-  organisationId,
-  registrationId
-}) =>
-  toUploadPath(
-    `/organisations/${organisationId}/registrations/${registrationId}`
-  )
-
-/**
  * @param {string} importId
  * @returns {UploadPath}
  */

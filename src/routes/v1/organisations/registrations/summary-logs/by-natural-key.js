@@ -2,7 +2,6 @@ import Joi from 'joi'
 
 import { uploadCallbackUrl } from '#common/helpers/auth/upload-callback-signature.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams,
@@ -23,7 +22,7 @@ import { summaryLogsYearCreate } from './year-post.js'
 /**
  * @import { ResponseObject } from '@hapi/hapi'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  * @import { SummaryLogKeyedRequest } from './at-summary-log-keys.js'
  */
 
@@ -47,7 +46,7 @@ const uploadAddresses = [
 
 /**
  * @param {boolean} accredited
- * @returns {(request: ResolvedRequest & { params: { year: Year } }) => void}
+ * @returns {(request: SummaryLogKeyedRequest & { params: { year: Year } }) => void}
  */
 const callbackToNaturalKeys = (accredited) => (request) => {
   const { organisationNumber, registrationNumber, year } = request.params
@@ -128,13 +127,12 @@ const ownSummaryLog = { before: assertSummaryLogMatchesPath }
  * its own id, so only creating one, and its callback, carry the year.
  */
 export const summaryLogRoutesByNaturalKey = [
-  // Uploads still need database ids for their S3 location.
   ...uploadAddresses.flatMap(({ address, accredited }) => [
-    atNaturalKeys(summaryLogsYearCreate, address, yearParams, {
+    atSummaryLogKeys(summaryLogsYearCreate, address, yearParams, {
       accredited,
       before: callbackToNaturalKeys(accredited)
     }),
-    atNaturalKeys(
+    atSummaryLogKeys(
       summaryLogsUploadCompletedYear,
       `${address}/{summaryLogId}/upload-completed`,
       uploadParams,

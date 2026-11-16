@@ -51,6 +51,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
 }))
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const LEGACY_ONLY_NUMBER = 'R26ER5001180098PL'
 const YEAR = toYear(2026)
 
 const accredited = accreditation()
@@ -59,7 +60,11 @@ const registeredOnlyRegistration = reprocessor({
 })
 const accreditedRegistration = reprocessor({ accreditationId: accredited.id })
 const organisation = buildOrganisation({
-  registrations: [registeredOnlyRegistration, accreditedRegistration],
+  registrations: [
+    registeredOnlyRegistration,
+    accreditedRegistration,
+    reprocessor({ registrationNumber: LEGACY_ONLY_NUMBER })
+  ],
   accreditations: [accredited]
 })
 
@@ -225,8 +230,13 @@ describe('summary-log routes by natural key', () => {
   }
 
   describe.each(uploadAddresses)(
-    'uploading a $kind summary log',
+    'uploading a $kind summary log of an organisation only the read model holds',
     ({ uploads, registration, accreditationNumber }) => {
+      beforeEach(async () => {
+        await server.stop()
+        server = await startServer([])
+      })
+
       it('starts the upload under the registration numbers, with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
@@ -260,11 +270,13 @@ describe('summary-log routes by natural key', () => {
           1
         )
         expect(stored.summaryLog).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber: registration.registrationNumber,
           year: YEAR,
           accreditationNumber
         })
+        expect(stored.summaryLog).not.toHaveProperty('organisationId')
+        expect(stored.summaryLog).not.toHaveProperty('registrationId')
       })
     }
   )
@@ -327,7 +339,7 @@ describe('summary-log routes by natural key', () => {
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
-      registrationId: accreditedRegistration.id,
+      registrationNumber: REPROCESSOR_NUMBER,
       accreditationNumber: null
     })
   })
@@ -545,6 +557,20 @@ describe('summary-log routes by natural key', () => {
       'POST',
       `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}`,
       redirect
+    ],
+    [
+      'creating under a registration only the legacy record holds',
+      'POST',
+      `${registrations}/${LEGACY_ONLY_NUMBER}/summary-logs/${YEAR}`,
+      redirect
+    ],
+    [
+      'completing an upload under a registration only the legacy record holds',
+      'POST',
+      signedCallback(
+        `${registrations}/${LEGACY_ONLY_NUMBER}/summary-logs/${YEAR}/${randomUUID()}/upload-completed`
+      ),
+      uploadCompletedFor(LEGACY_ONLY_NUMBER)
     ],
     [
       'completing an upload under a registration with no accreditation',
