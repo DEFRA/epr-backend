@@ -9,14 +9,12 @@ import { createReportsService } from '#reports/application/report-service.js'
  * @typedef {Pick<ServerApp,
  *   | 'uploadsRepository'
  *   | 'summaryLogsRepository'
- *   | 'organisationAdministrationRepository'
  *   | 'organisationReadRepository'
  *   | 'summaryLogRowStatesRepository'
  *   | 'ledgerRepository'
  *   | 'wasteBalanceService'
  *   | 'reportsRepository'
  *   | 'systemLogsRepository'
- *   | 'overseasSitesRepository'
  * >} SummaryLogHandlerSources
  */
 
@@ -31,22 +29,18 @@ import { createReportsService } from '#reports/application/report-service.js'
 export const buildSummaryLogHandlerDeps = ({
   uploadsRepository,
   summaryLogsRepository,
-  organisationAdministrationRepository,
   organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   wasteBalanceService,
   reportsRepository,
-  systemLogsRepository,
-  overseasSitesRepository
+  systemLogsRepository
 }) => ({
   summaryLogsRepository,
-  organisationAdministrationRepository,
   organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   wasteBalanceService,
-  overseasSitesRepository,
   reportsService: createReportsService(reportsRepository),
   summaryLogExtractor: createSummaryLogExtractor({ uploadsRepository }),
   onSummaryLogUploaded: createOnSummaryLogUploaded({

@@ -50,6 +50,7 @@ export const DEFAULT_REPORT_DUE_DATE = calendarDate('2024-02-15')
 const REPORT_YEAR = 2024
 export const DEFAULT_REPORT_YEAR = toYear(REPORT_YEAR)
 export const DEFAULT_REPORT_PERIOD = MONTHLY_PERIODS.January
+export const NEXT_REPORT_YEAR = toYear(REPORT_YEAR + 1)
 
 /**
  * @returns {import('../port.js').UserSummary}
@@ -141,3 +142,14 @@ export const buildCreateReportParams = (overrides = {}) =>
     },
     ...overrides
   })
+
+/**
+ * Overrides that place a report in the year after the default, with dates to match.
+ * @type {Pick<import('../port.js').CreateReportParams, 'year' | 'startDate' | 'endDate' | 'dueDate'>}
+ */
+export const NEXT_YEAR_REPORT = {
+  year: NEXT_REPORT_YEAR,
+  startDate: calendarDate(`${NEXT_REPORT_YEAR}-01-01`),
+  endDate: calendarDate(`${NEXT_REPORT_YEAR}-01-31`),
+  dueDate: calendarDate(`${NEXT_REPORT_YEAR}-02-15`)
+}

@@ -466,7 +466,7 @@ describe('syncFromSummaryLog', () => {
         summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2026)),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-1 for 2026')
+    ).rejects.toThrow('Accreditation with number ACC-1 for 2026 not found')
   })
 
   it('resolves overseas sites for exporter waste balance validation', async () => {
@@ -542,7 +542,7 @@ describe('syncFromSummaryLog', () => {
 
     await expect(
       makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
-    ).rejects.toThrow('Organisation not found: 500001')
+    ).rejects.toThrow('Organisation with number 500001 not found')
   })
 
   it('throws when the organisation holds no registration with the number', async () => {
@@ -557,7 +557,7 @@ describe('syncFromSummaryLog', () => {
         },
         TEST_USER
       )
-    ).rejects.toThrow('Registration not found: REG-MISSING')
+    ).rejects.toThrow('Registration with number REG-MISSING not found')
   })
 
   it('throws when the organisation holds no accreditation with the number', async () => {
@@ -574,7 +574,9 @@ describe('syncFromSummaryLog', () => {
         summaryLogFor(fileId, toAccreditationNumber('ACC-MISSING')),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-MISSING for 2026')
+    ).rejects.toThrow(
+      'Accreditation with number ACC-MISSING for 2026 not found'
+    )
   })
 
   it('throws when the accreditation belongs to another of the organisation’s registrations', async () => {
@@ -591,7 +593,7 @@ describe('syncFromSummaryLog', () => {
         summaryLogFor(fileId, toAccreditationNumber('ACC-2')),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-2 for 2026')
+    ).rejects.toThrow('Accreditation with number ACC-2 for 2026 not found')
   })
 
   describe('return value (created/updated counts against the committed head)', () => {

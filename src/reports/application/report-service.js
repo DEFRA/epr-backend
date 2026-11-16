@@ -4,6 +4,7 @@ import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-iss
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { reportOperatorCategory } from '#reports/domain/operator-category.js'
+import { orsDetailsOf } from '#reports/domain/ors-details.js'
 import { assertPeriodRequired } from './assert-period-required.js'
 import {
   assertNoExistingReport,
@@ -20,15 +21,13 @@ import {
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
- * @import { ExporterAccreditation, UkAddress } from '#organisation-read-model/domain/model.js'
- * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { UkAddress } from '#organisation-read-model/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence, CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
+ * @import { HasReportSubmittedSinceParams, PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
  */
 
 /**
@@ -37,7 +36,7 @@ import {
  * service rather than the repository port directly. See PAE-1686.
  *
  * @typedef {object} ReportsService
- * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, since: string) => Promise<boolean>} hasReportSubmittedSince
+ * @property {(params: HasReportSubmittedSinceParams) => Promise<boolean>} hasReportSubmittedSince
  * @property {(params: RegistrationKey) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
@@ -47,12 +46,8 @@ import {
  * @returns {ReportsService}
  */
 export const createReportsService = (reportsRepository) => ({
-  hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
-    reportsRepository.hasReportSubmittedSince(
-      organisationNumber,
-      registrationNumber,
-      since
-    ),
+  hasReportSubmittedSince: (params) =>
+    reportsRepository.hasReportSubmittedSince(params),
 
   findPeriodicReports: (params) =>
     reportsRepository.findPeriodicReports(params),
@@ -112,38 +107,6 @@ function formatSiteAddress(address) {
     [address.line1, address.line2, address.town, address.postcode]
       .filter(Boolean)
       .join(', ')
-  )
-}
-
-/**
- * Each of an exporter's overseas sites by ORS key, approved from the day the
- * accreditation reported under approved it. A reprocessor has none.
- *
- * @param {ReportRegistration} reportRegistration
- * @returns {Map<string, OrsDetails>}
- */
-function orsDetailsOf({ registration, accreditation }) {
-  if (!('overseasSites' in registration)) {
-    return new Map()
-  }
-  const approvals =
-    /** @type {ExporterAccreditation | null} */ (accreditation)
-      ?.overseasSites ?? {}
-  return new Map(
-    Object.entries(registration.overseasSites).map(([orsKey, site]) => {
-      const approval = approvals[orsKey]
-      return [
-        orsKey,
-        {
-          siteName: site.name,
-          country: site.address.country,
-          validFrom:
-            approval?.status === 'approved'
-              ? new Date(approval.approvedOn)
-              : null
-        }
-      ]
-    })
   )
 }
 

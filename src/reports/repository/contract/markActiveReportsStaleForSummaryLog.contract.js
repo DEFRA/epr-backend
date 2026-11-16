@@ -3,11 +3,21 @@ import {
   buildCreateReportParams,
   createAndSubmitReport,
   DEFAULT_ORG_NUMBER,
-  DEFAULT_REG_NUMBER
+  DEFAULT_REG_NUMBER,
+  DEFAULT_REPORT_YEAR,
+  NEXT_YEAR_REPORT
 } from './test-data.js'
 
 const SL_ID = 'sl-id-new-000000000000000000000001'
 const UPLOADED_AT = '2026-06-01T12:00:00.000Z'
+
+const DEFAULT_PARAMS = {
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER,
+  year: DEFAULT_REPORT_YEAR,
+  summaryLogId: SL_ID,
+  uploadedAt: UPLOADED_AT
+}
 
 export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
   describe('markActiveReportsStaleForSummaryLog', () => {
@@ -29,12 +39,7 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
       )
 
       const reportsMarkedStale =
-        await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_NUMBER,
-          DEFAULT_REG_NUMBER,
-          SL_ID,
-          UPLOADED_AT
-        )
+        await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
 
       expect(reportsMarkedStale).toHaveLength(1)
       expect(reportsMarkedStale[0]).toMatchObject({
@@ -55,26 +60,29 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
 
     it('returns [] when no active reports exist', async () => {
       const reportsMarkedStale =
-        await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_NUMBER,
-          DEFAULT_REG_NUMBER,
-          SL_ID,
-          UPLOADED_AT
-        )
+        await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
 
       expect(reportsMarkedStale).toEqual([])
+    })
+
+    it('does not mark stale an active report for a different year', async () => {
+      const { id: reportId } = await repository.createReport(
+        buildCreateReportParams(NEXT_YEAR_REPORT)
+      )
+
+      const reportsMarkedStale =
+        await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
+
+      expect(reportsMarkedStale).toEqual([])
+      const report = await repository.findReportById(reportId)
+      expect(report.stale).toBeUndefined()
     })
 
     it('does not touch submitted reports', async () => {
       const reportId = await createAndSubmitReport(repository)
 
       const reportsMarkedStale =
-        await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_NUMBER,
-          DEFAULT_REG_NUMBER,
-          SL_ID,
-          UPLOADED_AT
-        )
+        await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
 
       expect(reportsMarkedStale).toEqual([])
       const report = await repository.findReportById(reportId)
@@ -84,20 +92,12 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
     it('is idempotent — second call with same summaryLogId returns []', async () => {
       await repository.createReport(buildCreateReportParams())
 
-      const first = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_NUMBER,
-        DEFAULT_REG_NUMBER,
-        SL_ID,
-        UPLOADED_AT
-      )
+      const first =
+        await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
       expect(first).toHaveLength(1)
 
-      const second = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_NUMBER,
-        DEFAULT_REG_NUMBER,
-        SL_ID,
-        UPLOADED_AT
-      )
+      const second =
+        await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
       expect(second).toEqual([])
     })
 
@@ -106,20 +106,15 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      const first = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_NUMBER,
-        DEFAULT_REG_NUMBER,
-        SL_ID,
-        UPLOADED_AT
-      )
+      const first =
+        await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
       expect(first).toHaveLength(1)
 
-      const second = await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_NUMBER,
-        DEFAULT_REG_NUMBER,
-        'sl-id-new-000000000000000000000002',
-        '2026-06-02T12:00:00.000Z'
-      )
+      const second = await repository.markActiveReportsStaleForSummaryLog({
+        ...DEFAULT_PARAMS,
+        summaryLogId: 'sl-id-new-000000000000000000000002',
+        uploadedAt: '2026-06-02T12:00:00.000Z'
+      })
       expect(second).toEqual([])
 
       const report = await repository.findReportById(reportId)
@@ -134,12 +129,10 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
       await repository.createReport(buildCreateReportParams())
 
       const reportsMarkedStale =
-        await repository.markActiveReportsStaleForSummaryLog(
-          DEFAULT_ORG_NUMBER,
-          DEFAULT_REG_NUMBER,
-          'sl-1',
-          UPLOADED_AT
-        )
+        await repository.markActiveReportsStaleForSummaryLog({
+          ...DEFAULT_PARAMS,
+          summaryLogId: 'sl-1'
+        })
 
       expect(reportsMarkedStale).toEqual([])
     })
@@ -158,12 +151,7 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
         occurredAt: '2026-05-01T00:00:00.000Z'
       })
 
-      await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_NUMBER,
-        DEFAULT_REG_NUMBER,
-        SL_ID,
-        UPLOADED_AT
-      )
+      await repository.markActiveReportsStaleForSummaryLog(DEFAULT_PARAMS)
 
       const report = await repository.findReportById(reportId)
       expect(report.stale).toMatchObject({
@@ -174,7 +162,22 @@ export const testMarkActiveReportsStaleForSummaryLogBehaviour = (it) => {
 
     it('throws validation error for invalid input', async () => {
       await expect(
-        repository.markActiveReportsStaleForSummaryLog('', '', '', '')
+        repository.markActiveReportsStaleForSummaryLog({
+          ...DEFAULT_PARAMS,
+          organisationNumber: '',
+          registrationNumber: '',
+          summaryLogId: '',
+          uploadedAt: ''
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+    })
+
+    it('throws validation error without a year', async () => {
+      await expect(
+        repository.markActiveReportsStaleForSummaryLog({
+          ...DEFAULT_PARAMS,
+          year: undefined
+        })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
   })
