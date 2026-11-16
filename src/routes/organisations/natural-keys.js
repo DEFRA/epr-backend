@@ -136,7 +136,7 @@ export async function findOrganisationAndRegistrationReadModels(request) {
  * @param {HapiRequest & { params: OrganisationParams }} request
  * @returns {Promise<ReadModelOrganisation>}
  */
-async function findOrganisationReadModel({
+export async function findOrganisationReadModel({
   organisationReadRepository,
   params: { organisationNumber }
 }) {
@@ -148,23 +148,6 @@ async function findOrganisationReadModel({
     throw Boom.notFound('Organisation not found')
   }
   return organisation
-}
-
-/**
- * The registrations the organisation read model serves.
- *
- * @param {Organisation} organisation
- * @returns {Registration[]}
- */
-export function servedRegistrations(organisation) {
-  const numbers = new Set(
-    organisation.registrations.flatMap(
-      ({ registrationNumber }) => registrationNumber ?? []
-    )
-  )
-  return [...numbers].flatMap(
-    (number) => servedRegistrationByNumber(organisation, number) ?? []
-  )
 }
 
 /**
@@ -194,7 +177,7 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
  * @param {Year} year
  * @returns {Accreditation[]}
  */
-export function accreditationsForYear(organisation, registration, year) {
+function accreditationsForYear(organisation, registration, year) {
   return accreditationsForRegistration(registration, organisation).filter(
     (candidate) =>
       toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
