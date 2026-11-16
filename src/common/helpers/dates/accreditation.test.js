@@ -3,14 +3,13 @@ import {
   accreditationWindow,
   deriveAccreditationYear,
   getStatusHistoryDateTimes,
-  isSuspendedOrCancelledAtDate,
   isAccreditedAtDates,
   isWithinAccreditationDateRange
 } from './accreditation.js'
 
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 /** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
-/** @import {AccreditationWindow, StatusHistoryDateTime} from './accreditation.js' */
+/** @import {AccreditationWindow} from './accreditation.js' */
 
 /**
  * @param {Partial<Accreditation>} [overrides]
@@ -180,253 +179,6 @@ describe('accreditation date helpers', () => {
     })
   })
 
-  describe('isSuspendedOrCancelledAtDate', () => {
-    it('should return false when statusHistory is empty', () => {
-      expect(isSuspendedOrCancelledAtDate('2025-06-15T00:00:00.000Z', [])).toBe(
-        false
-      )
-    })
-
-    it('should return false when most recent status is approved', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(false)
-    })
-
-    it('should return true when accreditation was suspended at the given date', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(true)
-    })
-
-    it('should return false when accreditation was re-approved after suspension', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-07-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-08-01T00:00:00.000Z', statusHistory)
-      ).toBe(false)
-    })
-
-    it('should return true when date falls within a suspension period before re-approval', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-07-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(true)
-    })
-
-    it('should return false when date is before any status history entries', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-01-01T00:00:00.000Z', statusHistory)
-      ).toBe(false)
-    })
-
-    it('should return true on the exact date of suspension', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-06-01T00:00:00.000Z', statusHistory)
-      ).toBe(true)
-    })
-
-    it('should return false when most recent status is created', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(false)
-    })
-
-    it('should return true with a single suspended entry', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(true)
-    })
-
-    it('should use the first entry when multiple share the same timestamp', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-06-15T00:00:00.000Z', statusHistory)
-      ).toBe(true)
-    })
-    it('should return true when the most recent status is cancelled', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'cancelled',
-          updatedAt: new Date('2025-08-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-09-01T00:00:00.000Z', statusHistory)
-      ).toBe(true)
-    })
-
-    it('should return true on the exact date of cancellation', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'cancelled',
-          updatedAt: new Date('2025-08-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-08-01T00:00:00.000Z', statusHistory)
-      ).toBe(true)
-    })
-
-    it('should return false for a date before cancellation while still approved', () => {
-      /** @type {StatusHistoryDateTime[]} */
-      const statusHistory = [
-        {
-          status: 'cancelled',
-          updatedAt: new Date('2025-08-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        }
-      ]
-
-      expect(
-        isSuspendedOrCancelledAtDate('2025-05-01T00:00:00.000Z', statusHistory)
-      ).toBe(false)
-    })
-  })
-
   describe('isAccreditedAtDates', () => {
     const approvedStatusHistory = /** @type {StatusHistoryEntry[]} */ ([
       { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
@@ -491,6 +243,35 @@ describe('accreditation date helpers', () => {
           accreditationWithSuspension
         )
       ).toBe(false)
+    })
+
+    it('excludes the whole day an accreditation was suspended on, even before the suspension', () => {
+      const suspendedAtTwo = /** @type {Accreditation} */ ({
+        ...accreditation,
+        statusHistory: [
+          ...approvedStatusHistory,
+          { status: 'suspended', updatedAt: '2025-04-01T14:00:00.000Z' }
+        ]
+      })
+
+      expect(
+        isAccreditedAtDates(['2025-04-01T00:00:00.000Z'], suspendedAtTwo)
+      ).toBe(false)
+    })
+
+    it('includes a day the accreditation was suspended and reinstated on', () => {
+      const reinstatedSameDay = /** @type {Accreditation} */ ({
+        ...accreditation,
+        statusHistory: [
+          ...approvedStatusHistory,
+          { status: 'suspended', updatedAt: '2025-04-01T09:00:00.000Z' },
+          { status: 'approved', updatedAt: '2025-04-01T14:00:00.000Z' }
+        ]
+      })
+
+      expect(
+        isAccreditedAtDates(['2025-04-01T00:00:00.000Z'], reinstatedSameDay)
+      ).toBe(true)
     })
 
     it('should return true for an empty dates array', () => {
