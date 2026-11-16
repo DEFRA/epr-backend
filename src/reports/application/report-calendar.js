@@ -13,6 +13,7 @@ import {
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { config } from '#root/config.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
@@ -80,9 +81,8 @@ const reportingWindowsFor = (registration, year) => {
   if (registration.status.current === REGISTRATION_STATUS.CANCELLED) {
     return { registeredOnly: [], accredited: [], wholePeriods: true }
   }
-  return HELD_ACCREDITATION_STATUSES.has(
-    registration.accreditations[year]?.status.current
-  )
+  const status = accreditationForYear(registration, year)?.status.current
+  return status !== undefined && HELD_ACCREDITATION_STATUSES.has(status)
     ? { registeredOnly: [], accredited: windows.accredited, wholePeriods: true }
     : {
         registeredOnly: windows.registeredOnly,
@@ -117,7 +117,7 @@ const servesAccreditedReport = (registration, year) => {
  */
 export const accreditedFrom = (registration, year) => {
   const approvedAt = firstApprovedAt(
-    registration.accreditations[year]?.status.timeline ?? []
+    accreditationForYear(registration, year)?.status.timeline ?? []
   )
   return approvedAt === undefined ? undefined : calendarDate(approvedAt)
 }
@@ -215,7 +215,7 @@ export const reportingPeriodsByKind = ({
 }) => {
   const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
   const reportsInYear = storedReports.filter((report) => report.year === year)
-  const accreditation = registration.accreditations[year]
+  const accreditation = accreditationForYear(registration, year)
   const options = { now, wholePeriods }
 
   return {

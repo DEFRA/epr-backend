@@ -14,6 +14,7 @@ import { extractChangedBy, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /**
  * @import { HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
@@ -103,7 +104,7 @@ export const reportsPost = {
       // registration holds no accreditation for the year.
       const cadenceAccreditation = cadenceAccreditationFor(
         cadence,
-        registration.accreditations[year]?.accreditationNumber
+        accreditationForYear(registration, year)?.accreditationNumber
       )
 
       const createdReport = await createReportForPeriod({

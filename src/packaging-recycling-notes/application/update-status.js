@@ -22,6 +22,7 @@ import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { toIssuingAccreditation } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -337,7 +338,7 @@ async function findIssuingAccreditation(organisationReadRepository, prn) {
       organisationNumber
     )
   const registration = organisation?.registrations[registrationNumber]
-  const accreditation = registration?.accreditations[year]
+  const accreditation = registration && accreditationForYear(registration, year)
   if (
     !registration ||
     accreditation?.accreditationNumber !== accreditationNumber
