@@ -51,8 +51,7 @@ const runRemoval = async (server) => {
  * organisation read model does not hold for them. Flag off (the default) only
  * reports what it would remove; on removes it, auditing each ledger. Both
  * modes log one summary line, and an error for each failure. It judges against
- * the read model as it stands at each start, so the flag is meant to be turned
- * off once the removal has run.
+ * the read model as it stands at each start, so it is removed once it has run.
  *
  * @param {StartedServer} server
  */
