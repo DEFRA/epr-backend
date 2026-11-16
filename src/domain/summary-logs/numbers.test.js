@@ -15,6 +15,8 @@ describe('summaryLogKeyOf', () => {
       registrationId: 'reg-1',
       organisationNumber: '500123',
       registrationNumber: 'R25SR500010912PL',
+      accreditationNumber: null,
+      year: toYear(2026),
       ...fields
     })
 
@@ -23,7 +25,6 @@ describe('summaryLogKeyOf', () => {
       summaryLogKeyOf(
         summaryLog({
           year: toYear(2026),
-          accreditationId: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC500123')
         })
       )
@@ -40,7 +41,6 @@ describe('summaryLogKeyOf', () => {
       summaryLogKeyOf(
         summaryLog({
           year: toYear(2026),
-          accreditationId: null,
           accreditationNumber: null
         })
       )
@@ -52,17 +52,9 @@ describe('summaryLogKeyOf', () => {
     })
   })
 
-  it('names every year and accreditation for a summary log stored before either was recorded', () => {
-    expect(summaryLogKeyOf(summaryLog({}))).toEqual({
-      organisationNumber: '500123',
-      registrationNumber: 'R25SR500010912PL'
-    })
-  })
-
   it.each([
     ['an organisation number', { organisationNumber: undefined }],
-    ['a registration number', { registrationNumber: undefined }],
-    ['an accreditation number', { accreditationId: 'acc-1' }]
+    ['a registration number', { registrationNumber: undefined }]
   ])('refuses a summary log without %s', (_missing, fields) => {
     expect(() => summaryLogKeyOf(summaryLog(fields))).toThrow(
       'The summary log is missing one of its numbers'

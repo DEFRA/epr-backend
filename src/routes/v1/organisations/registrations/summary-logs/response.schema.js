@@ -81,7 +81,6 @@ export const summaryLogResponseSchema = Joi.object({
   material: Joi.string().optional(),
   accreditationNumber: Joi.string().optional(),
   year: Joi.number().integer().required(),
-  accreditationId: Joi.string().allow(null).optional(),
   ledgerAccreditation: Joi.alternatives()
     .try(
       Joi.object({
@@ -96,7 +95,7 @@ export const summaryLogResponseSchema = Joi.object({
           .required()
       })
     )
-    .optional()
+    .required()
 })
 
 const statusOnlyResponseSchema = (status) =>
