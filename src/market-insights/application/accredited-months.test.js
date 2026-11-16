@@ -90,6 +90,15 @@ describe('accreditedMonths', () => {
     expect(monthsOf(cancelled)).toEqual(['2026-01', '2026-02'])
   })
 
+  it('yields nothing for an accreditation cancelled at the moment it was approved', () => {
+    const cancelledBeforeItStarted = operatorAccredited([
+      then('approved', '2026-02-15'),
+      then('cancelled', '2026-02-15')
+    ])
+
+    expect(monthsOf(cancelledBeforeItStarted)).toEqual([])
+  })
+
   it('leaves out a month the accreditation stood cancelled throughout, and yields the month it was reinstated in', () => {
     const reinstated = operatorAccredited([
       ...grantedFrom(),
