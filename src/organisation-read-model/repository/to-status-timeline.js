@@ -87,7 +87,7 @@ const servedOnly = (changes, statuses) =>
 export const lastRecordedAt = (changes) =>
   changes
     .map(({ updatedAt }) => updatedAt)
-    .toSorted()
+    .toSorted((one, other) => one.localeCompare(other))
     .at(-1)
 
 /**
