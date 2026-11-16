@@ -25,6 +25,7 @@ import {
   renderTab
 } from './published-workbook-test-helpers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =
@@ -33,8 +34,8 @@ const insertAccreditedOperator =
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { ReadMarketInsightsFiguresParams } from '#market-insights/application/read-figures.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
@@ -42,9 +43,9 @@ const HEADING_ROW = 9
 const FIRST_FIGURE_COLUMN = 3
 
 /**
- * @typedef {Pick<ReadMarketInsightsFiguresParams,
- *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationAdministrationRepository' | 'organisationReadRepository' | 'reportsRepository'
- * > & { served: ReturnType<typeof readParamsFor>['served'] }} Register
+ * @typedef {Pick<ReturnType<typeof readParamsFor>,
+ *   'ledgerRepository' | 'summaryLogRowStatesRepository' | 'organisationReadRepository' | 'reportsRepository' | 'served'
+ * > & { organisationAdministrationRepository: OrganisationAdministrationRepository }} Register
  */
 
 /** @returns {Register} */
@@ -52,7 +53,6 @@ const emptyRegister = () => {
   const {
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationAdministrationRepository,
     organisationReadRepository,
     reportsRepository,
     served
@@ -61,7 +61,9 @@ const emptyRegister = () => {
     served,
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationAdministrationRepository,
+    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
+      []
+    )(),
     organisationReadRepository,
     reportsRepository
   }
