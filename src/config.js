@@ -399,11 +399,11 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_LEDGER_YEAR_BACKFILL'
     },
-    testOrganisationDataRemoval: {
-      doc: "Feature Flag: Let the startup migration remove test organisations' records under numbers the organisation read model does not hold for them, rather than only reporting them",
+    testOrganisationWholeDataRemoval: {
+      doc: 'Feature Flag: Let the startup migration remove every record test organisations hold, keeping the organisations themselves, rather than only reporting them',
       format: Boolean,
       default: false,
-      env: 'FEATURE_FLAG_TEST_ORGANISATION_DATA_REMOVAL'
+      env: 'FEATURE_FLAG_TEST_ORGANISATION_WHOLE_DATA_REMOVAL'
     }
   },
   formSubmissionOverrides: {

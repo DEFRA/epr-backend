@@ -11,6 +11,7 @@ import { config } from '../config.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { SourceIds } from './mongodb.js' */
+/** @import { RemovedUnnumberedSummaryLogs } from './application/removal.js' */
 
 const LOCK_NAME = 'test-organisation-data-removal'
 
@@ -18,16 +19,24 @@ const LOCK_NAME = 'test-organisation-data-removal'
 const describeSources = ({ summaryLogIds, prnIds }) =>
   `summaryLogIds=${summaryLogIds.join(',')} prnIds=${prnIds.join(',')}`
 
+/** @param {RemovedUnnumberedSummaryLogs} unnumbered */
+const describeUnnumbered = ({
+  organisationNumber,
+  organisationId,
+  summaryLogIds,
+  removed
+}) =>
+  `organisationNumber=${organisationNumber} organisationId=${organisationId}: summaryLogs=${removed} summaryLogIds=${summaryLogIds.join(',')}`
+
 /** @param {StartedServer} server */
 const runRemoval = async (server) => {
-  const isDryRun = !config.get('featureFlags.testOrganisationDataRemoval')
+  const isDryRun = !config.get('featureFlags.testOrganisationWholeDataRemoval')
 
-  const { removed, undecided, skipped, failed, auditFailed } =
+  const { removed, unnumbered, skipped, failed, auditFailed } =
     await removeTestOrganisationData(
       {
         testOrganisationNumbers: TEST_ORGANISATION_NUMBERS,
         records: createTestOrganisationRecords(server.db),
-        organisationReadRepository: server.app.organisationReadRepository,
         systemLogsRepository: server.app.systemLogsRepository,
         logger
       },
@@ -35,23 +44,25 @@ const runRemoval = async (server) => {
     )
 
   const mode = isDryRun ? 'dry-run' : 'removal'
-  const byLedger = removed
-    .map(
+  const details = [
+    ...removed.map(
       ({ ledger, counts, sources }) =>
-        `; ${describeLedger(ledger)}: ${describeCounts(counts)} ${describeSources(sources)}`
-    )
+        `${describeLedger(ledger)}: ${describeCounts(counts)} ${describeSources(sources)}`
+    ),
+    ...unnumbered.map(describeUnnumbered)
+  ]
+    .map((detail) => `; ${detail}`)
     .join('')
   logger.info({
-    message: `Test organisation data removal (${mode}): ledgers=${removed.length} undecided=${undecided} skipped=${skipped} failed=${failed} auditFailed=${auditFailed}${byLedger}`
+    message: `Test organisation data removal (${mode}): ledgers=${removed.length} unnumbered=${unnumbered.length} skipped=${skipped} failed=${failed} auditFailed=${auditFailed}${details}`
   })
 }
 
 /**
- * Startup removal of test organisations' records stored under numbers the
- * organisation read model does not hold for them. Flag off (the default) only
- * reports what it would remove; on removes it, auditing each ledger. Both
- * modes log one summary line, and an error for each failure. It judges against
- * the read model as it stands at each start, so it is removed once it has run.
+ * Startup removal of every record test organisations hold, keeping the
+ * organisations themselves. Flag off (the default) only reports what it would
+ * remove; on removes it, auditing each ledger. Both modes log one summary
+ * line, and an error for each failure. It is removed once it has run.
  *
  * @param {StartedServer} server
  */

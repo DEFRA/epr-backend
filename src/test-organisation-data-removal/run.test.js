@@ -44,7 +44,7 @@ describe('runTestOrganisationDataRemoval', () => {
     lock = { free: vi.fn() }
     server = {
       db: {},
-      app: { organisationReadRepository: {}, systemLogsRepository: {} },
+      app: { systemLogsRepository: {} },
       locker: { lock: vi.fn().mockResolvedValue(lock) }
     }
     vi.mocked(removeTestOrganisationData).mockResolvedValue({
@@ -75,7 +75,14 @@ describe('runTestOrganisationDataRemoval', () => {
           sources: { summaryLogIds: ['log-2'], prnIds: [] }
         }
       ],
-      undecided: 1,
+      unnumbered: [
+        {
+          organisationNumber: toOrganisationNumber('500521'),
+          organisationId: '6969171b94f6a09a01e1bc7e',
+          summaryLogIds: ['log-3', 'log-4'],
+          removed: 2
+        }
+      ],
       skipped: 0,
       failed: 0,
       auditFailed: 0
@@ -88,16 +95,17 @@ describe('runTestOrganisationDataRemoval', () => {
     await runTestOrganisationDataRemoval(server)
 
     expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.testOrganisationDataRemoval'
+      'featureFlags.testOrganisationWholeDataRemoval'
     )
     expect(removeTestOrganisationData).toHaveBeenCalledWith(expect.anything(), {
       isDryRun: true
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Test organisation data removal (dry-run): ledgers=2 undecided=1 skipped=0 failed=0 auditFailed=0' +
+        'Test organisation data removal (dry-run): ledgers=2 unnumbered=1 skipped=0 failed=0 auditFailed=0' +
         '; organisationNumber=500521 registrationNumber=TEST-REG-0123 accreditationNumber=test-acc-0123 year=2026: events=3 rowStates=2 reports=1 prns=4 summaryLogs=1 summaryLogIds=log-1 prnIds=prn-1,prn-2' +
-        '; organisationNumber=500521 registrationNumber=TEST-REG-0123 accreditationNumber=absent year=2026: events=0 rowStates=0 reports=0 prns=0 summaryLogs=1 summaryLogIds=log-2 prnIds='
+        '; organisationNumber=500521 registrationNumber=TEST-REG-0123 accreditationNumber=absent year=2026: events=0 rowStates=0 reports=0 prns=0 summaryLogs=1 summaryLogIds=log-2 prnIds=' +
+        '; organisationNumber=500521 organisationId=6969171b94f6a09a01e1bc7e: summaryLogs=2 summaryLogIds=log-3,log-4'
     })
     expect(lock.free).toHaveBeenCalled()
   })

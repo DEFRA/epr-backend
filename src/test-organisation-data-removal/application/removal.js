@@ -1,15 +1,11 @@
 import { safeAudit, SYSTEM_USER } from '#auditing/helpers.js'
-import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
-import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 
 import { RECORD_KINDS } from '../mongodb.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-/** @import { Ledger, RecordCounts, SourceIds, TestOrganisationRecords } from '../mongodb.js' */
+/** @import { Ledger, RecordCounts, SourceIds, TestOrganisationRecords, UnnumberedSummaryLogs } from '../mongodb.js' */
 
 export const REMOVAL_ACTION = 'test-organisation-data-removal'
 
@@ -21,11 +17,19 @@ export const REMOVAL_ACTION = 'test-organisation-data-removal'
  */
 
 /**
+ * @typedef {Object} RemovedUnnumberedSummaryLogs
+ * @property {OrganisationNumber} organisationNumber
+ * @property {string} organisationId
+ * @property {string[]} summaryLogIds
+ * @property {number} removed - how many of them were removed (would be, on a dry run)
+ */
+
+/**
  * @typedef {Object} RemovalResult
  * @property {RemovedLedger[]} removed - each ledger removed (would be, on a dry run)
- * @property {number} undecided - ledgers left because they have no year to judge their accreditation by
- * @property {number} skipped - organisations left whole, because a record they keep cites one they would remove
- * @property {number} failed - organisations or ledgers not fully removed; retried on the next run
+ * @property {RemovedUnnumberedSummaryLogs[]} unnumbered - each organisation's summary logs removed from under its database id (would be, on a dry run)
+ * @property {number} skipped - organisations left whole, because another organisation's record cites one they would remove
+ * @property {number} failed - organisations, ledgers or unnumbered summary logs not fully removed; retried on the next run
  * @property {number} auditFailed - ledgers removed but not audited
  */
 
@@ -33,7 +37,6 @@ export const REMOVAL_ACTION = 'test-organisation-data-removal'
  * @typedef {Object} Dependencies
  * @property {Iterable<OrganisationNumber>} testOrganisationNumbers
  * @property {TestOrganisationRecords} records
- * @property {Pick<OrganisationReadRepository, 'findByOrganisationNumber'>} organisationReadRepository
  * @property {Pick<SystemLogsRepository, 'insert'>} systemLogsRepository
  * @property {TypedLogger} logger
  */
@@ -65,62 +68,17 @@ const noRecords = () => ({
 /** @param {Record<string, number>} counts */
 const holdsAny = (counts) => Object.values(counts).some((count) => count > 0)
 
-/** @typedef {'held' | 'invalid' | 'undecided'} Verdict */
-
-const HELD = 'held'
-const INVALID = 'invalid'
-const UNDECIDED = 'undecided'
-
 /**
- * Judges a ledger against the read model. It is held when the read model
- * holds its registration and, unless it is registered-only, its accreditation
- * for its year. A ledger naming no accreditation at all is invalid. One with
- * no year cannot be judged by year, so is undecided unless its registration
- * alone decides it.
- *
- * @param {Organisation | null} organisation
- * @returns {(ledger: Ledger) => Verdict}
- */
-const judgeAgainst = (organisation) => {
-  const index = indexByLedger(organisation ? [organisation] : [], {
-    includeTestOrganisations: true
-  })
-  return ({
-    organisationNumber,
-    registrationNumber,
-    accreditationNumber,
-    year
-  }) => {
-    if (
-      !organisation ||
-      !Object.hasOwn(organisation.registrations, registrationNumber) ||
-      accreditationNumber === undefined
-    ) {
-      return INVALID
-    }
-    if (accreditationNumber === null) {
-      return HELD
-    }
-    if (year === undefined) {
-      return UNDECIDED
-    }
-    const key = ledgerKey({
-      organisationNumber,
-      registrationNumber,
-      accreditationNumber,
-      year
-    })
-    return index.has(key) ? HELD : INVALID
-  }
-}
-
-/**
- * @param {Pick<SystemLogsRepository, 'insert'>} systemLogsRepository
- * @param {RemovedLedger} removedLedger
+ * @param {Dependencies} dependencies
+ * @param {object} context - what was removed, and from where
+ * @param {string} description - of what was removed, for the log
+ * @param {RemovalResult} result
  */
 const auditRemoval = async (
-  systemLogsRepository,
-  { ledger, counts, sources }
+  { systemLogsRepository, logger },
+  context,
+  description,
+  result
 ) => {
   const payload = {
     event: {
@@ -128,18 +86,26 @@ const auditRemoval = async (
       subCategory: 'test-organisation-data',
       action: REMOVAL_ACTION
     },
-    context: { ...ledger, removed: counts, ...sources },
+    context,
     user: SYSTEM_USER
   }
 
   safeAudit(payload)
 
-  await systemLogsRepository.insert({
-    createdAt: new Date(),
-    createdBy: SYSTEM_USER,
-    event: payload.event,
-    context: payload.context
-  })
+  try {
+    await systemLogsRepository.insert({
+      createdAt: new Date(),
+      createdBy: SYSTEM_USER,
+      event: payload.event,
+      context: payload.context
+    })
+  } catch (auditError) {
+    logger.error({
+      err: auditError,
+      message: `Removed but failed to audit ${description}`
+    })
+    result.auditFailed++
+  }
 }
 
 /**
@@ -171,12 +137,8 @@ const clearLedger = async (records, ledger, isDryRun) => {
  * @param {boolean} isDryRun
  * @param {RemovalResult} result
  */
-const removeLedger = async (
-  { records, systemLogsRepository, logger },
-  ledger,
-  isDryRun,
-  result
-) => {
+const removeLedger = async (dependencies, ledger, isDryRun, result) => {
+  const { records, logger } = dependencies
   const sources = await records.findSourceIds(ledger)
   const { counts, error } = await clearLedger(records, ledger, isDryRun)
   if (error) {
@@ -194,15 +156,62 @@ const removeLedger = async (
   if (isDryRun) {
     return
   }
+  await auditRemoval(
+    dependencies,
+    { ...ledger, removed: counts, ...sources },
+    `test organisation ledger ${describeLedger(ledger)}`,
+    result
+  )
+}
+
+/**
+ * @param {Dependencies} dependencies
+ * @param {OrganisationNumber} organisationNumber
+ * @param {UnnumberedSummaryLogs} unnumbered
+ * @param {boolean} isDryRun
+ * @param {RemovalResult} result
+ */
+const removeUnnumberedSummaryLogs = async (
+  dependencies,
+  organisationNumber,
+  { organisationId, summaryLogIds },
+  isDryRun,
+  result
+) => {
+  const description = `test organisation ${organisationNumber}'s summary logs under organisationId=${organisationId}`
+  let removed
   try {
-    await auditRemoval(systemLogsRepository, removedLedger)
-  } catch (auditError) {
-    logger.error({
-      err: auditError,
-      message: `Removed but failed to audit test organisation ledger ${describeLedger(ledger)}`
+    removed = isDryRun
+      ? summaryLogIds.length
+      : await dependencies.records.removeUnnumberedSummaryLogs(summaryLogIds)
+  } catch (error) {
+    dependencies.logger.error({
+      err: error,
+      message: `Failed to remove ${description}`
     })
-    result.auditFailed++
+    result.failed++
+    return
   }
+  result.unnumbered.push({
+    organisationNumber,
+    organisationId,
+    summaryLogIds,
+    removed
+  })
+  if (isDryRun) {
+    return
+  }
+  await auditRemoval(
+    dependencies,
+    {
+      organisationNumber,
+      organisationId,
+      removed: { summaryLogs: removed },
+      summaryLogIds
+    },
+    description,
+    result
+  )
 }
 
 /**
@@ -217,45 +226,44 @@ const removeFromOrganisation = async (
   isDryRun,
   result
 ) => {
-  const { records, organisationReadRepository, logger } = dependencies
-  const judge = judgeAgainst(
-    await organisationReadRepository.findByOrganisationNumber(
-      organisationNumber
-    )
-  )
+  const { records, logger } = dependencies
   const ledgers = await records.findLedgers(organisationNumber)
-
-  const undecided = ledgers.filter((ledger) => judge(ledger) === UNDECIDED)
-  for (const ledger of undecided) {
-    logger.warn({
-      message: `Leaving test organisation ledger ${describeLedger(ledger)}: it has no year to judge its accreditation by`
-    })
-  }
-  result.undecided += undecided.length
-
-  const invalid = ledgers.filter((ledger) => judge(ledger) === INVALID)
-  if (invalid.length === 0) {
+  const unnumbered = await records.findUnnumberedSummaryLogs(organisationNumber)
+  if (ledgers.length === 0 && !unnumbered) {
     return
   }
 
-  const citations = await records.countCitationsOutside(invalid)
+  const citations = await records.countCitationsOutside(
+    organisationNumber,
+    unnumbered?.summaryLogIds ?? []
+  )
   if (holdsAny(citations)) {
     logger.error({
-      message: `Skipping test organisation ${organisationNumber}: kept records citing a summary log or PRN it would remove: ${describeCounts(citations)}`
+      message: `Skipping test organisation ${organisationNumber}: other organisations' records cite a summary log or PRN it would remove: ${describeCounts(citations)}`
     })
     result.skipped++
     return
   }
 
-  for (const ledger of invalid) {
+  for (const ledger of ledgers) {
     await removeLedger(dependencies, ledger, isDryRun, result) // NOSONAR(javascript:S9382) one ledger at a time, to spare the database
+  }
+  if (unnumbered) {
+    await removeUnnumberedSummaryLogs(
+      dependencies,
+      organisationNumber,
+      unnumbered,
+      isDryRun,
+      result
+    )
   }
 }
 
 /**
- * Removes the records test organisations hold under numbers the organisation
- * read model does not hold for them, with everything stored under those
- * numbers. Test organisations only, so it never reaches an operator's data.
+ * Removes every record test organisations hold, on every ledger and under
+ * their database ids, keeping the organisations themselves, their users and
+ * the system logs. Test organisations only, so it never reaches an operator's
+ * data.
  *
  * @param {Dependencies} dependencies
  * @param {{ isDryRun: boolean }} options
@@ -268,7 +276,7 @@ export const removeTestOrganisationData = async (
   /** @type {RemovalResult} */
   const result = {
     removed: [],
-    undecided: 0,
+    unnumbered: [],
     skipped: 0,
     failed: 0,
     auditFailed: 0
@@ -284,7 +292,7 @@ export const removeTestOrganisationData = async (
     } catch (error) {
       dependencies.logger.error({
         err: error,
-        message: `Failed to remove the invalid data of test organisation ${organisationNumber}`
+        message: `Failed to remove the data of test organisation ${organisationNumber}`
       })
       result.failed++
     }
