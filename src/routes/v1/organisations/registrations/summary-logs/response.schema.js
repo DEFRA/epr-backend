@@ -95,7 +95,7 @@ export const summaryLogResponseSchema = Joi.object({
           .required()
       })
     )
-    .optional()
+    .required()
 })
 
 const statusOnlyResponseSchema = (status) =>

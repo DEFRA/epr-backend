@@ -164,8 +164,8 @@ const update = (db, logger) => async (id, version, updates) => {
 
 /**
  * Production holds two summary logs that record no accreditation, which no
- * backfill could give one and which nobody can delete. Every read leaves them
- * out, so the domain never sees them.
+ * backfill could give one and which nobody can delete. Every read that returns
+ * a summary log leaves them out, so the domain never sees them.
  */
 const RECORDS_ITS_ACCREDITATION = { accreditationNumber: { $exists: true } }
 

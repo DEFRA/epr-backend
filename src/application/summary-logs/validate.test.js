@@ -274,7 +274,6 @@ describe('SummaryLogsValidator', () => {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',
-      accreditationId: FIXTURE_LEDGER.accreditationId,
       organisationNumber: FIXTURE_LEDGER.organisationNumber,
       registrationNumber: FIXTURE_LEDGER.registrationNumber,
       accreditationNumber: FIXTURE_LEDGER.accreditationNumber,
@@ -617,7 +616,6 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('validates a registered-only summary log against no accreditation', async () => {
-    summaryLog.accreditationId = null
     summaryLog.accreditationNumber = null
 
     await validateSummaryLog(summaryLogId)
@@ -633,7 +631,6 @@ describe('SummaryLogsValidator', () => {
   it('validates a summary log that holds numbers but no database ids', async () => {
     delete summaryLog.organisationId
     delete summaryLog.registrationId
-    delete summaryLog.accreditationId
 
     await validateSummaryLog(summaryLogId)
 
@@ -2350,7 +2347,6 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('resolves the previous submission on the accreditation the summary log was uploaded against', async () => {
-      summaryLog.accreditationId = 'acc-1'
       summaryLog.accreditationNumber = 'ACC-1'
       givenRegistration({
         registrationNumber: 'REG12345',
