@@ -16,7 +16,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 
 const userFixture = {
@@ -142,7 +142,7 @@ describe('getReportableRegistrations', () => {
 // ---------------------------------------------------------------------------
 
 describe('isRegistrationAccredited', () => {
-  /** @type {Array<{ status: AccreditationStatus, expected: boolean }>} */
+  /** @type {Array<{ status: StoredAccreditationStatus, expected: boolean }>} */
   const linkedAccreditations = [
     { status: 'approved', expected: true },
     { status: 'suspended', expected: true },
@@ -427,20 +427,26 @@ describe('accreditationsForRegistration', () => {
 
 describe('isRegistrationActiveInYear', () => {
   /**
-   * @param {{ current?: 'approved' | 'cancelled', validFrom?: string }} [overrides]
+   * @param {{ current?: 'approved' | 'cancelled', approvedFrom?: string }} [overrides]
    */
   const buildRegistration = ({
     current = 'approved',
-    validFrom = '2025-01-01'
-  } = {}) => ({
-    status: { current, timeline: [] },
-    validFrom
-  })
+    approvedFrom = '2025-01-01'
+  } = {}) => {
+    const at = new Date(approvedFrom).toISOString()
+    return {
+      status: {
+        current,
+        lastUpdatedAt: at,
+        timeline: [{ status: /** @type {const} */ ('approved'), at }]
+      }
+    }
+  }
 
-  it('is true when approved and validFrom is on or before the year ends', () => {
+  it('is true when approved on or before the year ends', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ validFrom: '2025-06-01' }),
+        buildRegistration({ approvedFrom: '2025-06-01' }),
         toYear(2025)
       )
     ).toBe(true)
@@ -449,16 +455,16 @@ describe('isRegistrationActiveInYear', () => {
   it('is true for a later year, since a registration never expires', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ validFrom: '2025-06-01' }),
+        buildRegistration({ approvedFrom: '2025-06-01' }),
         toYear(2030)
       )
     ).toBe(true)
   })
 
-  it('is false for a year before validFrom', () => {
+  it('is false for a year before its approval takes effect', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ validFrom: '2026-01-01' }),
+        buildRegistration({ approvedFrom: '2026-01-01' }),
         toYear(2025)
       )
     ).toBe(false)
@@ -467,7 +473,22 @@ describe('isRegistrationActiveInYear', () => {
   it('is false when cancelled', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ current: 'cancelled', validFrom: '2025-01-01' }),
+        buildRegistration({ current: 'cancelled', approvedFrom: '2025-01-01' }),
+        toYear(2025)
+      )
+    ).toBe(false)
+  })
+
+  it('is false when approved but its timeline holds no approval', () => {
+    expect(
+      isRegistrationActiveInYear(
+        {
+          status: {
+            current: 'approved',
+            lastUpdatedAt: undefined,
+            timeline: []
+          }
+        },
         toYear(2025)
       )
     ).toBe(false)

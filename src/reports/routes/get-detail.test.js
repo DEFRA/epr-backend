@@ -2,7 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
@@ -94,18 +94,14 @@ const seedRepositories = async (
  * @returns {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>}
  */
 const approvedFrom = (validFrom, standing = 'registeredOnly') => ({
-  validFrom,
-  status: { current: 'approved', timeline: approvedTimelineFrom(validFrom) },
+  status: approvedStatusFrom(validFrom),
   standingByDate: { 2026: { [validFrom]: { standing } } }
 })
 
 const accreditedFromJanuary = (accreditationNumber) =>
   buildReadAccreditation({
     accreditationNumber: toAccreditationNumber(accreditationNumber),
-    status: {
-      current: 'approved',
-      timeline: approvedTimelineFrom('2026-01-01')
-    }
+    status: approvedStatusFrom('2026-01-01')
   })
 
 /** @param {string} [validFrom] */

@@ -23,7 +23,7 @@ import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract
 import * as reportAudit from '#reports/application/audit.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
@@ -75,7 +75,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   /**
    * @param {{
    *   reportOverrides?: object,
-   *   accreditationStatus?: AccreditationStatus,
+   *   accreditationStatus?: StoredAccreditationStatus,
    *   stream?: { cadence: Cadence, period: number },
    *   withReport?: boolean
    * }} [options]
@@ -98,6 +98,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
                       /** @type {'approved' | 'suspended' | 'cancelled'} */ (
                         accreditationStatus
                       ),
+                    lastUpdatedAt: '2026-07-01T00:00:00.000Z',
                     timeline: approvedTimelineFrom('2026-07-01')
                   }
                 })
@@ -346,7 +347,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it.each(
-      /** @type {AccreditationStatus[]} */ ([
+      /** @type {StoredAccreditationStatus[]} */ ([
         'created',
         'rejected',
         'cancelled',

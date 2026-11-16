@@ -30,7 +30,7 @@ import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { ObjectId, WithId } from 'mongodb' */
-/** @import { StoredLinkedDefraOrganisation, Organisation, OrganisationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredLinkedDefraOrganisation, Organisation, StoredOrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './administration-port.js' */
@@ -211,7 +211,7 @@ export const mapDocumentWithCurrentStatuses = (org) => {
     )
   const { _id, orgId, ...rest } = normalised
 
-  rest.status = /** @type {OrganisationStatus} */ (getCurrentStatus(rest))
+  rest.status = /** @type {StoredOrganisationStatus} */ (getCurrentStatus(rest))
 
   for (const item of rest.registrations) {
     item.status = getCurrentStatus(item)
@@ -344,7 +344,7 @@ export const prepareForReplace = (existing, updates) => {
  * @param {StoredLinkedDefraOrganisation} linkedDefraOrganisation
  * @returns {{
  *   linkedDefraOrganisation: StoredLinkedDefraOrganisation,
- *   statusHistoryEntry: { status: OrganisationStatus, updatedAt: Date } | null
+ *   statusHistoryEntry: { status: StoredOrganisationStatus, updatedAt: Date } | null
  * }}
  */
 export const prepareLink = (existing, linkedDefraOrganisation) => {

@@ -87,12 +87,12 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       devEndpoints: true
     })
     const approved = {
-      status: 'approved',
+      status: /** @type {const} */ ('approved'),
       at: '2027-01-01T00:00:00.000Z',
       updatedAt: '2026-12-14T10:31:00.000Z'
     }
     const suspended = {
-      status: 'suspended',
+      status: /** @type {const} */ ('suspended'),
       at: '2027-03-01T00:00:00.000Z',
       updatedAt: '2027-03-01T00:00:00.000Z'
     }

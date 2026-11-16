@@ -6,13 +6,13 @@ import {
   TARGET_TYPE
 } from '#domain/organisations/validation/issue.js'
 
-/** @import { AccreditationStatus, Organisation } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus, Organisation } from '#domain/organisations/model.js' */
 
 /**
  * The fields the rule reads. The number is `unknown` so a test can store a
  * malformed one.
  *
- * @typedef {{ id: string, status: AccreditationStatus, accreditationNumber?: unknown }} StoredAccreditation
+ * @typedef {{ id: string, status: StoredAccreditationStatus, accreditationNumber?: unknown }} StoredAccreditation
  */
 
 /** @param {StoredAccreditation[]} accreditations */

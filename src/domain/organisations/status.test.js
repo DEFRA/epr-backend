@@ -11,7 +11,7 @@ import {
 } from './model.js'
 import Boom from '@hapi/boom'
 
-/** @import {AccreditationStatus, OrganisationStatus, RegistrationStatus} from './model.js' */
+/** @import {StoredAccreditationStatus, StoredOrganisationStatus, StoredRegistrationStatus} from './model.js' */
 /** @import {StatusTransitionAsserter} from './status.js' */
 
 /**
@@ -55,7 +55,7 @@ const describeTransitionTable = (
 }
 
 describe('assertOrgStatusTransitionValid', () => {
-  /** @type {[OrganisationStatus, OrganisationStatus, boolean][]} */
+  /** @type {[StoredOrganisationStatus, StoredOrganisationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
     [ORGANISATION_STATUS.CREATED, ORGANISATION_STATUS.APPROVED, true],
@@ -117,11 +117,11 @@ describe('assertOrgStatusTransitionValid', () => {
 
 describe('assertRegistrationStatusTransitionValid', () => {
   // Only reachable from a status read from storage, never from a typed caller.
-  const suspended = /** @type {RegistrationStatus} */ (
+  const suspended = /** @type {StoredRegistrationStatus} */ (
     ACCREDITATION_STATUS.SUSPENDED
   )
 
-  /** @type {[RegistrationStatus, RegistrationStatus, boolean][]} */
+  /** @type {[StoredRegistrationStatus, StoredRegistrationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
     [REGISTRATION_STATUS.CREATED, REGISTRATION_STATUS.APPROVED, true],
@@ -161,7 +161,7 @@ describe('assertRegistrationStatusTransitionValid', () => {
 })
 
 describe('assertAccreditationStatusTransitionValid', () => {
-  /** @type {[AccreditationStatus, AccreditationStatus, boolean][]} */
+  /** @type {[StoredAccreditationStatus, StoredAccreditationStatus, boolean][]} */
   const transitionTable = [
     // From CREATED
     [ACCREDITATION_STATUS.CREATED, ACCREDITATION_STATUS.APPROVED, true],
