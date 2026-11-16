@@ -135,12 +135,7 @@ export const summaryLogsUploadCompletedYear = {
         summaryLogId,
         isInLocation ? summaryLogUpload : asRejected(summaryLogUpload),
         logger,
-        {
-          organisationId,
-          registrationId,
-          year,
-          numbers: numbersFromPath(params)
-        }
+        { year, numbers: numbersFromPath(params) }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })

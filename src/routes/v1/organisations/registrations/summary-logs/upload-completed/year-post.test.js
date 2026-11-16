@@ -140,8 +140,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
       status: SUMMARY_LOG_STATUS.VALIDATING,
-      organisationId,
-      registrationId,
       year: 2026,
       organisationNumber,
       registrationNumber,

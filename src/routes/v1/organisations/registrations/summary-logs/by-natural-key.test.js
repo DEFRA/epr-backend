@@ -260,8 +260,8 @@ describe('summary-log routes by natural key', () => {
           1
         )
         expect(stored.summaryLog).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber: registration.registrationNumber,
           year: YEAR,
           accreditationNumber
         })
@@ -327,7 +327,7 @@ describe('summary-log routes by natural key', () => {
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
-      registrationId: accreditedRegistration.id,
+      registrationNumber: accreditedRegistration.registrationNumber,
       accreditationNumber: null
     })
   })

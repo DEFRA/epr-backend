@@ -81,8 +81,8 @@ const extractCascadeKeys = (organisation) => {
  * organisation's id, so they join against organisationId. The
  * 'registration', 'accreditation' and 'organisation' collections (written by
  * the journey-test apply path) are keyed by the numeric orgId. PRNs, reports,
- * waste balance events, row states and report system logs carry the
- * organisation number instead.
+ * summary logs, waste balance events, row states and report system logs
+ * carry the organisation number instead.
  *
  * @param {Organisation} organisation
  * @param {{ overseasSiteIds: string[], registrationNumbers: string[] }} keys
@@ -117,7 +117,7 @@ const buildCascadeSteps = (
     {
       label: 'summary-logs',
       collection: COLLECTIONS.SUMMARY_LOGS,
-      filter: { organisationId }
+      filter: { organisationNumber }
     },
     {
       label: 'overseas-sites',

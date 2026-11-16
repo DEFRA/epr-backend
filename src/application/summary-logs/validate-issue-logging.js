@@ -18,8 +18,6 @@ export const MAX_VALIDATION_ISSUES = 100
  * upstream business logic provides by the VALIDATING state.
  *
  * @typedef {SummaryLog & {
- *   organisationId: string,
- *   registrationId: string,
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
  *   file: StoredFile

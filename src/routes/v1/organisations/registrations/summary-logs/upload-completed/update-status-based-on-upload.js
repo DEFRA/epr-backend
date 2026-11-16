@@ -25,8 +25,6 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 
 /**
  * @typedef {{
- *   organisationId: string,
- *   registrationId: string,
  *   year: Year,
  *   numbers: RequiredNumbers
  * }} UploadLocation
@@ -51,17 +49,10 @@ export const buildFileData = (upload, existingFile) => {
 
 /**
  * @param {SummaryLogUpload} upload
- * @param {SummaryLogFile | undefined} existingFile
- * @param {string} organisationId
- * @param {string} registrationId
+ * @param {SummaryLogFile} [existingFile]
  * @returns {Omit<SummaryLog, 'year' | 'accreditationNumber'>}
  */
-const buildSummaryLogData = (
-  upload,
-  existingFile,
-  organisationId,
-  registrationId
-) => {
+const buildSummaryLogData = (upload, existingFile) => {
   const status = determineStatusFromUpload(upload.fileStatus)
 
   /** @type {Omit<SummaryLog, 'year' | 'accreditationNumber'>} */
@@ -69,9 +60,7 @@ const buildSummaryLogData = (
     status,
     expiresAt: calculateExpiresAt(status),
     createdAt: new Date().toISOString(),
-    file: buildFileData(upload, existingFile),
-    organisationId,
-    registrationId
+    file: buildFileData(upload, existingFile)
   }
 
   if (status === SUMMARY_LOG_STATUS.REJECTED) {
@@ -114,11 +103,11 @@ const insertNewSummaryLog = async (
   summaryLogsRepository,
   summaryLogId,
   upload,
-  { organisationId, registrationId, year, numbers }
+  { year, numbers }
 ) => {
   /** @type {NewSummaryLog} */
   const summaryLog = {
-    ...buildSummaryLogData(upload, undefined, organisationId, registrationId),
+    ...buildSummaryLogData(upload),
     year,
     ...numbers
   }
@@ -149,7 +138,6 @@ export const updateStatusBasedOnUpload = async (
   logger,
   location
 ) => {
-  const { organisationId, registrationId } = location
   const existing = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
 
@@ -176,12 +164,7 @@ export const updateStatusBasedOnUpload = async (
       throw Boom.conflict(error.message)
     }
 
-    const updates = buildSummaryLogData(
-      upload,
-      summaryLog.file,
-      organisationId,
-      registrationId
-    )
+    const updates = buildSummaryLogData(upload, summaryLog.file)
     await summaryLogsRepository.update(summaryLogId, version, updates)
   } else {
     await insertNewSummaryLog(
