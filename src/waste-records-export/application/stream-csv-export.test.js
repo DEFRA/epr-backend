@@ -91,6 +91,8 @@ const NEXT_YEAR = toYear(DEFAULT_YEAR + 1)
 
 /**
  * A reprocessor registration holding `accreditations`, each under its year.
+ *
+ * @param {...{ year: Year }} accreditations
  */
 const accredited = (...accreditations) =>
   reprocessorRegistration({

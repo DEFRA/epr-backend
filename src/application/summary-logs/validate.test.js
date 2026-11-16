@@ -385,7 +385,8 @@ describe('SummaryLogsValidator', () => {
 
   /**
    * The registration's accreditations: one for `year`, approved from
-   * `approvedAt` and holding `status` today.
+   * `approvedAt` and holding `status` today, listing `overseasSites` when
+   * given, as an exporter's does.
    *
    * @param {{ accreditationNumber?: string, year: string, approvedAt: string, status?: string, overseasSites?: Record<string, any> }} params
    */
@@ -394,7 +395,7 @@ describe('SummaryLogsValidator', () => {
     year,
     approvedAt,
     status = 'approved',
-    overseasSites = {}
+    overseasSites
   }) => {
     const at = new Date(approvedAt).toISOString()
     return {
@@ -404,7 +405,7 @@ describe('SummaryLogsValidator', () => {
           current: status,
           timeline: [{ status: 'approved', at, updatedAt: at }]
         },
-        overseasSites,
+        ...(overseasSites && { overseasSites }),
         year: toYear(Number(year))
       }
     }
@@ -454,7 +455,8 @@ describe('SummaryLogsValidator', () => {
           ? accreditationsFor({
               accreditationNumber: accreditation.accreditationNumber,
               year: accreditation.validFrom.slice(0, 4),
-              approvedAt: accreditation.validFrom
+              approvedAt: accreditation.validFrom,
+              ...(wasteProcessingType === 'exporter' && { overseasSites: {} })
             })
           : {}
       }
