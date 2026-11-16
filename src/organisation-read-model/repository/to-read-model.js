@@ -551,7 +551,7 @@ function toAccreditedOverseasSite(site) {
   return site.validFrom
     ? {
         status: 'approved',
-        approvedOn: new Date(site.validFrom).toISOString().slice(0, 10)
+        approvedOn: toCalendarDate(new Date(site.validFrom))
       }
     : { status: 'pending' }
 }

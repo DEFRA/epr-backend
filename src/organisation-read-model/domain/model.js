@@ -77,7 +77,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *
  * @typedef {
  *   | { status: 'pending' }
- *   | { approvedOn: string, status: 'approved' }
+ *   | { approvedOn: CalendarDate, status: 'approved' }
  * } AccreditedOverseasSite
  *
  * @typedef {{ country?: string, region?: string } & (
