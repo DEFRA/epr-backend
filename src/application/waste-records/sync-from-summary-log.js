@@ -414,8 +414,7 @@ export const syncFromSummaryLog = (dependencies) => {
       year
     }
     const { accreditation, overseasSites } = classificationContextOf(
-      await ledgerAccreditationFor(organisationReadRepository, summaryLog),
-      processingType
+      await ledgerAccreditationFor(organisationReadRepository, summaryLog)
     )
 
     // 3. Transform to waste records

@@ -46,7 +46,6 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
-/** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
@@ -312,8 +311,7 @@ const runValidationChecks = async (
   })
   result.registration = registration
   const classificationContext = classificationContextOf(
-    await ledgerAccreditationFor(organisationReadRepository, summaryLog),
-    /** @type {ProcessingType} */ (meta.PROCESSING_TYPE)
+    await ledgerAccreditationFor(organisationReadRepository, summaryLog)
   )
   result.classificationContext = classificationContext
   issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))

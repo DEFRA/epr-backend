@@ -4,13 +4,11 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear, yearBounds } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
@@ -176,16 +174,12 @@ export const ledgerAccreditationFor = async (
  * exporter's overseas sites are checked.
  *
  * @param {LedgerAccreditation | null} ledgerAccreditation
- * @param {ProcessingType} processingType
  * @returns {ClassificationContext}
  */
-export const classificationContextOf = (ledgerAccreditation, processingType) =>
+export const classificationContextOf = (ledgerAccreditation) =>
   ledgerAccreditation
     ? {
         accreditation: validityOf(ledgerAccreditation),
-        overseasSites:
-          processingType === PROCESSING_TYPES.EXPORTER
-            ? overseasSitesOf(ledgerAccreditation)
-            : ORS_VALIDATION_DISABLED
+        overseasSites: overseasSitesOf(ledgerAccreditation)
       }
     : { accreditation: null, overseasSites: ORS_VALIDATION_DISABLED }
