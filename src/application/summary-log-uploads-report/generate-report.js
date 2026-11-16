@@ -17,6 +17,7 @@ import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 
@@ -58,11 +59,14 @@ function transformRow(formattedInfo, summaryLogStats) {
 }
 
 /**
- * @param {Registration['accreditations']} accreditations
+ * @param {Registration} registration
  * @returns {string}
  */
-function accreditationNumberOf(accreditations) {
-  return accreditations[currentUtcYear()]?.accreditationNumber ?? ''
+function accreditationNumberOf(registration) {
+  return (
+    accreditationForYear(registration, currentUtcYear())?.accreditationNumber ??
+    ''
+  )
 }
 
 /**
@@ -98,9 +102,7 @@ function buildRegistrationLookup(organisations) {
               businessName: org.name,
               organisationNumber: org.organisationNumber,
               registrationNumber,
-              accreditationNumber: accreditationNumberOf(
-                registration.accreditations
-              ),
+              accreditationNumber: accreditationNumberOf(registration),
               reprocessingSite: reprocessingSiteOf(registration),
               packagingWasteCategory: formatResolvedMaterial(
                 registration.material
