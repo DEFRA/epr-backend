@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { transform } from './public-register-transformer.js'
 
 /** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { TonnageBand } from '#domain/organisations/model.js' */
 
 const REGISTRATION_NUMBER = 'R26ER5000010001PL'
 
@@ -210,7 +211,9 @@ describe('transform', () => {
         reprocessor({
           accreditations: {
             2026: accreditation({
-              prnIssuance: { tonnageBand },
+              prnIssuance: {
+                tonnageBand: /** @type {TonnageBand} */ (tonnageBand)
+              },
               status: {
                 current: /** @type {any} */ (current),
                 lastUpdatedAt: APPROVAL_RECORDED_AT,
