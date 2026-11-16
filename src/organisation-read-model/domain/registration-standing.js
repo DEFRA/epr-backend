@@ -1,6 +1,7 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { utcYearOf, yearBounds } from '#common/helpers/dates/year.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
+import { accreditationForYear } from './accreditation-for-year.js'
 import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
 import { approvedYears, statusRanges } from './status-timeline.js'
 
@@ -83,7 +84,7 @@ const datesToCheck = (timelines, year) => {
 export const standingByDate = (registration, year) => {
   const registrationTimeline = registration.status.timeline
   const accreditationTimeline =
-    registration.accreditations[year]?.status.timeline ?? []
+    accreditationForYear(registration, year)?.status.timeline ?? []
   const dates = datesToCheck(
     [registrationTimeline, accreditationTimeline],
     year
