@@ -83,15 +83,6 @@ const update =
   }
 
 /**
- * Every read leaves out a summary log that records no accreditation, as the
- * MongoDB adapter does.
- *
- * @param {StoredSummaryLog} summaryLog
- */
-const recordsItsAccreditation = (summaryLog) =>
-  summaryLog.accreditationNumber !== undefined
-
-/**
  * @param {SummaryLogId} id
  * @param {StoredSummaryLog} summaryLog
  */
@@ -104,7 +95,7 @@ const fromStored = (id, summaryLog) =>
  * @returns {SummaryLogVersion | null}
  */
 const toVersion = (id, doc) =>
-  doc && recordsItsAccreditation(doc.summaryLog)
+  doc
     ? { version: doc.version, summaryLog: fromStored(id, doc.summaryLog) }
     : null
 
@@ -114,11 +105,8 @@ const toVersion = (id, doc) =>
  * @returns {[SummaryLogId, StoredVersion] | []}
  */
 const holdingFile = (staleCache, fileId) =>
-  [...staleCache].find(
-    ([, held]) =>
-      held?.summaryLog?.file?.id === fileId &&
-      recordsItsAccreditation(held.summaryLog)
-  ) ?? []
+  [...staleCache].find(([, held]) => held?.summaryLog?.file?.id === fileId) ??
+  []
 
 // Read from staleCache to simulate reading from replica
 /** @param {SummaryLogStore} staleCache */
@@ -219,9 +207,8 @@ const uploads = (staleCache, matches) => {
  * @returns {SummaryLogMatch}
  */
 const matchesAccreditation = (accreditationNumber) => (summaryLog) =>
-  recordsItsAccreditation(summaryLog) &&
-  (accreditationNumber === undefined ||
-    summaryLog.accreditationNumber === accreditationNumber)
+  accreditationNumber === undefined ||
+  summaryLog.accreditationNumber === accreditationNumber
 
 /**
  * @param {SummaryLogKey['year']} year
@@ -331,9 +318,6 @@ const getDownloadUrl = (staleCache) => async (summaryLogId) =>
 const getDownloadUrlByFileId = (staleCache) => async (fileId) =>
   signDownload(await findByFileId(staleCache)(fileId), validateId(fileId))
 
-// A missing accreditation number indexes as null in MongoDB's lock index.
-const sameAccreditationNumber = (a, b) => (a ?? null) === (b ?? null)
-
 /**
  * Whether `candidate` collides with `subject` for the submitting-lock check:
  * same registration, already submitting, and the same year and accreditation.
@@ -343,10 +327,7 @@ const collidesOnSubmittingLock = (candidate, subject) =>
   candidate.registrationNumber === subject.registrationNumber &&
   candidate.status === 'submitting' &&
   candidate.year === subject.year &&
-  sameAccreditationNumber(
-    candidate.accreditationNumber,
-    subject.accreditationNumber
-  )
+  candidate.accreditationNumber === subject.accreditationNumber
 
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
@@ -354,7 +335,7 @@ const transitionToSubmittingExclusive =
     const existing = storage.get(validatedId)
 
     // Verify summary log exists
-    if (!existing || !recordsItsAccreditation(existing.summaryLog)) {
+    if (!existing) {
       throw Boom.notFound(`Summary log with id ${validatedId} not found`)
     }
 

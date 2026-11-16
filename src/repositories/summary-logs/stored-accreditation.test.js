@@ -37,25 +37,28 @@ describe('readStoredSummaryLog', () => {
     ).toEqual({ status: 'submitted', year: 2026, accreditationNumber: null })
   })
 
+  it('reads a summary log uploaded for an accreditation held outside this service, which has no accreditation id', () => {
+    expect(
+      readStoredSummaryLog('log-1', stored({ accreditationNumber: 'A27ER123' }))
+    ).toEqual({
+      status: 'submitted',
+      year: 2026,
+      accreditationNumber: 'A27ER123'
+    })
+  })
+
+  it('reads a registered-only summary log with no accreditation id', () => {
+    expect(
+      readStoredSummaryLog('log-1', stored({ accreditationNumber: null }))
+    ).toEqual({ status: 'submitted', year: 2026, accreditationNumber: null })
+  })
+
   it.each([
-    ['no accreditation at all', {}],
-    ['an accreditation id with no number', { accreditationId: 'acc-1' }],
-    ['a number with no accreditation id', { accreditationNumber: 'A26ER123' }],
-    [
-      'an accreditation id with a null number',
-      { accreditationId: 'acc-1', accreditationNumber: null }
-    ],
-    [
-      'a null accreditation id with a number',
-      { accreditationId: null, accreditationNumber: 'A26ER123' }
-    ],
-    [
-      'an empty accreditation number',
-      { accreditationId: 'acc-1', accreditationNumber: '' }
-    ],
+    ['no accreditation number', {}],
+    ['an empty accreditation number', { accreditationNumber: '' }],
     [
       'an accreditation number that is not a string',
-      { accreditationId: 'acc-1', accreditationNumber: 123 }
+      { accreditationNumber: 123 }
     ]
   ])('refuses a summary log stored with %s', (_, accreditation) => {
     expect(() => readStoredSummaryLog('log-1', stored(accreditation))).toThrow(
