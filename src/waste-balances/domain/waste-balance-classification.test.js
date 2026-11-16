@@ -8,10 +8,8 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { tableSchemasWith } from '#waste-balances/domain/table-schemas-test-helpers.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-const accreditation =
-  /** @type {import('#domain/organisations/accreditation.js').Accreditation} */ (
-    /** @type {unknown} */ ({ id: 'acc-1' })
-  )
+/** @type {import('#domain/organisations/accreditation.js').AccreditationValidity} */
+const accreditation = { timeline: [] }
 const overseasSites = /** @type {*} */ (new Map())
 
 const buildRecord = (overrides = {}) =>

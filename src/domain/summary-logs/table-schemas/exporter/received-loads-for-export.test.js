@@ -7,7 +7,7 @@ import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 import { assertIncluded } from '../shared/classify-test-helpers.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '../validation-pipeline.js' */
 
 describe('RECEIVED_LOADS_FOR_EXPORT', () => {
@@ -679,13 +679,10 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
   })
 
   describe('classifyForWasteBalance', () => {
-    const accreditation = /** @type {Accreditation} */ ({
+    const accreditation = /** @type {AccreditationValidity} */ ({
       validFrom: '2024-01-01',
       validTo: '2024-12-31',
-      statusHistory: [
-        { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-        { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-      ]
+      timeline: [{ status: 'approved', at: '2023-12-15T00:00:00.000Z' }]
     })
 
     const completeRow = {
@@ -1039,13 +1036,12 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(result.reasons).toEqual([])
       })
 
-      it('returns INCLUDED when accreditation has empty statusHistory', () => {
+      it('returns INCLUDED when accreditation has empty timeline', () => {
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: /** @type {Accreditation} */ ({
+          accreditation: /** @type {AccreditationValidity} */ ({
             validFrom: '2024-01-01',
             validTo: '2024-12-31',
-            statusHistory:
-              /** @type {{ status: string, updatedAt: string }[]} */ ([])
+            timeline: []
           }),
           overseasSites: ORS_VALIDATION_DISABLED
         })
@@ -1059,14 +1055,15 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const suspendedAccreditation = {
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' }
+          timeline: [
+            { status: 'approved', at: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', at: '2024-03-01T00:00:00.000Z' }
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
+          accreditation: /** @type {AccreditationValidity} */ (
+            suspendedAccreditation
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1079,15 +1076,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const reapprovedAccreditation = {
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-03-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-04-01T00:00:00.000Z' }
+          timeline: [
+            { status: 'approved', at: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', at: '2024-03-01T00:00:00.000Z' },
+            { status: 'approved', at: '2024-04-01T00:00:00.000Z' }
           ]
         }
         const result = schema.classifyForWasteBalance(completeRow, {
-          accreditation: /** @type {Accreditation} */ (reapprovedAccreditation),
+          accreditation: /** @type {AccreditationValidity} */ (
+            reapprovedAccreditation
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
@@ -1102,15 +1100,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const suspendedAccreditation = {
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-04-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-07-01T00:00:00.000Z' }
+          timeline: [
+            { status: 'approved', at: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', at: '2024-04-01T00:00:00.000Z' },
+            { status: 'approved', at: '2024-07-01T00:00:00.000Z' }
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
+          accreditation: /** @type {AccreditationValidity} */ (
+            suspendedAccreditation
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1128,15 +1127,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const suspendedAccreditation = {
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-04-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-07-01T00:00:00.000Z' }
+          timeline: [
+            { status: 'approved', at: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', at: '2024-04-01T00:00:00.000Z' },
+            { status: 'approved', at: '2024-07-01T00:00:00.000Z' }
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: /** @type {Accreditation} */ (suspendedAccreditation),
+          accreditation: /** @type {AccreditationValidity} */ (
+            suspendedAccreditation
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
@@ -1154,15 +1154,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         const reapprovedAccreditation = {
           validFrom: '2024-01-01',
           validTo: '2024-12-31',
-          statusHistory: [
-            { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' },
-            { status: 'suspended', updatedAt: '2024-04-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-07-01T00:00:00.000Z' }
+          timeline: [
+            { status: 'approved', at: '2023-12-15T00:00:00.000Z' },
+            { status: 'suspended', at: '2024-04-01T00:00:00.000Z' },
+            { status: 'approved', at: '2024-07-01T00:00:00.000Z' }
           ]
         }
         const result = schema.classifyForWasteBalance(row, {
-          accreditation: /** @type {Accreditation} */ (reapprovedAccreditation),
+          accreditation: /** @type {AccreditationValidity} */ (
+            reapprovedAccreditation
+          ),
           overseasSites: ORS_VALIDATION_DISABLED
         })
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
