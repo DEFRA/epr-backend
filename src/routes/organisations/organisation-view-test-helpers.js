@@ -103,8 +103,7 @@ export const reprocessorResponse = {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
       prns: { open: true },
-      status: approvedStatusFrom('2026-07-01'),
-      year: 2026
+      status: approvedStatusFrom('2026-07-01')
     }
   }
 }
@@ -122,7 +121,6 @@ export const exporterResponse = {
       accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
       prns: { open: true },
       status: approvedStatusFrom('2026-07-01'),
-      year: 2026,
       overseasSites: {
         '001': { status: 'approved', approvedOn: '2026-01-01' },
         '002': { status: 'pending' }
