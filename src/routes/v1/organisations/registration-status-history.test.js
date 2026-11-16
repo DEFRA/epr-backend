@@ -318,6 +318,22 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
     })
 
+    it('returns 422 when the validFrom is before 2024', async () => {
+      const ctx = await seedOrg('created')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { ...grantPayload, validFrom: '2015-03-01' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(JSON.parse(response.payload).message).toMatch(
+        /validFrom: must be in 2024 or later/
+      )
+    })
+
     it('returns 422 when the registration has no reprocessingType, which granting does not set', async () => {
       const ctx = await seedOrg('created', {
         registrationOverrides: { reprocessingType: null }
