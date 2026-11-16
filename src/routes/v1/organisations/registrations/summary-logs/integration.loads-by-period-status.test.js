@@ -345,7 +345,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ])
   })
 
-  it('classifies an added load dated in a closed period as a closed-period load', async () => {
+  it('classifies an added load dated in a closed period as a closed-period load and leaves the deprecated closedPeriods empty', async () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
     const env = await setupWasteBalanceIntegrationEnvironment({
