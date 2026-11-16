@@ -6,7 +6,6 @@ import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
@@ -315,13 +314,9 @@ const measuresByCell = ({
 }) => {
   const registrations = new Map(
     reportableRegistrations(organisations).map(
-      ({ organisation, registrationNumber, registration, key }) => [
+      ({ organisationNumber, registrationNumber, registration, key }) => [
         key,
-        {
-          organisationNumber: organisation.organisationNumber,
-          registrationNumber: toRegistrationNumber(registrationNumber),
-          registration
-        }
+        { organisationNumber, registrationNumber, registration }
       ]
     )
   )

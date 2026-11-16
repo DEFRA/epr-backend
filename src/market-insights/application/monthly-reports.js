@@ -7,8 +7,6 @@ import {
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
-import { registrationKey } from '#reports/domain/registration-key.js'
-import { getStatusHistoryDateTimes } from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
@@ -63,11 +61,10 @@ const isCancelledByEndOf = (month, history) =>
  *
  * @param {Set<YearMonth>} served
  * @param {Year[]} years
- * @param {Pick<GrantedRegistration, 'accreditation' | 'window'>} granted
+ * @param {Pick<GrantedRegistration, 'window' | 'history'>} granted
  */
-const owedPeriods = (served, years, { accreditation, window }) => {
-  const history = getStatusHistoryDateTimes(accreditation.statusHistory)
-  return filterPeriodsFromDate(
+const owedPeriods = (served, years, { window, history }) =>
+  filterPeriodsFromDate(
     years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
     window.validFrom,
     window.validTo
@@ -76,7 +73,6 @@ const owedPeriods = (served, years, { accreditation, window }) => {
       served.has(toYearMonth(period.startDate)) &&
       !isCancelledByEndOf(toYearMonth(period.startDate), history)
   )
-}
 
 /**
  * One monthly report an accreditation owed for a month served, and whether it
@@ -117,15 +113,13 @@ export function* owedMonthlyReports({
     registrationNumber,
     registration,
     year,
-    accreditation,
-    window
-  } of grantedRegistrations(organisations, covers)) {
-    const owed = owedPeriods(served, years, { accreditation, window })
+    key,
+    window,
+    history
+  } of grantedRegistrations(organisations, years, covers)) {
+    const owed = owedPeriods(served, years, { window, history })
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
-    const reports =
-      reportsByRegistration.get(
-        registrationKey({ organisationNumber, registrationNumber })
-      ) ?? []
+    const reports = reportsByRegistration.get(key) ?? []
 
     // The merge also appends any report the operator submitted for a month it
     // does not owe, and those count for nothing.

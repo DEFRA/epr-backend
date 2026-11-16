@@ -2,8 +2,6 @@ import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { utcYearOf } from '#common/helpers/dates/year.js'
 import { validityOf } from '#waste-balances/application/read-model-accreditations.js'
 import {
   accreditationWindow,
@@ -52,8 +50,10 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * A registration whose accreditation for a year has been granted.
  *
  * @typedef {AccreditationOfRegistration & {
+ *   key: string,
  *   accreditation: AccreditationValidity,
- *   window: AccreditationWindow
+ *   window: AccreditationWindow,
+ *   history: StatusHistoryDateTime[]
  * }} GrantedRegistration
  */
 
@@ -117,38 +117,67 @@ const isAccreditedDuring = (period, window, history) =>
   )
 
 /**
- * Every accreditation the read model serves, outside test organisations, that
- * has been approved, with its validity window, among those the caller's
- * publication covers. Only an
- * accredited registration reports monthly, so a registered-only operator
- * yields nothing.
+ * Every accreditation the read model serves for the years given, outside test
+ * organisations, that has been approved, with its validity window and parsed
+ * history.
  *
  * @param {Organisation[]} organisations
- * @param {CoversRegistration} covers
- * @returns {Generator<GrantedRegistration>}
+ * @param {Year[]} years
+ * @returns {GrantedRegistration[]}
  */
-export function* grantedRegistrations(organisations, covers) {
-  for (const {
-    organisation: { organisationNumber },
-    registrationNumber,
-    registration
-  } of reportableRegistrations(organisations)) {
-    for (const year of Object.keys(registration.accreditations).map((key) =>
-      utcYearOf(key)
-    )) {
-      const accreditation = validityOf({ registration, year })
-      const window = accreditationWindow(accreditation)
-      const candidate = {
-        organisationNumber,
-        registrationNumber: toRegistrationNumber(registrationNumber),
-        registration,
-        year
-      }
-      if (window !== null && covers(candidate)) {
-        yield { ...candidate, accreditation, window }
-      }
-    }
+const everyGranted = (organisations, years) =>
+  reportableRegistrations(organisations).flatMap(
+    ({ organisationNumber, registrationNumber, registration, key }) =>
+      years.flatMap((year) => {
+        if (!Object.hasOwn(registration.accreditations, year)) {
+          return []
+        }
+        const accreditation = validityOf({ registration, year })
+        const window = accreditationWindow(accreditation)
+        return window === null
+          ? []
+          : [
+              {
+                organisationNumber,
+                registrationNumber,
+                registration,
+                year,
+                key,
+                accreditation,
+                window,
+                history: getStatusHistoryDateTimes(accreditation.statusHistory)
+              }
+            ]
+      })
+  )
+
+/**
+ * Each register's granted accreditations by the years asked for. The figures
+ * for one publication share one register, so they work these out once.
+ *
+ * @type {WeakMap<Organisation[], Map<string, GrantedRegistration[]>>}
+ */
+const grantedByRegister = new WeakMap()
+
+/**
+ * Every accreditation the read model serves for the years given, outside test
+ * organisations, that has been approved, with its validity window, among those
+ * the caller's publication covers. Only an accredited registration reports
+ * monthly, so a registered-only operator yields nothing.
+ *
+ * @param {Organisation[]} organisations
+ * @param {Year[]} years
+ * @param {CoversRegistration} covers
+ * @returns {GrantedRegistration[]}
+ */
+export const grantedRegistrations = (organisations, years, covers) => {
+  const byYears = grantedByRegister.get(organisations) ?? new Map()
+  grantedByRegister.set(organisations, byYears)
+  const yearsKey = years.join()
+  if (!byYears.has(yearsKey)) {
+    byYears.set(yearsKey, everyGranted(organisations, years))
   }
+  return byYears.get(yearsKey).filter(covers)
 }
 
 /**
@@ -169,7 +198,8 @@ export function* accreditedMonths({
   covers = () => true
 }) {
   const served = new Set(months)
-  const periods = [...new Set(months.map(yearOf))]
+  const years = [...new Set(months.map(yearOf))]
+  const periods = years
     .flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year))
     .filter((period) => served.has(toYearMonth(period.startDate)))
 
@@ -177,10 +207,9 @@ export function* accreditedMonths({
     organisationNumber,
     registrationNumber,
     registration,
-    accreditation,
-    window
-  } of grantedRegistrations(organisations, covers)) {
-    const history = getStatusHistoryDateTimes(accreditation.statusHistory)
+    window,
+    history
+  } of grantedRegistrations(organisations, years, covers)) {
     for (const period of periods) {
       if (isAccreditedDuring(period, window, history)) {
         yield {

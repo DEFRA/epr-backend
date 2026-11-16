@@ -230,6 +230,20 @@ describe('countOutstandingReturns', () => {
     expect(outstanding(counts)).toEqual(EVERY_MONTH.slice(1))
   })
 
+  it('owes nothing before the start of an accreditation suspended before it started', async () => {
+    const operator = makeOperator({
+      orgId: 500042,
+      timeline: [
+        changed('approved', '2026-03-01'),
+        changed('suspended', '2026-03-01')
+      ]
+    })
+
+    const counts = await count({ operators: [operator.organisation] })
+
+    expect(outstanding(counts)).toEqual(EVERY_MONTH.slice(2))
+  })
+
   it('still counts an accreditation suspended throughout the period, since a suspended accreditation owes its reports', async () => {
     const operator = makeOperator({
       orgId: 500041,

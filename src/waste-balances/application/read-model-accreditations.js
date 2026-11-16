@@ -86,8 +86,7 @@ export const validityOf = ({ registration, year }) => {
   const { timeline } = registration.accreditations[year].status
   const approvedAt = firstApprovedAt(timeline)
   return {
-    // Latest first, so a change sharing its time with the approval sorts ahead of it
-    statusHistory: timeline.toReversed().map(({ status, at }) => ({
+    statusHistory: timeline.map(({ status, at }) => ({
       status,
       updatedAt: at
     })),
