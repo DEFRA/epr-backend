@@ -78,7 +78,7 @@ export const indexByLedger = (
   )
 
 /**
- * The validity window and status history that classification reads, taken
+ * The validity window and status timeline that classification reads, taken
  * from the read model's accreditation for its year. ADR-0044 has an
  * accreditation valid from its approval to the end of its scheme year.
  *
@@ -90,10 +90,7 @@ export const validityOf = ({ registration, year }) => {
   const { timeline } = registration.accreditations[year].status
   const approvedAt = firstApprovedAt(timeline)
   return {
-    statusHistory: timeline.map(({ status, at }) => ({
-      status,
-      updatedAt: at
-    })),
+    timeline,
     ...(approvedAt && {
       validFrom:
         calendarDate(approvedAt).localeCompare(start) < 0

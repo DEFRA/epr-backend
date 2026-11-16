@@ -7,7 +7,6 @@ import { performUpdateViaLedger } from './update-via-ledger.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { partialMock } from '#test/type-helpers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -52,7 +51,7 @@ const prnAwareClassifier = (data) =>
         transactionAmount: data.tonnage
       }
 
-/** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 
@@ -67,11 +66,12 @@ const ledgerId = withNumbers({
 const { organisationNumber, registrationNumber, accreditationNumber } = ledgerId
 const numbers = { organisationNumber, registrationNumber, accreditationNumber }
 
-/** @type {Accreditation} */
-const accreditation = partialMock({
+/** @type {AccreditationValidity} */
+const accreditation = {
+  timeline: [],
   validFrom: '2023-01-01',
   validTo: '2030-12-31'
-})
+}
 
 const overseasSites = /** @type {*} */ (new Map())
 const user = {
