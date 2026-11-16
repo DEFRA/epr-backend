@@ -6,13 +6,7 @@ import { statusOn } from '#organisation-read-model/domain/model.js'
 /** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
-/** @import {AccreditationValidity, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
-/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
-/** @import {StatusTimeline} from '#organisation-read-model/domain/model.js' */
-
-/**
- * @typedef {{ updatedAt: number, status: StoredAccreditationStatus }} StatusHistoryDateTime
- */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
 /**
  * The period an accreditation is valid for, both bounds present. Branded so it
@@ -34,7 +28,7 @@ import { statusOn } from '#organisation-read-model/domain/model.js'
  * held while it was live — the schema allows exactly that, requiring the dates
  * only for `approved`/`suspended` and permitting them otherwise — and loads
  * made before the cancellation are still accredited. Status decides whether a
- * *given date* falls inside the window (see `isSuspendedOrCancelledAtDate`),
+ * *given date* falls inside the window (see `isAccreditedAtDates`),
  * not whether a window exists at all.
  *
  * @param {AccreditationValidity} accreditation
@@ -56,23 +50,6 @@ const EXCLUDED_STATUSES = new Set([
 ])
 
 /**
- * A status history as a timeline for `statusOn`: oldest first, by day.
- *
- * @param {StatusHistoryEntry[]} statusHistory - in any order
- * @returns {StatusTimeline<StoredAccreditationStatus>}
- */
-export const statusTimelineOf = (statusHistory) =>
-  statusHistory
-    .toSorted(
-      (a, b) =>
-        new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
-    )
-    .map(({ status, updatedAt }) => ({
-      status,
-      at: toCalendarDate(updatedAt)
-    }))
-
-/**
  * Checks if all dates are accredited. The last status on a day holds for the
  * whole day.
  * @param { (Date|string)[] } dates - The date to check
@@ -87,29 +64,13 @@ export function isAccreditedAtDates(dates, accreditation) {
   if (window === null) {
     return false
   }
-  const timeline = statusTimelineOf(accreditation.statusHistory)
   return dates.every(
     (date) =>
       isWithinAccreditationDateRange(date, window) &&
-      !EXCLUDED_STATUSES.has(statusOn(timeline, toCalendarDate(date)))
+      !EXCLUDED_STATUSES.has(
+        statusOn(accreditation.timeline, toCalendarDate(date))
+      )
   )
-}
-
-/**
- * Convert dates to numbers and sort descending. Of changes at the same time,
- * the one later in the history comes first, so the latest recorded wins.
- * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history, in recorded order
- * @returns {StatusHistoryDateTime[]} Sorted list
- */
-export function getStatusHistoryDateTimes(statusHistory) {
-  return statusHistory
-    .map((s, index) => ({
-      index,
-      updatedAt: new Date(s.updatedAt).getTime(),
-      status: s.status
-    }))
-    .sort((a, b) => b.updatedAt - a.updatedAt || b.index - a.index)
-    .map(({ updatedAt, status }) => ({ updatedAt, status }))
 }
 
 /**

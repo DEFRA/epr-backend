@@ -14,16 +14,19 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
-/** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
-const accreditationCovering = (validFrom, validTo) =>
-  /** @type {Accreditation} */ (
-    /** @type {unknown} */ (
-      buildAccreditation({ id: 'acc-1', validFrom, validTo })
-    )
-  )
+/**
+ * @param {string} validFrom
+ * @param {string} validTo
+ * @returns {AccreditationValidity}
+ */
+const accreditationCovering = (validFrom, validTo) => ({
+  timeline: [],
+  validFrom,
+  validTo
+})
 
 const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
@@ -53,7 +56,7 @@ const receivedRowState = (overrides = {}) => ({
 })
 
 /**
- * @param {Accreditation | null} accreditation
+ * @param {AccreditationValidity | null} accreditation
  * @returns {import('./reclassify-waste-record-states.js').ReclassificationContext}
  */
 const contextWith = (accreditation) => ({
