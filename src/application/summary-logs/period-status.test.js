@@ -9,7 +9,8 @@ import { RECORD_CHANGE } from './record-change.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {ClassificationContext, ProcessingTypeSchemas} from './period-status.js' */
+/** @import {ProcessingTypeSchemas} from './period-status.js' */
+/** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {RecordChange} from './record-change.js' */
 
 /**

@@ -478,9 +478,17 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper'
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -497,13 +505,7 @@ describe('Advanced validation scenarios', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'paper'
-              })
-            ])()
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -667,9 +669,17 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'aluminium'
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -686,13 +696,7 @@ describe('Advanced validation scenarios', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'aluminium'
-              })
-            ])()
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
