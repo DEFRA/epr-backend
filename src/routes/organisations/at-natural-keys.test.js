@@ -1,6 +1,13 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -31,6 +38,27 @@ const organisation = buildOrganisation({
   accreditations: [accredited]
 })
 
+// The read model holds the 2027 accreditation outside this service's
+// stored accreditations, as it holds the external accreditations.
+const ACCREDITATION_2026 = toAccreditationNumber('A26ER5001180041PL')
+const ACCREDITATION_2027 = toAccreditationNumber('A27ER5001180041PL')
+const readOrganisation = buildReadOrganisation({
+  organisationNumber: organisation.organisationNumber,
+  registrations: {
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      accreditations: {
+        2026: buildReadAccreditation({
+          accreditationNumber: ACCREDITATION_2026
+        }),
+        2027: buildReadAccreditation({
+          accreditationNumber: ACCREDITATION_2027
+        })
+      }
+    }),
+    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration()
+  }
+})
+
 const scopes = { scope: ['organisation:read'] }
 const payloadSchema = Joi.object({ name: Joi.string() })
 
@@ -49,7 +77,10 @@ const requestFor = (params) =>
     params,
     organisationAdministrationRepository: createInMemoryOrganisationsRepository(
       [partialMock(organisation)]
-    )()
+    )(),
+    organisationReadRepository: createInMemoryOrganisationReadRepository([
+      readOrganisation
+    ])()
   })
 
 const h = partialMock({})
@@ -95,29 +126,37 @@ describe('atNaturalKeys', () => {
     expect(params).toMatchObject({
       organisationId: organisation.id,
       registrationId: registeredOnlyRegistration.id,
-      accreditationId: null
+      accreditationNumber: null
     })
+    expect(params).not.toHaveProperty('accreditationId')
   })
 
-  it("passes the accreditation for the year to an accredited route's handler", async () => {
-    const served = atNaturalKeys(route, '/served', registrationParams, {
-      accredited: true
-    })
+  it.each([
+    [2026, ACCREDITATION_2026],
+    [2027, ACCREDITATION_2027]
+  ])(
+    "passes the read model's accreditation number for %i to an accredited route's handler",
+    async (year, accreditationNumber) => {
+      const served = atNaturalKeys(route, '/served', registrationParams, {
+        accredited: true
+      })
 
-    const params = await served.handler(
-      requestFor({
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: REPROCESSOR_NUMBER,
-        year: 2026
-      }),
-      h
-    )
+      const params = await served.handler(
+        requestFor({
+          organisationNumber: organisation.organisationNumber,
+          registrationNumber: REPROCESSOR_NUMBER,
+          year
+        }),
+        h
+      )
 
-    expect(params).toMatchObject({
-      registrationId: accreditedRegistration.id,
-      accreditationId: accredited.id
-    })
-  })
+      expect(params).toMatchObject({
+        registrationId: accreditedRegistration.id,
+        accreditationNumber
+      })
+      expect(params).not.toHaveProperty('accreditationId')
+    }
+  )
 
   it('passes the organisation alone to an organisation route', async () => {
     const served = atNaturalKeys(route, '/served', organisationParams)
@@ -193,7 +232,7 @@ describe('atNaturalKeys', () => {
       {
         organisationNumber: organisation.organisationNumber,
         registrationNumber: REPROCESSOR_NUMBER,
-        year: 2027
+        year: 2028
       },
       true
     ],
