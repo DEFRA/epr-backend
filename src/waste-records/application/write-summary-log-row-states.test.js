@@ -12,7 +12,7 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
 /**
  * @param {{ rowId: string, tonnage: number }} args
@@ -80,14 +80,12 @@ const accreditedLedgerId = withNumbers({
   accreditationId: 'acc-1'
 })
 
-const accreditation = buildAccreditation({
+/** @type {AccreditationValidity} */
+const accreditation = {
   validFrom: '2023-01-01',
   validTo: '2030-12-31',
-  statusHistory: [
-    { status: 'created', updatedAt: '2022-12-01T00:00:00.000Z' },
-    { status: 'approved', updatedAt: '2022-12-15T00:00:00.000Z' }
-  ]
-})
+  timeline: [{ status: 'approved', at: '2022-12-15T00:00:00.000Z' }]
+}
 
 describe('writeSummaryLogRowStates', () => {
   let summaryLogRowStatesRepository

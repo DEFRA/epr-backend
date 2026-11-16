@@ -3,21 +3,18 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import { validityOf } from '#waste-balances/application/read-model-accreditations.js'
-import {
-  accreditationWindow,
-  getStatusHistoryDateTimes,
-  statusHeldAt
-} from '#common/helpers/dates/accreditation.js'
+import { accreditationWindow } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { statusOn } from '#organisation-read-model/domain/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation, Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, Registration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
-/** @import { AccreditationWindow, StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
+/** @import { AccreditationWindow } from '#common/helpers/dates/accreditation.js' */
 
 /**
  * @typedef {{ startDate: CalendarDate, endDate: CalendarDate }} Period
@@ -52,8 +49,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  * @typedef {AccreditationOfRegistration & {
  *   key: string,
  *   accreditation: AccreditationValidity,
- *   window: AccreditationWindow,
- *   history: StatusHistoryDateTime[]
+ *   window: AccreditationWindow
  * }} GrantedRegistration
  */
 
@@ -82,11 +78,13 @@ const daysOf = ({ startDate, endDate }) => {
 }
 
 /**
+ * The last status on a day holds for the whole day.
+ *
  * @param {CalendarDate} day
- * @param {StatusHistoryDateTime[]} history
+ * @param {StatusTimeline} timeline
  */
-const isCancelledOn = (day, history) =>
-  statusHeldAt(day, history) === ACCREDITATION_STATUS.CANCELLED
+const isCancelledOn = (day, timeline) =>
+  statusOn(timeline, day) === ACCREDITATION_STATUS.CANCELLED
 
 /**
  * The days of the period inside the accreditation's validity window, none
@@ -109,17 +107,16 @@ const withinWindow = ({ startDate, endDate }, { validFrom, validTo }) => ({
  *
  * @param {Period} period
  * @param {AccreditationWindow} window
- * @param {StatusHistoryDateTime[]} history
+ * @param {StatusTimeline} timeline
  */
-const isAccreditedDuring = (period, window, history) =>
+const isAccreditedDuring = (period, window, timeline) =>
   daysOf(withinWindow(period, window)).some(
-    (day) => !isCancelledOn(day, history)
+    (day) => !isCancelledOn(day, timeline)
   )
 
 /**
  * Every accreditation the read model serves for the years given, outside test
- * organisations, that has been approved, with its validity window and parsed
- * history.
+ * organisations, that has been approved, with its validity window.
  *
  * @param {Organisation[]} organisations
  * @param {Year[]} years
@@ -144,8 +141,7 @@ const everyGranted = (organisations, years) =>
                 year,
                 key,
                 accreditation,
-                window,
-                history: getStatusHistoryDateTimes(accreditation.statusHistory)
+                window
               }
             ]
       })
@@ -207,11 +203,11 @@ export function* accreditedMonths({
     organisationNumber,
     registrationNumber,
     registration,
-    window,
-    history
+    accreditation,
+    window
   } of grantedRegistrations(organisations, years, covers)) {
     for (const period of periods) {
-      if (isAccreditedDuring(period, window, history)) {
+      if (isAccreditedDuring(period, window, accreditation.timeline)) {
         yield {
           month: toYearMonth(period.startDate),
           organisationNumber,
