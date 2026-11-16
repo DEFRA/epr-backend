@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -21,9 +23,13 @@ import {
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @param {string} registrationNumber */
-const externalAccreditationOf = (registrationNumber) =>
+/**
+ * @param {{ organisationNumber: OrganisationNumber }} organisation
+ * @param {string} registrationNumber
+ */
+const externalAccreditationOf = ({ organisationNumber }, registrationNumber) =>
   buildExternalAccreditation({
+    organisationNumber,
     registrationNumber: toRegistrationNumber(registrationNumber)
   })
 
@@ -71,7 +77,9 @@ describe('stored and external accreditations together', () => {
     const stored = accreditedIn2026()
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      externalAccreditations: [
+        externalAccreditationOf(stored, REPROCESSOR_NUMBER)
+      ]
     })
 
     const organisation = await findOrganisation(
@@ -93,7 +101,9 @@ describe('stored and external accreditations together', () => {
     const stored = accreditedIn2026()
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      externalAccreditations: [
+        externalAccreditationOf(stored, REPROCESSOR_NUMBER)
+      ]
     })
 
     const organisation = await findOrganisation(
@@ -120,6 +130,7 @@ describe('stored and external accreditations together', () => {
       organisations: [stored],
       externalAccreditations: [
         buildExternalAccreditation({
+          organisationNumber: stored.organisationNumber,
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
           status: {
             current: 'approved',
@@ -158,7 +169,9 @@ describe('stored and external accreditations together', () => {
     const stored = accreditedIn2026()
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      externalAccreditations: [
+        externalAccreditationOf(stored, REPROCESSOR_NUMBER)
+      ]
     })
 
     const organisation = await findOrganisation(
@@ -185,7 +198,9 @@ describe('stored and external accreditations together', () => {
     const logger = { warn: vi.fn() }
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)],
+      externalAccreditations: [
+        externalAccreditationOf(stored, REPROCESSOR_NUMBER)
+      ],
       logger
     })
 
@@ -213,7 +228,9 @@ describe('stored and external accreditations together', () => {
     })
     const repository = await organisationReadRepositoryWith({
       organisations: [stored, other],
-      externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      externalAccreditations: [
+        externalAccreditationOf(stored, REPROCESSOR_NUMBER)
+      ]
     })
 
     const organisation = await findOrganisation(
@@ -239,7 +256,9 @@ describe('stored and external accreditations together', () => {
     const stored = buildOrganisation({ registrations: [reprocessor()] })
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf('R26ER5001189999PL')]
+      externalAccreditations: [
+        externalAccreditationOf(stored, 'R26ER5001189999PL')
+      ]
     })
 
     const organisation = await findOrganisation(
@@ -263,7 +282,7 @@ describe('stored and external accreditations together', () => {
     })
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf(EXPORTER_NUMBER)]
+      externalAccreditations: [externalAccreditationOf(stored, EXPORTER_NUMBER)]
     })
 
     const organisation = await findOrganisation(
@@ -283,7 +302,7 @@ describe('stored and external accreditations together', () => {
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
       overseasSites,
-      externalAccreditations: [externalAccreditationOf(EXPORTER_NUMBER)]
+      externalAccreditations: [externalAccreditationOf(stored, EXPORTER_NUMBER)]
     })
 
     const organisation = await findOrganisation(
@@ -310,6 +329,7 @@ describe('stored and external accreditations together', () => {
       overseasSites,
       externalAccreditations: [
         buildExternalAccreditation({
+          organisationNumber: stored.organisationNumber,
           registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
           overseasSites: {
             '001': { status: 'pending' },
@@ -345,6 +365,7 @@ describe('stored and external accreditations together', () => {
       overseasSites,
       externalAccreditations: [
         buildExternalAccreditation({
+          organisationNumber: stored.organisationNumber,
           registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
           overseasSites: {
             '001': { status: 'pending' },
@@ -382,6 +403,7 @@ describe('stored and external accreditations together', () => {
       organisations: [stored],
       externalAccreditations: [
         buildExternalAccreditation({
+          organisationNumber: stored.organisationNumber,
           registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
           overseasSites: { '001': { status: 'pending' } }
         })
@@ -421,6 +443,7 @@ describe('stored and external accreditations together', () => {
       overseasSites,
       externalAccreditations: [
         buildExternalAccreditation({
+          organisationNumber: stored.organisationNumber,
           registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
           overseasSites: {
             '001': { status: 'pending' },
@@ -456,6 +479,7 @@ describe('stored and external accreditations together', () => {
       organisations: [stored],
       externalAccreditations: [
         buildExternalAccreditation({
+          organisationNumber: stored.organisationNumber,
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
           overseasSites: { '001': { status: 'pending' } }
         })
@@ -482,7 +506,9 @@ describe('stored and external accreditations together', () => {
     const stored = accreditedIn2026()
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      externalAccreditations: [
+        externalAccreditationOf(stored, REPROCESSOR_NUMBER)
+      ]
     })
 
     const { items } = await repository.find({
@@ -502,7 +528,9 @@ describe('stored and external accreditations together', () => {
     const stored = accreditedIn2026()
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
-      externalAccreditations: [externalAccreditationOf(REPROCESSOR_NUMBER)]
+      externalAccreditations: [
+        externalAccreditationOf(stored, REPROCESSOR_NUMBER)
+      ]
     })
 
     const [organisation] = await repository.findAll()

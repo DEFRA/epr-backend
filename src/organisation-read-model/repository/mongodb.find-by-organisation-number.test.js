@@ -33,6 +33,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 /** @import { ExporterRegistration, Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */
 /** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 describe('findByOrganisationNumber', () => {
   it('returns the organisation with granted registrations keyed by number and accreditations by year', async ({
@@ -241,6 +242,7 @@ describe('findByOrganisationNumber', () => {
         organisations: [stored],
         externalAccreditations: [
           buildExternalAccreditation({
+            organisationNumber: stored.organisationNumber,
             registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
           })
         ]
@@ -622,8 +624,10 @@ describe('findByOrganisationNumber for years', () => {
     return /** @type {Organisation} */ (organisation)
   }
 
-  const external2027 = () =>
+  /** @param {{ organisationNumber: OrganisationNumber }} organisation */
+  const external2027 = ({ organisationNumber }) =>
     buildExternalAccreditation({
+      organisationNumber,
       registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
     })
 
@@ -644,7 +648,7 @@ describe('findByOrganisationNumber for years', () => {
       organisationReadRepositoryWith,
       stored,
       2026,
-      [external2027()]
+      [external2027(stored)]
     )
 
     expect(
@@ -681,7 +685,7 @@ describe('findByOrganisationNumber for years', () => {
       organisationReadRepositoryWith,
       stored,
       2026,
-      [external2027()]
+      [external2027(stored)]
     )
 
     expect(registrations[REPROCESSOR_NUMBER].accreditations).toStrictEqual({})

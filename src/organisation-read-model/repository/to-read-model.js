@@ -28,7 +28,7 @@ import {
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress, AccreditationStatus } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
@@ -50,6 +50,7 @@ import {
  * as it is stored: each change carries when it was recorded.
  *
  * @typedef {(Omit<ReprocessorAccreditation, 'status'> | Omit<ExporterAccreditation, 'status'>) & {
+ *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  *   year: Year
  *   status: {
@@ -68,6 +69,7 @@ import {
  * @returns {ReprocessorAccreditation | ExporterAccreditation}
  */
 const toAccreditationCommon = ({
+  organisationNumber: _organisationNumber,
   registrationNumber: _registrationNumber,
   year: _year,
   status: { current, timeline },
@@ -97,17 +99,6 @@ const byRegistrationAndYear = (externalAccreditations) =>
         )
       ]
     )
-  )
-
-/**
- * The registration numbers granted across the stored organisations.
- *
- * @param {StoredOrganisation[]} stored
- * @returns {RegistrationNumber[]}
- */
-export const registrationNumbersOf = (stored) =>
-  stored.flatMap(({ registrations }) =>
-    registrations.flatMap(({ registrationNumber }) => registrationNumber ?? [])
   )
 
 /**

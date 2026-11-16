@@ -255,6 +255,7 @@ describe('aggregateAvailableBalance - Integration', () => {
       )
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
+        organisationNumber: toOrganisationNumber(String(orgId1)),
         registrationNumber: toRegistrationNumber('REG-1'),
         year: toYear(2026),
         accreditationNumber: toAccreditationNumber('ACC-EXTERNAL'),

@@ -147,6 +147,5 @@ export const createMockOverseasSitesRepository = (overrides = {}) => ({
  */
 export const createMockExternalAccreditationsRepository = (overrides = {}) => ({
   upsert: vi.fn(),
-  remove: vi.fn(),
   ...overrides
 })

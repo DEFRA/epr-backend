@@ -56,16 +56,11 @@ const anyOf = (field, values) =>
   values.length === 0 ? null : { [field]: { $in: values } }
 
 /** @param {Organisation} organisation */
-const extractCascadeKeys = (organisation) => {
-  const { registrations } = organisation
-  const overseasSiteIds = registrations.flatMap((reg) =>
+const extractCascadeKeys = ({ registrations }) => ({
+  overseasSiteIds: registrations.flatMap((reg) =>
     Object.values(reg.overseasSites ?? {}).map((entry) => entry.overseasSiteId)
   )
-  const registrationNumbers = registrations.flatMap(
-    (reg) => reg.registrationNumber ?? []
-  )
-  return { overseasSiteIds, registrationNumbers }
-}
+})
 
 /**
  * Declarative description of the cascade. Each step names the collection to
@@ -81,16 +76,13 @@ const extractCascadeKeys = (organisation) => {
  * organisation's id, so they join against organisationId. The
  * 'registration', 'accreditation' and 'organisation' collections (written by
  * the journey-test apply path) are keyed by the numeric orgId. PRNs, reports,
- * waste balance events, row states and report system logs carry the
- * organisation number instead.
+ * waste balance events, row states, external accreditations and report system
+ * logs carry the organisation number instead.
  *
  * @param {Organisation} organisation
- * @param {{ overseasSiteIds: string[], registrationNumbers: string[] }} keys
+ * @param {{ overseasSiteIds: string[] }} keys
  */
-const buildCascadeSteps = (
-  organisation,
-  { overseasSiteIds, registrationNumbers }
-) => {
+const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
   const { organisationNumber, id: organisationId } = organisation
   const orgId = storedOrgId(organisationNumber)
   return [
@@ -127,7 +119,7 @@ const buildCascadeSteps = (
     {
       label: 'external-accreditations',
       collection: COLLECTIONS.EXTERNAL_ACCREDITATIONS,
-      filter: anyOf('registrationNumber', registrationNumbers)
+      filter: { organisationNumber }
     },
     {
       label: 'system-logs',
