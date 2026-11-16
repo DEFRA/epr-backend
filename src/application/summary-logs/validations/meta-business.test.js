@@ -10,15 +10,13 @@ describe('validateMetaBusiness', () => {
   })
 
   const createValidRegistration = () => ({
-    id: 'reg-123',
     registrationNumber: 'WRN12345',
-    wasteProcessingType: 'reprocessor',
-    reprocessingType: 'input',
-    material: 'aluminium',
-    accreditation: {
-      id: 'acc-456',
-      accreditationNumber: 'ACC123'
-    }
+    registration: {
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
+      material: 'aluminium'
+    },
+    accreditation: { accreditationNumber: 'ACC123' }
   })
 
   it('returns valid result when validators pass', () => {

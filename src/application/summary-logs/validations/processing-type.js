@@ -41,7 +41,7 @@ const isReprocessingTypeMismatch = (
 
   return (
     expectedReprocessingType &&
-    expectedReprocessingType !== registration.reprocessingType
+    expectedReprocessingType !== registration.registration.reprocessingType
   )
 }
 
@@ -52,7 +52,7 @@ export const validateProcessingType = ({
 }) => {
   const issues = createValidationIssues()
 
-  const { wasteProcessingType } = registration
+  const { wasteProcessingType } = registration.registration
 
   const processingTypeField = extractMetaField(
     parsed,
@@ -114,7 +114,7 @@ export const validateProcessingType = ({
       VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
       {
         location,
-        expected: registration.reprocessingType,
+        expected: registration.registration.reprocessingType,
         actual: spreadsheetProcessingType
       }
     )
