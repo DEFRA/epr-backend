@@ -1,4 +1,7 @@
-import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import {
+  toCalendarDate,
+  utcCalendarDate
+} from '#common/helpers/date-formatter.js'
 import { isOneOf } from '#common/helpers/is-one-of.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
@@ -551,7 +554,7 @@ function toAccreditedOverseasSite(site) {
   return site.validFrom
     ? {
         status: 'approved',
-        approvedOn: toCalendarDate(new Date(site.validFrom))
+        approvedOn: utcCalendarDate(new Date(site.validFrom))
       }
     : { status: 'pending' }
 }
