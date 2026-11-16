@@ -22,10 +22,7 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import {
-  summaryLogFactory,
-  withoutAccreditationId
-} from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
@@ -111,13 +108,13 @@ const uploadAddresses = [
     kind: 'registered-only',
     uploads: `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${YEAR}`,
     registration: registeredOnlyRegistration,
-    accreditationId: null
+    accreditationNumber: null
   },
   {
     kind: 'accredited',
     uploads: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`,
     registration: accreditedRegistration,
-    accreditationId: accredited.id
+    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
   }
 ]
 
@@ -223,7 +220,7 @@ describe('summary-log routes by natural key', () => {
 
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
-    ({ uploads, registration, accreditationId }) => {
+    ({ uploads, registration, accreditationNumber }) => {
       it('starts the upload with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
@@ -260,7 +257,7 @@ describe('summary-log routes by natural key', () => {
           organisationId: organisation.id,
           registrationId: registration.id,
           year: YEAR,
-          accreditationId
+          accreditationNumber
         })
       })
     }
@@ -310,35 +307,6 @@ describe('summary-log routes by natural key', () => {
     })
   })
 
-  it('reads a summary log that holds no accreditation id without a ledger accreditation', async () => {
-    const summaryLogId = toSummaryLogId(randomUUID())
-    await summaryLogsRepository.insert(
-      summaryLogId,
-      partialMock(
-        withoutAccreditationId(
-          summaryLogFactory.validated({
-            organisationId: organisation.id,
-            ...accreditedLog,
-            year: YEAR,
-            meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
-          })
-        )
-      )
-    )
-    await waitForVersion(summaryLogsRepository, summaryLogId, 1)
-
-    const response = await server.inject({
-      method: 'GET',
-      url: `${summaryLogs}/${summaryLogId}`,
-      ...asOperator()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).not.toHaveProperty(
-      'ledgerAccreditation'
-    )
-  })
-
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
     const summaryLogId = toSummaryLogId(randomUUID())
 
@@ -354,7 +322,7 @@ describe('summary-log routes by natural key', () => {
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
       registrationId: accreditedRegistration.id,
-      accreditationId: null
+      accreditationNumber: null
     })
   })
 

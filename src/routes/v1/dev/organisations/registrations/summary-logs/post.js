@@ -38,9 +38,8 @@ import {
 /** @import { OrganisationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
-/** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
+/** @import { NewSummaryLog, SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
@@ -204,7 +203,7 @@ const insertValidatingLog = async (
   const { summaryLogsRepository } = request
   const { organisationId, registrationId } = request.params
 
-  /** @type {SummaryLog} */
+  /** @type {NewSummaryLog} */
   const summaryLog = {
     status: SUMMARY_LOG_STATUS.VALIDATING,
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),

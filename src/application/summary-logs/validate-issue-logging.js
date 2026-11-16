@@ -9,11 +9,11 @@ export const MAX_VALIDATION_ISSUES = 100
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {StoredFile, SummaryLog} from '#domain/summary-logs/model.js' */
-/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * SummaryLog after the validator has confirmed it's past PREPROCESSING. The
- * base typedef leaves org/reg/accreditation optional and admits the pending
+ * base typedef leaves org/reg optional and admits the pending
  * file shape to cover PREPROCESSING; this narrows them to the guarantees
  * upstream business logic provides by the VALIDATING state.
  *
@@ -22,8 +22,6 @@ export const MAX_VALIDATION_ISSUES = 100
  *   registrationId: string,
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
- *   accreditationId: string | null,
- *   accreditationNumber: AccreditationNumber | null,
  *   file: StoredFile
  * }} SubmittedSummaryLog
  */

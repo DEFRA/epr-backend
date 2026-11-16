@@ -549,12 +549,6 @@ describe('SummaryLogsValidator', () => {
       unset: 'registrationNumber',
       stored: organisationWithNumberlessRecords,
       message: 'Summary log has no registration number'
-    },
-    {
-      when: 'it has no accreditation number, rather than matching an accreditation with none',
-      unset: 'accreditationNumber',
-      stored: organisationWithNumberlessRecords,
-      message: 'Summary log has no accreditation number'
     }
   ])(
     'marks the summary log invalid when $when',

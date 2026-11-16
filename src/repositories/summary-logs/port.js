@@ -5,6 +5,23 @@
 /** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
 
 /**
+ * A summary log as an upload stores it, holding the database id of the
+ * accreditation it was uploaded for beside its number.
+ *
+ * @typedef {SummaryLog & { accreditationId: string | null }} NewSummaryLog
+ */
+
+/**
+ * A summary log document as the collection may hold it, before it is read
+ * into one of the shapes the domain declares.
+ *
+ * @typedef {Omit<SummaryLog, 'accreditationNumber'> & {
+ *   accreditationId?: string | null,
+ *   accreditationNumber?: AccreditationNumber | null
+ * }} StoredSummaryLog
+ */
+
+/**
  * @typedef {Object} SummaryLogVersion
  * @property {number} version
  * @property {SummaryLog} summaryLog
@@ -35,14 +52,12 @@
  */
 
 /**
- * A summary log named by its organisation, registration and accreditation
- * numbers in place of their database ids. The accreditation number is absent
- * when the summary log was stored before its accreditation was recorded.
+ * A summary log named by its organisation and registration numbers in place
+ * of their database ids.
  *
- * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId' | 'accreditationId'> & {
+ * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId'> & {
  *   organisationNumber: OrganisationNumber,
- *   registrationNumber: RegistrationNumber,
- *   accreditationNumber?: AccreditationNumber | null
+ *   registrationNumber: RegistrationNumber
  * }} KeyedSummaryLog
  */
 
@@ -70,12 +85,12 @@
  * @typedef {Object} DownloadUrlResult
  * @property {string} url - The download URL
  * @property {string} expiresAt - ISO 8601 timestamp when the URL expires
- * @property {AccreditationNumber | null | undefined} accreditationNumber - The summary log's accreditation, null when it is registered-only
+ * @property {AccreditationNumber | null} accreditationNumber - The summary log's accreditation, null when it is registered-only
  */
 
 /**
  * @typedef {Object} SummaryLogsRepository
- * @property {(id: SummaryLogId, summaryLog: SummaryLog) => Promise<void>} insert
+ * @property {(id: SummaryLogId, summaryLog: NewSummaryLog) => Promise<void>} insert
  * @property {(id: SummaryLogId, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: SummaryLogId) => Promise<SummaryLogVersion|null>} findById
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records

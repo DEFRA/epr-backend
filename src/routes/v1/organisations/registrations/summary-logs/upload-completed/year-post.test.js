@@ -143,7 +143,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       organisationId,
       registrationId,
       year: 2026,
-      accreditationId: null,
       organisationNumber,
       registrationNumber,
       accreditationNumber: null
@@ -223,7 +222,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       await accreditedServer.stop()
     })
 
-    it('stores the accreditation the path names, and its number', async () => {
+    it('stores the accreditation the path names, by its number', async () => {
       const summaryLogId = randomUUID()
 
       const response = await accreditedServer.inject({
@@ -258,7 +257,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       )
       expect(stored.summaryLog).toMatchObject({
         year: 2026,
-        accreditationId: accredited.id,
         accreditationNumber: ACCREDITATION_NUMBER
       })
     })
