@@ -22,7 +22,6 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
@@ -718,21 +717,18 @@ export const createTestInfrastructure = async (
   const organisationAdministrationRepository =
     createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
-  const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
   const ledgerRepository = createInMemoryLedgerRepository()()
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
-    organisationAdministrationRepository,
     organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
       findPeriodicReports: async () => []
     }),
-    overseasSitesRepository,
     summaryLogExtractor,
     logger: mockLogger
   })
@@ -840,33 +836,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     }
   }
 
-  const overseasSitesRepository = createInMemoryOverseasSitesRepository([
-    {
-      id: TEST_OVERSEAS_SITE_ID,
-      name: 'Test Overseas Site',
-      address: {
-        line1: '1 Test Road',
-        townOrCity: 'Berlin'
-      },
-      country: 'Germany',
-      validFrom: new Date(VALID_FROM),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: TEST_UNAPPROVED_OVERSEAS_SITE_ID,
-      name: 'Test Unapproved Overseas Site',
-      address: {
-        line1: '2 Test Road',
-        townOrCity: 'Hamburg'
-      },
-      country: 'Germany',
-      validFrom: new Date(UNAPPROVED_VALID_FROM),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ])()
-
   const packagingRecyclingNotesRepositoryFactory =
     createInMemoryPackagingRecyclingNotesRepository()
   const packagingRecyclingNotesRepository =
@@ -874,12 +843,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
-    organisationAdministrationRepository,
     organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),
-    overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger
   })
@@ -922,7 +889,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     packagingRecyclingNotesRepository,
     organisationAdministrationRepository,
     organisationReadRepository,
-    overseasSitesRepository,
     organisationId,
     registrationId,
     reportKey: reportKeyOf(testOrg, testOrg.registrations[0]),
