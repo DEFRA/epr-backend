@@ -1,11 +1,9 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 import {
-  getReportableRegistrations,
   isRegistrationAccredited,
   isRegistrationActiveInYear,
   resolveAccreditationNumber,
-  resolveAccreditation,
   resolveAccreditationByNumber,
   accreditationsForRegistration,
   resolveMaterial
@@ -16,7 +14,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus, GlassRecyclingProcess, Organisation } from '#domain/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 
 const userFixture = {
@@ -75,74 +73,11 @@ const buildOrg = (overrides = {}) => ({ ...orgFixture, ...overrides })
 const buildReg = (overrides = {}) => ({ ...regFixture, ...overrides })
 
 // ---------------------------------------------------------------------------
-// getReportableRegistrations
-// ---------------------------------------------------------------------------
-
-describe('getReportableRegistrations', () => {
-  it('includes approved registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'approved' })] })
-
-    const result = getReportableRegistrations([org])
-
-    expect(result).toHaveLength(1)
-    expect(result[0].registration.status).toBe('approved')
-  })
-
-  it('includes cancelled registrations', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'cancelled' })] })
-
-    expect(getReportableRegistrations([org])).toHaveLength(1)
-  })
-
-  it.each(['suspended', 'created', 'rejected'])(
-    'excludes %s registrations',
-    (status) => {
-      const org = buildOrg({ registrations: [buildReg({ status })] })
-
-      expect(getReportableRegistrations([org])).toHaveLength(0)
-    }
-  )
-
-  it('excludes test organisations by organisation number', () => {
-    const testOrg = buildOrg({
-      organisationNumber: toOrganisationNumber('999999'),
-      registrations: [buildReg({ status: 'approved' })]
-    })
-
-    expect(getReportableRegistrations([testOrg])).toHaveLength(0)
-  })
-
-  it('flattens registrations across multiple orgs', () => {
-    const org1 = buildOrg({
-      id: 'org-1',
-      registrations: [buildReg({ id: 'reg-1', status: 'approved' })]
-    })
-    const org2 = buildOrg({
-      id: 'org-2',
-      registrations: [buildReg({ id: 'reg-2', status: 'approved' })]
-    })
-
-    const result = getReportableRegistrations([org1, org2])
-
-    expect(result).toHaveLength(2)
-    expect(result.map((r) => r.registration.id)).toEqual(['reg-1', 'reg-2'])
-  })
-
-  it('pairs each registration with its org', () => {
-    const org = buildOrg({ registrations: [buildReg({ status: 'approved' })] })
-
-    const result = getReportableRegistrations([org])
-
-    expect(result[0].org).toBe(org)
-  })
-})
-
-// ---------------------------------------------------------------------------
 // isRegistrationAccredited
 // ---------------------------------------------------------------------------
 
 describe('isRegistrationAccredited', () => {
-  /** @type {Array<{ status: AccreditationStatus, expected: boolean }>} */
+  /** @type {Array<{ status: StoredAccreditationStatus, expected: boolean }>} */
   const linkedAccreditations = [
     { status: 'approved', expected: true },
     { status: 'suspended', expected: true },
@@ -224,57 +159,6 @@ describe('resolveAccreditationNumber', () => {
       expect(resolveAccreditationNumber(reg, org)).toBe(expected)
     }
   )
-})
-
-// ---------------------------------------------------------------------------
-// resolveAccreditation
-// ---------------------------------------------------------------------------
-
-describe('resolveAccreditation', () => {
-  const accreditationFixture = {
-    id: 'acc-1',
-    status: 'approved',
-    validFrom: '2026-01-01',
-    validTo: '2026-12-31',
-    statusHistory: []
-  }
-
-  it('returns accreditation from org.accreditations when status is approved', () => {
-    const org = buildOrg({ accreditations: [accreditationFixture] })
-    const reg = buildReg({ accreditationId: 'acc-1' })
-
-    expect(resolveAccreditation(reg, org)).toBe(accreditationFixture)
-  })
-
-  it('returns accreditation from org.accreditations when status is suspended', () => {
-    const suspended = { ...accreditationFixture, status: 'suspended' }
-    const org = buildOrg({ accreditations: [suspended] })
-    const reg = buildReg({ accreditationId: 'acc-1' })
-
-    expect(resolveAccreditation(reg, org)).toBe(suspended)
-  })
-
-  it('returns null when registration has no accreditationId', () => {
-    const org = buildOrg({ accreditations: [accreditationFixture] })
-    const reg = buildReg({ accreditationId: null })
-
-    expect(resolveAccreditation(reg, org)).toBeNull()
-  })
-
-  it('returns null when accreditationId does not match any entry in org.accreditations', () => {
-    const org = buildOrg({ accreditations: [accreditationFixture] })
-    const reg = buildReg({ accreditationId: 'acc-unknown' })
-
-    expect(resolveAccreditation(reg, org)).toBeNull()
-  })
-
-  it('returns null when matched accreditation has a non-active status', () => {
-    const cancelled = { ...accreditationFixture, status: 'cancelled' }
-    const org = buildOrg({ accreditations: [cancelled] })
-    const reg = buildReg({ accreditationId: 'acc-1' })
-
-    expect(resolveAccreditation(reg, org)).toBeNull()
-  })
 })
 
 // ---------------------------------------------------------------------------
@@ -427,20 +311,26 @@ describe('accreditationsForRegistration', () => {
 
 describe('isRegistrationActiveInYear', () => {
   /**
-   * @param {{ current?: 'approved' | 'cancelled', validFrom?: string }} [overrides]
+   * @param {{ current?: 'approved' | 'cancelled', approvedFrom?: string }} [overrides]
    */
   const buildRegistration = ({
     current = 'approved',
-    validFrom = '2025-01-01'
-  } = {}) => ({
-    status: { current, timeline: [] },
-    validFrom
-  })
+    approvedFrom = '2025-01-01'
+  } = {}) => {
+    const at = new Date(approvedFrom).toISOString()
+    return {
+      status: {
+        current,
+        lastUpdatedAt: at,
+        timeline: [{ status: /** @type {const} */ ('approved'), at }]
+      }
+    }
+  }
 
-  it('is true when approved and validFrom is on or before the year ends', () => {
+  it('is true when approved on or before the year ends', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ validFrom: '2025-06-01' }),
+        buildRegistration({ approvedFrom: '2025-06-01' }),
         toYear(2025)
       )
     ).toBe(true)
@@ -449,16 +339,16 @@ describe('isRegistrationActiveInYear', () => {
   it('is true for a later year, since a registration never expires', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ validFrom: '2025-06-01' }),
+        buildRegistration({ approvedFrom: '2025-06-01' }),
         toYear(2030)
       )
     ).toBe(true)
   })
 
-  it('is false for a year before validFrom', () => {
+  it('is false for a year before its approval takes effect', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ validFrom: '2026-01-01' }),
+        buildRegistration({ approvedFrom: '2026-01-01' }),
         toYear(2025)
       )
     ).toBe(false)
@@ -467,7 +357,22 @@ describe('isRegistrationActiveInYear', () => {
   it('is false when cancelled', () => {
     expect(
       isRegistrationActiveInYear(
-        buildRegistration({ current: 'cancelled', validFrom: '2025-01-01' }),
+        buildRegistration({ current: 'cancelled', approvedFrom: '2025-01-01' }),
+        toYear(2025)
+      )
+    ).toBe(false)
+  })
+
+  it('is false when approved but its timeline holds no approval', () => {
+    expect(
+      isRegistrationActiveInYear(
+        {
+          status: {
+            current: 'approved',
+            lastUpdatedAt: undefined,
+            timeline: []
+          }
+        },
         toYear(2025)
       )
     ).toBe(false)

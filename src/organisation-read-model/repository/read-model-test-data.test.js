@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadApprovedOrganisation,
@@ -15,18 +16,19 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 describe('read-model-test-data', () => {
   describe('approvedTimelineFrom', () => {
-    it('puts created no later than approved, whatever the approval date', () => {
-      const [created, approved] = approvedTimelineFrom('2025-03-01')
+    it('is approved from the start of the date given', () => {
+      expect(approvedTimelineFrom('2025-03-01')).toEqual([
+        { status: 'approved', at: '2025-03-01T00:00:00.000Z' }
+      ])
+    })
+  })
 
-      expect(created).toEqual({
-        status: 'created',
-        at: '2025-03-01T00:00:00.000Z',
-        updatedAt: '2025-03-01T00:00:00.000Z'
-      })
-      expect(approved).toEqual({
-        status: 'approved',
-        at: '2025-03-01T00:00:00.000Z',
-        updatedAt: '2025-03-01T00:00:00.000Z'
+  describe('approvedStatusFrom', () => {
+    it('is approved, and was last updated, at the start of the date given', () => {
+      expect(approvedStatusFrom('2025-03-01')).toEqual({
+        current: 'approved',
+        lastUpdatedAt: '2025-03-01T00:00:00.000Z',
+        timeline: [{ status: 'approved', at: '2025-03-01T00:00:00.000Z' }]
       })
     })
   })
@@ -77,10 +79,7 @@ describe('read-model-test-data', () => {
       const registration = build({
         accreditations: {
           2027: buildReadExporterAccreditation({
-            status: {
-              current: 'approved',
-              timeline: approvedTimelineFrom('2027-01-01')
-            }
+            status: approvedStatusFrom('2027-01-01')
           })
         }
       })

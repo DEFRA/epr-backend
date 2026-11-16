@@ -14,7 +14,6 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
@@ -29,7 +28,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
@@ -103,18 +102,13 @@ const servedOf = (stored) => {
  * @param {string} status
  * @param {string} day - `YYYY-MM-DD` or an ISO date-time
  */
-const changed = (status, day) => {
-  const at = new Date(day).toISOString()
-  return { status, at, updatedAt: at }
-}
+const changed = (status, day) => ({ status, at: new Date(day).toISOString() })
 
-const APPROVED_TIMELINE = [
-  changed('created', '2025-11-01'),
-  {
-    ...changed('approved', ACCREDITED_FROM),
-    updatedAt: '2025-12-01T00:00:00.000Z'
-  }
-]
+const APPROVED_STATUS = {
+  current: 'approved',
+  lastUpdatedAt: '2025-12-01T00:00:00.000Z',
+  timeline: [changed('approved', ACCREDITED_FROM)]
+}
 
 /**
  * The served organisation with each registration's accreditation and standing
@@ -219,13 +213,8 @@ const makeOperator = ({
     prnIssuance: { tonnageBand: 'up_to_500' },
     status: {
       current: 'approved',
-      timeline: [
-        changed('created', '2025-11-01'),
-        {
-          ...changed('approved', validFrom),
-          updatedAt: '2025-12-01T00:00:00.000Z'
-        }
-      ]
+      lastUpdatedAt: '2025-12-01T00:00:00.000Z',
+      timeline: [changed('approved', validFrom)]
     }
   }
   const siteNumbers = Object.keys(overseasSites ?? {})
@@ -233,7 +222,7 @@ const makeOperator = ({
   const served = /** @type {any} */ ({
     organisationNumber: toOrganisationNumber(String(orgId)),
     name: `Operator ${orgId}`,
-    status: { current: 'approved', timeline: APPROVED_TIMELINE },
+    status: APPROVED_STATUS,
     submittedToRegulator: { code: regulator },
     submitterContactDetails: CONTACT,
     users: [],
@@ -244,7 +233,7 @@ const makeOperator = ({
         approvedPersons: [],
         submitterContactDetails: CONTACT,
         material: glassRecyclingProcess?.[0] ?? material,
-        status: { current: 'approved', timeline: APPROVED_TIMELINE },
+        status: APPROVED_STATUS,
         standingByDate: {
           2026:
             validFrom === ACCREDITED_FROM
@@ -255,7 +244,6 @@ const makeOperator = ({
                 }
         },
         submittedToRegulator: { code: regulator },
-        validFrom: ACCREDITED_FROM,
         wasteProcessingType,
         ...(isExporter
           ? {
@@ -526,7 +514,7 @@ const heldOutside = (operator, accreditationNumber, approvedOn) => {
  *
  * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
  * @param {Organisation} organisation
- * @param {AccreditationStatus} status
+ * @param {StoredAccreditationStatus} status
  * @param {StatusHistoryEntry[]} transitions
  * @param {Record<string, { standing: string }>} [standing] - how the change moves the registration's standing, as the read model serves it
  */
@@ -714,15 +702,9 @@ const run = async ({
 
   const logger = { info: vi.fn(), warn: vi.fn() }
 
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository(
-      organisations.map((organisation) => partialMock(organisation))
-    )()
-
   const table = await buildWasteBalanceTable({
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationAdministrationRepository,
     organisationReadRepository: createInMemoryOrganisationReadRepository(
       readModelOrganisations.map(servedOf)
     )(),
@@ -932,23 +914,6 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('expects no report after the accreditation ends', async () => {
-      const operator = makeOperator({
-        orgId: 500026,
-        validFrom: '2026-01-01',
-        validTo: '2026-03-31'
-      })
-
-      const { table } = await run({
-        organisations: [operator.organisation],
-        submissions: []
-      })
-
-      expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0])
-      )
-    })
-
     it('expects reports for the months before the accreditation was cancelled, not the month it was cancelled in, and counts those it filed', async () => {
       const operator = makeOperator({ orgId: 500027 })
 
@@ -1002,7 +967,7 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('keeps expecting reports across the window after an approval is reverted', async () => {
+    it('expects nothing of an accreditation whose approval was reverted', async () => {
       const operator = makeOperator({ orgId: 500029 })
 
       const { table } = await run({
@@ -1011,7 +976,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
 
@@ -1409,21 +1374,6 @@ describe('buildWasteBalanceTable', () => {
       expect(operatorCounts(table)).toEqual({})
     })
 
-    it('counts an operator in the month its accreditation window ends', async () => {
-      const ending = makeOperator({ orgId: 500048, validTo: '2026-03-10' })
-
-      const { table } = await run({
-        organisations: [ending.organisation],
-        submissions: []
-      })
-
-      expect(operatorCounts(table)).toEqual({
-        '2026-01 plastic reprocessor': 1,
-        '2026-02 plastic reprocessor': 1,
-        '2026-03 plastic reprocessor': 1
-      })
-    })
-
     it('counts an operator in each material it reports', async () => {
       const plastic = makeOperator({ orgId: 500039 })
       const paper = makeOperator({ orgId: 500040, material: MATERIAL.PAPER })
@@ -1608,7 +1558,7 @@ describe('buildWasteBalanceTable', () => {
         table.data.period.operatorCounts[MATERIAL.PLASTIC][
           WASTE_PROCESSING_TYPE.REPROCESSOR
         ]
-      ).toEqual({ operatorCount: 0, submittingOperatorCount: 1 })
+      ).toEqual({ operatorCount: 1, submittingOperatorCount: 1 })
     })
   })
 
@@ -1719,39 +1669,6 @@ describe('buildWasteBalanceTable', () => {
         sentOnDeductions: 0,
         netCredit: 70
       })
-    })
-  })
-
-  describe('a registration the stored organisations do not hold yet', () => {
-    it('publishes its figures without counting its operator as submitting, and names the registration', async () => {
-      const operator = makeOperator({ orgId: 500062 })
-
-      const { table, logger } = await run({
-        organisations: [],
-        readModelOrganisations: [operator.organisation],
-        submissions: [
-          { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
-        ]
-      })
-
-      expect(
-        table.data.months[toYearMonth('2026-02')].figures[MATERIAL.PLASTIC][
-          WASTE_PROCESSING_TYPE.REPROCESSOR
-        ]
-      ).toEqual({
-        ...NO_ACTIVITY,
-        totalCredited: 40,
-        eligibleForWasteBalance: 40,
-        netCredit: 40
-      })
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: expect.objectContaining({
-            action: 'market_insights_registration_uncounted',
-            reference: operator.ledgerId.registrationNumber
-          })
-        })
-      )
     })
   })
 

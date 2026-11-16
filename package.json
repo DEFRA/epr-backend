@@ -67,11 +67,11 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1163.0",
-    "@aws-sdk/client-sqs": "3.1163.0",
-    "@aws-sdk/credential-providers": "3.1163.0",
-    "@aws-sdk/lib-storage": "3.1163.0",
-    "@aws-sdk/s3-request-presigner": "3.1163.0",
+    "@aws-sdk/client-s3": "3.1164.0",
+    "@aws-sdk/client-sqs": "3.1164.0",
+    "@aws-sdk/credential-providers": "3.1164.0",
+    "@aws-sdk/lib-storage": "3.1164.0",
+    "@aws-sdk/s3-request-presigner": "3.1164.0",
     "@defra/cdp-auditing": "0.6.3",
     "@defra/hapi-secure-context": "0.4.2",
     "@defra/hapi-tracing": "1.30.2",
@@ -96,7 +96,7 @@
     "hapi-swagger": "17.3.2",
     "http-status-codes": "2.3.0",
     "immer": "11.2.9",
-    "joi": "18.2.9",
+    "joi": "18.3.1",
     "joi-to-json": "5.0.6",
     "lodash.chunk": "4.2.0",
     "lodash.keyby": "4.6.0",
@@ -114,9 +114,16 @@
   "overrides": {
     "@apidevtools/json-schema-ref-parser": "15.3.6",
     "@apidevtools/swagger-parser": "12.1.0",
-    "glob": "11.1.0",
-    "joi": "18.2.9",
-    "uuid": "14.0.0"
+    "glob": "14.0.2",
+    "joi": "18.3.1",
+    "uuid": "14.0.0",
+    "minimatch": "11.0.5",
+    "eslint": {
+      "minimatch": "3.1.5"
+    },
+    "eslint-plugin-import-x": {
+      "minimatch": "10.2.5"
+    }
   },
   "devDependencies": {
     "@vitest/coverage-v8": "5.1.0",

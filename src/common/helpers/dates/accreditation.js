@@ -1,15 +1,16 @@
 import { calendarDate, toCalendarDate } from '#common/helpers/date-formatter.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { statusOn } from '#organisation-read-model/domain/model.js'
 
 /** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {AccreditationValidity, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
-/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
- * @typedef {{ updatedAt: number, status: AccreditationStatus }} StatusHistoryDateTime
+ * @typedef {{ updatedAt: number, status: StoredAccreditationStatus }} StatusHistoryDateTime
  */
 
 /**
@@ -47,8 +48,15 @@ export function accreditationWindow({ validFrom, validTo }) {
     : null
 }
 
+/** @type {ReadonlySet<string | undefined>} */
+const EXCLUDED_STATUSES = new Set([
+  ACCREDITATION_STATUS.SUSPENDED,
+  ACCREDITATION_STATUS.CANCELLED
+])
+
 /**
- * Checks if all dates are accredited
+ * Checks if all dates are accredited. The last status on a day holds for the
+ * whole day.
  * @param { (Date|string)[] } dates - The date to check
  * @param { AccreditationValidity | null | undefined } accreditation
  * @returns { boolean } True if accredited at date
@@ -61,25 +69,32 @@ export function isAccreditedAtDates(dates, accreditation) {
   if (window === null) {
     return false
   }
-  const sortedHistory = getStatusHistoryDateTimes(accreditation.statusHistory)
+  const timeline = accreditation.statusHistory.map(({ status, updatedAt }) => ({
+    status,
+    at: toCalendarDate(updatedAt)
+  }))
   return dates.every(
     (date) =>
       isWithinAccreditationDateRange(date, window) &&
-      !isSuspendedOrCancelledAtDate(date, sortedHistory)
+      !EXCLUDED_STATUSES.has(statusOn(timeline, toCalendarDate(date)))
   )
 }
 
 /**
- * Convert dates to numbers and sort descending
- * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history
+ * Convert dates to numbers and sort descending. Of changes at the same time,
+ * the one later in the history comes first, so the latest recorded wins.
+ * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history, in recorded order
  * @returns {StatusHistoryDateTime[]} Sorted list
  */
 export function getStatusHistoryDateTimes(statusHistory) {
-  const statusDates = statusHistory.map((s) => ({
-    updatedAt: new Date(s.updatedAt).getTime(),
-    status: s.status
-  }))
-  return statusDates.sort((a, b) => b.updatedAt - a.updatedAt)
+  return statusHistory
+    .map((s, index) => ({
+      index,
+      updatedAt: new Date(s.updatedAt).getTime(),
+      status: s.status
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt || b.index - a.index)
+    .map(({ updatedAt, status }) => ({ updatedAt, status }))
 }
 
 /**
@@ -106,31 +121,12 @@ export function isWithinAccreditationDateRange(date, window) {
  *
  * @param {string|Date} date
  * @param {StatusHistoryDateTime[]} statusHistory - descending
- * @returns {AccreditationStatus | undefined}
+ * @returns {StoredAccreditationStatus | undefined}
  */
 export function statusHeldAt(date, statusHistory) {
   return statusHistory.find(
     (entry) => entry.updatedAt <= new Date(date).getTime()
   )?.status
-}
-
-/**
- * Whether the accreditation's history excludes a date from its validity
- * window. Suspension is temporary and cancellation is terminal, but both take
- * effect from their status-history `updatedAt`, so a date before the change is
- * unaffected and still counts. The window itself (validFrom/validTo) is never
- * altered by these transitions.
- *
- * @param {string|Date} date - The date to check
- * @param {StatusHistoryDateTime[]} statusHistory - Accreditation status history in descending date order
- * @returns {boolean} True if the accreditation was suspended or cancelled at the given date
- */
-export function isSuspendedOrCancelledAtDate(date, statusHistory) {
-  const status = statusHeldAt(date, statusHistory)
-  return (
-    status === ACCREDITATION_STATUS.SUSPENDED ||
-    status === ACCREDITATION_STATUS.CANCELLED
-  )
 }
 
 /**

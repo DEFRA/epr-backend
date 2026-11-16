@@ -94,12 +94,16 @@ const periodStatusByChangeSchema = Joi.object({
 export const loadsByReportingPeriodSchema = Joi.object({
   openPeriodLoads: periodStatusByChangeSchema.required(),
   closedPeriodLoads: periodStatusByChangeSchema.required(),
-  // The closed (submitted) periods this upload added or adjusted loads in, which
-  // drive resubmission detection at submit time. Optional with a default so logs
-  // written before this field existed still validate on read.
-  closedPeriods: Joi.array().items(periodRefSchema).default([]),
-  // No default: absent means not computed, and readers fall back on it. A
-  // default [] would read as nothing to resubmit.
+  // Kept so older logs that carry it still validate on read.
+  closedPeriods: Joi.array()
+    .items(periodRefSchema)
+    .default([])
+    .description(
+      'Deprecated and no longer populated: use periodsRequiringResubmission.'
+    )
+    .meta({ deprecated: true }),
+  // No default: the frontend still reads an absent field as not computed and
+  // falls back on closed-period counts.
   periodsRequiringResubmission: Joi.array().items(periodRefSchema)
 })
 
