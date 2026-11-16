@@ -3,22 +3,18 @@
 
 /**
  * @param {string} id
- * @param {Pick<StoredSummaryLog, 'accreditationId' | 'accreditationNumber'>} stored
+ * @param {Pick<StoredSummaryLog, 'accreditationNumber'>} stored
  * @returns {SummaryLogAccreditation}
  */
-const accreditationOf = (id, { accreditationId, accreditationNumber }) => {
+const accreditationOf = (id, { accreditationNumber }) => {
   if (
-    accreditationId !== null &&
-    typeof accreditationNumber === 'string' &&
-    accreditationNumber
+    accreditationNumber === null ||
+    (typeof accreditationNumber === 'string' && accreditationNumber)
   ) {
     return { accreditationNumber }
   }
-  if (typeof accreditationId !== 'string' && accreditationNumber === null) {
-    return { accreditationNumber }
-  }
   throw new TypeError(
-    `Summary log ${id} is stored with an accreditation in no shape a summary log can take: accreditationId ${accreditationId}, accreditationNumber ${accreditationNumber}`
+    `Summary log ${id} is stored with an accreditation in no shape a summary log can take: accreditationNumber ${accreditationNumber}`
   )
 }
 
