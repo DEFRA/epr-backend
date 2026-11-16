@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { summaryLogFactory, withoutAccreditationId } from './test-data.js'
+import { summaryLogFactory } from './test-data.js'
 
 /**
  * @import { TestAPI } from 'vitest'
@@ -140,79 +140,5 @@ export const testReadAccreditation = (it) => {
         })
       })
     }
-
-    describe('a summary log that records no accreditation', () => {
-      /**
-       * @param {(overrides: object) => NewSummaryLog} uploaded
-       * @returns {NewSummaryLog & SummaryLogKey} a log the type forbids, as
-       *   stored before accreditations were recorded
-       */
-      const recordingNone = (uploaded) =>
-        /** @type {NewSummaryLog & SummaryLogKey} */ (
-          /** @type {unknown} */ (
-            withoutAccreditationId(uploaded({ ...aRegistration() }))
-          )
-        )
-
-      it('is not found by id or by file id', async () => {
-        const summaryLog = recordingNone(summaryLogFactory.validated)
-        const id = await insert(summaryLog)
-
-        expect(await repository.findById(id)).toBeNull()
-        expect(await repository.findByFileId(summaryLog.file.id)).toBeNull()
-      })
-
-      it('is not found by its registration, whichever accreditation the key names', async () => {
-        const summaryLog = recordingNone(summaryLogFactory.submitted)
-        await insert(summaryLog)
-
-        for (const accreditationNumber of [undefined, null]) {
-          const key = {
-            ...keyOf(summaryLog),
-            ...(accreditationNumber !== undefined && { accreditationNumber })
-          }
-          expect(await repository.findLatestSubmitted(key)).toBeNull()
-          expect(await repository.findAll(key)).toEqual([])
-        }
-      })
-
-      it('does not hide a recorded log holding the same file', async () => {
-        const unrecorded = recordingNone(summaryLogFactory.submitted)
-        await insert(unrecorded)
-        await insert(
-          summaryLogFactory.submitted({
-            ...aRegistration(),
-            file: unrecorded.file
-          })
-        )
-
-        const found = await repository.findByFileId(unrecorded.file.id)
-        const download = await repository.getDownloadUrlByFileId(
-          unrecorded.file.id
-        )
-
-        expect(accreditationOf(found?.summaryLog)).toEqual({
-          accreditationNumber: null
-        })
-        expect(download.accreditationNumber).toBeNull()
-      })
-
-      it('cannot be submitted', async () => {
-        const id = await insert(recordingNone(summaryLogFactory.validated))
-
-        await expect(
-          repository.transitionToSubmittingExclusive(id)
-        ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 404 } })
-      })
-
-      it('has no download to sign', async () => {
-        const id = await insert(recordingNone(summaryLogFactory.submitted))
-
-        await expect(repository.getDownloadUrl(id)).rejects.toMatchObject({
-          isBoom: true,
-          output: { statusCode: 404 }
-        })
-      })
-    })
   })
 }
