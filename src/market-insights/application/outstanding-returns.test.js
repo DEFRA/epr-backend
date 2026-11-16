@@ -247,7 +247,7 @@ describe('countOutstandingReturns', () => {
   it('still counts an accreditation suspended throughout the period, since a suspended accreditation owes its reports', async () => {
     const operator = makeOperator({
       orgId: 500041,
-      timeline: [changed('suspended', '2025-12-15'), APPROVED]
+      timeline: [APPROVED, changed('suspended', '2026-01-01')]
     })
 
     const counts = await count({ operators: [operator.organisation] })

@@ -415,12 +415,13 @@ describe('toReportResource', () => {
       async (_, expected, summaryLogChanged, prnCancelled) => {
         const { repository, id } = await createInProgress()
         if (summaryLogChanged) {
-          await repository.markActiveReportsStaleForSummaryLog(
-            DEFAULT_ORG_NUMBER,
-            DEFAULT_REG_NUMBER,
-            toSummaryLogFileId('sl-2'),
-            '2026-05-01T00:00:00.000Z'
-          )
+          await repository.markActiveReportsStaleForSummaryLog({
+            organisationNumber: DEFAULT_ORG_NUMBER,
+            registrationNumber: DEFAULT_REG_NUMBER,
+            year: DEFAULT_REPORT_YEAR,
+            summaryLogId: toSummaryLogFileId('sl-2'),
+            uploadedAt: '2026-05-01T00:00:00.000Z'
+          })
         }
         if (prnCancelled) {
           await repository.markActiveReportsStaleForPrnCancellation({
@@ -624,12 +625,13 @@ describe('reportResourceSchema', () => {
 
   it('accepts a stale stored report', async () => {
     const { repository, id } = await createInProgress()
-    await repository.markActiveReportsStaleForSummaryLog(
-      DEFAULT_ORG_NUMBER,
-      DEFAULT_REG_NUMBER,
-      toSummaryLogFileId('sl-2'),
-      '2026-05-01T00:00:00.000Z'
-    )
+    await repository.markActiveReportsStaleForSummaryLog({
+      organisationNumber: DEFAULT_ORG_NUMBER,
+      registrationNumber: DEFAULT_REG_NUMBER,
+      year: DEFAULT_REPORT_YEAR,
+      summaryLogId: toSummaryLogFileId('sl-2'),
+      uploadedAt: '2026-05-01T00:00:00.000Z'
+    })
     const resource = toReportResource(await bodyOf(repository, id), {
       submissionNumber: 1
     })

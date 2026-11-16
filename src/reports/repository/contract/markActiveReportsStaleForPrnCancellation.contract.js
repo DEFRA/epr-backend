@@ -129,12 +129,13 @@ export const testMarkActiveReportsStaleForPrnCancellationBehaviour = (it) => {
       const { id: reportId } = await repository.createReport(
         buildCreateReportParams()
       )
-      await repository.markActiveReportsStaleForSummaryLog(
-        DEFAULT_ORG_NUMBER,
-        DEFAULT_REG_NUMBER,
-        'sl-new',
-        '2026-05-01T00:00:00.000Z'
-      )
+      await repository.markActiveReportsStaleForSummaryLog({
+        organisationNumber: DEFAULT_ORG_NUMBER,
+        registrationNumber: DEFAULT_REG_NUMBER,
+        year: DEFAULT_REPORT_YEAR,
+        summaryLogId: 'sl-new',
+        uploadedAt: '2026-05-01T00:00:00.000Z'
+      })
 
       await repository.markActiveReportsStaleForPrnCancellation(DEFAULT_PARAMS)
 

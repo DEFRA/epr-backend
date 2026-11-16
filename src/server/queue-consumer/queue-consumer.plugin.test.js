@@ -177,8 +177,6 @@ describe('commandQueueConsumerPlugin', () => {
           queueName: 'test-queue',
           logger: server.logger,
           summaryLogsRepository: server.app.summaryLogsRepository,
-          organisationAdministrationRepository:
-            server.app.organisationAdministrationRepository,
           organisationReadRepository: server.app.organisationReadRepository,
           wasteBalanceService: server.app.wasteBalanceService,
           reportsService: expect.objectContaining({
@@ -215,6 +213,8 @@ describe('commandQueueConsumerPlugin', () => {
         expect.objectContaining({
           orsImportsRepository: server.app.orsImportsRepository,
           overseasSitesRepository: server.app.overseasSitesRepository,
+          organisationAdministrationRepository:
+            server.app.organisationAdministrationRepository,
           uploadsRepository: server.app.uploadsRepository,
           systemLogsRepository: server.app.systemLogsRepository
         }),

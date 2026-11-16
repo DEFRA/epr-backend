@@ -4,6 +4,16 @@ import {
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
+/**
+ * The registration and accreditation as the summary log lookup nests them.
+ *
+ * @param {{ accreditation?: object } & Record<string, unknown>} fields
+ */
+const nested = ({ accreditation, ...registration }) => ({
+  registration,
+  accreditation
+})
+
 const mockLoggerInfo = vi.fn()
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -30,7 +40,7 @@ describe('validateProcessingType', () => {
 
     const result = validateProcessingType({
       parsed,
-      registration,
+      registration: nested(registration),
       loggingContext: 'test'
     })
 
@@ -62,7 +72,7 @@ describe('validateProcessingType', () => {
 
     const result = validateProcessingType({
       parsed,
-      registration,
+      registration: nested(registration),
       loggingContext: 'test'
     })
 
@@ -118,7 +128,7 @@ describe('validateProcessingType', () => {
 
       const result = validateProcessingType({
         parsed,
-        registration,
+        registration: nested(registration),
         loggingContext: 'test'
       })
 
@@ -152,7 +162,7 @@ describe('validateProcessingType', () => {
 
       const result = validateProcessingType({
         parsed,
-        registration,
+        registration: nested(registration),
         loggingContext: 'test'
       })
 
@@ -191,7 +201,7 @@ describe('validateProcessingType', () => {
 
       const result = validateProcessingType({
         parsed,
-        registration,
+        registration: nested(registration),
         loggingContext: 'test'
       })
 
@@ -228,7 +238,7 @@ describe('validateProcessingType', () => {
 
       const result = validateProcessingType({
         parsed,
-        registration,
+        registration: nested(registration),
         loggingContext: 'test'
       })
 
@@ -254,7 +264,7 @@ describe('validateProcessingType', () => {
 
     const result = validateProcessingType({
       parsed,
-      registration,
+      registration: nested(registration),
       loggingContext: 'test'
     })
 
@@ -276,7 +286,7 @@ describe('validateProcessingType', () => {
 
     const result = validateProcessingType({
       parsed,
-      registration,
+      registration: nested(registration),
       loggingContext: 'test'
     })
 

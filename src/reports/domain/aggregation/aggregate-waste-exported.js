@@ -14,7 +14,7 @@ import { OPERATOR_CATEGORY } from '../operator-category.js'
 /**
  * @import { AggregatedExportActivity, ReportableWasteRecordState } from './aggregate-report-detail.js'
  * @import { ReportingPeriod } from '../reporting-period.js'
- * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { OrsDetails } from '#reports/domain/ors-details.js'
  * @import { ExporterCategory } from '../operator-category.js'
  * @import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
  * @import { LOADS_EXPORTED_FIELDS } from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'

@@ -1,9 +1,7 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import {
-  classificationContextOf,
-  ledgerAccreditationFor
-} from '#waste-balances/application/read-model-accreditations.js'
+import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
+import { registrationForSummaryLog } from '#application/summary-logs/registration-for-summary-log.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
@@ -414,7 +412,7 @@ export const syncFromSummaryLog = (dependencies) => {
       year
     }
     const { accreditation, overseasSites } = classificationContextOf(
-      await ledgerAccreditationFor(organisationReadRepository, summaryLog)
+      await registrationForSummaryLog(organisationReadRepository, summaryLog)
     )
 
     // 3. Transform to waste records
