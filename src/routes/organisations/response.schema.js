@@ -47,7 +47,8 @@ const overseasSiteViewSchema = Joi.object({
     townOrCity: Joi.string().required()
   }).required(),
   coordinates: Joi.string(),
-  name: Joi.string().required()
+  name: Joi.string().required(),
+  validFrom: isoDateTime
 })
 
 const overseasSitesViewSchema = Joi.object()

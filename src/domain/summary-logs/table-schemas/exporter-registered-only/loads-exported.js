@@ -1,5 +1,9 @@
 import Joi from 'joi'
-import { LOADS_EXPORTED_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import {
+  LOADS_EXPORTED_FIELDS as FIELDS,
+  LOADS_EXPORTED_FIELDS_2027,
+  ROW_ID_MINIMUMS
+} from './fields.js'
 import {
   createRowIdSchema,
   createUnboundedWeightFieldSchema,
@@ -71,4 +75,19 @@ export const LOADS_EXPORTED = {
   })
     .unknown(true)
     .prefs({ abortEarly: false })
+}
+
+export const LOADS_EXPORTED_2027 = {
+  ...LOADS_EXPORTED,
+  requiredHeaders: [
+    ...LOADS_EXPORTED.requiredHeaders,
+    ...Object.values(LOADS_EXPORTED_FIELDS_2027)
+  ],
+  validationSchema: LOADS_EXPORTED.validationSchema.keys({
+    [LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID]: createRowIdSchema(
+      ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
+    ).optional(),
+    [LOADS_EXPORTED_FIELDS_2027.EXIT_PORT]: createFreeTextFieldSchema(),
+    [LOADS_EXPORTED_FIELDS_2027.DWT_EXPORT_ID]: createFreeTextFieldSchema()
+  })
 }

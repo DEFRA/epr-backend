@@ -104,12 +104,6 @@ describe('getWasteBalanceClassification', () => {
         WASTE_RECORD_TYPE.RECEIVED
       ],
       [
-        'no schema for the processing type',
-        /** @type {*} */ ('NOT_A_REAL_TYPE'),
-        accreditation,
-        WASTE_RECORD_TYPE.RECEIVED
-      ],
-      [
         'schema has no classifyForWasteBalance',
         PROCESSING_TYPES.EXPORTER,
         accreditation,
@@ -125,6 +119,17 @@ describe('getWasteBalanceClassification', () => {
           ORS_VALIDATION_DISABLED
         )
       ).toBeNull()
+    })
+
+    it('throws for a processing type with no template', () => {
+      expect(() =>
+        getWasteBalanceClassification(
+          buildWasteRecord(),
+          /** @type {*} */ ('NOT_A_REAL_TYPE'),
+          accreditation,
+          ORS_VALIDATION_DISABLED
+        )
+      ).toThrow('No NOT_A_REAL_TYPE summary log template for 2026')
     })
 
     it('the no-accreditation check takes precedence for an unaccredited incomplete row', () => {

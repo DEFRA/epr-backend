@@ -1,6 +1,6 @@
 [tools]
 gitleaks = "8.30.1"
-node = "26.13.0"
+node = "26.13.1"
 
 [settings]
 minimum_release_age = "3d"

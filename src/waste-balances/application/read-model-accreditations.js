@@ -1,5 +1,5 @@
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear, yearBounds } from '#common/helpers/dates/year.js'
 import {
@@ -52,20 +52,24 @@ export const indexByLedger = (
           ([number, registration]) => {
             const registrationNumber = toRegistrationNumber(number)
             return Object.entries(registration.accreditations).map(
-              ([year, accreditation]) => [
-                ledgerKey({
-                  organisationNumber: organisation.organisationNumber,
-                  registrationNumber,
-                  accreditationNumber: accreditation.accreditationNumber
-                }),
-                {
-                  organisation,
-                  registrationNumber,
-                  registration,
-                  year: toYear(Number(year)),
-                  accreditation
-                }
-              ]
+              ([key, accreditation]) => {
+                const year = toYear(Number(key))
+                return [
+                  ledgerKey({
+                    organisationNumber: organisation.organisationNumber,
+                    registrationNumber,
+                    accreditationNumber: accreditation.accreditationNumber,
+                    year
+                  }),
+                  {
+                    organisation,
+                    registrationNumber,
+                    registration,
+                    year,
+                    accreditation
+                  }
+                ]
+              }
             )
           }
         )

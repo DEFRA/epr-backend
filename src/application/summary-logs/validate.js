@@ -6,7 +6,6 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/index.js'
-import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -14,7 +13,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
@@ -33,6 +32,8 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { capIssuesForStorage } from './cap-issues-for-storage.js'
 import { transformAndValidateData } from './transform-and-validate-data.js'
 import { ledgerIdFor } from './ledger-id.js'
+import { registrationForSummaryLog } from './registration-for-summary-log.js'
+import { recordValidationMetrics } from './validation-metrics.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -42,7 +43,6 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
-/** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
@@ -86,26 +86,6 @@ const extractSummaryLog = async ({
 }
 
 /**
- * The accreditation a summary log is validated against: the one it stored,
- * or none for a registered-only summary log.
- *
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
- * @param {SubmittedSummaryLog} summaryLog
- * @returns {Promise<Registration['accreditation']>}
- */
-const accreditationFor = async (
-  organisationAdministrationRepository,
-  { organisationId, accreditationId }
-) => {
-  return accreditationId === null
-    ? null
-    : organisationAdministrationRepository.findAccreditationById(
-        organisationId,
-        accreditationId
-      )
-}
-
-/**
  * @param {{
  *   organisationAdministrationRepository: OrganisationAdministrationRepository,
  *   summaryLog: SubmittedSummaryLog,
@@ -120,18 +100,10 @@ const fetchRegistration = async ({
   loggingContext,
   logger
 }) => {
-  const currentRegistration =
-    await organisationAdministrationRepository.findRegistrationById(
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
-  const registration = {
-    ...currentRegistration,
-    accreditation: await accreditationFor(
-      organisationAdministrationRepository,
-      summaryLog
-    )
-  }
+  const registration = await registrationForSummaryLog(
+    organisationAdministrationRepository,
+    summaryLog
+  )
 
   logger.info({
     message: `Fetched registration: ${loggingContext}`,
@@ -355,85 +327,6 @@ const performValidationChecks = async ({
 }
 
 /**
- * Records validation issue metrics grouped by severity × category
- *
- * @param {ValidationIssuesCollector} issues - Validation issues object
- * @param {string} processingType - The processing type for the metric dimension
- */
-const recordValidationIssueMetrics = async (issues, processingType) => {
-  const allIssues = issues.getAllIssues()
-  if (allIssues.length === 0) {
-    return
-  }
-
-  // Count issues by severity × category
-  const counts = new Map()
-  for (const issue of allIssues) {
-    const key = `${issue.severity}:${issue.category}`
-    counts.set(key, (counts.get(key) || 0) + 1)
-  }
-
-  // Record metrics for each combination
-  for (const [key, count] of counts) {
-    const [severity, category] = key.split(':')
-    await summaryLogMetrics.recordValidationIssues(
-      {
-        severity:
-          /** @type {import('#application/summary-logs/metrics.js').ValidationSeverity} */ (
-            severity
-          ),
-        category:
-          /** @type {import('#application/summary-logs/metrics.js').ValidationCategory} */ (
-            category
-          ),
-        processingType: /** @type {ProcessingType} */ (processingType)
-      },
-      count
-    )
-  }
-}
-
-/**
- * Records row outcome metrics grouped by outcome
- *
- * @param {ValidatedWasteRecord[] | null} wasteRecords - Waste records with outcomes
- * @param {string} processingType - The processing type for the metric dimension
- */
-const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
-  if (!wasteRecords || wasteRecords.length === 0) {
-    return
-  }
-
-  // Count by outcome
-  const counts = {
-    [ROW_OUTCOME.INCLUDED]: 0,
-    [ROW_OUTCOME.EXCLUDED]: 0,
-    [ROW_OUTCOME.REJECTED]: 0,
-    [ROW_OUTCOME.IGNORED]: 0
-  }
-
-  for (const { outcome } of wasteRecords) {
-    counts[outcome]++
-  }
-
-  // Record metrics for each outcome with non-zero count
-  for (const [outcome, count] of Object.entries(counts)) {
-    if (count > 0) {
-      await summaryLogMetrics.recordRowOutcome(
-        {
-          outcome:
-            /** @type {import('#application/summary-logs/metrics.js').RowOutcome} */ (
-              outcome
-            ),
-          processingType: /** @type {ProcessingType} */ (processingType)
-        },
-        count
-      )
-    }
-  }
-}
-
-/**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
  * @param {SummaryLogId} summaryLogId
  */
@@ -449,32 +342,6 @@ const assertValidatingStatus = (result, summaryLogId) => {
       `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
     )
   }
-}
-
-/**
- * Records all validation-related metrics.
- *
- * @param {Object} params
- * @param {ValidationIssuesCollector} params.issues
- * @param {ProcessingType} params.processingType
- * @param {SummaryLogStatus} params.status
- * @param {number} params.validationDurationMs
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
- */
-const recordValidationMetrics = async ({
-  issues,
-  processingType,
-  status,
-  validationDurationMs,
-  wasteBalanceRecords
-}) => {
-  await summaryLogMetrics.recordValidationDuration(
-    { processingType },
-    validationDurationMs
-  )
-  await summaryLogMetrics.recordStatusTransition({ status, processingType })
-  await recordValidationIssueMetrics(issues, processingType)
-  await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
 }
 
 /**
@@ -534,7 +401,7 @@ const loadSubmittedRowStatesByKey = async ({
   summaryLogRowStatesRepository,
   summaryLog
 }) => {
-  const submittedRowStates = await summaryLogRowStatesForRegistration({
+  const submittedRowStates = await summaryLogRowStatesForLedger({
     ...ledgerIdFor(summaryLog),
     ledgerRepository,
     summaryLogRowStatesRepository
@@ -609,6 +476,7 @@ const classifyAndPersistResult = async ({
       loadsByReportingPeriod,
       periodicReports,
       wasteRecords,
+      tableSchemas,
       registration,
       overseasSites,
       summaryLog,

@@ -26,16 +26,16 @@ export const buildLedgerId = (overrides = {}) =>
   })
 
 /**
- * The numbers alone of the ledger `buildLedgerId` builds from the same
- * overrides.
+ * The numbers and year alone of the ledger `buildLedgerId` builds from the
+ * same overrides.
  *
  * @param {LedgerIdOverrides} [overrides]
- * @returns {import('#domain/organisations/numbers.js').RequiredNumbers}
+ * @returns {import('./ledger-schema.js').WasteBalanceLedgerId}
  */
 export const buildLedgerNumbers = (overrides = {}) => {
-  const { organisationNumber, registrationNumber, accreditationNumber } =
+  const { organisationNumber, registrationNumber, accreditationNumber, year } =
     buildLedgerId(overrides)
-  return { organisationNumber, registrationNumber, accreditationNumber }
+  return { organisationNumber, registrationNumber, accreditationNumber, year }
 }
 
 /**

@@ -45,8 +45,6 @@ const serveFile = (idOf, sign) => async (request, h) => {
 
   await auditSummaryLogDownload(request, {
     summaryLogId: id,
-    organisationId,
-    registrationId,
     organisationNumber,
     registrationNumber,
     accreditationNumber

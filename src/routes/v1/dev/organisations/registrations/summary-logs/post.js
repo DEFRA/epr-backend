@@ -16,6 +16,8 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
+import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
@@ -153,6 +155,36 @@ const requiredNumbersOf = (organisationNumber, registration) => {
 }
 
 /**
+ * Refuses a year the upload route would refuse.
+ *
+ * @param {SubmitRequest} request
+ * @param {RequiredNumbers} numbers
+ * @param {Year} year
+ */
+const assertUploadEligible = async (
+  { organisationReadRepository },
+  { organisationNumber, registrationNumber },
+  year
+) => {
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  const registration = organisation?.registrations[registrationNumber]
+  if (!registration) {
+    throw Boom.notFound('Registration not found')
+  }
+  const eligibility = checkSummaryLogUploadEligibility({
+    registration,
+    year,
+    latestOpenYear: latestOpenYear()
+  })
+  if (!eligibility.eligible) {
+    throw Boom.badData(eligibility.reason)
+  }
+}
+
+/**
  * Inserts the document an upload's completion would, validating against the
  * registration's latest submission.
  *
@@ -160,20 +192,18 @@ const requiredNumbersOf = (organisationNumber, registration) => {
  * @param {SummaryLogId} summaryLogId
  * @param {Year} year
  * @param {Registration} registration
+ * @param {RequiredNumbers} numbers
  */
 const insertValidatingLog = async (
   request,
   summaryLogId,
   year,
-  registration
+  registration,
+  numbers
 ) => {
-  const { summaryLogsRepository, organisationAdministrationRepository } =
-    request
+  const { summaryLogsRepository } = request
   const { organisationId, registrationId } = request.params
 
-  const { organisationNumber } =
-    await organisationAdministrationRepository.findById(organisationId)
-  const numbers = requiredNumbersOf(organisationNumber, registration)
   /** @type {SummaryLog} */
   const summaryLog = {
     status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -206,7 +236,6 @@ const insertValidatingLog = async (
  */
 const submitValidatedLog = async (request, submitPayload, deps) => {
   const { summaryLogsRepository } = request
-  const { organisationId, registrationId } = request.params
   const { summaryLogId } = submitPayload
 
   const transition =
@@ -229,8 +258,6 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     summaryLogKeyOf(transition.summaryLog)
   await auditSummaryLogSubmit(request, {
     summaryLogId,
-    organisationId,
-    registrationId,
     organisationNumber,
     registrationNumber,
     accreditationNumber
@@ -256,19 +283,23 @@ export const devSummaryLogsSubmitPath =
  *
  * @param {SummaryLogContentPayload} payload
  * @param {Registration} registration
+ * @param {Year} year
  * @returns {ReturnType<typeof templateForRegistration>}
  */
-const templateFor = (payload, registration) =>
-  templateForRegistration({
-    ...registration,
-    accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
-      ? {
-          accreditationNumber: toAccreditationNumber(
-            String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
-          )
-        }
-      : null
-  })
+const templateFor = (payload, registration, year) =>
+  templateForRegistration(
+    {
+      ...registration,
+      accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+        ? {
+            accreditationNumber: toAccreditationNumber(
+              String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
+            )
+          }
+        : null
+    },
+    year
+  )
 
 /**
  * @param {Registration} registration
@@ -315,12 +346,22 @@ export const devSummaryLogsSubmit = {
         organisationId,
         registrationId
       )
+    const { organisationNumber } =
+      await organisationAdministrationRepository.findById(organisationId)
+    const numbers = requiredNumbersOf(organisationNumber, registration)
+    await assertUploadEligible(request, numbers, year)
     const parsed = toParsedSummaryLog(
       payload,
-      templateFor(payload, registration)
+      templateFor(payload, registration, year)
     )
 
-    await insertValidatingLog(request, summaryLogId, year, registration)
+    await insertValidatingLog(
+      request,
+      summaryLogId,
+      year,
+      registration,
+      numbers
+    )
 
     const deps = {
       logger,

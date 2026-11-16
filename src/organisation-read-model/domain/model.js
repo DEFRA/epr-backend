@@ -61,6 +61,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   address: OverseasAddress
  *   coordinates?: string
  *   name: string
+ *   validFrom?: string
  * }} OverseasSite
  *
  * @typedef {{

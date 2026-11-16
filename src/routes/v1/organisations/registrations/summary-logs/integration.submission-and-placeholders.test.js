@@ -7,7 +7,7 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
@@ -495,7 +495,7 @@ describe('Submission and placeholder tests', () => {
     })
 
     it('should commit the submission rows as row states', async () => {
-      const rowStates = await summaryLogRowStatesForRegistration({
+      const rowStates = await summaryLogRowStatesForLedger({
         organisationNumber: TEST_ORGANISATION_NUMBER,
         registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
         accreditationNumber: toAccreditationNumber('ACC-2026-001'),

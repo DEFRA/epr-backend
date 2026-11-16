@@ -147,22 +147,20 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     decemberWasteRowCount
   )
 
+  await summaryLogsRepository.update(
+    summaryLogId,
+    version,
+    transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+  )
+
   await onSummaryLogUploaded({
     organisationNumber: summaryLog.organisationNumber,
     registrationNumber: summaryLog.registrationNumber,
     year: summaryLog.year,
     summaryLogId: fileId,
     periodsRequiringResubmission:
-      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??
-      summaryLog.loadsByReportingPeriod?.closedPeriods ??
-      []
+      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ?? []
   })
-
-  await summaryLogsRepository.update(
-    summaryLogId,
-    version,
-    transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-  )
 
   await summaryLogMetrics.recordStatusTransition({
     status: SUMMARY_LOG_STATUS.SUBMITTED,

@@ -1,4 +1,4 @@
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { ExporterRegistration, Organisation, OverseasSite } from '#organisation-read-model/domain/model.js' */
 import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import Boom from '@hapi/boom'
 import Joi from 'joi'
@@ -10,10 +10,8 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-
-/**
- * @typedef {import('#overseas-sites/repository/port.js').OverseasSite} OverseasSite
- */
+import { currentUtcYear } from '#common/helpers/dates/year.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
 
@@ -37,29 +35,28 @@ const buildPaginationMetadata = ({ page, pageSize, totalItems }) => {
 
 const nullable = (value) => value ?? null
 
-const firstPresent = (...values) => {
-  for (const value of values) {
-    if (value !== undefined && value !== null) {
-      return value
-    }
-  }
-  return null
-}
-
-const getAccreditationNumber = (organisation, registration) => {
-  const matchedAccreditationNumber = organisation.accreditations?.find(
-    (accreditation) => accreditation.id === registration.accreditationId
-  )?.accreditationNumber
-
-  return firstPresent(
-    registration.accreditation?.accreditationNumber,
-    registration.accreditationNumber,
-    matchedAccreditationNumber
-  )
-}
-
-const mapSiteFields = (site) => ({
-  destinationCountry: site.country,
+/**
+ * @param {Organisation} organisation
+ * @param {string} registrationNumber
+ * @param {ExporterRegistration} registration
+ * @param {string} orsId
+ * @param {OverseasSite} site
+ */
+const toRow = (
+  organisation,
+  registrationNumber,
+  registration,
+  orsId,
+  site
+) => ({
+  orgId: toWireOrgId(organisation.organisationNumber),
+  registrationNumber,
+  accreditationNumber: nullable(
+    registration.accreditations[currentUtcYear()]?.accreditationNumber
+  ),
+  orsId,
+  packagingWasteCategory: registration.material,
+  destinationCountry: site.address.country,
   overseasReprocessorName: site.name,
   addressLine1: site.address.line1,
   addressLine2: nullable(site.address.line2),
@@ -70,69 +67,28 @@ const mapSiteFields = (site) => ({
   validFrom: nullable(site.validFrom)
 })
 
-const mapMappingToRow = (
-  { organisation, registration, orsId, mapping },
-  sitesById
-) => {
-  const site = sitesById.get(mapping.overseasSiteId)
-  if (!site) {
-    return null
-  }
-
-  return {
-    orgId: toWireOrgId(organisation.organisationNumber),
-    registrationNumber: nullable(registration.registrationNumber),
-    accreditationNumber: getAccreditationNumber(organisation, registration),
-    orsId,
-    packagingWasteCategory: nullable(registration.material),
-    ...mapSiteFields(site)
-  }
-}
-
 /**
- * @typedef {Object} OrganisationsOverseasSitesAdminListItem
- * @property {OrganisationNumber} [organisationNumber]
- * @property {Array<{
- *   material?: string,
- *   registrationNumber: string | null,
- *   accreditationId?: string,
- *   accreditationNumber?: string,
- *   accreditation?: { accreditationNumber?: string | null } | null,
- *   overseasSites?: Record<string, { overseasSiteId: string }>
- * }>} [registrations]
- * @property {Array<{ id?: string, accreditationNumber?: string | null }>} [accreditations]
+ * @param {Organisation[]} organisations
  */
-
-/**
- * @param {Array<OrganisationsOverseasSitesAdminListItem>} organisations
- * @param {Map<string, OverseasSite>} sitesById
- */
-const buildRows = (organisations, sitesById) => {
-  const registrationContexts = organisations.flatMap((organisation) =>
-    (organisation.registrations ?? []).map((registration) => ({
-      organisation,
-      registration
-    }))
-  )
-
-  const mappings = registrationContexts.flatMap(
-    ({ organisation, registration }) =>
-      Object.entries(registration.overseasSites ?? {}).map(
-        ([orsId, mapping]) => ({
-          organisation,
-          registration,
-          orsId,
-          mapping
-        })
+const buildRows = (organisations) =>
+  organisations
+    .flatMap((organisation) =>
+      Object.entries(organisation.registrations).flatMap(
+        ([registrationNumber, registration]) =>
+          registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+            ? Object.entries(registration.overseasSites).map(([orsId, site]) =>
+                toRow(
+                  organisation,
+                  registrationNumber,
+                  registration,
+                  orsId,
+                  site
+                )
+              )
+            : []
       )
-  )
-
-  const rows = mappings
-    .map((mappingContext) => mapMappingToRow(mappingContext, sitesById))
-    .filter((row) => row !== null)
-
-  return rows.sort((a, b) => a.orsId.localeCompare(b.orsId))
-}
+    )
+    .sort((a, b) => a.orsId.localeCompare(b.orsId))
 
 const buildAllPageSize = (rowCount) =>
   rowCount === 0 ? DEFAULT_PAGE_SIZE : rowCount
@@ -154,7 +110,7 @@ const filterRowsByRegistrationNumber = (rows, registrationNumber) => {
   const normalisedFilter = registrationNumber.toLowerCase()
 
   return rows.filter((row) =>
-    row.registrationNumber?.toLowerCase().includes(normalisedFilter)
+    row.registrationNumber.toLowerCase().includes(normalisedFilter)
   )
 }
 
@@ -175,16 +131,11 @@ export const adminOverseasSitesList = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   organisationAdministrationRepository: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository,
-   *   overseasSitesRepository: import('#overseas-sites/repository/port.js').OverseasSitesRepository,
+   *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository
    * }} request
    */
   handler: async (request, h) => {
-    const {
-      logger,
-      organisationAdministrationRepository,
-      overseasSitesRepository
-    } = request
+    const { logger, organisationReadRepository } = request
     const all = Boolean(request.query.all)
     const page = Number(request.query.page ?? DEFAULT_PAGE)
     const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
@@ -193,14 +144,10 @@ export const adminOverseasSitesList = {
     )
 
     try {
-      const [organisations, sites] = await Promise.all([
-        organisationAdministrationRepository.findAll(),
-        overseasSitesRepository.findAll()
-      ])
+      const organisations = await organisationReadRepository.findAll()
 
-      const sitesById = new Map(sites.map((site) => [site.id, site]))
       const rows = filterRowsByRegistrationNumber(
-        buildRows(organisations, sitesById),
+        buildRows(organisations),
         registrationNumber
       )
       const startIndex = (page - 1) * pageSize

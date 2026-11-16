@@ -1,13 +1,14 @@
 import { addRounded, toNumber } from '#common/helpers/decimal-utils.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
   overseasSitesOf,
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
@@ -199,10 +200,11 @@ const periodFigures = (cells, months) =>
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
  * @param {string} accreditationNumber
+ * @param {Year} year
  */
-const warnAboutUnmatchedPartition = (logger, accreditationNumber) => {
+const warnAboutUnmatchedPartition = (logger, accreditationNumber, year) => {
   logger.warn({
-    message: `Market insights waste balance left out a ledger partition whose accreditation no longer resolves: ${accreditationNumber}. Everything that partition reported is absent from the publication.`,
+    message: `Market insights waste balance left out a ledger partition whose accreditation no longer resolves: ${accreditationNumber} for ${year}. Everything that partition reported is absent from the publication.`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: 'market_insights_partition_unmatched',
@@ -228,7 +230,7 @@ const resolvePublishedPartitions = (entries, index, logger) => {
     const ledgerAccreditation = index.get(ledgerKey(ledgerId))
     if (ledgerAccreditation === undefined) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
-        warnAboutUnmatchedPartition(logger, accreditationNumber)
+        warnAboutUnmatchedPartition(logger, accreditationNumber, ledgerId.year)
       }
       continue
     }
@@ -259,7 +261,7 @@ const publishedContribution = (rowState, partitions) => {
   const { registration, accreditation, overseasSites } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    rowState.processingType,
+    tableSchemasOf(rowState.year, rowState.processingType),
     accreditation,
     overseasSites
   )

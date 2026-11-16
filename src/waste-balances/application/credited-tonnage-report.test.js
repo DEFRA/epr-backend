@@ -594,33 +594,6 @@ describe('buildCreditedTonnageReport', () => {
     )
   })
 
-  it('reports the tonnage the waste balance holds for rows dated before the window, where the accreditation started before it', async () => {
-    const { organisation, accreditationNumber, ledgerEntry } =
-      makeAccreditation({
-        orgId: 500001,
-        year: 2025,
-        approvedOn: '2025-01-01'
-      })
-
-    const { report, logger } = run({
-      organisations: [organisation],
-      entries: [ledgerEntry],
-      rowStatesByAccreditationNumber: {
-        [accreditationNumber]: [receivedRow('2025-06-01', 40)]
-      }
-    })
-
-    await report
-
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining(
-          '1 dated before 2026-01 (40t credited, 40t eligible)'
-        )
-      })
-    )
-  })
-
   it('does not log when no rows are skipped', async () => {
     const { organisation, accreditationNumber, ledgerEntry } =
       makeAccreditation({ orgId: 500001 })

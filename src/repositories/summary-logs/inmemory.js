@@ -8,7 +8,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
-import { keyedBy } from './natural-keys.js'
+import { keyedBy, submittedKeyedBy } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -224,7 +224,7 @@ const findLatestSubmitted =
   /** @param {SummaryLogKey} key */
   async (key) => {
     const found = latestSubmitted(staleCache, matchesKey(key))
-    return found && keyedBy(key)(found)
+    return found && submittedKeyedBy(key)(found)
   }
 
 /** @param {SummaryLogStore} staleCache */

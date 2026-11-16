@@ -1,5 +1,9 @@
 import Joi from 'joi'
-import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import {
+  RECEIVED_LOADS_FIELDS as FIELDS,
+  RECEIVED_LOADS_FIELDS_2027,
+  ROW_ID_MINIMUMS
+} from './fields.js'
 import {
   createRowIdSchema,
   createUnboundedWeightFieldSchema,
@@ -8,7 +12,8 @@ import {
   createEnumFieldSchema,
   DROPDOWN_PLACEHOLDER,
   MESSAGES,
-  RECYCLABLE_PROPORTION_METHODS
+  RECYCLABLE_PROPORTION_METHODS,
+  createFreeTextFieldSchema
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
@@ -81,4 +86,15 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   })
     .unknown(true)
     .prefs({ abortEarly: false })
+}
+
+export const RECEIVED_LOADS_FOR_REPROCESSING_2027 = {
+  ...RECEIVED_LOADS_FOR_REPROCESSING,
+  requiredHeaders: [
+    ...RECEIVED_LOADS_FOR_REPROCESSING.requiredHeaders,
+    ...Object.values(RECEIVED_LOADS_FIELDS_2027)
+  ],
+  validationSchema: RECEIVED_LOADS_FOR_REPROCESSING.validationSchema.keys({
+    [RECEIVED_LOADS_FIELDS_2027.DWT_SUPPLY_ID]: createFreeTextFieldSchema()
+  })
 }

@@ -6,7 +6,10 @@
 
 // Re-export shared fields
 export { SENT_ON_LOADS_FIELDS } from '../shared/index.js'
-export { RECEIVED_LOADS_FOR_REPROCESSING_FIELDS as RECEIVED_LOADS_FIELDS } from '../shared/index.js'
+export {
+  RECEIVED_LOADS_FOR_REPROCESSING_FIELDS as RECEIVED_LOADS_FIELDS,
+  RECEIVED_LOADS_FOR_REPROCESSING_FIELDS_2027 as RECEIVED_LOADS_FIELDS_2027
+} from '../shared/index.js'
 
 /**
  * ROW_ID minimum values for REPROCESSOR_INPUT tables

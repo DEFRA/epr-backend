@@ -14,7 +14,7 @@ import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
-import { keyedBy } from './natural-keys.js'
+import { keyedBy, submittedKeyedBy } from './natural-keys.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -287,7 +287,7 @@ const findLatestSubmitted =
   /** @param {SummaryLogKey} key */
   async (key) => {
     const found = await latestSubmitted(db, keyFilter(key))
-    return found && keyedBy(key)(found)
+    return found && submittedKeyedBy(key)(found)
   }
 
 /** @param {Db} db */

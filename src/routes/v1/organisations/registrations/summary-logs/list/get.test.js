@@ -5,37 +5,34 @@ import { ObjectId } from 'mongodb'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import {
-  REPROCESSOR_NUMBER,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber
+  toOrganisationNumber,
+  toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
-const { buildOrganisation } = createOrganisationBuilders()
+const registrationNumber = toRegistrationNumber(REPROCESSOR_NUMBER)
+const otherRegistrationNumber = toRegistrationNumber('R26ER5001180099PL')
 
-const OTHER_REGISTRATION_NUMBER = 'R26ER5001180099PL'
-
-const registration = reprocessor()
-const otherRegistration = reprocessor({
-  registrationNumber: OTHER_REGISTRATION_NUMBER
-})
-const organisation = buildOrganisation({
-  registrations: [registration, otherRegistration]
+const organisation = buildReadOrganisation({
+  registrations: {
+    [registrationNumber]: buildReadReprocessorRegistration(),
+    [otherRegistrationNumber]: buildReadReprocessorRegistration()
+  }
 })
 
 const organisationNumber = organisation.organisationNumber
-const registrationNumber = registration.registrationNumber
 const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 const url = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
 const year = currentUtcYear()
@@ -52,8 +49,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          organisation
+        ]),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -240,7 +238,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
         new ObjectId().toString(),
         summaryLogFactory.submitted({
           organisationNumber,
-          registrationNumber: otherRegistration.registrationNumber,
+          registrationNumber: otherRegistrationNumber,
           submittedAt: '2026-04-03T10:00:00.000Z'
         })
       )

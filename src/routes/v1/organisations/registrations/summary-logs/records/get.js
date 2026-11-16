@@ -1,17 +1,22 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { metaText } from '#domain/summary-logs/stored-meta.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
+import {
+  findOrganisationAndRegistrationReadModels,
+  registrationParams,
+  registrationPath
+} from '#routes/organisations/natural-keys.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { streamSubmissionCsvToReadable } from '#waste-records-export/application/stream-submission-csv.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { KeyedSummaryLog, KeyedSummaryLogWithId, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { ResolvedParams } from '#routes/organisations/at-natural-keys.js' */
+/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
@@ -40,16 +45,22 @@ const submittedSummaryLogForFile = (summaryLogs, fileId) =>
  */
 export const summaryLogRecordsCsv = {
   method: 'GET',
+  path: `${registrationPath}/summary-logs/files/{fileId}/records.csv`,
   options: {
     auth: {
       scope: [`+${SCOPES.summaryLogRead}`, `+${SCOPES.organisationRead}`]
     },
-    tags: ['api']
+    tags: ['api'],
+    validate: {
+      params: Joi.object({
+        ...registrationParams,
+        fileId: Joi.string().required()
+      })
+    }
   },
   /**
    * @param {HapiRequest & {
-   *   params: ResolvedParams & { fileId: SummaryLogFileId },
-   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *   params: RegistrationParams & { fileId: SummaryLogFileId },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   systemLogsRepository: SystemLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
@@ -57,13 +68,7 @@ export const summaryLogRecordsCsv = {
    * @param {*} h
    */
   handler: async (request, h) => {
-    const {
-      organisationId,
-      registrationId,
-      organisationNumber,
-      registrationNumber,
-      fileId
-    } = request.params
+    const { organisationNumber, registrationNumber, fileId } = request.params
 
     // Every read happens here: once the handler has returned a Readable the
     // status is already sent.
@@ -78,12 +83,8 @@ export const summaryLogRecordsCsv = {
       throw Boom.notFound('Summary log file not found')
     }
 
-    const [org, registration, rowStates] = await Promise.all([
-      request.organisationAdministrationRepository.findById(organisationId),
-      request.organisationAdministrationRepository.findRegistrationById(
-        organisationId,
-        registrationId
-      ),
+    const [{ organisation, registration }, rowStates] = await Promise.all([
+      findOrganisationAndRegistrationReadModels(request),
       request.summaryLogRowStatesRepository.findRowStatesForSummaryLogFile(
         organisationNumber,
         registrationNumber,
@@ -93,8 +94,6 @@ export const summaryLogRecordsCsv = {
 
     await auditSummaryLogDownload(request, {
       summaryLogId: fileId,
-      organisationId,
-      registrationId,
       organisationNumber,
       registrationNumber,
       accreditationNumber: summaryLog.accreditationNumber
@@ -103,7 +102,7 @@ export const summaryLogRecordsCsv = {
     const response = h
       .response(
         streamSubmissionCsvToReadable({
-          org,
+          org: organisation,
           registration,
           meta: summaryLog.meta,
           submittedAt: summaryLog.submittedAt,

@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { yearSchema } from '#common/validation/year-schema.js'
+import { ledgerIdKeys } from '#waste-balances/repository/ledger-schema.js'
 
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
@@ -24,8 +24,6 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 
 /**
  * A single row from the 1.1 per-row classification list — the unit
@@ -66,9 +64,8 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * Shape returned by reads — the stored fields plus the storage-assigned `id`.
- * A row state stored before row states recorded their year has none.
  *
- * @typedef {RowStateFields & RequiredNumbers & { year?: Year, id: string }} SummaryLogRowState
+ * @typedef {RowStateFields & WasteBalanceLedgerId & { id: string }} SummaryLogRowState
  */
 
 const classificationReasonSchema = Joi.object({
@@ -86,13 +83,6 @@ const classificationSchema = Joi.object({
   transactionAmount: Joi.number().required()
 })
 
-const ledgerIdKeys = {
-  organisationNumber: Joi.string().required(),
-  registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.string().allow(null).required(),
-  year: yearSchema().required()
-}
-
 const rowStateBaseSchema = Joi.object({
   wasteRecordType: Joi.string()
     .valid(...Object.values(WASTE_RECORD_TYPE))
@@ -109,6 +99,5 @@ export const summaryLogRowStateInsertSchema =
 
 export const summaryLogRowStateReadSchema = rowStateBaseSchema.keys({
   ...ledgerIdKeys,
-  year: yearSchema(),
   id: Joi.string().required()
 })

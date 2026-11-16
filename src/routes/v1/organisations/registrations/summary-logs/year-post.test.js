@@ -10,8 +10,11 @@ import {
   beforeAll,
   afterAll,
   afterEach,
+  onTestFinished,
   vi
 } from 'vitest'
+
+import { config } from '#root/config.js'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -135,6 +138,20 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 201 for 2027 once it is open', async () => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
+
+      const response = await server.inject({
+        method: 'POST',
+        url: buildUrl(organisation, 2027),
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
     it('returns 422 for a non-numeric year', async () => {

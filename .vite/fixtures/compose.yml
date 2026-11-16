@@ -13,4 +13,4 @@ services:
   redis:
     image: redis:8.0.6-alpine3.21@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4
   cdp-uploader:
-    image: defradigital/cdp-uploader:1.28.0@sha256:c2ad7db7c7141a02d1dfd621ace5bf628bd71d156bbe6bd7dbd976f0468f9845
+    image: defradigital/cdp-uploader:1.31.0@sha256:bdb3930bd8182b389bd3e030b1dff03d60085f71119b7d9760de1fecf27fe2c6

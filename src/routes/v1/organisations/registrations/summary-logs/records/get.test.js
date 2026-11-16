@@ -1,11 +1,8 @@
-import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -17,12 +14,17 @@ import { encodeRow } from '#waste-records-export/application/stream-csv-export.j
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  buildReadExporterRegistration,
+  buildReadOrganisation
+} from '#organisation-read-model/repository/read-model-test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
-const { buildReadOrganisation } = createOrganisationBuilders()
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 const mockAuditSummaryLogDownload = vi.fn()
 
@@ -35,21 +37,7 @@ const REGISTRATION_ID = 'reg-1'
 const FILE_ID = 'file-1'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
 
-const buildRegistration = (overrides = {}) => {
-  const [, exporterRegistration] = buildReadOrganisation().registrations
-  return {
-    ...exporterRegistration,
-    id: REGISTRATION_ID,
-    material: 'plastic',
-    submittedToRegulator: 'ea',
-    registrationNumber: 'R26ER5000000002PA',
-    accreditation: null,
-    overseasSites: {},
-    validFrom: '2026-02-01',
-    status: REGISTRATION_STATUS.APPROVED,
-    ...overrides
-  }
-}
+const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000000002PA')
 
 const receivedRowState = (overrides = {}) => ({
   rowId: '1001',
@@ -81,37 +69,31 @@ const submittedLog = (fileId, submittedAt, meta = SUBMITTED_META) => ({
 
 /**
  * Stand up a server whose export reads from the real in-memory row-state
- * adapter, so the route's own wiring is what is under test. The organisation
- * the handler reads is shared by reference, so a test can change it between
- * requests; the path's keys resolve against a copy taken at the start.
+ * adapter, so the route's own wiring is what is under test. The read model
+ * serves the organisation as it stands at each request, so a test can change
+ * it between requests.
  *
  * @param {{
  *   summaryLogs?: any[],
  *   rows?: any[],
  *   accreditationId?: string | null,
- *   accreditations?: any[],
- *   registration?: any,
- *   findById?: () => Promise<any>,
- *   findRegistrationById?: () => Promise<any>
+ *   registrationNumber?: RegistrationNumber,
+ *   readModelHolds?: (organisation: any) => any
  * }} [options]
  */
 const createServer = async ({
   summaryLogs = [submittedLog(FILE_ID, SUBMITTED_AT)],
   rows = [receivedRowState()],
   accreditationId = null,
-  accreditations = [],
-  registration = buildRegistration(),
-  findById,
-  findRegistrationById = () => Promise.resolve(registration)
+  registrationNumber = REGISTRATION_NUMBER,
+  readModelHolds = (organisation) => organisation
 } = {}) => {
   const organisation = buildReadOrganisation({
-    id: ORGANISATION_ID,
-    companyDetails: { name: 'Acme Ltd' },
-    submittedToRegulator: 'ea',
-    accreditations,
-    registrations: [registration]
+    name: 'Acme Ltd',
+    registrations: {
+      [registrationNumber]: buildReadExporterRegistration()
+    }
   })
-  const keyedOrganisation = structuredClone(organisation)
 
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
@@ -123,7 +105,7 @@ const createServer = async ({
         accreditationId
       }),
       organisationNumber: organisation.organisationNumber,
-      registrationNumber: registration.registrationNumber
+      registrationNumber
     },
     rows,
     toSummaryLogFileId(FILE_ID)
@@ -135,26 +117,22 @@ const createServer = async ({
     await summaryLogsRepository.insert(id, {
       ...summaryLog,
       organisationNumber: organisation.organisationNumber,
-      registrationNumber: registration.registrationNumber
+      registrationNumber
     })
   }
 
   const server = await createTestServer({
     repositories: {
-      organisationAdministrationRepository: () => ({
-        findByOrganisationNumber: vi.fn(() =>
-          Promise.resolve(keyedOrganisation)
-        ),
-        findById: vi.fn(findById ?? (() => Promise.resolve(organisation))),
-        findRegistrationById: vi.fn(findRegistrationById)
-      }),
+      organisationReadRepository: () =>
+        createInMemoryOrganisationReadRepository(
+          [readModelHolds(organisation)].filter(Boolean)
+        )(),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       summaryLogsRepository: () => summaryLogsRepository
     }
   })
 
   const { organisationNumber } = organisation
-  const { registrationNumber } = registration
   /** @param {string} [fileId] */
   const urlFor = (fileId = FILE_ID) =>
     `/organisations/${organisationNumber}/registrations/${registrationNumber}/summary-logs/files/${fileId}/records.csv`
@@ -206,9 +184,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
   it('names the download by the registration number the submission stored, not the current one', async () => {
     const { server, urlFor } = await createServer({
-      registration: buildRegistration({
-        registrationNumber: 'R26ER5999999999PA'
-      })
+      registrationNumber: toRegistrationNumber('R26ER5999999999PA')
     })
 
     const response = await server.inject({
@@ -248,15 +224,12 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   })
 
   it.each([
-    ['organisation', { findById: () => Promise.reject(Boom.notFound()) }],
-    [
-      'registration',
-      { findRegistrationById: () => Promise.reject(Boom.notFound()) }
-    ]
+    ['organisation', () => null],
+    ['registration', (organisation) => ({ ...organisation, registrations: {} })]
   ])(
-    'returns 404 and does not audit when the %s is missing',
-    async (_, options) => {
-      const { server, urlFor } = await createServer(options)
+    'returns 404 and does not audit when the read model no longer holds the %s',
+    async (_, readModelHolds) => {
+      const { server, urlFor } = await createServer({ readModelHolds })
 
       const response = await server.inject({
         method: 'GET',
@@ -273,18 +246,6 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const { server, organisation, summaryLogRowStatesRepository, urlFor } =
       await createServer({
         accreditationId: 'acc-1',
-        accreditations: [
-          {
-            ...buildReadOrganisation().accreditations[0],
-            id: 'acc-1',
-            status: 'approved',
-            accreditationNumber: 'A26ER5000000002PA'
-          }
-        ],
-        registration: buildRegistration({
-          accreditationId: 'acc-1',
-          overseasSites: { '001': { overseasSiteId: 'site-1' } }
-        }),
         summaryLogs: [
           submittedLog(FILE_ID, SUBMITTED_AT, {
             ...SUBMITTED_META,
@@ -310,11 +271,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const before = await download()
 
-    const [registration] = organisation.registrations
-    registration.registrationNumber = toRegistrationNumber('R26ER5999999999PA')
-    registration.material = 'wood'
-    registration.overseasSites = { '001': { overseasSiteId: 'site-2' } }
-    organisation.accreditations[0].status = 'cancelled'
+    organisation.registrations[REGISTRATION_NUMBER].material = 'wood'
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       withNumbers({
         organisationId: ORGANISATION_ID,
@@ -360,8 +317,6 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       expect.anything(),
       {
         summaryLogId: FILE_ID,
-        organisationId: ORGANISATION_ID,
-        registrationId: REGISTRATION_ID,
         organisationNumber: organisation.organisationNumber,
         registrationNumber: 'R26ER5000000002PA',
         accreditationNumber: 'A26ER5000000002PA'

@@ -1,3 +1,5 @@
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import { organisationInYear } from './organisation-in-year.js'
 import { findPage } from '#repositories/organisations/inmemory-find.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
@@ -26,8 +28,8 @@ const searchable = (organisation) => ({
 
 /**
  * Holds organisations already in the read model's shape, and serves them as
- * given. It ignores `findByOrganisationNumber`'s `year`: a test asking for a
- * year seeds the organisation as it stood in that year.
+ * given. Given a `year`, `findByOrganisationNumber` serves the organisation as
+ * it stood in that year, as the MongoDB adapter does.
  *
  * It shares the in-memory organisations repository's search through the
  * `#repositories/organisations/inmemory-find.js` import, so both match
@@ -45,14 +47,17 @@ export const createInMemoryOrganisationReadRepository = (
   const held = structuredClone(organisations)
 
   return () => ({
-    findByOrganisationNumber: async (organisationNumber) => {
+    findByOrganisationNumber: async (organisationNumber, { year } = {}) => {
       const found = held.find(
         (candidate) => candidate.organisationNumber === organisationNumber
       )
       if (!found) {
         return null
       }
-      return structuredClone(found)
+      const organisation = structuredClone(found)
+      return year === undefined
+        ? organisation
+        : organisationInYear(organisation, year, toCalendarDate(new Date()))
     },
 
     find: async (params) => {

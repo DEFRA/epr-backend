@@ -103,8 +103,6 @@ export const summaryLogsSubmit = {
       })
       await auditSummaryLogSubmit(request, {
         summaryLogId,
-        organisationId,
-        registrationId,
         organisationNumber,
         registrationNumber,
         accreditationNumber: summaryLog.accreditationNumber

@@ -38,7 +38,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
@@ -223,6 +223,7 @@ const setupSubmit = async ({
     organisationId,
     registrationId,
     ...reportKey,
+    year: toYear(2026),
     accreditationId,
     accreditationNumber,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
@@ -352,7 +353,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     await submitSummaryLog(summaryLogId, deps)
 
-    const rowStates = await summaryLogRowStatesForRegistration({
+    const rowStates = await summaryLogRowStatesForLedger({
       ...reportKey,
       accreditationNumber: toAccreditationNumber('ACC-123'),
       year,
@@ -460,21 +461,27 @@ describe('submitSummaryLog resubmission flag source', () => {
 
     expect(flagged).toEqual({ january: true, february: false })
   })
-
-  it('flags every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
-    const { openPeriodLoads, closedPeriodLoads } = emptyLoadsByReportingPeriod()
-
-    const flagged = await submitOverJanuaryAndFebruaryReports({
-      openPeriodLoads,
-      closedPeriodLoads,
-      closedPeriods: [january, february]
-    })
-
-    expect(flagged).toEqual({ january: true, february: true })
-  })
 })
 
 describe('submitSummaryLog stale flagging', () => {
+  it('marks reports stale only once the summary log is submitted, so a report built in between reads it', async () => {
+    const { deps, summaryLogId, summaryLogsRepository } = await setupSubmit({
+      reportsRepository: createInMemoryReportsRepository()()
+    })
+    const update = vi.spyOn(summaryLogsRepository, 'update')
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    const [submittedOrder] = update.mock.calls.flatMap(([, , changes], i) =>
+      changes.status === SUMMARY_LOG_STATUS.SUBMITTED
+        ? [update.mock.invocationCallOrder[i]]
+        : []
+    )
+    const [markedStaleOrder] = vi.mocked(deps.onSummaryLogUploaded).mock
+      .invocationCallOrder
+    expect(submittedOrder).toBeLessThan(markedStaleOrder)
+  })
+
   /**
    * Submits a log over one active report, through the real
    * summary-log-uploaded handler, and returns the report and the log.

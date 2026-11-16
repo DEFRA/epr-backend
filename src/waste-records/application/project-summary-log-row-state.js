@@ -2,6 +2,10 @@ import { classifyWasteRecord } from '#waste-balances/application/target-amount.j
 import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
 
 /**
+ * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
+ * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
+ * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
  * @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js'
  */
 
@@ -31,19 +35,21 @@ const normaliseNegativeZero = (value) => (value === 0 ? 0 : value)
  * `classifyWasteRecord` directly and stays at full precision, which the
  * cross-field reconciliation arithmetic requires.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
- * @param {Object} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {WasteRecord} record
+ * @param {Record<string, TableSchema>} tableSchemas - The table schemas of the record's template
+ * @param {AccreditationValidity | null} accreditation
+ * @param {OverseasSitesContext} overseasSites
  * @returns {SummaryLogRowStateEntry}
  */
 export const projectSummaryLogRowState = (
   record,
+  tableSchemas,
   accreditation,
   overseasSites
 ) => {
   const classified = classifyWasteRecord(
     record,
-    record.data?.processingType,
+    tableSchemas,
     accreditation,
     overseasSites
   )

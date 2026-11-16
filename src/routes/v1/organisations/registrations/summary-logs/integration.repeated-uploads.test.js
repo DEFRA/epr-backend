@@ -5,7 +5,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -416,7 +416,7 @@ describe('Repeated uploads of identical data', () => {
           year: UPLOAD_YEAR
         }
 
-        const committedBefore = await summaryLogRowStatesForRegistration({
+        const committedBefore = await summaryLogRowStatesForLedger({
           ...ledgerId,
           ledgerRepository,
           summaryLogRowStatesRepository
@@ -432,7 +432,7 @@ describe('Repeated uploads of identical data', () => {
           waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
         })
 
-        const committedAfter = await summaryLogRowStatesForRegistration({
+        const committedAfter = await summaryLogRowStatesForLedger({
           ...ledgerId,
           ledgerRepository,
           summaryLogRowStatesRepository

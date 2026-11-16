@@ -65,7 +65,8 @@ export const classifyLoads = ({
   if (
     status !== SUMMARY_LOG_STATUS.VALIDATED ||
     !wasteRecords ||
-    !submittedRowStatesByKey
+    !submittedRowStatesByKey ||
+    !tableSchemas
   ) {
     return {
       loads: null,
@@ -76,6 +77,7 @@ export const classifyLoads = ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
+    tableSchemas,
     accreditation: registration?.accreditation ?? null,
     overseasSites
   })
@@ -88,25 +90,24 @@ export const classifyLoads = ({
     })
   )
 
-  /* v8 ignore start -- defensive guard: registration and tableSchemas are always set when status is VALIDATED */
-  const loadsByReportingPeriod =
-    registration && tableSchemas
-      ? classifyByPeriodStatus({
-          wasteRecords,
-          submittedRowStatesByKey,
-          recordChanges,
-          periodicReports,
-          cadence: isRegistrationAccredited(registration)
-            ? CADENCE.monthly
-            : CADENCE.quarterly,
-          tableSchemas,
-          operatorCategory: getOperatorCategory(registration),
-          classificationContext: {
-            accreditation: registration.accreditation ?? null,
-            overseasSites
-          }
-        })
-      : null
+  /* v8 ignore start -- defensive guard: registration is always set when status is VALIDATED */
+  const loadsByReportingPeriod = registration
+    ? classifyByPeriodStatus({
+        wasteRecords,
+        submittedRowStatesByKey,
+        recordChanges,
+        periodicReports,
+        cadence: isRegistrationAccredited(registration)
+          ? CADENCE.monthly
+          : CADENCE.quarterly,
+        tableSchemas,
+        operatorCategory: getOperatorCategory(registration),
+        classificationContext: {
+          accreditation: registration.accreditation ?? null,
+          overseasSites
+        }
+      })
+    : null
   /* v8 ignore stop */
 
   return { loads, loadsByReportingPeriod }
