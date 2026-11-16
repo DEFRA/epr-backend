@@ -51,7 +51,7 @@ export const createOnSummaryLogUploaded =
     const uploadedAt = new Date().toISOString()
 
     logger.info({
-      message: `Summary log uploaded, marking reports stale for ${organisationNumber}/${registrationNumber}: fileId=${summaryLogId}`
+      message: `Summary log uploaded, marking reports stale for ${organisationNumber}/${registrationNumber} year=${year}: fileId=${summaryLogId}`
     })
 
     const reportsMarkedStale =
@@ -65,7 +65,7 @@ export const createOnSummaryLogUploaded =
 
     if (reportsMarkedStale.length > 0) {
       logger.info({
-        message: `Reports marked as stale for ${organisationNumber}/${registrationNumber} fileId=${summaryLogId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+        message: `Reports marked as stale for ${organisationNumber}/${registrationNumber} year=${year} fileId=${summaryLogId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
       })
 
       await auditMarkReportsStale({

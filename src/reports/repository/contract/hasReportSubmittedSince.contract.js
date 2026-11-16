@@ -20,12 +20,18 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
     let repository
     let organisationNumber
     let registrationNumber
+    let params
 
     beforeEach(
       /** @param {ReportsFixture} fixture */ async ({ reportsRepository }) => {
         repository = reportsRepository()
         organisationNumber = uniqueOrganisationNumber()
         registrationNumber = uniqueRegistrationNumber()
+        params = {
+          organisationNumber,
+          registrationNumber,
+          year: DEFAULT_REPORT_YEAR
+        }
       }
     )
 
@@ -41,20 +47,13 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
 
       // Well before the submission.
       expect(
-        await repository.hasReportSubmittedSince({
-          organisationNumber,
-          registrationNumber,
-          year: DEFAULT_REPORT_YEAR,
-          since: BEFORE
-        })
+        await repository.hasReportSubmittedSince({ ...params, since: BEFORE })
       ).toBe(true)
 
       // One millisecond before: still strictly after -> matches (lower boundary).
       expect(
         await repository.hasReportSubmittedSince({
-          organisationNumber,
-          registrationNumber,
-          year: DEFAULT_REPORT_YEAR,
+          ...params,
           since: oneMsBefore
         })
       ).toBe(true)
@@ -71,21 +70,14 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       // Exactly at the submission instant: not strictly after (strict >).
       expect(
         await repository.hasReportSubmittedSince({
-          organisationNumber,
-          registrationNumber,
-          year: DEFAULT_REPORT_YEAR,
+          ...params,
           since: submittedAt
         })
       ).toBe(false)
 
       // Well after the submission.
       expect(
-        await repository.hasReportSubmittedSince({
-          organisationNumber,
-          registrationNumber,
-          year: DEFAULT_REPORT_YEAR,
-          since: AFTER
-        })
+        await repository.hasReportSubmittedSince({ ...params, since: AFTER })
       ).toBe(false)
     })
 
@@ -95,12 +87,7 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       )
 
       expect(
-        await repository.hasReportSubmittedSince({
-          organisationNumber,
-          registrationNumber,
-          year: DEFAULT_REPORT_YEAR,
-          since: BEFORE
-        })
+        await repository.hasReportSubmittedSince({ ...params, since: BEFORE })
       ).toBe(false)
     })
 
@@ -111,12 +98,7 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       })
 
       expect(
-        await repository.hasReportSubmittedSince({
-          organisationNumber,
-          registrationNumber,
-          year: DEFAULT_REPORT_YEAR,
-          since: BEFORE
-        })
+        await repository.hasReportSubmittedSince({ ...params, since: BEFORE })
       ).toBe(false)
     })
 
@@ -128,12 +110,7 @@ export const testHasReportSubmittedSinceBehaviour = (it) => {
       })
 
       expect(
-        await repository.hasReportSubmittedSince({
-          organisationNumber,
-          registrationNumber,
-          year: DEFAULT_REPORT_YEAR,
-          since: BEFORE
-        })
+        await repository.hasReportSubmittedSince({ ...params, since: BEFORE })
       ).toBe(false)
     })
 

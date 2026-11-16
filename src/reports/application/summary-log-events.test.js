@@ -58,6 +58,13 @@ const buildSystemLogsRepository = () => ({
 const FIXED_NOW = '2025-06-01T12:00:00.000Z'
 const DEFAULT_SL_ID = 'sl-id-new-000000000000000000000001'
 
+const UPLOADED_LOG = {
+  organisationNumber: DEFAULT_ORG_NUMBER,
+  registrationNumber: DEFAULT_REG_NUMBER,
+  year: DEFAULT_REPORT_YEAR,
+  summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID)
+}
+
 const closedPeriod = {
   year: DEFAULT_REPORT_YEAR,
   cadence: 'monthly',
@@ -84,10 +91,7 @@ describe('onSummaryLogUploaded', () => {
     const { id: reportId } = await repo.createReport(buildCreateReportParams())
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -108,10 +112,7 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -129,10 +130,7 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -161,10 +159,7 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -186,10 +181,7 @@ describe('onSummaryLogUploaded', () => {
     const systemLogsRepository = buildSystemLogsRepository()
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository
     })
@@ -214,10 +206,7 @@ describe('onSummaryLogUploaded', () => {
 
   it('does nothing when there are no active reports', async () => {
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       reportsRepository: createInMemoryReportsRepository()(),
       systemLogsRepository: buildSystemLogsRepository()
     })
@@ -232,10 +221,7 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       periodsRequiringResubmission: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
@@ -256,10 +242,7 @@ describe('onSummaryLogUploaded', () => {
     const systemLogsRepository = buildSystemLogsRepository()
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       periodsRequiringResubmission: [closedPeriod],
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository
@@ -292,10 +275,7 @@ describe('onSummaryLogUploaded', () => {
     )
 
     await onSummaryLogUploaded({
-      organisationNumber: DEFAULT_ORG_NUMBER,
-      registrationNumber: DEFAULT_REG_NUMBER,
-      year: DEFAULT_REPORT_YEAR,
-      summaryLogId: toSummaryLogFileId(DEFAULT_SL_ID),
+      ...UPLOADED_LOG,
       reportsRepository: reportsRepositoryFactory(),
       systemLogsRepository: buildSystemLogsRepository()
     })
