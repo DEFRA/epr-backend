@@ -78,7 +78,7 @@ export const indexByLedger = (
  * from the read model's accreditation for its year. ADR-0044 has an
  * accreditation valid from its approval to the end of its scheme year.
  *
- * @param {LedgerAccreditation} ledgerAccreditation
+ * @param {Pick<LedgerAccreditation, 'registration' | 'year'>} ledgerAccreditation
  * @returns {AccreditationValidity}
  */
 export const validityOf = ({ registration, year }) => {

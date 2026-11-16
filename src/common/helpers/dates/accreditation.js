@@ -70,16 +70,20 @@ export function isAccreditedAtDates(dates, accreditation) {
 }
 
 /**
- * Convert dates to numbers and sort descending
- * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history
+ * Convert dates to numbers and sort descending. Of changes at the same time,
+ * the one later in the history comes first, so the latest recorded wins.
+ * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history, in recorded order
  * @returns {StatusHistoryDateTime[]} Sorted list
  */
 export function getStatusHistoryDateTimes(statusHistory) {
-  const statusDates = statusHistory.map((s) => ({
-    updatedAt: new Date(s.updatedAt).getTime(),
-    status: s.status
-  }))
-  return statusDates.sort((a, b) => b.updatedAt - a.updatedAt)
+  return statusHistory
+    .map((s, index) => ({
+      index,
+      updatedAt: new Date(s.updatedAt).getTime(),
+      status: s.status
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt || b.index - a.index)
+    .map(({ updatedAt, status }) => ({ updatedAt, status }))
 }
 
 /**
