@@ -108,8 +108,8 @@ const servesAccreditedReport = (registration, year) => {
 }
 
 /**
- * The day the year's accreditation took effect: its validFrom, which the read
- * model dates its approval at.
+ * The day the year's accreditation took effect: its validFrom, which
+ * `toAccreditationStatusTimeline` dates its first approval at.
  *
  * @param {Registration} registration
  * @param {Year} year

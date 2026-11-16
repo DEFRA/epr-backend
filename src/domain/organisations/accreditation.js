@@ -85,7 +85,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber;
- *  status: StoredAccreditationStatus;
+ *  status: Extract<StoredAccreditationStatus, 'approved'|'suspended'>;
  *  validFrom: string;
  *  validTo: string
  * }} AccreditationApproved
@@ -94,7 +94,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber | null;
- *  status: StoredAccreditationStatus;
+ *  status: Extract<StoredAccreditationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
  * }} AccreditationOther

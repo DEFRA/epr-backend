@@ -155,7 +155,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: RegistrationNumber;
- *  status:StoredRegistrationStatus;
+ *  status: Extract<StoredRegistrationStatus, 'approved'>;
  *  validFrom: string;
  * }} RegistrationApproved
  */
@@ -163,7 +163,7 @@
 /**
  * @typedef {RegistrationBase & {
  *  registrationNumber: RegistrationNumber | null;
- *  status: StoredRegistrationStatus;
+ *  status: Extract<StoredRegistrationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  * }} RegistrationOther
  */

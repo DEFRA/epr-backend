@@ -17,6 +17,7 @@ import {
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { organisationInYear } from './organisation-in-year.js'
 import {
+  lastRecordedAt,
   toAccreditationStatusTimeline,
   toOrganisationStatusTimeline,
   toRegistrationStatusTimeline
@@ -75,7 +76,7 @@ const toAccreditationCommon = ({
   ...accreditation,
   status: {
     current,
-    lastUpdatedAt: timeline.at(-1)?.updatedAt,
+    lastUpdatedAt: lastRecordedAt(timeline),
     timeline: timeline.map(({ status, at }) => ({ status, at }))
   }
 })

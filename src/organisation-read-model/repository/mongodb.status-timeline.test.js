@@ -131,6 +131,37 @@ describe('status timeline', () => {
     })
   })
 
+  it('serves when the last change was recorded, even when an approval from a later validFrom takes effect after it', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const stored = organisationAccredited({
+      validFrom: '2026-01-01',
+      statusHistory: [
+        { status: 'created', updatedAt: '2025-12-01T09:00:00.000Z' },
+        { status: 'approved', updatedAt: '2025-12-10T09:00:00.000Z' },
+        { status: 'suspended', updatedAt: '2025-12-20T09:00:00.000Z' }
+      ]
+    })
+    const repository = await organisationReadRepositoryWith({
+      organisations: [stored]
+    })
+
+    const organisation = await findOrganisation(
+      repository,
+      stored.organisationNumber
+    )
+
+    expect(
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+    ).toMatchObject({
+      lastUpdatedAt: '2025-12-20T09:00:00.000Z',
+      timeline: [
+        { status: 'suspended', at: '2025-12-20T09:00:00.000Z' },
+        { status: 'approved', at: '2026-01-01T00:00:00.000Z' }
+      ]
+    })
+  })
+
   it('serves only the changes since the last re-creation, the approval from validFrom', async ({
     organisationReadRepositoryWith
   }) => {

@@ -45,19 +45,16 @@ const sinceLastCreated = (recorded) =>
   )
 
 /**
- * The changes to a status the read model serves, oldest first. Until
- * ADR-0051's events exist, the approval takes effect from validFrom and every
- * other change when it was recorded. A stable sort keeps recorded order among
- * equal times.
+ * The changes oldest first. Until ADR-0051's events exist, the first approval
+ * takes effect from validFrom and every other change when it was recorded. A
+ * stable sort keeps recorded order among equal times.
  *
  * @template {string} T
- * @template {T} S
  * @param {Change<T>[]} recorded - in recorded order
  * @param {string} validFrom
- * @param {readonly S[]} statuses - the statuses the read model serves
- * @returns {Change<S>[]}
+ * @returns {Change<T>[]}
  */
-const setAtDates = (recorded, validFrom, statuses) => {
+const setAtDates = (recorded, validFrom) => {
   const approval = recorded.findIndex(({ status }) => status === 'approved')
   const approvedFrom = new Date(validFrom)
   return recorded
@@ -65,10 +62,33 @@ const setAtDates = (recorded, validFrom, statuses) => {
       index === approval ? { ...change, at: approvedFrom } : change
     )
     .toSorted((one, other) => one.at.getTime() - other.at.getTime())
-    .flatMap(({ status, at, updatedAt }) =>
-      isOneOf(statuses, status) ? [{ status, at, updatedAt }] : []
-    )
 }
+
+/**
+ * The changes to a status the read model serves.
+ *
+ * @template {string} T
+ * @template {T} S
+ * @param {Change<T>[]} changes
+ * @param {readonly S[]} statuses - the statuses the read model serves
+ * @returns {Change<S>[]}
+ */
+const servedOnly = (changes, statuses) =>
+  changes.flatMap(({ status, at, updatedAt }) =>
+    isOneOf(statuses, status) ? [{ status, at, updatedAt }] : []
+  )
+
+/**
+ * The latest of the times the changes were recorded.
+ *
+ * @param {{ updatedAt: string }[]} changes - each `updatedAt` an ISO 8601 datetime
+ * @returns {string | undefined}
+ */
+export const lastRecordedAt = (changes) =>
+  changes
+    .map(({ updatedAt }) => updatedAt)
+    .toSorted()
+    .at(-1)
 
 /**
  * The timeline of the changes, and when the last of them was recorded.
@@ -78,7 +98,7 @@ const setAtDates = (recorded, validFrom, statuses) => {
  * @returns {Omit<Status<S>, 'current'>}
  */
 const toTimelineStatus = (changes) => ({
-  lastUpdatedAt: changes.at(-1)?.updatedAt,
+  lastUpdatedAt: lastRecordedAt(changes),
   timeline: changes.map(({ status, at }) => ({
     status,
     at: at.toISOString()
@@ -93,14 +113,12 @@ const toTimelineStatus = (changes) => ({
  */
 export const toOrganisationStatusTimeline = (statusHistory) =>
   toTimelineStatus(
-    inRecordedOrder(statusHistory).filter(({ status }) =>
-      isOneOf(ORGANISATION_STATUSES, status)
-    )
+    servedOnly(inRecordedOrder(statusHistory), ORGANISATION_STATUSES)
   )
 
 /**
- * The registration's changes since it was last created, its approval taking
- * effect from validFrom.
+ * The registration's changes since it was last created, its first approval
+ * taking effect from validFrom.
  *
  * @param {StatusHistoryEntryOf<StoredRegistrationStatus>[]} statusHistory
  * @param {string} validFrom
@@ -108,16 +126,15 @@ export const toOrganisationStatusTimeline = (statusHistory) =>
  */
 export const toRegistrationStatusTimeline = (statusHistory, validFrom) =>
   toTimelineStatus(
-    setAtDates(
-      sinceLastCreated(inRecordedOrder(statusHistory)),
-      validFrom,
+    servedOnly(
+      setAtDates(sinceLastCreated(inRecordedOrder(statusHistory)), validFrom),
       REGISTRATION_STATUSES
     )
   )
 
 /**
- * The accreditation's changes since it was last created, its approval taking
- * effect from validFrom.
+ * The accreditation's changes since it was last created, its first approval
+ * taking effect from validFrom.
  *
  * @param {StatusHistoryEntryOf<StoredAccreditationStatus>[]} statusHistory
  * @param {string} validFrom
@@ -125,9 +142,8 @@ export const toRegistrationStatusTimeline = (statusHistory, validFrom) =>
  */
 export const toAccreditationStatusTimeline = (statusHistory, validFrom) =>
   toTimelineStatus(
-    setAtDates(
-      sinceLastCreated(inRecordedOrder(statusHistory)),
-      validFrom,
+    servedOnly(
+      setAtDates(sinceLastCreated(inRecordedOrder(statusHistory)), validFrom),
       ACCREDITATION_STATUSES
     )
   )
