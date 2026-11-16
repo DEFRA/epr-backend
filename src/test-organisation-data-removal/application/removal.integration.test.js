@@ -382,7 +382,9 @@ describe('removeTestOrganisationData', () => {
             events: 1,
             rowStates: 1,
             reports: 1
-          }
+          },
+          summaryLogIds: ['unheld-log'],
+          prnIds: [expect.any(String)]
         },
         {
           ...UNHELD_YEAR,
@@ -392,12 +394,16 @@ describe('removeTestOrganisationData', () => {
             events: 1,
             rowStates: 1,
             reports: 1
-          }
+          },
+          summaryLogIds: ['unheld-year-log'],
+          prnIds: [expect.any(String)]
         },
         {
           ...HELD,
           accreditationNumber: undefined,
-          removed: { ...NOTHING, summaryLogs: 1 }
+          removed: { ...NOTHING, summaryLogs: 1 },
+          summaryLogIds: ['no-accreditation-log'],
+          prnIds: []
         }
       ])
     )
@@ -428,6 +434,10 @@ describe('removeTestOrganisationData', () => {
             events: 1,
             rowStates: 1,
             reports: 1
+          },
+          sources: {
+            summaryLogIds: ['unheld-log'],
+            prnIds: [expect.any(String)]
           }
         }
       ])
@@ -466,7 +476,7 @@ describe('removeTestOrganisationData', () => {
     })
     expect(logger.error).toHaveBeenCalledWith({
       message:
-        'Skipping test organisation 999999: kept records citing a summary log or PRN it would remove=1'
+        'Skipping test organisation 999999: kept records citing a summary log or PRN it would remove: events=1 rowStates=0 reports=0'
     })
   })
 
@@ -519,6 +529,45 @@ describe('removeTestOrganisationData', () => {
       )
     }
   )
+
+  it('leaves a yearless ledger under a held accreditation, and removes one under an unheld registration', async () => {
+    const { year: _, ...heldYearless } = HELD
+    const { year: __, ...unheldYearless } = UNHELD
+    for (const numbers of [heldYearless, unheldYearless]) {
+      const { year: ___, ...yearlessEvent } = buildLedgerEvent({
+        ...numbers,
+        number: 9,
+        payload: { creditTotal: 1 }
+      })
+      await db.collection('waste-balance-events').insertOne(yearlessEvent)
+      await db
+        .collection('summary-log-row-states')
+        .insertOne({ ...numbers, summaryLogIds: [] })
+    }
+
+    const result = await run(false)
+
+    expect(result.undecided).toBe(1)
+    expect(
+      await db
+        .collection('waste-balance-events')
+        .countDocuments({ ...heldYearless, year: { $exists: false } })
+    ).toBe(1)
+    expect(
+      await db
+        .collection('summary-log-row-states')
+        .countDocuments({ ...heldYearless, year: { $exists: false } })
+    ).toBe(1)
+    expect(
+      await db
+        .collection('waste-balance-events')
+        .countDocuments({ ...unheldYearless, year: { $exists: false } })
+    ).toBe(0)
+    expect(logger.warn).toHaveBeenCalledWith({
+      message:
+        'Leaving test organisation ledger organisationNumber=999999 registrationNumber=REG-1 accreditationNumber=ACC-1 year=undefined: it has no year to judge its accreditation by'
+    })
+  })
 
   it('removes everything of a test organisation the read model does not hold at all', async () => {
     const absent = {

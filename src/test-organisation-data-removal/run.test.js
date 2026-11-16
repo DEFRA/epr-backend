@@ -60,7 +60,8 @@ describe('runTestOrganisationDataRemoval', () => {
             reports: 1,
             prns: 4,
             summaryLogs: 1
-          }
+          },
+          sources: { summaryLogIds: ['log-1'], prnIds: ['prn-1', 'prn-2'] }
         },
         {
           ledger,
@@ -70,9 +71,11 @@ describe('runTestOrganisationDataRemoval', () => {
             reports: 0,
             prns: 0,
             summaryLogs: 1
-          }
+          },
+          sources: { summaryLogIds: ['log-2'], prnIds: [] }
         }
       ],
+      undecided: 1,
       skipped: 0,
       failed: 0,
       auditFailed: 0
@@ -92,9 +95,9 @@ describe('runTestOrganisationDataRemoval', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Test organisation data removal (dry-run): ledgers=2 skipped=0 failed=0 auditFailed=0' +
-        '; organisationNumber=500521 registrationNumber=TEST-REG-0123 accreditationNumber=test-acc-0123 year=2026: events=3 rowStates=2 reports=1 prns=4 summaryLogs=1' +
-        '; organisationNumber=500521 registrationNumber=TEST-REG-0123 accreditationNumber=absent year=2026: events=0 rowStates=0 reports=0 prns=0 summaryLogs=1'
+        'Test organisation data removal (dry-run): ledgers=2 undecided=1 skipped=0 failed=0 auditFailed=0' +
+        '; organisationNumber=500521 registrationNumber=TEST-REG-0123 accreditationNumber=test-acc-0123 year=2026: events=3 rowStates=2 reports=1 prns=4 summaryLogs=1 summaryLogIds=log-1 prnIds=prn-1,prn-2' +
+        '; organisationNumber=500521 registrationNumber=TEST-REG-0123 accreditationNumber=absent year=2026: events=0 rowStates=0 reports=0 prns=0 summaryLogs=1 summaryLogIds=log-2 prnIds='
     })
     expect(lock.free).toHaveBeenCalled()
   })

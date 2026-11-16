@@ -2,6 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 
 import {
+  describeCounts,
   describeLedger,
   removeTestOrganisationData
 } from './application/removal.js'
@@ -9,21 +10,19 @@ import { createTestOrganisationRecords } from './mongodb.js'
 import { config } from '../config.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
-/** @import { RecordCounts } from './mongodb.js' */
+/** @import { SourceIds } from './mongodb.js' */
 
 const LOCK_NAME = 'test-organisation-data-removal'
 
-/** @param {RecordCounts} counts */
-const describeCounts = (counts) =>
-  Object.entries(counts)
-    .map(([kind, count]) => `${kind}=${count}`)
-    .join(' ')
+/** @param {SourceIds} sources */
+const describeSources = ({ summaryLogIds, prnIds }) =>
+  `summaryLogIds=${summaryLogIds.join(',')} prnIds=${prnIds.join(',')}`
 
 /** @param {StartedServer} server */
 const runRemoval = async (server) => {
   const isDryRun = !config.get('featureFlags.testOrganisationDataRemoval')
 
-  const { removed, skipped, failed, auditFailed } =
+  const { removed, undecided, skipped, failed, auditFailed } =
     await removeTestOrganisationData(
       {
         testOrganisationNumbers: TEST_ORGANISATION_NUMBERS,
@@ -38,12 +37,12 @@ const runRemoval = async (server) => {
   const mode = isDryRun ? 'dry-run' : 'removal'
   const byLedger = removed
     .map(
-      ({ ledger, counts }) =>
-        `; ${describeLedger(ledger)}: ${describeCounts(counts)}`
+      ({ ledger, counts, sources }) =>
+        `; ${describeLedger(ledger)}: ${describeCounts(counts)} ${describeSources(sources)}`
     )
     .join('')
   logger.info({
-    message: `Test organisation data removal (${mode}): ledgers=${removed.length} skipped=${skipped} failed=${failed} auditFailed=${auditFailed}${byLedger}`
+    message: `Test organisation data removal (${mode}): ledgers=${removed.length} undecided=${undecided} skipped=${skipped} failed=${failed} auditFailed=${auditFailed}${byLedger}`
   })
 }
 
@@ -51,8 +50,9 @@ const runRemoval = async (server) => {
  * Startup removal of test organisations' records stored under numbers the
  * organisation read model does not hold for them. Flag off (the default) only
  * reports what it would remove; on removes it, auditing each ledger. Both
- * modes log one summary line, and an error for each failure. Idempotent, so
- * safe to leave enabled across restarts.
+ * modes log one summary line, and an error for each failure. It judges against
+ * the read model as it stands at each start, so the flag is meant to be turned
+ * off once the removal has run.
  *
  * @param {StartedServer} server
  */
