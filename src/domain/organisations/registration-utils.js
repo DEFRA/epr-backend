@@ -6,15 +6,16 @@ import {
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
+import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, RegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material, Organisation, StoredRegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { ReportableRegistration } from '#domain/organisations/registration.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 
-/** @type {Set<RegistrationStatus>} */
+/** @type {Set<StoredRegistrationStatus>} */
 const REPORTABLE_STATUSES = new Set([
   REGISTRATION_STATUS.APPROVED,
   REGISTRATION_STATUS.CANCELLED
@@ -44,7 +45,7 @@ export function getReportableRegistrations(orgs) {
  * or '' when no active (approved/suspended) accreditation is found.
  *
  * @param {{ accreditationId?: string | null }} registration
- * @param {{ accreditations: Array<{ id: string, status: AccreditationStatus, accreditationNumber?: string | null }> }} org
+ * @param {{ accreditations: Array<{ id: string, status: StoredAccreditationStatus, accreditationNumber?: string | null }> }} org
  * @returns {string}
  */
 export function resolveAccreditationNumber(registration, org) {
@@ -60,7 +61,7 @@ export function resolveAccreditationNumber(registration, org) {
 }
 
 /**
- * @typedef {{ accreditation: { status: AccreditationStatus } | null }} AccreditationLink
+ * @typedef {{ accreditation: { status: StoredAccreditationStatus } | null }} AccreditationLink
  */
 
 /**
@@ -80,7 +81,7 @@ export function isRegistrationAccredited({ accreditation }) {
 
 /**
  * Whether the registration is approved and active during a specific year
- * @param {Pick<ReadModelRegistration, 'status' | 'validFrom'>} registration
+ * @param {Pick<ReadModelRegistration, 'status'>} registration
  * @param {Year} year
  * @returns {boolean}
  */
@@ -88,7 +89,11 @@ export function isRegistrationActiveInYear(registration, year) {
   if (registration.status.current !== REGISTRATION_STATUS.APPROVED) {
     return false
   }
-  return toCalendarDate(registration.validFrom) <= yearBounds(year).end
+  const approvedAt = firstApprovedAt(registration.status.timeline)
+  return (
+    approvedAt !== undefined &&
+    toCalendarDate(approvedAt) <= yearBounds(year).end
+  )
 }
 
 /**
@@ -124,7 +129,7 @@ export function resolveMaterial(record) {
  * or the matched accreditation is not in an active status.
  *
  * @param {{ accreditationId?: string | null }} registration
- * @param {{ accreditations: Array<{ id: string; status: AccreditationStatus } & Accreditation> }} org
+ * @param {{ accreditations: Array<{ id: string; status: StoredAccreditationStatus } & Accreditation> }} org
  * @returns {Accreditation | null}
  */
 export function resolveAccreditation(registration, org) {
@@ -145,7 +150,7 @@ export function resolveAccreditation(registration, org) {
  * null when there is none or the number is null.
  *
  * @param {AccreditationNumber | null} accreditationNumber
- * @param {{ accreditations: Array<{ status: AccreditationStatus } & Accreditation> }} org
+ * @param {{ accreditations: Array<{ status: StoredAccreditationStatus } & Accreditation> }} org
  * @returns {Accreditation | null}
  */
 export function resolveAccreditationByNumber(accreditationNumber, org) {

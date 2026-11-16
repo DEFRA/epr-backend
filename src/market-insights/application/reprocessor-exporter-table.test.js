@@ -54,8 +54,8 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
  *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
  *   accreditationRegulator?: import('#domain/organisations/model.js').RegulatorValue,
- *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').RegistrationStatus, updatedAt: string }[]
- *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').AccreditationStatus, updatedAt: string }[]
+ *   registrationStatusHistory?: { status: import('#domain/organisations/model.js').StoredRegistrationStatus, updatedAt: string }[]
+ *   accreditationStatusHistory?: { status: import('#domain/organisations/model.js').StoredAccreditationStatus, updatedAt: string }[]
  *   validFrom?: string
  * }} options
  */

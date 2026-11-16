@@ -163,20 +163,11 @@ describe('organisation read repository over MongoDB repositories', () => {
       stored.organisationNumber
     )
 
-    expect(organisation.registrations[REPROCESSOR_NUMBER]).toHaveProperty(
-      'status.timeline',
-      [
-        {
-          status: 'created',
-          at: '2026-01-01T09:00:00.000Z',
-          updatedAt: '2026-01-01T09:00:00.000Z'
-        },
-        {
-          status: 'approved',
-          at: '2026-02-01T00:00:00.000Z',
-          updatedAt: '2026-02-01T23:30:00.000Z'
-        }
-      ]
+    expect(organisation.registrations[REPROCESSOR_NUMBER].status).toMatchObject(
+      {
+        lastUpdatedAt: '2026-02-01T23:30:00.000Z',
+        timeline: [{ status: 'approved', at: '2026-02-01T00:00:00.000Z' }]
+      }
     )
   })
 })

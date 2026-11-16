@@ -3,7 +3,7 @@ import { vi } from 'vitest'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
@@ -86,9 +86,8 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
 
 /** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
 export const reprocessorResponse = {
-  status: { current: 'approved', timeline: approvedTimelineFrom('2026-02-01') },
+  status: approvedStatusFrom('2026-02-01'),
   standingByDate,
-  validFrom: '2026-02-01',
   material: 'glass_re_melt',
   submittedToRegulator: { code: 'ea' },
   wasteProcessingType: 'reprocessor',
@@ -104,19 +103,15 @@ export const reprocessorResponse = {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
       prns: { open: true },
-      status: {
-        current: 'approved',
-        timeline: approvedTimelineFrom('2026-07-01')
-      }
+      status: approvedStatusFrom('2026-07-01')
     }
   }
 }
 
 /** What `buildAccreditedOrganisation` serves for its exporter while 2026 is open. */
 export const exporterResponse = {
-  status: { current: 'approved', timeline: approvedTimelineFrom('2026-02-01') },
+  status: approvedStatusFrom('2026-02-01'),
   standingByDate,
-  validFrom: '2026-02-01',
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },
   wasteProcessingType: 'exporter',
@@ -125,10 +120,7 @@ export const exporterResponse = {
     2026: {
       accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
       prns: { open: true },
-      status: {
-        current: 'approved',
-        timeline: approvedTimelineFrom('2026-07-01')
-      },
+      status: approvedStatusFrom('2026-07-01'),
       overseasSites: {
         '001': { status: 'approved', approvedOn: '2026-01-01' },
         '002': { status: 'pending' }

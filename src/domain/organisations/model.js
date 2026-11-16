@@ -9,7 +9,7 @@
 /**
  * Status values for registrations. A registration can never be suspended —
  * suspension is an accreditation-only concept (PAE-1705).
- * @typedef {typeof REGISTRATION_STATUS[keyof typeof REGISTRATION_STATUS]} RegistrationStatus
+ * @typedef {typeof REGISTRATION_STATUS[keyof typeof REGISTRATION_STATUS]} StoredRegistrationStatus
  */
 export const REGISTRATION_STATUS = Object.freeze({
   CREATED: 'created',
@@ -20,7 +20,7 @@ export const REGISTRATION_STATUS = Object.freeze({
 
 /**
  * Status values for accreditations
- * @typedef {typeof ACCREDITATION_STATUS[keyof typeof ACCREDITATION_STATUS]} AccreditationStatus
+ * @typedef {typeof ACCREDITATION_STATUS[keyof typeof ACCREDITATION_STATUS]} StoredAccreditationStatus
  */
 export const ACCREDITATION_STATUS = Object.freeze({
   CREATED: 'created',
@@ -33,7 +33,7 @@ export const ACCREDITATION_STATUS = Object.freeze({
 /**
  * Union for code that is generic over registrations and accreditations
  * (status history, user collation).
- * @typedef {RegistrationStatus | AccreditationStatus} RegOrAccStatus
+ * @typedef {StoredRegistrationStatus | StoredAccreditationStatus} StoredRegOrAccStatus
  */
 
 export const LEDGER_ACCREDITATION_KIND = Object.freeze({
@@ -41,7 +41,7 @@ export const LEDGER_ACCREDITATION_KIND = Object.freeze({
   REGISTERED_ONLY: 'registeredOnly'
 })
 
-/** @type {ReadonlySet<AccreditationStatus>} */
+/** @type {ReadonlySet<StoredAccreditationStatus>} */
 export const ACTIVE_ACCREDITATION_STATUSES = new Set([
   ACCREDITATION_STATUS.APPROVED,
   ACCREDITATION_STATUS.SUSPENDED
@@ -49,7 +49,7 @@ export const ACTIVE_ACCREDITATION_STATUSES = new Set([
 
 /**
  * Status values for organisations
- * @typedef {typeof ORGANISATION_STATUS[keyof typeof ORGANISATION_STATUS]} OrganisationStatus
+ * @typedef {typeof ORGANISATION_STATUS[keyof typeof ORGANISATION_STATUS]} StoredOrganisationStatus
  */
 export const ORGANISATION_STATUS = Object.freeze({
   CREATED: 'created',
@@ -286,7 +286,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
- *   status: RegOrAccStatus;
+ *   status: StoredOrganisationStatus;
  *   updatedAt: Date;
  *   updatedBy?: string;
  * }} StatusHistoryItem
@@ -320,7 +320,7 @@ export const USER_ROLES = Object.freeze({
  *   registrations: Registration[];
  *   reprocessingNations?: NationValue[];
  *   schemaVersion: number;
- *   status: OrganisationStatus;
+ *   status: StoredOrganisationStatus;
  *   statusHistory: StatusHistoryItem[];
  *   submittedToRegulator: RegulatorValue;
  *   submitterContactDetails: User;

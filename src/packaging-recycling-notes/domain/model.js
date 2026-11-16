@@ -3,7 +3,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 export const PRN_NUMBER_MAX_LENGTH = 20
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
  * Status values for Packaging Recycling Notes (PRNs)
@@ -133,7 +133,7 @@ export class AccreditationStatusError extends Error {
  * issuance is governed, so any other target status passes.
  *
  * @param {PrnStatus} newStatus
- * @param {{ status: AccreditationStatus } | null | undefined} accreditation
+ * @param {{ status: StoredAccreditationStatus } | null | undefined} accreditation
  * @returns {AccreditationStatusError | undefined}
  */
 export function issuanceRefusal(newStatus, accreditation) {

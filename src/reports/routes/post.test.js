@@ -1,7 +1,7 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
@@ -81,22 +81,14 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
     ? buildReadAccreditation({
         accreditationNumber: accreditationRecord.accreditationNumber,
         status: approved
-          ? {
-              current: 'approved',
-              timeline: approvedTimelineFrom('2026-07-01')
-            }
+          ? approvedStatusFrom('2026-07-01')
           : {
-              current: 'cancelled',
+              current: /** @type {const} */ ('cancelled'),
+              lastUpdatedAt: '2026-02-01T09:00:00.000Z',
               timeline: [
                 {
-                  status: 'created',
-                  at: '2026-01-01T09:00:00.000Z',
-                  updatedAt: '2026-01-01T09:00:00.000Z'
-                },
-                {
-                  status: 'cancelled',
-                  at: '2026-02-01T09:00:00.000Z',
-                  updatedAt: '2026-02-01T09:00:00.000Z'
+                  status: /** @type {const} */ ('cancelled'),
+                  at: '2026-02-01T09:00:00.000Z'
                 }
               ]
             }
@@ -106,11 +98,7 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
     ? { [YEAR]: isExporter ? buildReadExporterAccreditation(served) : served }
     : {}
   const fields = {
-    validFrom: registration.validFrom,
-    status: {
-      current: 'approved',
-      timeline: approvedTimelineFrom(registration.validFrom)
-    },
+    status: approvedStatusFrom(registration.validFrom),
     standingByDate: {
       [YEAR]: {
         [registration.validFrom]: { standing: 'registeredOnly' },
