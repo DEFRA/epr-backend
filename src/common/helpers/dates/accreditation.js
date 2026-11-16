@@ -5,11 +5,11 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 /** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
-/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {AccreditationValidity, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
+/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
 
 /**
- * @typedef {{ at: number, status: AccreditationStatus }} StatusHistoryDateTime
+ * @typedef {{ updatedAt: number, status: StoredAccreditationStatus }} StatusHistoryDateTime
  */
 
 /**
@@ -70,16 +70,20 @@ export function isAccreditedAtDates(dates, accreditation) {
 }
 
 /**
- * Convert dates to numbers and sort descending
- * @param { AccreditationValidity['statusHistory'] } statusHistory - Accreditation status history
+ * Convert dates to numbers and sort descending. Of changes at the same time,
+ * the one later in the history comes first, so the latest recorded wins.
+ * @param { StatusHistoryEntry[] } statusHistory - Accreditation status history, in recorded order
  * @returns {StatusHistoryDateTime[]} Sorted list
  */
 export function getStatusHistoryDateTimes(statusHistory) {
-  const statusDates = statusHistory.map((entry) => ({
-    at: new Date('at' in entry ? entry.at : entry.updatedAt).getTime(),
-    status: entry.status
-  }))
-  return statusDates.sort((a, b) => b.at - a.at)
+  return statusHistory
+    .map((s, index) => ({
+      index,
+      updatedAt: new Date(s.updatedAt).getTime(),
+      status: s.status
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt || b.index - a.index)
+    .map(({ updatedAt, status }) => ({ updatedAt, status }))
 }
 
 /**
@@ -101,22 +105,23 @@ export function isWithinAccreditationDateRange(date, window) {
 
 /**
  * The status an accreditation held on a date, read from its history: each
- * entry holds from its `at` until the next. Before the first entry there is
- * none, so a date there is left to the validity window alone.
+ * entry holds from its `updatedAt` until the next. Before the first entry
+ * there is none, so a date there is left to the validity window alone.
  *
  * @param {string|Date} date
  * @param {StatusHistoryDateTime[]} statusHistory - descending
- * @returns {AccreditationStatus | undefined}
+ * @returns {StoredAccreditationStatus | undefined}
  */
 export function statusHeldAt(date, statusHistory) {
-  return statusHistory.find((entry) => entry.at <= new Date(date).getTime())
-    ?.status
+  return statusHistory.find(
+    (entry) => entry.updatedAt <= new Date(date).getTime()
+  )?.status
 }
 
 /**
  * Whether the accreditation's history excludes a date from its validity
  * window. Suspension is temporary and cancellation is terminal, but both take
- * effect from their status-history `at`, so a date before the change is
+ * effect from their status-history `updatedAt`, so a date before the change is
  * unaffected and still counts. The window itself (validFrom/validTo) is never
  * altered by these transitions.
  *

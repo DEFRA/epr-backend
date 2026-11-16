@@ -2,7 +2,6 @@ import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { validityOf } from '#waste-balances/application/read-model-accreditations.js'
 import {
   accreditationWindow,
@@ -10,10 +9,7 @@ import {
   statusHeldAt
 } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
-import {
-  ACCREDITATION_STATUS,
-  ACTIVE_ACCREDITATION_STATUSES
-} from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
@@ -53,7 +49,12 @@ import {
 /**
  * A registration whose accreditation for a year has been granted.
  *
- * @typedef {AccreditationOfRegistration & { accreditation: AccreditationValidity }} GrantedRegistration
+ * @typedef {AccreditationOfRegistration & {
+ *   key: string,
+ *   accreditation: AccreditationValidity,
+ *   window: AccreditationWindow,
+ *   history: StatusHistoryDateTime[]
+ * }} GrantedRegistration
  */
 
 /**
@@ -61,20 +62,6 @@ import {
  *
  * @typedef {RegistrationOfOrganisation & { month: YearMonth }} AccreditedMonth
  */
-
-/**
- * Whether the accreditation has ever been granted, read from its history
- * rather than from the status it holds now. The schema makes the validity
- * dates optional rather than absent for an accreditation still created or
- * since rejected, so one that carries dates must not be walked as though it
- * were live. Reading the history keeps an approval since reverted to draft,
- * and a cancellation, on the months they held, which the validity window and
- * the status on each day then bound.
- *
- * @param {AccreditationValidity} accreditation
- */
-const hasBeenGranted = ({ statusHistory }) =>
-  statusHistory.some(({ status }) => ACTIVE_ACCREDITATION_STATUSES.has(status))
 
 /**
  * Every day of a period, as the bare dates a load can carry.
@@ -130,37 +117,67 @@ const isAccreditedDuring = (period, window, history) =>
   )
 
 /**
- * Every accreditation for one of the years the read model serves, outside
- * test organisations, that has been granted, among those the caller's
- * publication covers. Only an accredited registration reports monthly, so a
- * registered-only operator yields nothing.
+ * Every accreditation the read model serves for the years given, outside test
+ * organisations, that has been approved, with its validity window and parsed
+ * history.
+ *
+ * @param {Organisation[]} organisations
+ * @param {Year[]} years
+ * @returns {GrantedRegistration[]}
+ */
+const everyGranted = (organisations, years) =>
+  reportableRegistrations(organisations).flatMap(
+    ({ organisationNumber, registrationNumber, registration, key }) =>
+      years.flatMap((year) => {
+        if (!Object.hasOwn(registration.accreditations, year)) {
+          return []
+        }
+        const accreditation = validityOf({ registration, year })
+        const window = accreditationWindow(accreditation)
+        return window === null
+          ? []
+          : [
+              {
+                organisationNumber,
+                registrationNumber,
+                registration,
+                year,
+                key,
+                accreditation,
+                window,
+                history: getStatusHistoryDateTimes(accreditation.statusHistory)
+              }
+            ]
+      })
+  )
+
+/**
+ * Each register's granted accreditations by the years asked for. The figures
+ * for one publication share one register, so they work these out once.
+ *
+ * @type {WeakMap<Organisation[], Map<string, GrantedRegistration[]>>}
+ */
+const grantedByRegister = new WeakMap()
+
+/**
+ * Every accreditation the read model serves for the years given, outside test
+ * organisations, that has been approved, with its validity window, among those
+ * the caller's publication covers. Only an accredited registration reports
+ * monthly, so a registered-only operator yields nothing.
  *
  * @param {Organisation[]} organisations
  * @param {Year[]} years
  * @param {CoversRegistration} covers
- * @returns {Generator<GrantedRegistration>}
+ * @returns {GrantedRegistration[]}
  */
-export function* grantedRegistrations(organisations, years, covers) {
-  for (const {
-    organisation: { organisationNumber },
-    registrationNumber,
-    registration
-  } of reportableRegistrations(organisations)) {
-    for (const year of years.filter((served) =>
-      Object.hasOwn(registration.accreditations, served)
-    )) {
-      const accreditation = validityOf({ registration, year })
-      const candidate = {
-        organisationNumber,
-        registrationNumber: toRegistrationNumber(registrationNumber),
-        registration,
-        year
-      }
-      if (hasBeenGranted(accreditation) && covers(candidate)) {
-        yield { ...candidate, accreditation }
-      }
-    }
+export const grantedRegistrations = (organisations, years, covers) => {
+  const byYears = grantedByRegister.get(organisations) ?? new Map()
+  grantedByRegister.set(organisations, byYears)
+  const yearsKey = years.join()
+  if (!byYears.has(yearsKey)) {
+    byYears.set(yearsKey, everyGranted(organisations, years))
   }
+  return byYears.get(yearsKey).filter(covers)
 }
 
 /**
@@ -190,13 +207,9 @@ export function* accreditedMonths({
     organisationNumber,
     registrationNumber,
     registration,
-    accreditation
+    window,
+    history
   } of grantedRegistrations(organisations, years, covers)) {
-    const window = accreditationWindow(accreditation)
-    if (window === null) {
-      continue
-    }
-    const history = getStatusHistoryDateTimes(accreditation.statusHistory)
     for (const period of periods) {
       if (isAccreditedDuring(period, window, history)) {
         yield {

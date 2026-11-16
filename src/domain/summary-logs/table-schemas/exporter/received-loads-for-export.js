@@ -19,7 +19,11 @@ import {
   isYes,
   YES_NO_VALUES
 } from '../shared/index.js'
-import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
+import {
+  RECEIVED_LOADS_FIELDS as FIELDS,
+  RECEIVED_LOADS_FIELDS_2027,
+  ROW_ID_MINIMUMS
+} from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -326,4 +330,20 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       )
     }
   }
+}
+
+export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
+  ...RECEIVED_LOADS_FOR_EXPORT,
+  requiredHeaders: [
+    ...RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
+    ...Object.values(RECEIVED_LOADS_FIELDS_2027)
+  ],
+  validationSchema: RECEIVED_LOADS_FOR_EXPORT.validationSchema.keys({
+    [RECEIVED_LOADS_FIELDS_2027.PREVIOUS_YEAR_ROW_ID]: createRowIdSchema(
+      ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
+    ).optional(),
+    [RECEIVED_LOADS_FIELDS_2027.EXIT_PORT]: createFreeTextFieldSchema(),
+    [RECEIVED_LOADS_FIELDS_2027.DWT_EXPORT_ID]: createFreeTextFieldSchema(),
+    [RECEIVED_LOADS_FIELDS_2027.DWT_SUPPLY_ID]: createFreeTextFieldSchema()
+  })
 }

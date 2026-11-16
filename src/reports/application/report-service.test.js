@@ -67,7 +67,7 @@ const readModelAccreditation = (
 ) => ({
   accreditationNumber,
   prnIssuance: { tonnageBand: 'over_10000' },
-  status: { current: 'approved', timeline: [] }
+  status: { current: 'approved', lastUpdatedAt: undefined, timeline: [] }
 })
 
 /**
@@ -521,7 +521,11 @@ describe('report-service', () => {
         })
 
       const generate = async (entries, reportDataValidationEnabled) => {
-        const params = defaultParams()
+        const params = {
+          ...defaultParams(),
+          year: toYear(2026),
+          requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2026))
+        }
         const { summaryLogsRepository, summaryLogRowStatesRepository } =
           await seedState(params, entries)
         return fetchOrGenerateReportForPeriod({

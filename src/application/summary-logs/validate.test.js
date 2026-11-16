@@ -125,7 +125,7 @@ const buildMeta = (overrides = {}) => ({
 const buildReceivedLoadRow = (overrides = {}) => ({
   // Waste balance fields (Section 1)
   ROW_ID: 10000,
-  DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
+  DATE_RECEIVED_FOR_REPROCESSING: '2026-05-28T00:00:00.000Z',
   EWC_CODE: '03 03 08',
   DESCRIPTION_WASTE: 'Glass - pre-sorted',
   WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
@@ -255,7 +255,7 @@ const EXPORTER_RECEIVED_HEADERS = [
 
 // The supplementary columns are not waste-balance fields, so leaving them
 // empty still yields an INCLUDED row.
-const exporterReceivedRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
+const exporterReceivedRow = (rowId, exportDate, receivedDate = '2026-01-01') =>
   EXPORTER_RECEIVED_HEADERS.map((h) => {
     if (h === 'ROW_ID') {
       return rowId
@@ -315,7 +315,7 @@ const exporterReceivedRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
       return 'CONT123'
     }
     if (h === 'DATE_RECEIVED_BY_OSR') {
-      return '2025-01-15'
+      return '2026-01-15'
     }
     if (h === 'OSR_ID') {
       return 100
@@ -458,14 +458,14 @@ describe('SummaryLogsValidator', () => {
       wasteProcessingType: 'reprocessor',
       reprocessingType: 'input',
       material: 'aluminium',
-      validFrom: '2025-01-01T00:00:00.000Z',
+      validFrom: '2026-01-01T00:00:00.000Z',
       accreditation: {
         accreditationNumber: 'ACC12345',
-        validFrom: '2025-01-01T00:00:00.000Z',
-        validTo: '2025-12-31T23:59:59.999Z',
+        validFrom: '2026-01-01T00:00:00.000Z',
+        validTo: '2026-12-31T23:59:59.999Z',
         statusHistory: [
-          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
         ]
       }
     })
@@ -642,11 +642,11 @@ describe('SummaryLogsValidator', () => {
       material: 'aluminium',
       accreditation: {
         accreditationNumber: 'ACC12345',
-        validFrom: '2025-01-01T00:00:00.000Z',
-        validTo: '2025-12-31T23:59:59.999Z',
+        validFrom: '2026-01-01T00:00:00.000Z',
+        validTo: '2026-12-31T23:59:59.999Z',
         statusHistory: [
-          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+          { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
         ]
       }
     })
@@ -851,7 +851,7 @@ describe('SummaryLogsValidator', () => {
           REG12345: { wasteProcessingType: 'reprocessor', accreditations: {} }
         }
       },
-      message: 'Accreditation not found: ACC12345'
+      message: 'Accreditation not found: ACC12345 for 2026'
     }
   ])(
     'marks the summary log invalid when the read model does not serve its $missing',
@@ -917,14 +917,14 @@ describe('SummaryLogsValidator', () => {
       material: 'paper',
       accreditation: {
         accreditationNumber: 'ACC12345',
-        validFrom: '2025-01-01'
+        validFrom: '2026-01-01'
       }
     })
     givenReadModelAccreditation({
       wasteProcessingType: 'exporter',
-      year: '2025',
-      approvedAt: '2025-01-01',
-      overseasSites: { 100: { status: 'approved', approvedOn: '2025-03-01' } }
+      year: '2026',
+      approvedAt: '2026-01-01',
+      overseasSites: { 100: { status: 'approved', approvedOn: '2026-03-01' } }
     })
     summaryLogExtractor.extract.mockResolvedValue(
       buildExtractedData({
@@ -939,11 +939,11 @@ describe('SummaryLogsValidator', () => {
             rows: [
               {
                 rowNumber: 8,
-                values: exporterReceivedRow(3000, '2025-02-01', '2025-01-01')
+                values: exporterReceivedRow(3000, '2026-02-01', '2026-01-01')
               },
               {
                 rowNumber: 9,
-                values: exporterReceivedRow(3001, '2025-04-01', '2025-01-01')
+                values: exporterReceivedRow(3001, '2026-04-01', '2026-01-01')
               }
             ]
           }
@@ -1444,17 +1444,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1467,11 +1467,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow({
                   ROW_ID: 10000,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01' // In range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-06-01' // In range
                 }),
                 buildReceivedLoadRow({
                   ROW_ID: 10001,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' // Out of range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-12-31' // Out of range
                 })
               ]
             })
@@ -1497,17 +1497,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1535,11 +1535,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', ''] // In range
+                  values: [4000, '2026-06-01', '', '', 10, '', '', '', '', ''] // In range
                 },
                 {
                   rowNumber: 9,
-                  values: [4001, '2024-12-31', '', '', 20, '', '', '', '', ''] // Out of range
+                  values: [4001, '2025-12-31', '', '', 20, '', '', '', '', ''] // Out of range
                 }
               ]
             }
@@ -1562,17 +1562,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1605,7 +1605,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     5000,
-                    '2025-06-01',
+                    '2026-06-01',
                     10,
                     '',
                     '',
@@ -1623,7 +1623,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 9,
                   values: [
                     5001,
-                    '2024-12-31',
+                    '2025-12-31',
                     20,
                     '',
                     '',
@@ -1655,16 +1655,16 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'exporter',
         material: 'paper',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1682,15 +1682,15 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: exporterReceivedRow(3000, '2025-06-01')
+                  values: exporterReceivedRow(3000, '2026-06-01')
                 },
                 {
                   rowNumber: 9,
-                  values: exporterReceivedRow(3001, '2024-12-31')
+                  values: exporterReceivedRow(3001, '2025-12-31')
                 },
                 {
                   rowNumber: 10,
-                  values: exporterReceivedRow(3002, '', '2024-12-31')
+                  values: exporterReceivedRow(3002, '', '2025-12-31')
                 } // Fallback to DATE_RECEIVED_FOR_EXPORT
               ]
             }
@@ -1710,16 +1710,16 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'exporter',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1754,7 +1754,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     4200,
-                    '2024-12-31',
+                    '2025-12-31',
                     10,
                     'Other',
                     'Other Name',
@@ -1789,17 +1789,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1812,11 +1812,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow({
                   ROW_ID: 20000,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01' // In range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-06-01' // In range
                 }),
                 buildReceivedLoadRow({
                   ROW_ID: 20001,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' // Out of range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-12-31' // Out of range
                 })
               ]
             })
@@ -1839,17 +1839,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1882,7 +1882,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     3000,
-                    '2025-06-01',
+                    '2026-06-01',
                     10,
                     0.5,
                     5,
@@ -1900,7 +1900,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 9,
                   values: [
                     3001,
-                    '2024-12-31',
+                    '2025-12-31',
                     20,
                     0.5,
                     10,
@@ -1932,17 +1932,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -1975,7 +1975,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     5000,
-                    '2025-06-01',
+                    '2026-06-01',
                     10,
                     'Other',
                     'Other Name',
@@ -1993,7 +1993,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 9,
                   values: [
                     5001,
-                    '2024-12-31',
+                    '2025-12-31',
                     20,
                     'Other',
                     'Other Name',
@@ -2028,17 +2028,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -2071,7 +2071,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     6000,
-                    '2024-12-31',
+                    '2025-12-31',
                     10,
                     'Other',
                     'Other Name',
@@ -2101,17 +2101,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -2174,17 +2174,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'output',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -2213,16 +2213,16 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'exporter',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -2318,17 +2318,17 @@ describe('SummaryLogsValidator', () => {
       givenRegistration({
         id: 'reg-123',
         registrationNumber: 'REG12345',
-        validFrom: '2025-01-01',
+        validFrom: '2026-01-01',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         material: 'aluminium',
         accreditation: {
           accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01',
-          validTo: '2025-12-31',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
           statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
           ]
         }
       })
@@ -2356,7 +2356,7 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', '']
+                  values: [4000, '2026-06-01', '', '', 10, '', '', '', '', '']
                 }
               ]
             }
@@ -2637,6 +2637,23 @@ describe('SummaryLogsValidator', () => {
       const fatal = sequentialRowRemovedFatal()
       expect(fatal).toBeDefined()
       expect(fatal.context.previousSummaryLog.id).toBe('log-2')
+    })
+
+    it('accepts an upload that leaves out rows submitted for the year before', async () => {
+      await seedSubmittedSummaryLog({
+        ledgerId: { ...FIXTURE_LEDGER, year: toYear(FIXTURE_LEDGER.year - 1) },
+        summaryLogId: 'previous-year-log',
+        number: 1,
+        rows: [{ rowId: 'A' }],
+        summaryLogRowStatesRepository,
+        ledgerRepository
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(sequentialRowRemovedFatal()).toBeUndefined()
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
     })
 
     it('accepts an upload when the registration has never submitted', async () => {

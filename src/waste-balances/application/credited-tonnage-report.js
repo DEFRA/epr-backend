@@ -2,7 +2,7 @@ import chunk from 'lodash.chunk'
 
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
 import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
   overseasSitesOf,
@@ -154,7 +154,7 @@ export const buildCreditedTonnageReport = async ({
     if (!ledgerAccreditation) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
         logger.warn({
-          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber}`,
+          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber} for ${ledgerId.year}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: 'credited_tonnage_ledger_entry_unmatched',
@@ -172,6 +172,7 @@ export const buildCreditedTonnageReport = async ({
         ledgerId,
         summaryLogId
       ),
+      ledgerAccreditation.year,
       {
         accreditation: validityOf(ledgerAccreditation),
         overseasSites: overseasSitesOf(ledgerAccreditation)

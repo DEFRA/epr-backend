@@ -7,11 +7,6 @@ import {
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
-import { registrationKey } from '#reports/domain/registration-key.js'
-import {
-  accreditationWindow,
-  getStatusHistoryDateTimes
-} from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
@@ -19,11 +14,10 @@ import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
-/** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
+/** @import { CoversRegistration, GrantedRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -51,9 +45,9 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  */
 const isCancelledByEndOf = (month, history) =>
   history.find(
-    ({ at }) =>
+    ({ updatedAt }) =>
       toYearMonth(
-        formatLocalDateTime(new Date(at), UK_TIME_ZONE)
+        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
       ).localeCompare(month) <= 0
   )?.status === ACCREDITATION_STATUS.CANCELLED
 
@@ -67,15 +61,10 @@ const isCancelledByEndOf = (month, history) =>
  *
  * @param {Set<YearMonth>} served
  * @param {Year[]} years
- * @param {AccreditationValidity} accreditation
+ * @param {Pick<GrantedRegistration, 'window' | 'history'>} granted
  */
-const owedPeriods = (served, years, accreditation) => {
-  const window = accreditationWindow(accreditation)
-  if (window === null) {
-    return []
-  }
-  const history = getStatusHistoryDateTimes(accreditation.statusHistory)
-  return filterPeriodsFromDate(
+const owedPeriods = (served, years, { window, history }) =>
+  filterPeriodsFromDate(
     years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
     window.validFrom,
     window.validTo
@@ -84,7 +73,6 @@ const owedPeriods = (served, years, accreditation) => {
       served.has(toYearMonth(period.startDate)) &&
       !isCancelledByEndOf(toYearMonth(period.startDate), history)
   )
-}
 
 /**
  * One monthly report an accreditation owed for a month served, and whether it
@@ -125,14 +113,13 @@ export function* owedMonthlyReports({
     registrationNumber,
     registration,
     year,
-    accreditation
+    key,
+    window,
+    history
   } of grantedRegistrations(organisations, years, covers)) {
-    const owed = owedPeriods(served, years, accreditation)
+    const owed = owedPeriods(served, years, { window, history })
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
-    const reports =
-      reportsByRegistration.get(
-        registrationKey({ organisationNumber, registrationNumber })
-      ) ?? []
+    const reports = reportsByRegistration.get(key) ?? []
 
     // The merge also appends any report the operator submitted for a month it
     // does not owe, and those count for nothing.

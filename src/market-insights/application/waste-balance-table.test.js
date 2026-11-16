@@ -1,4 +1,4 @@
-import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -28,7 +28,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
@@ -102,18 +102,13 @@ const servedOf = (stored) => {
  * @param {string} status
  * @param {string} day - `YYYY-MM-DD` or an ISO date-time
  */
-const changed = (status, day) => {
-  const at = new Date(day).toISOString()
-  return { status, at, updatedAt: at }
-}
+const changed = (status, day) => ({ status, at: new Date(day).toISOString() })
 
-const APPROVED_TIMELINE = [
-  changed('created', '2025-11-01'),
-  {
-    ...changed('approved', ACCREDITED_FROM),
-    updatedAt: '2025-12-01T00:00:00.000Z'
-  }
-]
+const APPROVED_STATUS = {
+  current: 'approved',
+  lastUpdatedAt: '2025-12-01T00:00:00.000Z',
+  timeline: [changed('approved', ACCREDITED_FROM)]
+}
 
 /**
  * The served organisation with each registration's accreditation and standing
@@ -218,13 +213,8 @@ const makeOperator = ({
     prnIssuance: { tonnageBand: 'up_to_500' },
     status: {
       current: 'approved',
-      timeline: [
-        changed('created', '2025-11-01'),
-        {
-          ...changed('approved', validFrom),
-          updatedAt: '2025-12-01T00:00:00.000Z'
-        }
-      ]
+      lastUpdatedAt: '2025-12-01T00:00:00.000Z',
+      timeline: [changed('approved', validFrom)]
     }
   }
   const siteNumbers = Object.keys(overseasSites ?? {})
@@ -232,7 +222,7 @@ const makeOperator = ({
   const served = /** @type {any} */ ({
     organisationNumber: toOrganisationNumber(String(orgId)),
     name: `Operator ${orgId}`,
-    status: { current: 'approved', timeline: APPROVED_TIMELINE },
+    status: APPROVED_STATUS,
     submittedToRegulator: { code: regulator },
     submitterContactDetails: CONTACT,
     users: [],
@@ -243,7 +233,7 @@ const makeOperator = ({
         approvedPersons: [],
         submitterContactDetails: CONTACT,
         material: glassRecyclingProcess?.[0] ?? material,
-        status: { current: 'approved', timeline: APPROVED_TIMELINE },
+        status: APPROVED_STATUS,
         standingByDate: {
           2026:
             validFrom === ACCREDITED_FROM
@@ -254,7 +244,6 @@ const makeOperator = ({
                 }
         },
         submittedToRegulator: { code: regulator },
-        validFrom: ACCREDITED_FROM,
         wasteProcessingType,
         ...(isExporter
           ? {
@@ -350,7 +339,7 @@ const makeOperator = ({
       organisationNumber: toOrganisationNumber(String(orgId)),
       registrationNumber: toRegistrationNumber(`REG-${orgId}`),
       accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
-      year: utcYearOf(validFrom)
+      year: toYear(2026)
     },
     summaryLogId: `log-${orgId}`
   }
@@ -525,7 +514,7 @@ const heldOutside = (operator, accreditationNumber, approvedOn) => {
  *
  * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
  * @param {Organisation} organisation
- * @param {AccreditationStatus} status
+ * @param {StoredAccreditationStatus} status
  * @param {StatusHistoryEntry[]} transitions
  * @param {Record<string, { standing: string }>} [standing] - how the change moves the registration's standing, as the read model serves it
  */
@@ -1883,6 +1872,29 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
+  describe('a row whose processing type has no template', () => {
+    const operator = makeOperator({ orgId: 500012 })
+
+    it('fails rather than leaving the row out', async () => {
+      await expect(
+        run({
+          organisations: [operator.organisation],
+          submissions: [
+            {
+              ...operator,
+              rows: [
+                {
+                  ...receivedRow('row-1', '2026-03-10', 50),
+                  processingType: 'UNKNOWN'
+                }
+              ]
+            }
+          ]
+        })
+      ).rejects.toThrow('No UNKNOWN summary log template for 2026')
+    })
+  })
+
   describe('a month after the window', () => {
     const operator = makeOperator({ orgId: 500012 })
 
@@ -2006,7 +2018,7 @@ describe('buildWasteBalanceTable', () => {
     expect(reported(table)).toEqual([])
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('ACC-500009'),
+        message: expect.stringContaining('ACC-500009 for 2026'),
         event: expect.objectContaining({
           action: 'market_insights_partition_unmatched',
           reference: 'ACC-500009'

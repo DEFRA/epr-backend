@@ -46,6 +46,7 @@ export const createMetaSchema = ({ year }) => {
       .messages({
         'any.required': IS_REQUIRED,
         'number.min': 'must be at least {#limit}',
+        'number.max': 'must be at most {#limit}',
         'templateVersion.year': 'must be a template for a supported year',
         'templateVersion.yearMismatch': 'must be a template for {#year}'
       }),

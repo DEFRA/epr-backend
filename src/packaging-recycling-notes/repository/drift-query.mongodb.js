@@ -14,18 +14,18 @@ import { COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME } from './
 
 /**
  * Detects which PRN documents lag their ledger, keyed per-PRN so a sibling
- * advancing the shared `(registrationNumber, accreditationNumber)` slot
+ * advancing the shared `(registrationNumber, accreditationNumber, year)` slot
  * sequence cannot falsely flag one (ADR-0047). The `$lookup` sub-pipeline joins
  * each PRN to events for ITS OWN `payload.prnId` past its watermark (a missing
  * watermark reads as `0`) and stops at the first — this is an existence probe,
  * not a fetch, so the caller re-reads the tail through the validated catch-up
- * path. Index-backed by `prn_watermark_catchup_by_number`; returns only the
+ * path. Index-backed by `prn_watermark_catchup_by_year`; returns only the
  * drifting `_id`s.
  *
  * The join omits the organisation number (the catch-up read includes it): a
  * registration number belongs to one organisation, so the registration and
  * accreditation numbers plus the unique `payload.prnId` already name exactly
- * one event stream.
+ * one event stream, in the ledger of the PRN's accreditation year.
  */
 const DRIFTING_IDS_PIPELINE = [
   {
@@ -34,6 +34,7 @@ const DRIFTING_IDS_PIPELINE = [
       let: {
         registrationNumber: '$registration.registrationNumber',
         accreditationNumber: '$accreditation.accreditationNumber',
+        year: '$accreditation.accreditationYear',
         pid: { $toString: '$_id' },
         wm: { $ifNull: ['$lastAppliedEventNumber', 0] }
       },
@@ -44,6 +45,7 @@ const DRIFTING_IDS_PIPELINE = [
               $and: [
                 { $eq: ['$registrationNumber', '$$registrationNumber'] },
                 { $eq: ['$accreditationNumber', '$$accreditationNumber'] },
+                { $eq: ['$year', '$$year'] },
                 { $eq: ['$payload.prnId', '$$pid'] },
                 { $gt: ['$number', '$$wm'] }
               ]

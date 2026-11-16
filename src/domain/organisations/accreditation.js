@@ -1,4 +1,4 @@
-/** @import {AccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
+/** @import {StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
 /** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
 
 /**
@@ -14,7 +14,7 @@
  */
 
 /**
- * @typedef {StatusHistoryEntryOf<AccreditationStatus>} StatusHistoryEntry
+ * @typedef {StatusHistoryEntryOf<StoredAccreditationStatus>} StatusHistoryEntry
  */
 
 /**
@@ -25,7 +25,7 @@
  */
 
 /**
- * @typedef {StatusHistoryOf<AccreditationStatus>} StatusHistory
+ * @typedef {StatusHistoryOf<StoredAccreditationStatus>} StatusHistory
  */
 
 /**
@@ -85,7 +85,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber;
- *  status: Extract<AccreditationStatus, 'approved'|'suspended'>;
+ *  status: Extract<StoredAccreditationStatus, 'approved'|'suspended'>;
  *  validFrom: string;
  *  validTo: string
  * }} AccreditationApproved
@@ -94,7 +94,7 @@
 /**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber | null;
- *  status: Extract<AccreditationStatus, 'created'|'rejected'|'cancelled'>;
+ *  status: Extract<StoredAccreditationStatus, 'created'|'rejected'|'cancelled'>;
  *  validFrom?: string;
  *  validTo?: string
  * }} AccreditationOther
@@ -105,18 +105,9 @@
  */
 
 /**
- * A status and when it takes effect, as the read model's timeline holds it.
+ * What deciding whether a date is accredited reads of an accreditation.
  *
- * @typedef {{ status: AccreditationStatus; at: string }} EffectiveStatusEntry
- */
-
-/**
- * What deciding whether a date is accredited reads of an accreditation. A
- * stored change takes effect when it was recorded.
- *
- * @typedef {{
- *  statusHistory: (StatusHistoryEntry | EffectiveStatusEntry)[];
- * } & Pick<AccreditationOther, 'validFrom' | 'validTo'>} AccreditationValidity
+ * @typedef {StatusHistory & Pick<AccreditationOther, 'validFrom' | 'validTo'>} AccreditationValidity
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

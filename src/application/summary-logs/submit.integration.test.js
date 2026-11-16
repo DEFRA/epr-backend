@@ -36,7 +36,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
@@ -184,12 +184,11 @@ const setupSubmit = async ({
   // the same way.
   const approved = {
     current: /** @type {const} */ ('approved'),
+    lastUpdatedAt: APPROVED_AT,
     timeline: [
-      { status: 'created', at: CREATED_AT, updatedAt: CREATED_AT },
       {
-        status: 'approved',
-        at: `${VALID_FROM}T00:00:00.000Z`,
-        updatedAt: APPROVED_AT
+        status: /** @type {const} */ ('approved'),
+        at: `${VALID_FROM}T00:00:00.000Z`
       }
     ]
   }
@@ -199,7 +198,6 @@ const setupSubmit = async ({
       registrations: {
         'REG-123': buildReadReprocessorRegistration({
           material: 'paper',
-          validFrom: VALID_FROM,
           status: approved,
           standingByDate: {
             2026: { [VALID_FROM]: { standing: 'accredited' } },
@@ -221,6 +219,7 @@ const setupSubmit = async ({
     organisationId,
     registrationId,
     ...reportKey,
+    year: toYear(2026),
     accreditationId,
     accreditationNumber,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
@@ -310,7 +309,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
 
     await submitSummaryLog(summaryLogId, deps)
 
-    const rowStates = await summaryLogRowStatesForRegistration({
+    const rowStates = await summaryLogRowStatesForLedger({
       ...reportKey,
       accreditationNumber: toAccreditationNumber('ACC-123'),
       year: submitted.year,
@@ -409,18 +408,6 @@ describe('submitSummaryLog resubmission flag source', () => {
     })
 
     expect(flagged).toEqual({ january: true, february: false })
-  })
-
-  it('flags every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
-    const { openPeriodLoads, closedPeriodLoads } = emptyLoadsByReportingPeriod()
-
-    const flagged = await submitOverJanuaryAndFebruaryReports({
-      openPeriodLoads,
-      closedPeriodLoads,
-      closedPeriods: [january, february]
-    })
-
-    expect(flagged).toEqual({ january: true, february: true })
   })
 })
 

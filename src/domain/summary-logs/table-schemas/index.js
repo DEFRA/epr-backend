@@ -7,6 +7,7 @@ import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
 import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {ProcessingType} from '../meta-fields.js' */
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -28,6 +29,7 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
 /**
  * @typedef {Object} Template
  * @property {number} minVersion - The lowest template version accepted
+ * @property {number} [maxVersion] - The highest template version accepted, when the year accepts only versions known so far
  * @property {Record<string, TableSchema>} tableSchemas - Table schemas by table name
  */
 
@@ -63,6 +65,38 @@ export const getTemplate = (year, processingType) => {
 }
 
 /**
+ * The table schemas of the template for a year and processing type. Throws
+ * when there is no template, like {@link getTemplate}.
+ *
+ * @param {Year} year
+ * @param {ProcessingType} processingType
+ * @returns {Record<string, TableSchema>}
+ */
+export const tableSchemasOf = (year, processingType) =>
+  getTemplate(year, processingType).tableSchemas
+
+/**
+ * Whether {@link getTemplate} has a template for the year and processing type.
+ *
+ * @param {Year} year
+ * @param {string} processingType
+ * @returns {boolean}
+ */
+export const hasTemplate = (year, processingType) =>
+  TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[year] !== undefined
+
+/**
+ * Whether any processing type has a template for the year.
+ *
+ * @param {Year} year
+ * @returns {boolean}
+ */
+export const hasTemplatesForYear = (year) =>
+  Object.values(TEMPLATES_BY_PROCESSING_TYPE).some(
+    (templatesByYear) => templatesByYear[year] !== undefined
+  )
+
+/**
  * @typedef {{ error: string, context?: Record<string, unknown> }} TemplateVersionFailure
  */
 
@@ -83,10 +117,16 @@ export const checkTemplateVersion = ({ year, processingType, version }) => {
     return { error: 'templateVersion.year' }
   }
   if (versionYear !== year) {
-    return { error: 'templateVersion.yearMismatch', context: { year } }
+    return {
+      error: 'templateVersion.yearMismatch',
+      context: { year, actualYear: versionYear }
+    }
   }
   if (version < template.minVersion) {
     return { error: 'number.min', context: { limit: template.minVersion } }
+  }
+  if (template.maxVersion !== undefined && version > template.maxVersion) {
+    return { error: 'number.max', context: { limit: template.maxVersion } }
   }
   return null
 }

@@ -1,22 +1,19 @@
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear, yearBounds } from '#common/helpers/dates/year.js'
-import {
-  ACCREDITATION_STATUS,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
-/** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -58,35 +55,29 @@ export const indexByLedger = (
           ([number, registration]) => {
             const registrationNumber = toRegistrationNumber(number)
             return Object.entries(registration.accreditations).map(
-              ([year, accreditation]) => [
-                ledgerKey({
-                  organisationNumber: organisation.organisationNumber,
-                  registrationNumber,
-                  accreditationNumber: accreditation.accreditationNumber
-                }),
-                {
-                  organisation,
-                  registrationNumber,
-                  registration,
-                  year: toYear(Number(year)),
-                  accreditation
-                }
-              ]
+              ([key, accreditation]) => {
+                const year = toYear(Number(key))
+                return [
+                  ledgerKey({
+                    organisationNumber: organisation.organisationNumber,
+                    registrationNumber,
+                    accreditationNumber: accreditation.accreditationNumber,
+                    year
+                  }),
+                  {
+                    organisation,
+                    registrationNumber,
+                    registration,
+                    year,
+                    accreditation
+                  }
+                ]
+              }
             )
           }
         )
       )
   )
-
-/** @type {ReadonlySet<string>} */
-const ACCREDITATION_STATUS_VALUES = new Set(Object.values(ACCREDITATION_STATUS))
-
-/**
- * @param {StatusTimeline[number]} change
- * @returns {change is { status: AccreditationStatus, at: string, updatedAt: string }}
- */
-const isAccreditationChange = (change) =>
-  ACCREDITATION_STATUS_VALUES.has(change.status)
 
 /**
  * The validity window and status history that classification reads, taken
@@ -98,21 +89,13 @@ const isAccreditationChange = (change) =>
  */
 export const validityOf = ({ registration, year }) => {
   const { start, end } = yearBounds(year)
-  const timeline = registration.accreditations[year].status.timeline.filter(
-    isAccreditationChange
-  )
-  const lastCreated = timeline.findLastIndex(
-    ({ status }) => status === ACCREDITATION_STATUS.CREATED
-  )
-  const approvedAt = timeline.find(
-    ({ status }, index) =>
-      index > lastCreated && status === ACCREDITATION_STATUS.APPROVED
-  )?.at
+  const { timeline } = registration.accreditations[year].status
+  const approvedAt = firstApprovedAt(timeline)
   return {
-    // Latest first, so a change sharing its time with the approval sorts ahead of it
-    statusHistory: timeline
-      .toReversed()
-      .map(({ status, at }) => ({ status, at })),
+    statusHistory: timeline.map(({ status, at }) => ({
+      status,
+      updatedAt: at
+    })),
     ...(approvedAt && {
       validFrom:
         calendarDate(approvedAt).localeCompare(start) < 0
@@ -145,16 +128,16 @@ export const overseasSitesOf = ({ registration, year }) =>
   )
 
 /**
- * The accreditation a summary log's numbers name, as the read model serves
- * it, or none for a registered-only summary log.
+ * The accreditation a summary log's numbers and year name, as the read model
+ * serves it, or none for a registered-only summary log.
  *
  * @param {OrganisationReadRepository} organisationReadRepository
- * @param {{ organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, accreditationNumber: AccreditationNumber | null }} numbers
+ * @param {{ organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, accreditationNumber: AccreditationNumber | null, year: Year }} numbers
  * @returns {Promise<LedgerAccreditation | null>}
  */
 export const ledgerAccreditationFor = async (
   organisationReadRepository,
-  { organisationNumber, registrationNumber, accreditationNumber }
+  { organisationNumber, registrationNumber, accreditationNumber, year }
 ) => {
   const organisation =
     await organisationReadRepository.findByOrganisationNumber(
@@ -173,10 +156,17 @@ export const ledgerAccreditationFor = async (
   const ledgerAccreditation = indexByLedger([organisation], {
     includeTestOrganisations: true
   }).get(
-    ledgerKey({ organisationNumber, registrationNumber, accreditationNumber })
+    ledgerKey({
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber,
+      year
+    })
   )
   if (!ledgerAccreditation) {
-    throw new Error(`Accreditation not found: ${accreditationNumber}`)
+    throw new Error(
+      `Accreditation not found: ${accreditationNumber} for ${year}`
+    )
   }
   return ledgerAccreditation
 }

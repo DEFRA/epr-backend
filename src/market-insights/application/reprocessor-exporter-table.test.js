@@ -9,7 +9,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
@@ -30,7 +30,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const NOW = new Date('2026-04-15T12:00:00.000Z')
 
@@ -40,29 +40,17 @@ const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 const TEST_ORG_ID = 999999
 
 /**
- * A status change as the read model times it, taking effect when recorded.
- *
- * @param {string} status
+ * @param {AccreditationStatus} status
  * @param {string} at
  */
-const changed = (status, at) => {
-  const instant = new Date(at).toISOString()
-  return { status, at: instant, updatedAt: instant }
-}
+const changed = (status, at) => ({ status, at: new Date(at).toISOString() })
 
 /**
- * Created in November, approved in December to take effect from `validFrom`.
- *
- * @param {string} [validFrom]
- * @returns {StatusTimeline}
+ * @param {string} [approvedAt]
+ * @returns {StatusTimeline<AccreditationStatus>}
  */
-const approvedFrom = (validFrom = '2026-01-01') => [
-  changed('created', '2025-11-01'),
-  {
-    status: 'approved',
-    at: new Date(validFrom).toISOString(),
-    updatedAt: '2025-12-01T00:00:00.000Z'
-  }
+const approvedFrom = (approvedAt = '2026-01-01') => [
+  changed('approved', approvedAt)
 ]
 
 /**
@@ -75,7 +63,7 @@ const approvedFrom = (validFrom = '2026-01-01') => [
  *   material?: string,
  *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
  *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
- *   accreditationTimeline?: StatusTimeline | null,
+ *   accreditationTimeline?: StatusTimeline<AccreditationStatus> | null,
  *   year?: number,
  *   served?: boolean
  * }} options
@@ -90,12 +78,13 @@ const makeOperator = ({
   served = true
 }) => {
   const isExporter = wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-  const status = accreditationTimeline && {
-    current: /** @type {'approved' | 'suspended' | 'cancelled'} */ (
-      accreditationTimeline.at(-1)?.status
-    ),
-    timeline: accreditationTimeline
-  }
+  const last = accreditationTimeline?.at(-1)
+  const status = accreditationTimeline &&
+    last && {
+      current: last.status,
+      lastUpdatedAt: last.at,
+      timeline: accreditationTimeline
+    }
   const accreditationNumber = toAccreditationNumber(`ACC-${orgId}`)
   const accreditations = status
     ? {
@@ -107,11 +96,7 @@ const makeOperator = ({
   const common = {
     material: /** @type {any} */ (material),
     submittedToRegulator: { code: regulator },
-    validFrom: '2025-12-01',
-    status: {
-      current: /** @type {const} */ ('approved'),
-      timeline: approvedTimelineFrom('2025-12-01')
-    },
+    status: approvedStatusFrom('2025-12-01'),
     accreditations
   }
 

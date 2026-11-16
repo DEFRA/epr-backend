@@ -14,7 +14,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { partialMock } from '#test/type-helpers.js'
 import {
   latestSubmittedSummaryLogRowStates,
-  summaryLogRowStatesForRegistration
+  summaryLogRowStatesForLedger
 } from './read-summary-log-row-states.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
@@ -39,9 +39,9 @@ const submissionEvent = (number, summaryLogId, submittedAt) =>
 
 const registration = withNumbers(DEFAULT_LEDGER_ID)
 
-describe('summaryLogRowStatesForRegistration', () => {
+describe('summaryLogRowStatesForLedger', () => {
   it('returns an empty array when the stream has no submission', async () => {
-    const states = await summaryLogRowStatesForRegistration({
+    const states = await summaryLogRowStatesForLedger({
       ledgerRepository: createInMemoryLedgerRepository()(),
       summaryLogRowStatesRepository:
         createInMemorySummaryLogRowStatesRepository()(),
@@ -76,7 +76,7 @@ describe('summaryLogRowStatesForRegistration', () => {
       submissionEvent(2, 'log-2')
     ])()
 
-    const states = await summaryLogRowStatesForRegistration({
+    const states = await summaryLogRowStatesForLedger({
       ledgerRepository,
       summaryLogRowStatesRepository,
       ...registration
@@ -108,7 +108,7 @@ describe('summaryLogRowStatesForRegistration', () => {
       submissionEvent(1, 'log-1')
     ])()
 
-    const states = await summaryLogRowStatesForRegistration({
+    const states = await summaryLogRowStatesForLedger({
       ledgerRepository,
       summaryLogRowStatesRepository,
       ...registration
@@ -131,7 +131,7 @@ describe('summaryLogRowStatesForRegistration', () => {
       submissionEvent(1, 'log-1')
     ])()
 
-    const [state] = await summaryLogRowStatesForRegistration({
+    const [state] = await summaryLogRowStatesForLedger({
       ledgerRepository,
       summaryLogRowStatesRepository,
       ...registration

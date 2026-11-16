@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportSubmissions } from './report-submissions.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration,
@@ -441,10 +441,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-const approvedFromJanuary = {
-  current: /** @type {const} */ ('approved'),
-  timeline: approvedTimelineFrom('2026-01-01')
-}
+const approvedFromJanuary = approvedStatusFrom('2026-01-01')
 
 /**
  * An organisation the read model serves with one registration, `REG-001`, a
@@ -468,7 +465,6 @@ const buildOrg = ({
     registrations: {
       'REG-001': buildReadReprocessorRegistration({
         material: 'plastic',
-        validFrom: '2026-01-01',
         status: approvedFromJanuary,
         standingByDate: {
           2026: { '2026-01-01': { standing: 'registeredOnly' } }
@@ -494,7 +490,7 @@ const buildOrg = ({
  * A registration accredited for 2026 from `from`.
  *
  * @param {string} accreditationNumber
- * @param {{ current: 'approved' | 'suspended', timeline: import('#organisation-read-model/domain/model.js').StatusTimeline }} [status]
+ * @param {import('#organisation-read-model/domain/model.js').Status<'approved' | 'suspended'>} [status]
  * @param {string} [from]
  */
 const accreditedAs = (
@@ -568,13 +564,10 @@ describe('generateReportSubmissions (edge cases)', () => {
     const org = buildOrg({
       registration: accreditedAs('ACC-999', {
         current: 'suspended',
+        lastUpdatedAt: '2026-03-01T00:00:00.000Z',
         timeline: [
           ...approvedFromJanuary.timeline,
-          {
-            status: 'suspended',
-            at: '2026-03-01T00:00:00.000Z',
-            updatedAt: '2026-03-01T00:00:00.000Z'
-          }
+          { status: 'suspended', at: '2026-03-01T00:00:00.000Z' }
         ]
       })
     })
@@ -664,7 +657,7 @@ describe('generateReportSubmissions (edge cases)', () => {
     const org = buildOrg({
       registration: accreditedAs(
         'ACC-001',
-        { current: 'approved', timeline: approvedTimelineFrom('2026-02-15') },
+        approvedStatusFrom('2026-02-15'),
         '2026-02-15'
       )
     })

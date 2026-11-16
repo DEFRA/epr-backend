@@ -55,8 +55,12 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
         'log-1'
       )
 
-      const { organisationNumber, registrationNumber, accreditationNumber } =
-        withNumbers(DEFAULT_LEDGER_ID)
+      const {
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber,
+        year
+      } = withNumbers(DEFAULT_LEDGER_ID)
       expect(
         await collect(repository.streamRowStatesForSummaryLogs(['log-1']))
       ).toEqual([
@@ -64,6 +68,7 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
           organisationNumber,
           registrationNumber,
           accreditationNumber,
+          year,
           wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
           data: { tonnage: 7 }
