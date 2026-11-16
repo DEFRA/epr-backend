@@ -5,6 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import {
@@ -76,7 +77,10 @@ const atLedgerKeys = (route, path, { accredited = false } = {}) =>
       await findOrganisationAndRegistrationReadModels(request)
 
     const accreditation = accredited
-      ? registration.accreditations[/** @type {Year} */ (request.params.year)]
+      ? accreditationForYear(
+          registration,
+          /** @type {Year} */ (request.params.year)
+        )
       : null
     if (accreditation === undefined) {
       throw Boom.notFound('Accreditation not found')
@@ -206,17 +210,19 @@ const organisationWasteBalancesGet = {
     const organisation = await findOrganisationReadModel(request)
 
     const accredited = Object.entries(organisation.registrations).flatMap(
-      ([registrationNumber, { accreditations }]) =>
-        accreditations[year]
+      ([registrationNumber, registration]) => {
+        const accreditation = accreditationForYear(registration, year)
+        return accreditation
           ? [
               {
                 registrationNumber: /** @type {RegistrationNumber} */ (
                   registrationNumber
                 ),
-                accreditationNumber: accreditations[year].accreditationNumber
+                accreditationNumber: accreditation.accreditationNumber
               }
             ]
           : []
+      }
     )
 
     const balances = await Promise.all(
