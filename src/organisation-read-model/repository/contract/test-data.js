@@ -6,6 +6,7 @@ import {
 } from '#domain/organisations/numbers.js'
 
 /** @import { ExternalAccreditation } from '../to-read-model.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500056')
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
@@ -33,3 +34,16 @@ export const buildExternalAccreditation = (overrides = {}) => ({
   },
   ...overrides
 })
+
+/**
+ * An external accreditation held by the given organisation, so the read model
+ * serves it with that organisation rather than filtering it out.
+ *
+ * @param {{ organisationNumber: OrganisationNumber }} organisation
+ * @param {Partial<ExternalAccreditation>} [overrides]
+ * @returns {ExternalAccreditation}
+ */
+export const buildExternalAccreditationFor = (
+  { organisationNumber },
+  overrides = {}
+) => buildExternalAccreditation({ organisationNumber, ...overrides })
