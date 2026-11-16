@@ -203,16 +203,15 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
-        it('rejects an accreditation number without an accreditation id', async () => {
+        it('accepts an accreditation number without an accreditation id, as for an accreditation held outside this service', async () => {
           const id = `contract-validation-${randomUUID()}`
           const { accreditationId: _a, ...withoutAccreditationId } =
             summaryLogFactory.validating({ accreditationNumber: 'ACC-1' })
 
-          await expect(
-            repository.insert(id, withoutAccreditationId)
-          ).rejects.toThrow(
-            /Invalid summary log data.*"accreditationNumber" is not allowed/
-          )
+          await repository.insert(id, withoutAccreditationId)
+          const found = await repository.findById(id)
+
+          expect(found?.summaryLog.accreditationNumber).toBe('ACC-1')
         })
 
         it('rejects insert with missing URI when file status is complete', async () => {

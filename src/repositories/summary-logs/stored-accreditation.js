@@ -8,13 +8,13 @@
  */
 const accreditationOf = (id, { accreditationId, accreditationNumber }) => {
   if (
-    typeof accreditationId === 'string' &&
+    accreditationId !== null &&
     typeof accreditationNumber === 'string' &&
     accreditationNumber
   ) {
     return { accreditationNumber }
   }
-  if (accreditationId === null && accreditationNumber === null) {
+  if (typeof accreditationId !== 'string' && accreditationNumber === null) {
     return { accreditationNumber }
   }
   throw new TypeError(
