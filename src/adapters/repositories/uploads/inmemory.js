@@ -126,8 +126,8 @@ export const createInMemoryUploadsRepository = (config = {}) => {
 
       const /** @type {InitiateSummaryLogUploadOptions} */ options =
           /** @type {InitiateSummaryLogUploadOptions} */ (pending.options)
-      const { organisationId, registrationId, callbackUrl } = options
-      const s3Key = `${summaryLogUploadPath({ organisationId, registrationId })}/${uploadId}.xlsx`
+      const { organisationNumber, registrationNumber, callbackUrl } = options
+      const s3Key = `${summaryLogUploadPath({ organisationNumber, registrationNumber })}/${uploadId}.xlsx`
       const s3Uri = `s3://${summaryLogsBucket}/${s3Key}`
 
       storage.set(s3Uri, buffer)

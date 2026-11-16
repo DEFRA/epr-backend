@@ -1,5 +1,6 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
-import { DEFAULT_TEMPLATE_YEAR, templateYear } from '../template-year.js'
+import { templateYear } from '../template-year.js'
 import { EXPORTER_TEMPLATES } from './exporter/index.js'
 import { EXPORTER_REGISTERED_ONLY_TEMPLATES } from './exporter-registered-only/index.js'
 import { REPROCESSOR_INPUT_TEMPLATES } from './reprocessor-input/index.js'
@@ -84,6 +85,19 @@ export const tableSchemasOf = (year, processingType) =>
  */
 export const hasTemplate = (year, processingType) =>
   TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[year] !== undefined
+
+/**
+ * Every year any processing type has a template for, in no particular order.
+ *
+ * @returns {Year[]}
+ */
+export const yearsWithTemplates = () => [
+  ...new Set(
+    Object.values(TEMPLATES_BY_PROCESSING_TYPE).flatMap((templatesByYear) =>
+      Object.keys(templatesByYear).map((year) => toYear(Number(year)))
+    )
+  )
+]
 
 /**
  * Whether any processing type has a template for the year.
@@ -184,24 +198,4 @@ export const findSchemaByWasteRecordType = (wasteRecordType, tableSchemas) => {
     ([, schema]) => schema.wasteRecordType === wasteRecordType
   )
   return match ? { tableName: match[0], schema: match[1] } : null
-}
-
-/**
- * Finds a table schema by processing type and waste record type. Stored rows
- * carry no year, so this reads the DEFAULT_TEMPLATE_YEAR templates.
- *
- * @param {string} processingType - The processing type (e.g. 'REPROCESSOR_INPUT')
- * @param {string} wasteRecordType - The waste record type (e.g. 'received', 'sentOn')
- * @returns {TableSchema|null} The matching table schema, or null if not found
- */
-export const findSchemaForProcessingType = (
-  processingType,
-  wasteRecordType
-) => {
-  const tableSchemas =
-    TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[DEFAULT_TEMPLATE_YEAR]
-      ?.tableSchemas ?? {}
-  return (
-    findSchemaByWasteRecordType(wasteRecordType, tableSchemas)?.schema ?? null
-  )
 }

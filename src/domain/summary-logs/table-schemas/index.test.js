@@ -5,9 +5,9 @@ import {
   hasTemplate,
   hasTemplatesForYear,
   findSchemaByWasteRecordType,
-  findSchemaForProcessingType,
   unfilledValuesForYear,
-  tableSchemasOf
+  tableSchemasOf,
+  yearsWithTemplates
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -238,61 +238,6 @@ describe('table-schemas', () => {
     })
   })
 
-  describe('findSchemaForProcessingType', () => {
-    it('finds REPROCESSOR_INPUT received loads schema by waste record type', () => {
-      const result = findSchemaForProcessingType(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
-        WASTE_RECORD_TYPE.RECEIVED
-      )
-
-      expect(result).not.toBeNull()
-      const schema = /** @type {NonNullable<typeof result>} */ (result)
-      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.RECEIVED)
-      expect(schema.sheetName).toBe('Received')
-    })
-
-    it('finds EXPORTER exported loads schema by waste record type', () => {
-      const result = findSchemaForProcessingType(
-        PROCESSING_TYPES.EXPORTER,
-        WASTE_RECORD_TYPE.EXPORTED
-      )
-
-      expect(result).not.toBeNull()
-      const schema = /** @type {NonNullable<typeof result>} */ (result)
-      expect(schema.wasteRecordType).toBe(WASTE_RECORD_TYPE.EXPORTED)
-    })
-
-    it('finds sent-on loads schema by waste record type', () => {
-      const schema = findSchemaForProcessingType(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
-        WASTE_RECORD_TYPE.SENT_ON
-      )
-
-      expect(schema).not.toBeNull()
-      expect(
-        /** @type {NonNullable<typeof schema>} */ (schema).wasteRecordType
-      ).toBe(WASTE_RECORD_TYPE.SENT_ON)
-    })
-
-    it('returns null for unknown processing type', () => {
-      const schema = findSchemaForProcessingType(
-        'UNKNOWN',
-        WASTE_RECORD_TYPE.RECEIVED
-      )
-
-      expect(schema).toBeNull()
-    })
-
-    it('returns null for unknown waste record type', () => {
-      const schema = findSchemaForProcessingType(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
-        'unknown'
-      )
-
-      expect(schema).toBeNull()
-    })
-  })
-
   describe('unfilledValuesForYear', () => {
     it('gathers the placeholders of every table in the 2026 templates', () => {
       const result = unfilledValuesForYear(DEFAULT_TEMPLATE_YEAR)
@@ -377,6 +322,12 @@ describe('table-schemas', () => {
       [2026, 'UNKNOWN', false]
     ])('is %s %s: %s', (year, processingType, expected) => {
       expect(hasTemplate(toYear(year), processingType)).toBe(expected)
+    })
+  })
+
+  describe('yearsWithTemplates', () => {
+    it('lists every year with a template once', () => {
+      expect(yearsWithTemplates().toSorted()).toEqual([2026, 2027])
     })
   })
 
