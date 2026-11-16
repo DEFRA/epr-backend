@@ -40,14 +40,14 @@ const reinstateAfterAppealPayload = {
   fromStatus: 'cancelled',
   toStatus: 'approved'
 }
-// validTo deliberately differs from the seeded fixture value so the grant
-// assertions prove the persisted window came from the request, not the
-// application data that was already there.
+// validTo deliberately differs from the seeded fixture value (2026-12-31) so
+// the grant assertions prove the persisted window came from the request, not
+// the application data that was already there.
 const grantPayload = {
   fromStatus: 'created',
   toStatus: 'approved',
   validFrom: '2026-08-01',
-  validTo: '2027-03-31',
+  validTo: '2027-12-31',
   accreditationNumber: 'ACC999999'
 }
 const rejectPayload = { fromStatus: 'created', toStatus: 'rejected' }
@@ -546,7 +546,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(accreditation.validFrom).toBe('2026-08-01')
       // Overwrites the seeded 2026-12-31, proving the window came from the
       // request rather than the pre-existing application data.
-      expect(accreditation.validTo).toBe('2027-03-31')
+      expect(accreditation.validTo).toBe('2027-12-31')
       expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
         'created',
         'approved'
@@ -574,6 +574,25 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       )
     })
 
+    it.each(['2027-03-31', '2027-12-30', '2028-01-01'])(
+      'returns 422 when the supplied validTo %s is not a 31 December',
+      async (validTo) => {
+        const ctx = await seedOrg('created', {
+          registrationStatus: 'approved',
+          accreditationOverrides: ungrantedAccreditation
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: { ...grantPayload, validTo },
+          headers: { Authorization: `Bearer ${validToken}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      }
+    )
+
     it('returns 422 when the supplied validFrom is after the supplied validTo', async () => {
       const ctx = await seedOrg('created', {
         registrationStatus: 'approved',
@@ -583,14 +602,14 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, validFrom: '2027-06-01' },
+        payload: { ...grantPayload, validFrom: '2028-01-01' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(
-        /validFrom 2027-06-01 is after validTo 2027-03-31/
+        /validFrom 2028-01-01 is after validTo 2027-12-31/
       )
     })
 
@@ -603,14 +622,14 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, validFrom: '2027-06-01' },
+        payload: { ...grantPayload, validFrom: '2028-01-01' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(
-        /validFrom 2027-06-01 is after validTo 2027-03-31/
+        /validFrom 2028-01-01 is after validTo 2027-12-31/
       )
     })
 
@@ -640,7 +659,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       expect(accreditation.status).toBe('approved')
       expect(accreditation.validFrom).toBe('2026-08-01')
-      expect(accreditation.validTo).toBe('2027-03-31')
+      expect(accreditation.validTo).toBe('2027-12-31')
     })
 
     it('returns 422 when the linked registration is not approved', async () => {

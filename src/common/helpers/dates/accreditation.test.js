@@ -54,11 +54,11 @@ describe('accreditation date helpers', () => {
       { validFrom: '2025-01-01', validTo: undefined, desc: 'no validTo' },
       { validFrom: undefined, validTo: '2025-12-31', desc: 'no validFrom' }
     ])(
-      'returns null for an accreditation with $desc, which has never had a window',
+      'returns null for a cancelled accreditation with $desc, which has never had a window',
       ({ validFrom, validTo }) => {
         expect(
           accreditationWindow(
-            buildAccreditation({ status: 'created', validFrom, validTo })
+            buildAccreditation({ status: 'cancelled', validFrom, validTo })
           )
         ).toBeNull()
       }

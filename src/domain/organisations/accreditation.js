@@ -92,22 +92,35 @@
  */
 
 /**
+ * A created or rejected accreditation has no validity dates (ADR-0044 rule 2).
+ *
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber | null;
- *  status: Extract<StoredAccreditationStatus, 'created'|'rejected'|'cancelled'>;
- *  validFrom?: string;
- *  validTo?: string
- * }} AccreditationOther
+ *  status: Extract<StoredAccreditationStatus, 'created'|'rejected'>;
+ *  validFrom?: undefined;
+ *  validTo?: undefined
+ * }} AccreditationUngranted
  */
 
 /**
- * @typedef {AccreditationApproved | AccreditationOther} Accreditation
+ * A cancelled accreditation keeps the window it held while it was live.
+ *
+ * @typedef {AccreditationBase & {
+ *  accreditationNumber: AccreditationNumber | null;
+ *  status: Extract<StoredAccreditationStatus, 'cancelled'>;
+ *  validFrom?: string;
+ *  validTo?: string
+ * }} AccreditationCancelled
+ */
+
+/**
+ * @typedef {AccreditationApproved | AccreditationUngranted | AccreditationCancelled} Accreditation
  */
 
 /**
  * What deciding whether a date is accredited reads of an accreditation.
  *
- * @typedef {StatusHistory & Pick<AccreditationOther, 'validFrom' | 'validTo'>} AccreditationValidity
+ * @typedef {StatusHistory & Pick<AccreditationCancelled, 'validFrom' | 'validTo'>} AccreditationValidity
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

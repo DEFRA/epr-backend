@@ -37,12 +37,15 @@ const cancelledToApprovedSchema = Joi.object({
 // Granting issues the accreditation number and sets the validity window from
 // the supplied validFrom and validTo dates (PAE-1814). Both are required: the
 // persistence schema demands them on an approved accreditation, so the grant
-// supplies them rather than relying on whatever was already stored.
+// supplies them rather than relying on whatever was already stored. validTo is
+// 31 December (ADR-0044).
 const createdToApprovedSchema = Joi.object({
   fromStatus: Joi.string().valid(ACCREDITATION_STATUS.CREATED).required(),
   toStatus: Joi.string().valid(ACCREDITATION_STATUS.APPROVED).required(),
   validFrom: isoDateString().required(),
-  validTo: isoDateString().required(),
+  validTo: isoDateString()
+    .pattern(/-12-31$/)
+    .required(),
   accreditationNumber: Joi.string().trim().min(1).required()
 })
 
