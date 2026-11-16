@@ -8,7 +8,6 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
-import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
 import {
   createMongoSummaryLogRowStatesRepository,
@@ -367,14 +366,12 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
   /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} */
   const overseasSites = {}
 
-  const accreditation = buildAccreditation({
+  /** @type {import('#domain/organisations/accreditation.js').AccreditationValidity} */
+  const accreditation = {
     validFrom: '2024-01-01',
     validTo: '2024-12-31',
-    statusHistory: [
-      { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-      { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-    ]
-  })
+    timeline: [{ status: 'approved', at: '2023-12-15T00:00:00.000Z' }]
+  }
 
   // A zero-tonnage sent-on debit projects transactionAmount `-0`. MongoDB does
   // not preserve `-0` (it reads back `+0`), so without normalisation the fresh
