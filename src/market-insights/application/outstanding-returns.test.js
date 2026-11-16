@@ -8,7 +8,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -25,29 +25,18 @@ import {
 import { countOutstandingReturns } from './outstanding-returns.js'
 
 /** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
 /**
- * A status change as the read model times it, taking effect when recorded.
- *
- * @param {string} status
+ * @param {AccreditationStatus} status
  * @param {string} at - `YYYY-MM-DD` or an ISO date-time
  */
-const changed = (status, at) => {
-  const instant = new Date(at).toISOString()
-  return { status, at: instant, updatedAt: instant }
-}
+const changed = (status, at) => ({ status, at: new Date(at).toISOString() })
 
-/** Created in November, approved in December to take effect on 1 January. */
-const CREATED = changed('created', '2025-11-01')
-const APPROVED = {
-  status: 'approved',
-  at: '2026-01-01T00:00:00.000Z',
-  updatedAt: '2025-12-01T00:00:00.000Z'
-}
-const APPROVED_TIMELINE = [CREATED, APPROVED]
+const APPROVED = changed('approved', '2026-01-01')
+const APPROVED_TIMELINE = [APPROVED]
 
 /**
  * An operator accredited for the whole of 2026, holding one registration. With
@@ -57,7 +46,7 @@ const APPROVED_TIMELINE = [CREATED, APPROVED]
  *   orgId: number,
  *   material?: Material,
  *   tonnageBand?: TonnageBand,
- *   timeline?: StatusTimeline,
+ *   timeline?: StatusTimeline<AccreditationStatus>,
  *   registeredOnly?: boolean
  * }} options
  */
@@ -69,13 +58,13 @@ const makeOperator = ({
   registeredOnly = false
 }) => {
   const registrationNumber = toRegistrationNumber(`REG-${orgId}`)
-  const current = /** @type {'approved' | 'suspended' | 'cancelled'} */ (
-    timeline.at(-1)?.status
+  const last = /** @type {StatusTimeline<AccreditationStatus>[number]} */ (
+    timeline.at(-1)
   )
   const accreditation = buildReadAccreditation({
     accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
     prnIssuance: { tonnageBand },
-    status: { current, timeline }
+    status: { current: last.status, lastUpdatedAt: last.at, timeline }
   })
   const organisationNumber = toOrganisationNumber(String(orgId))
 
@@ -85,11 +74,7 @@ const makeOperator = ({
       registrations: {
         [registrationNumber]: buildReadReprocessorRegistration({
           material: /** @type {any} */ (material),
-          validFrom: '2025-12-01',
-          status: {
-            current: 'approved',
-            timeline: approvedTimelineFrom('2025-12-01')
-          },
+          status: approvedStatusFrom('2025-12-01'),
           accreditations: registeredOnly ? {} : { 2026: accreditation }
         })
       }
@@ -248,7 +233,7 @@ describe('countOutstandingReturns', () => {
   it('still counts an accreditation suspended throughout the period, since a suspended accreditation owes its reports', async () => {
     const operator = makeOperator({
       orgId: 500041,
-      timeline: [CREATED, changed('suspended', '2025-12-15'), APPROVED]
+      timeline: [changed('suspended', '2025-12-15'), APPROVED]
     })
 
     const counts = await count({ operators: [operator.organisation] })
@@ -267,15 +252,10 @@ describe('countOutstandingReturns', () => {
     expect(outstanding(counts)).toEqual([])
   })
 
-  it('counts nothing for an accreditation reverted to draft, then cancelled with its registration', async () => {
+  it('counts nothing for an accreditation cancelled without being approved', async () => {
     const operator = makeOperator({
       orgId: 500050,
-      timeline: [
-        CREATED,
-        changed('approved', '2025-12-01'),
-        changed('created', '2026-02-01'),
-        changed('cancelled', '2026-02-10')
-      ]
+      timeline: [changed('cancelled', '2026-02-10')]
     })
 
     const counts = await count({ operators: [operator.organisation] })

@@ -184,12 +184,11 @@ const setupSubmit = async ({
   // the same way.
   const approved = {
     current: /** @type {const} */ ('approved'),
+    lastUpdatedAt: APPROVED_AT,
     timeline: [
-      { status: 'created', at: CREATED_AT, updatedAt: CREATED_AT },
       {
-        status: 'approved',
-        at: `${VALID_FROM}T00:00:00.000Z`,
-        updatedAt: APPROVED_AT
+        status: /** @type {const} */ ('approved'),
+        at: `${VALID_FROM}T00:00:00.000Z`
       }
     ]
   }
@@ -199,7 +198,6 @@ const setupSubmit = async ({
       registrations: {
         'REG-123': buildReadReprocessorRegistration({
           material: 'paper',
-          validFrom: VALID_FROM,
           status: approved,
           standingByDate: {
             2026: { [VALID_FROM]: { standing: 'accredited' } },

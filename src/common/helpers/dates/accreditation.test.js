@@ -9,7 +9,7 @@ import {
 } from './accreditation.js'
 
 /** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
-/** @import {AccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
 /** @import {AccreditationWindow, StatusHistoryDateTime} from './accreditation.js' */
 
 /**
@@ -28,7 +28,7 @@ const buildAccreditation = (overrides = {}) =>
 describe('accreditation date helpers', () => {
   describe('accreditationWindow', () => {
     it.each(
-      /** @type {AccreditationStatus[]} */ ([
+      /** @type {StoredAccreditationStatus[]} */ ([
         'approved',
         'suspended',
         'cancelled'

@@ -19,23 +19,15 @@ import {
  * @param {string} status
  * @returns {(date: string) => StatusTimeline[number]}
  */
-const changeTo = (status) => (date) => {
-  const at = `${date}T00:00:00.000Z`
-  return { status, at, updatedAt: at }
-}
+const changeTo = (status) => (date) => ({ status, at: `${date}T00:00:00.000Z` })
 
 const approvedOn = changeTo('approved')
-const createdOn = changeTo('created')
 
 /**
  * Approved, sent back to created, and approved again from its validFrom in
- * July, as the read model dates it.
+ * July, as the read model serves it: only the approval since the re-creation.
  */
-const recreatedAccreditation = () => [
-  approvedOn('2026-02-01'),
-  createdOn('2026-03-01'),
-  approvedOn('2026-07-01')
-]
+const recreatedAccreditation = () => [approvedOn('2026-07-01')]
 const suspendedOn = changeTo('suspended')
 const cancelledOn = changeTo('cancelled')
 

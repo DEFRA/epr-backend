@@ -11,10 +11,7 @@ import {
   statusHeldAt
 } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
-import {
-  ACCREDITATION_STATUS,
-  ACTIVE_ACCREDITATION_STATUSES
-} from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
@@ -54,7 +51,10 @@ import {
 /**
  * A registration whose accreditation for a year has been granted.
  *
- * @typedef {AccreditationOfRegistration & { accreditation: AccreditationValidity }} GrantedRegistration
+ * @typedef {AccreditationOfRegistration & {
+ *   accreditation: AccreditationValidity,
+ *   window: AccreditationWindow
+ * }} GrantedRegistration
  */
 
 /**
@@ -62,20 +62,6 @@ import {
  *
  * @typedef {RegistrationOfOrganisation & { month: YearMonth }} AccreditedMonth
  */
-
-/**
- * Whether the accreditation has ever been granted, read from its history
- * rather than from the status it holds now. The schema makes the validity
- * dates optional rather than absent for an accreditation still created or
- * since rejected, so one that carries dates must not be walked as though it
- * were live. Reading the history keeps an approval since reverted to draft,
- * and a cancellation, on the months they held, which the validity window and
- * the status on each day then bound.
- *
- * @param {AccreditationValidity} accreditation
- */
-const hasBeenGranted = ({ statusHistory }) =>
-  statusHistory.some(({ status }) => ACTIVE_ACCREDITATION_STATUSES.has(status))
 
 /**
  * Every day of a period, as the bare dates a load can carry.
@@ -132,7 +118,8 @@ const isAccreditedDuring = (period, window, history) =>
 
 /**
  * Every accreditation the read model serves, outside test organisations, that
- * has been granted, among those the caller's publication covers. Only an
+ * has been approved, with its validity window, among those the caller's
+ * publication covers. Only an
  * accredited registration reports monthly, so a registered-only operator
  * yields nothing.
  *
@@ -150,14 +137,15 @@ export function* grantedRegistrations(organisations, covers) {
       utcYearOf(key)
     )) {
       const accreditation = validityOf({ registration, year })
+      const window = accreditationWindow(accreditation)
       const candidate = {
         organisationNumber,
         registrationNumber: toRegistrationNumber(registrationNumber),
         registration,
         year
       }
-      if (hasBeenGranted(accreditation) && covers(candidate)) {
-        yield { ...candidate, accreditation }
+      if (window !== null && covers(candidate)) {
+        yield { ...candidate, accreditation, window }
       }
     }
   }
@@ -189,12 +177,9 @@ export function* accreditedMonths({
     organisationNumber,
     registrationNumber,
     registration,
-    accreditation
+    accreditation,
+    window
   } of grantedRegistrations(organisations, covers)) {
-    const window = accreditationWindow(accreditation)
-    if (window === null) {
-      continue
-    }
     const history = getStatusHistoryDateTimes(accreditation.statusHistory)
     for (const period of periods) {
       if (isAccreditedDuring(period, window, history)) {

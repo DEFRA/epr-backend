@@ -10,7 +10,7 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
@@ -40,7 +40,7 @@ const insertAccreditedOperator =
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
-/** @import { StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */
@@ -56,35 +56,23 @@ const renderWith = (name, contents) =>
   renderTab((workbook) => addNationFigures(workbook, name, contents))
 
 /**
- * A status change as the read model times it, taking effect when recorded.
- *
- * @param {string} status
+ * @param {AccreditationStatus} status
  * @param {string} at
  */
-const changed = (status, at) => {
-  const instant = new Date(at).toISOString()
-  return { status, at: instant, updatedAt: instant }
-}
+const changed = (status, at) => ({ status, at: new Date(at).toISOString() })
 
 /**
- * Created in November, approved in December to take effect from `validFrom`.
- *
- * @param {string} [validFrom]
- * @returns {StatusTimeline}
+ * @param {string} [approvedAt]
+ * @returns {StatusTimeline<AccreditationStatus>}
  */
-const approvedFrom = (validFrom = '2026-01-01') => [
-  changed('created', '2025-11-01'),
-  {
-    status: 'approved',
-    at: new Date(validFrom).toISOString(),
-    updatedAt: '2025-12-01T00:00:00.000Z'
-  }
+const approvedFrom = (approvedAt = '2026-01-01') => [
+  changed('approved', approvedAt)
 ]
 
 /**
  * An exporter accredited for the rest of 2026, as the read model serves it.
  *
- * @param {{ material: Material, regulator?: RegulatorValue, timeline?: StatusTimeline }} options
+ * @param {{ material: Material, regulator?: RegulatorValue, timeline?: StatusTimeline<AccreditationStatus> }} options
  */
 const accreditedExporter = ({
   material,
@@ -92,25 +80,23 @@ const accreditedExporter = ({
   timeline = approvedFrom()
 }) => {
   const registrationNumber = uniqueRegistrationNumber()
+  const last = /** @type {StatusTimeline<AccreditationStatus>[number]} */ (
+    timeline.at(-1)
+  )
   const organisation = buildReadOrganisation({
     registrations: {
       [registrationNumber]: buildReadExporterRegistration({
         material: /** @type {any} */ (material),
         submittedToRegulator: { code: regulator },
-        validFrom: '2025-12-01',
-        status: {
-          current: 'approved',
-          timeline: approvedTimelineFrom('2025-12-01')
-        },
+        status: approvedStatusFrom('2025-12-01'),
         accreditations: {
           2026: buildReadExporterAccreditation({
             accreditationNumber: toAccreditationNumber(
               `ACC-${registrationNumber}`
             ),
             status: {
-              current: /** @type {'approved' | 'suspended' | 'cancelled'} */ (
-                timeline.at(-1)?.status
-              ),
+              current: last.status,
+              lastUpdatedAt: last.at,
               timeline
             }
           })

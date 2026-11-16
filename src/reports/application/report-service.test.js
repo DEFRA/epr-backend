@@ -67,7 +67,7 @@ const readModelAccreditation = (
 ) => ({
   accreditationNumber,
   prnIssuance: { tonnageBand: 'over_10000' },
-  status: { current: 'approved', timeline: [] }
+  status: { current: 'approved', lastUpdatedAt: undefined, timeline: [] }
 })
 
 /**

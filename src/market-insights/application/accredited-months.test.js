@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { MATERIAL } from '#domain/organisations/model.js'
 import {
-  approvedTimelineFrom,
+  approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -10,34 +10,22 @@ import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { accreditedMonths } from './accredited-months.js'
 
-/** @import { StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
 /**
- * A status change as the read model times it, taking effect when recorded.
- *
- * @param {string} status
+ * @param {AccreditationStatus} status
  * @param {string} at
  */
-const then = (status, at) => {
-  const instant = new Date(at).toISOString()
-  return { status, at: instant, updatedAt: instant }
-}
+const then = (status, at) => ({ status, at: new Date(at).toISOString() })
 
 /**
- * Created in November, approved in December to take effect from `validFrom`.
- *
- * @param {string} [validFrom]
- * @returns {StatusTimeline}
+ * @param {string} [approvedAt]
+ * @returns {StatusTimeline<AccreditationStatus>}
  */
-const grantedFrom = (validFrom = '2026-01-01') => [
-  then('created', '2025-11-01'),
-  {
-    status: 'approved',
-    at: new Date(validFrom).toISOString(),
-    updatedAt: '2025-12-01T00:00:00.000Z'
-  }
+const grantedFrom = (approvedAt = '2026-01-01') => [
+  then('approved', approvedAt)
 ]
 
 let sequence = 0
@@ -46,26 +34,24 @@ let sequence = 0
  * An organisation holding one reprocessor registration and its accreditation
  * for the year, 2026 unless told otherwise.
  *
- * @param {StatusTimeline} [timeline]
+ * @param {StatusTimeline<AccreditationStatus>} [timeline]
  * @param {number} [year]
  */
 const operatorAccredited = (timeline = grantedFrom(), year = 2026) => {
   sequence += 1
-  const current = /** @type {'approved' | 'suspended' | 'cancelled'} */ (
-    timeline.at(-1)?.status
+  const last = /** @type {StatusTimeline<AccreditationStatus>[number]} */ (
+    timeline.at(-1)
   )
   return buildReadOrganisation({
     registrations: {
       [toRegistrationNumber(`REG-${sequence}`)]:
         buildReadReprocessorRegistration({
           material: MATERIAL.PLASTIC,
-          validFrom: '2025-12-01',
-          status: {
-            current: 'approved',
-            timeline: approvedTimelineFrom('2025-12-01')
-          },
+          status: approvedStatusFrom('2025-12-01'),
           accreditations: {
-            [year]: buildReadAccreditation({ status: { current, timeline } })
+            [year]: buildReadAccreditation({
+              status: { current: last.status, lastUpdatedAt: last.at, timeline }
+            })
           }
         })
     }
@@ -121,43 +107,15 @@ describe('accreditedMonths', () => {
   })
 
   it('yields nothing for the months after the year an accreditation is for', () => {
-    const lastYear = operatorAccredited(
-      [
-        then('created', '2024-11-01'),
-        {
-          status: 'approved',
-          at: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2024-12-01T00:00:00.000Z'
-        }
-      ],
-      2025
-    )
+    const lastYear = operatorAccredited(grantedFrom('2025-01-01'), 2025)
 
     expect(monthsOf(lastYear)).toEqual([])
   })
 
-  it('yields the months of a window backdated before the approval', () => {
-    const backdated = operatorAccredited([
-      then('created', '2025-11-01'),
-      {
-        status: 'approved',
-        at: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-02-15T00:00:00.000Z'
-      }
-    ])
+  it('yields nothing for an accreditation cancelled without being approved', () => {
+    const neverApproved = operatorAccredited([then('cancelled', '2026-02-10')])
 
-    expect(monthsOf(backdated)).toEqual(JANUARY_TO_MARCH_2026)
-  })
-
-  it('yields nothing for an accreditation reverted to draft, then cancelled with its registration', () => {
-    const reverted = operatorAccredited([
-      then('created', '2025-11-01'),
-      then('approved', '2025-12-01'),
-      then('created', '2026-02-01'),
-      then('cancelled', '2026-02-10')
-    ])
-
-    expect(monthsOf(reverted)).toEqual([])
+    expect(monthsOf(neverApproved)).toEqual([])
   })
 
   it('yields only the registrations the caller covers', () => {

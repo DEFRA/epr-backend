@@ -58,7 +58,7 @@ const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { AppliedForMaterial, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { AppliedForMaterial, StoredRegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -230,7 +230,7 @@ const VALID_TO = '2026-12-31'
 // A registered overseas site whose approval starts after the default export
 // date, so OSR_ID 200 resolves to found-but-unapproved (ORS_NOT_APPROVED).
 const UNAPPROVED_VALID_FROM = '2026-06-01'
-/** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */
+/** @type {StatusHistoryEntryOf<StoredRegistrationStatus>[]} */
 const APPROVED_HISTORY = [
   { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
   { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
@@ -1104,16 +1104,11 @@ const buildComplexTestReadOrg = ({
   /** @param {string} approvedAt */
   const approvedFrom = (approvedAt) => ({
     current: /** @type {const} */ ('approved'),
+    lastUpdatedAt: '2023-12-15T00:00:00.000Z',
     timeline: [
       {
-        status: 'created',
-        at: '2023-12-01T00:00:00.000Z',
-        updatedAt: '2023-12-01T00:00:00.000Z'
-      },
-      {
-        status: 'approved',
-        at: `${approvedAt}T00:00:00.000Z`,
-        updatedAt: '2023-12-15T00:00:00.000Z'
+        status: /** @type {const} */ ('approved'),
+        at: `${approvedAt}T00:00:00.000Z`
       }
     ]
   })
@@ -1134,7 +1129,6 @@ const buildComplexTestReadOrg = ({
   })
   const common = {
     material: /** @type {any} */ (material),
-    validFrom: VALID_FROM,
     status: approvedFrom(VALID_FROM),
     standingByDate: /** @type {any} */ ({
       [accreditationYear]: standingInAccreditationYear,

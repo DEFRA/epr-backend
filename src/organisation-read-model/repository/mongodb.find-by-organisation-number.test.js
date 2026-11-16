@@ -17,7 +17,7 @@ import {
   accreditation,
   anakin,
   approvedOverseasSite,
-  approvedTimeline,
+  approvedStatus,
   exporter,
   exporterAccreditation,
   findOrganisation,
@@ -64,11 +64,13 @@ describe('findByOrganisationNumber', () => {
       },
       status: {
         current: 'created',
+        lastUpdatedAt: new Date(
+          stored.statusHistory[0].updatedAt
+        ).toISOString(),
         timeline: [
           {
             status: 'created',
-            at: new Date(stored.statusHistory[0].updatedAt).toISOString(),
-            updatedAt: new Date(stored.statusHistory[0].updatedAt).toISOString()
+            at: new Date(stored.statusHistory[0].updatedAt).toISOString()
           }
         ]
       },
@@ -80,12 +82,8 @@ describe('findByOrganisationNumber', () => {
         [REPROCESSOR_NUMBER]: {
           applicationContactDetails: luke,
           approvedPersons: [luke],
-          status: {
-            current: 'approved',
-            timeline: approvedTimeline('2026-02-01')
-          },
+          status: approvedStatus('2026-02-01'),
           submitterContactDetails: luke,
-          validFrom: '2026-02-01',
           material: 'glass_re_melt',
           standingByDate: expect.objectContaining({
             2026: {
@@ -107,10 +105,7 @@ describe('findByOrganisationNumber', () => {
             2026: {
               accreditationNumber: ACCREDITATION_NUMBER,
               prnIssuance: { tonnageBand: 'over_10000' },
-              status: {
-                current: 'approved',
-                timeline: approvedTimeline('2026-07-01')
-              }
+              status: approvedStatus('2026-07-01')
             }
           }
         }
@@ -135,12 +130,8 @@ describe('findByOrganisationNumber', () => {
     expect(organisation.registrations[EXPORTER_NUMBER]).toEqual({
       applicationContactDetails: anakin,
       approvedPersons: [anakin],
-      status: {
-        current: 'approved',
-        timeline: approvedTimeline('2026-02-01')
-      },
+      status: approvedStatus('2026-02-01'),
       submitterContactDetails: anakin,
-      validFrom: '2026-02-01',
       material: 'plastic',
       standingByDate: expect.objectContaining({
         2026: { '2026-02-01': { standing: 'registeredOnly' } }

@@ -14,7 +14,7 @@ import { hasTemplatesForYear } from '#domain/summary-logs/table-schemas/index.js
  * registration's current live link, captured when the upload completes.
  *
  * @param {{
- *   registration: Pick<Registration, 'status' | 'validFrom'>,
+ *   registration: Pick<Registration, 'status'>,
  *   year: Year,
  *   latestOpenYear: Year
  * }} args
