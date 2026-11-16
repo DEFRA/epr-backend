@@ -6,7 +6,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import {
@@ -16,7 +17,6 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
@@ -37,8 +37,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const registration = reprocessor()
   const organisation = buildOrganisation({ registrations: [registration] })
   const summaryLogId = new ObjectId().toString()
-  const organisationId = organisation.id
-  const registrationId = registration.id
+  const numbers = {
+    organisationNumber: organisation.organisationNumber,
+    registrationNumber: registration.registrationNumber
+  }
   const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
 
   const fileUrl = (logId = summaryLogId) => `${summaryLogs}/${logId}/file`
@@ -49,8 +51,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          buildReadOrganisationWithNumbersOf(organisation)
+        ]),
         summaryLogsRepository: () => summaryLogsRepository
       }
     })
@@ -62,11 +65,8 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     summaryLogsRepository.insert(
       summaryLogId,
       summaryLogFactory.submitted({
-        organisationId,
-        registrationId,
+        ...numbers,
         accreditationId: new ObjectId().toString(),
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: REPROCESSOR_NUMBER,
         accreditationNumber: ACCREDITATION_NUMBER,
         file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' }
       })
@@ -120,7 +120,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `Summary log file downloaded for summaryLogId: ${summaryLogId}, organisationId: ${organisationId}, registrationId: ${registrationId}`,
+          message: `Summary log file downloaded for summaryLogId: ${summaryLogId}, organisationNumber: ${organisation.organisationNumber}, registrationNumber: ${REPROCESSOR_NUMBER}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -159,7 +159,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         toSummaryLogId(summaryLogId),
-        summaryLogFactory.preprocessing({ organisationId, registrationId })
+        summaryLogFactory.preprocessing(numbers)
       )
 
       const response = await makeRequest(server)

@@ -2,21 +2,22 @@
 import Boom from '@hapi/boom'
 
 /**
- * @import { ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { SummaryLogKeyedRequest } from './at-summary-log-keys.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  */
 
 /**
- * A summary log is read only under the organisation and registration it
- * belongs to. One not stored yet passes: its upload is still in progress.
+ * A summary log is read only under the organisation and registration numbers
+ * it is stored with. One not stored yet passes: its upload is still in progress.
  *
- * @param {ResolvedRequest & {
+ * @param {SummaryLogKeyedRequest & {
  *   params: { summaryLogId: SummaryLogId },
  *   summaryLogsRepository: SummaryLogsRepository
  * }} request
  */
 export const assertSummaryLogMatchesPath = async (request) => {
-  const { organisationId, registrationId, summaryLogId } = request.params
+  const { organisationNumber, registrationNumber, summaryLogId } =
+    request.params
   const stored = await request.summaryLogsRepository.findById(summaryLogId)
   if (!stored) {
     return
@@ -24,8 +25,8 @@ export const assertSummaryLogMatchesPath = async (request) => {
 
   const { summaryLog } = stored
   if (
-    summaryLog.organisationId !== organisationId ||
-    summaryLog.registrationId !== registrationId
+    summaryLog.organisationNumber !== organisationNumber ||
+    summaryLog.registrationNumber !== registrationNumber
   ) {
     throw Boom.notFound('Summary log not found')
   }

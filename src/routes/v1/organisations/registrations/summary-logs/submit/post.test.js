@@ -18,20 +18,17 @@ import {
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
-
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
-/** @import { SummaryLogNumbers } from '#domain/summary-logs/numbers.js' */
 
 const mockAuditSummaryLogSubmit = vi.fn()
 const mockRecordStatusTransition = vi.fn()
@@ -46,23 +43,8 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
   }
 }))
 
-/**
- * The numbers an upload stores beside a registered-only summary log's ids,
- * by the registration's id.
- *
- * @type {Map<string, SummaryLogNumbers>}
- */
-const numbersByRegistrationId = new Map()
-
-/** @param {Pick<SummaryLog, 'registrationId'>} overrides */
-const numbersFor = ({ registrationId }) =>
-  numbersByRegistrationId.get(registrationId ?? '')
-
 const seedValidatingSummaryLog = async (repository, id, overrides = {}) => {
-  await repository.insert(id, {
-    ...summaryLogFactory.validating(overrides),
-    ...numbersFor(overrides)
-  })
+  await repository.insert(id, summaryLogFactory.validating(overrides))
   return waitForVersion(repository, id, 1)
 }
 
@@ -77,10 +59,7 @@ const seedValidatedSummaryLog = async (repository, id, overrides = {}) => {
 }
 
 const seedSubmittedSummaryLog = async (repository, id, overrides = {}) => {
-  await repository.insert(id, {
-    ...summaryLogFactory.submitted(overrides),
-    ...numbersFor(overrides)
-  })
+  await repository.insert(id, summaryLogFactory.submitted(overrides))
   return waitForVersion(repository, id, 1)
 }
 
@@ -89,7 +68,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   let server
   let summaryLogsRepository
   let summaryLogsWorker
-  let organisationAdministrationRepository
+  let organisationReadRepository
 
   /**
    * A registration of its own, so no test sees another's summary logs.
@@ -97,19 +76,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   const servedRegistration = () => {
     const registration = reprocessor()
     const organisation = buildOrganisation({ registrations: [registration] })
-    organisationAdministrationRepository =
-      createInMemoryOrganisationsRepository([partialMock(organisation)])()
+    organisationReadRepository = createInMemoryOrganisationReadRepository([
+      buildReadOrganisationWithNumbersOf(organisation)
+    ])()
+    const numbers = {
+      organisationNumber: organisation.organisationNumber,
+      registrationNumber: registration.registrationNumber
+    }
     const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${registration.registrationNumber}/summary-logs`
-    numbersByRegistrationId.set(registration.id, {
-      organisationNumber: organisation.organisationNumber,
-      registrationNumber: registration.registrationNumber,
-      accreditationNumber: null
-    })
     return {
-      organisationId: organisation.id,
-      registrationId: registration.id,
-      organisationNumber: organisation.organisationNumber,
-      registrationNumber: registration.registrationNumber,
+      numbers,
+      ...numbers,
       summaryLogs,
       /** @param {string} summaryLogId */
       submitUrl: (summaryLogId) => `${summaryLogs}/${summaryLogId}/submit`
@@ -127,8 +104,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
-        organisationAdministrationRepository: () =>
-          organisationAdministrationRepository
+        organisationReadRepository: () => organisationReadRepository
       },
       workers: {
         summaryLogsWorker
@@ -156,8 +132,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   it('transitions a validated summary log to submitting and records its side-effects', async () => {
     const {
-      organisationId,
-      registrationId,
+      numbers,
       organisationNumber,
       registrationNumber,
       summaryLogs,
@@ -169,8 +144,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       summaryLogsRepository,
       summaryLogId,
       {
-        organisationId,
-        registrationId,
+        ...numbers,
         validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION,
         meta: {
           [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
@@ -229,7 +203,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
     })
     expect(server.loggerMocks.info).toHaveBeenCalledWith({
-      message: `Summary log submission initiated: summaryLogId=${summaryLogId}, organisationId=${organisationId}, registrationId=${registrationId}`,
+      message: `Summary log submission initiated: summaryLogId=${summaryLogId}, organisationNumber=${organisationNumber}, registrationNumber=${registrationNumber}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -239,20 +213,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('submits when the preview baseline still matches the latest submitted log', async () => {
-    const { organisationId, registrationId, submitUrl } = servedRegistration()
+    const { numbers, submitUrl } = servedRegistration()
     const baselineId = randomUUID()
     const summaryLogId = randomUUID()
 
-    await seedSubmittedSummaryLog(summaryLogsRepository, baselineId, {
-      organisationId,
-      registrationId
-    })
+    await seedSubmittedSummaryLog(summaryLogsRepository, baselineId, numbers)
     const validated = await seedValidatedSummaryLog(
       summaryLogsRepository,
       summaryLogId,
       {
-        organisationId,
-        registrationId,
+        ...numbers,
         validatedAgainstSummaryLogId: baselineId
       }
     )
@@ -290,13 +260,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('returns 409 and leaves the log untouched when it is not yet validated', async () => {
-    const { organisationId, registrationId, submitUrl } = servedRegistration()
+    const { numbers, submitUrl } = servedRegistration()
     const summaryLogId = randomUUID()
 
-    await seedValidatingSummaryLog(summaryLogsRepository, summaryLogId, {
-      organisationId,
-      registrationId
-    })
+    await seedValidatingSummaryLog(summaryLogsRepository, summaryLogId, numbers)
 
     const response = await server.inject({
       method: 'POST',
@@ -314,25 +281,15 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('audits an accredited submission by its accreditation number', async () => {
-    const {
-      organisationId,
-      registrationId,
-      organisationNumber,
-      registrationNumber,
-      submitUrl
-    } = servedRegistration()
+    const { numbers, organisationNumber, registrationNumber, submitUrl } =
+      servedRegistration()
     const accreditationNumber = toAccreditationNumber('A27SR500030912PA')
-    numbersByRegistrationId.set(registrationId, {
-      organisationNumber,
-      registrationNumber,
-      accreditationNumber
-    })
     const summaryLogId = randomUUID()
 
     await seedValidatedSummaryLog(summaryLogsRepository, summaryLogId, {
-      organisationId,
-      registrationId,
+      ...numbers,
       accreditationId: randomUUID(),
+      accreditationNumber,
       validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
     })
 
@@ -354,20 +311,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('returns 409 without auditing or recording a metric when another submission is in progress', async () => {
-    const { organisationId, registrationId, submitUrl } = servedRegistration()
+    const { numbers, submitUrl } = servedRegistration()
     const inProgressId = randomUUID()
     const summaryLogId = randomUUID()
 
-    await seedValidatedSummaryLog(summaryLogsRepository, inProgressId, {
-      organisationId,
-      registrationId
-    })
+    await seedValidatedSummaryLog(summaryLogsRepository, inProgressId, numbers)
     await summaryLogsRepository.transitionToSubmittingExclusive(inProgressId)
 
-    await seedValidatedSummaryLog(summaryLogsRepository, summaryLogId, {
-      organisationId,
-      registrationId
-    })
+    await seedValidatedSummaryLog(summaryLogsRepository, summaryLogId, numbers)
 
     const response = await server.inject({
       method: 'POST',
@@ -388,21 +339,21 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('supersedes the log and returns 409 when the preview is stale', async () => {
-    const { organisationId, registrationId, submitUrl } = servedRegistration()
+    const { numbers, submitUrl } = servedRegistration()
     const newerSubmittedId = randomUUID()
     const staleBaselineId = randomUUID()
     const summaryLogId = randomUUID()
 
-    await seedSubmittedSummaryLog(summaryLogsRepository, newerSubmittedId, {
-      organisationId,
-      registrationId
-    })
+    await seedSubmittedSummaryLog(
+      summaryLogsRepository,
+      newerSubmittedId,
+      numbers
+    )
     const validated = await seedValidatedSummaryLog(
       summaryLogsRepository,
       summaryLogId,
       {
-        organisationId,
-        registrationId,
+        ...numbers,
         validatedAgainstSummaryLogId: staleBaselineId,
         meta: {
           [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]: PROCESSING_TYPES.EXPORTER
@@ -437,13 +388,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   it('returns 500 and logs the failure when the submission worker throws a non-Boom error', async () => {
-    const { organisationId, registrationId, submitUrl } = servedRegistration()
+    const { numbers, submitUrl } = servedRegistration()
     const summaryLogId = randomUUID()
 
-    await seedValidatedSummaryLog(summaryLogsRepository, summaryLogId, {
-      organisationId,
-      registrationId
-    })
+    await seedValidatedSummaryLog(summaryLogsRepository, summaryLogId, numbers)
 
     const testError = new Error('Unexpected error')
     summaryLogsWorker.submit.mockRejectedValue(testError)
