@@ -261,9 +261,18 @@ describe('Repeated uploads of identical data', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'glass_re_melt',
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,
@@ -281,13 +290,7 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: createInMemoryOrganisationReadRepository([
-          servedTestReadOrganisation({
-            wasteProcessingType: 'reprocessor',
-            material: 'glass_re_melt',
-            accreditationNumber: toAccreditationNumber('ACC-2026-001')
-          })
-        ])(),
+        organisationReadRepository,
         logger: mockLogger
       })
 
@@ -319,14 +322,7 @@ describe('Repeated uploads of identical data', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'glass_re_melt',
-                accreditationNumber: toAccreditationNumber('ACC-2026-001')
-              })
-            ])()
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker
