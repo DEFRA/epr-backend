@@ -114,8 +114,11 @@ const toVersion = (id, doc) =>
  * @returns {[SummaryLogId, StoredVersion] | []}
  */
 const holdingFile = (staleCache, fileId) =>
-  [...staleCache].find(([, held]) => held?.summaryLog?.file?.id === fileId) ??
-  []
+  [...staleCache].find(
+    ([, held]) =>
+      held?.summaryLog?.file?.id === fileId &&
+      recordsItsAccreditation(held.summaryLog)
+  ) ?? []
 
 // Read from staleCache to simulate reading from replica
 /** @param {SummaryLogStore} staleCache */
@@ -296,35 +299,37 @@ const findAllSummaryLogStatsByRegistration = (staleCache) => async () => {
 
 const SIXTY_SECONDS = 60
 
-const signDownload = (id, doc, reference) => {
-  if (!doc?.summaryLog?.file?.uri || !recordsItsAccreditation(doc.summaryLog)) {
+/**
+ * @param {SummaryLogVersion | null} found
+ * @param {string} reference
+ */
+const signDownload = (found, reference) => {
+  const file = found?.summaryLog.file
+  if (!file || !('uri' in file)) {
     throw Boom.notFound('Summary log file not found')
   }
 
-  const { Bucket, Key } = parseSummaryLogUri(doc.summaryLog.file.uri, reference)
+  const { Bucket, Key } = parseSummaryLogUri(file.uri, reference)
   const url = `https://${Bucket}.test/${Key}/download`
   const expiresAt = new Date(Date.now() + SIXTY_SECONDS * 1000).toISOString()
 
   return {
     url,
     expiresAt,
-    accreditationNumber: readStoredSummaryLog(id, doc.summaryLog)
-      .accreditationNumber
+    accreditationNumber: found.summaryLog.accreditationNumber
   }
 }
 
-const getDownloadUrl = (staleCache) => async (summaryLogId) => {
-  const validatedId = validateId(summaryLogId)
+/** @param {SummaryLogStore} staleCache */
+const getDownloadUrl = (staleCache) => async (summaryLogId) =>
+  signDownload(
+    await findById(staleCache)(summaryLogId),
+    validateId(summaryLogId)
+  )
 
-  return signDownload(validatedId, staleCache.get(validatedId), validatedId)
-}
-
-const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
-  const validatedId = validateId(fileId)
-
-  const [id, doc] = holdingFile(staleCache, validatedId)
-  return signDownload(id, doc, validatedId)
-}
+/** @param {SummaryLogStore} staleCache */
+const getDownloadUrlByFileId = (staleCache) => async (fileId) =>
+  signDownload(await findByFileId(staleCache)(fileId), validateId(fileId))
 
 // A missing accreditation number indexes as null in MongoDB's lock index.
 const sameAccreditationNumber = (a, b) => (a ?? null) === (b ?? null)

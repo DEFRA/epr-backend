@@ -7,7 +7,11 @@
  * @returns {SummaryLogAccreditation}
  */
 const accreditationOf = (id, { accreditationId, accreditationNumber }) => {
-  if (typeof accreditationId === 'string' && accreditationNumber) {
+  if (
+    typeof accreditationId === 'string' &&
+    typeof accreditationNumber === 'string' &&
+    accreditationNumber
+  ) {
     return { accreditationNumber }
   }
   if (accreditationId === null && accreditationNumber === null) {

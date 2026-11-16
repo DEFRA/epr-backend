@@ -6,7 +6,8 @@ import { summaryLogFactory, withoutAccreditationId } from './test-data.js'
 
 /**
  * @import { TestAPI } from 'vitest'
- * @import { SummaryLogsRepository } from '../port.js'
+ * @import { NewSummaryLog, SummaryLogsRepository } from '../port.js'
+ * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  *
  * @typedef {{ summaryLogsRepository: SummaryLogsRepository }} ReadAccreditationFixtures
  */
@@ -42,7 +43,10 @@ const aRegistration = () => ({
   registrationId: `reg-${randomUUID()}`
 })
 
-/** @param {{ organisationNumber: any, registrationNumber: any }} summaryLog */
+/**
+ * @param {SummaryLogKey} summaryLog
+ * @returns {SummaryLogKey}
+ */
 const keyOf = ({ organisationNumber, registrationNumber }) => ({
   organisationNumber,
   registrationNumber
@@ -62,10 +66,10 @@ export const testReadAccreditation = (it) => {
       }
     )
 
-    /** @param {object} summaryLog */
+    /** @param {NewSummaryLog} summaryLog */
     const insert = async (summaryLog) => {
       const id = toSummaryLogId(`contract-read-${randomUUID()}`)
-      await repository.insert(id, /** @type {any} */ (summaryLog))
+      await repository.insert(id, summaryLog)
       return id
     }
 
@@ -138,13 +142,20 @@ export const testReadAccreditation = (it) => {
     }
 
     describe('a summary log that records no accreditation', () => {
-      const recordingNone = () =>
-        withoutAccreditationId(
-          summaryLogFactory.validated({ ...aRegistration() })
+      /**
+       * @param {(overrides: object) => NewSummaryLog} uploaded
+       * @returns {NewSummaryLog & SummaryLogKey} a log the type forbids, as
+       *   stored before accreditations were recorded
+       */
+      const recordingNone = (uploaded) =>
+        /** @type {NewSummaryLog & SummaryLogKey} */ (
+          /** @type {unknown} */ (
+            withoutAccreditationId(uploaded({ ...aRegistration() }))
+          )
         )
 
       it('is not found by id or by file id', async () => {
-        const summaryLog = recordingNone()
+        const summaryLog = recordingNone(summaryLogFactory.validated)
         const id = await insert(summaryLog)
 
         expect(await repository.findById(id)).toBeNull()
@@ -152,9 +163,7 @@ export const testReadAccreditation = (it) => {
       })
 
       it('is not found by its registration, whichever accreditation the key names', async () => {
-        const summaryLog = withoutAccreditationId(
-          summaryLogFactory.submitted({ ...aRegistration() })
-        )
+        const summaryLog = recordingNone(summaryLogFactory.submitted)
         await insert(summaryLog)
 
         for (const accreditationNumber of [undefined, null]) {
@@ -167,8 +176,29 @@ export const testReadAccreditation = (it) => {
         }
       })
 
+      it('does not hide a recorded log holding the same file', async () => {
+        const unrecorded = recordingNone(summaryLogFactory.submitted)
+        await insert(unrecorded)
+        await insert(
+          summaryLogFactory.submitted({
+            ...aRegistration(),
+            file: unrecorded.file
+          })
+        )
+
+        const found = await repository.findByFileId(unrecorded.file.id)
+        const download = await repository.getDownloadUrlByFileId(
+          unrecorded.file.id
+        )
+
+        expect(accreditationOf(found?.summaryLog)).toEqual({
+          accreditationNumber: null
+        })
+        expect(download.accreditationNumber).toBeNull()
+      })
+
       it('cannot be submitted', async () => {
-        const id = await insert(recordingNone())
+        const id = await insert(recordingNone(summaryLogFactory.validated))
 
         await expect(
           repository.transitionToSubmittingExclusive(id)
@@ -176,11 +206,7 @@ export const testReadAccreditation = (it) => {
       })
 
       it('has no download to sign', async () => {
-        const id = await insert(
-          withoutAccreditationId(
-            summaryLogFactory.submitted({ ...aRegistration() })
-          )
-        )
+        const id = await insert(recordingNone(summaryLogFactory.submitted))
 
         await expect(repository.getDownloadUrl(id)).rejects.toMatchObject({
           isBoom: true,

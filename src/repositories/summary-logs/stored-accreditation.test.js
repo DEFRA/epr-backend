@@ -1,10 +1,18 @@
 import { readStoredSummaryLog } from './stored-accreditation.js'
 
-const stored = (accreditation) => ({
-  status: 'submitted',
-  year: 2026,
-  ...accreditation
-})
+/** @import { StoredSummaryLog } from './port.js' */
+
+/**
+ * A document as the database hands it back, whatever its accreditation.
+ *
+ * @param {object} accreditation
+ */
+const stored = (accreditation) =>
+  /** @type {StoredSummaryLog} */ ({
+    status: 'submitted',
+    year: 2026,
+    ...accreditation
+  })
 
 describe('readStoredSummaryLog', () => {
   it('reads a summary log uploaded for an accreditation by its number alone', () => {
@@ -44,6 +52,10 @@ describe('readStoredSummaryLog', () => {
     [
       'an empty accreditation number',
       { accreditationId: 'acc-1', accreditationNumber: '' }
+    ],
+    [
+      'an accreditation number that is not a string',
+      { accreditationId: 'acc-1', accreditationNumber: 123 }
     ]
   ])('refuses a summary log stored with %s', (_, accreditation) => {
     expect(() => readStoredSummaryLog('log-1', stored(accreditation))).toThrow(
