@@ -25,6 +25,17 @@ export const REMOVAL_ACTION = 'test-organisation-data-removal'
  */
 
 /**
+ * What was removed, and from where: a ledger, or an organisation's summary
+ * logs under its database id.
+ *
+ * @typedef {(Ledger & SourceIds & { removed: RecordCounts })
+ *   | (UnnumberedSummaryLogs & {
+ *       organisationNumber: OrganisationNumber
+ *       removed: { summaryLogs: number }
+ *     })} RemovalAuditContext
+ */
+
+/**
  * @typedef {Object} RemovalResult
  * @property {RemovedLedger[]} removed - each ledger removed (would be, on a dry run)
  * @property {RemovedUnnumberedSummaryLogs[]} unnumbered - each organisation's summary logs removed from under its database id (would be, on a dry run)
@@ -70,7 +81,7 @@ const holdsAny = (counts) => Object.values(counts).some((count) => count > 0)
 
 /**
  * @param {Dependencies} dependencies
- * @param {object} context - what was removed, and from where
+ * @param {RemovalAuditContext} context
  * @param {string} description - of what was removed, for the log
  * @param {RemovalResult} result
  */

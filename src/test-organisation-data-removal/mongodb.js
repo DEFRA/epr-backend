@@ -6,7 +6,7 @@ import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository
 import { REPORTS_COLLECTION } from '#reports/repository/mongodb-collection.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 
-/** @import { Collection, Db, Document, Filter } from 'mongodb' */
+/** @import { Collection, Db, Document, Filter, ObjectId } from 'mongodb' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
@@ -167,7 +167,7 @@ const ledgersIn = async (db, kind, organisationNumber) => {
 /**
  * @param {Db} db
  * @param {RecordKind} kind
- * @param {Filter<any>} filter - over the collection's records, whose `_id`s differ in type by kind
+ * @param {Filter<{ _id: string | ObjectId }>} filter - a summary log's `_id` is a string, a PRN's an ObjectId
  * @param {string} field
  * @returns {Promise<string[]>}
  */
