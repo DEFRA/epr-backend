@@ -2,9 +2,8 @@ import { getWasteBalanceClassification } from './is-included-in-waste-balance.js
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 
-/** @typedef {import('#domain/organisations/accreditation.js').Accreditation} Accreditation */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
 /**
  * @param {{ type?: import('#domain/waste-records/model.js').WasteRecordType, data?: object }} [overrides]
@@ -22,15 +21,12 @@ const buildWasteRecord = ({
   ...overrides
 })
 
-const accreditation = /** @type {Accreditation} */ (
-  /** @type {unknown} */ (
-    buildAccreditation({
-      id: 'acc-1',
-      validFrom: '2026-01-01',
-      validTo: '2027-01-01'
-    })
-  )
-)
+/** @type {AccreditationValidity} */
+const accreditation = {
+  timeline: [],
+  validFrom: '2026-01-01',
+  validTo: '2027-01-01'
+}
 
 const fullyFilledReprocessorRecord = buildWasteRecord({
   type: WASTE_RECORD_TYPE.RECEIVED,

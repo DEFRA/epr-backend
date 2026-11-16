@@ -6,20 +6,18 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 const overseasSites = /** @type {any} */ (new Map())
 
-const accreditation = buildAccreditation({
+/** @type {AccreditationValidity} */
+const accreditation = {
   validFrom: '2024-01-01',
   validTo: '2024-12-31',
-  statusHistory: [
-    { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-    { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-  ]
-})
+  timeline: [{ status: 'approved', at: '2023-12-15T00:00:00.000Z' }]
+}
 
 describe('projectSummaryLogRowState', () => {
   it('classifies the record and coerces its stored tonnages to two decimal places', () => {
