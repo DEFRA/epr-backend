@@ -11,6 +11,11 @@ import {
  */
 
 /**
+ * What classifying a row reads of its accreditation: null when there is none.
+ * @typedef {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} ClassificationContext
+ */
+
+/**
  * Validation pipeline for summary log rows
  *
  * Implements the three-outcome classification model:
@@ -47,7 +52,7 @@ import {
  *
  * @callback ClassifyForWasteBalance
  * @param {Record<string, any>} data - The row data
- * @param {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} context - Classification context; accreditation is null when absent, overseasSites is ORS_VALIDATION_DISABLED when feature is off
+ * @param {ClassificationContext} context
  * @returns {WasteBalanceClassificationResult}
  */
 
