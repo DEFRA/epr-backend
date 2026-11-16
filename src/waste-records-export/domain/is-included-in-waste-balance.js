@@ -5,7 +5,7 @@ import {
   classifyRecordForWasteBalance
 } from '#waste-balances/domain/waste-balance-classification.js'
 
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {WasteBalanceClassificationReason} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {WasteRecord} from '#domain/waste-records/model.js' */
@@ -32,7 +32,7 @@ import {
  *
  * @param {WasteRecord} record
  * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
- * @param {Accreditation | null} accreditation
+ * @param {AccreditationValidity | null} accreditation
  * @param {OverseasSitesContext} overseasSites
  * @returns {CsvWasteBalanceClassification | null}
  */
