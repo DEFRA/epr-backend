@@ -1,3 +1,4 @@
+/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /**
  * Storage-level port for summary-log row states (ADR-0037 Stage 1).
@@ -66,9 +67,9 @@
  * @property {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield each state document whose membership contains at least one of
  *   `summaryLogIds`, at most once however many of them it holds.
- * @property {() => Promise<string[]>} findDistinctDataKeys
+ * @property {(year: Year) => Promise<string[]>} findDistinctDataKeys
  *   Return the union of every key observed on `data` across every state
- *   document in the collection. Used by the CSV export to compose its dynamic
+ *   document of the year. Used by the CSV export to compose its dynamic
  *   header without materialising any document into memory.
  */
 
