@@ -1,4 +1,5 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   auditMarkReportsStale,
@@ -19,6 +20,7 @@ import {
  * }} SummaryLogUploadedRepositories
  *
  * @typedef {RegistrationKey & {
+ *   year: Year,
  *   summaryLogId: SummaryLogFileId,
  *   periodsRequiringResubmission?: PeriodRef[]
  * }} SummaryLogUploadedParams
@@ -29,10 +31,10 @@ import {
 /**
  * Builds the summary-log-uploaded handler, closing over the repositories that
  * stay fixed for the server's lifetime. The returned handler is called after a
- * new summary log is successfully submitted for an org/reg: it marks all active
- * (in_progress / ready_to_submit) reports as stale, and flags the latest
- * submitted report of each period in periodsRequiringResubmission as requiring
- * resubmission. Audits each batch in a single call.
+ * new summary log is successfully submitted for an org/reg: it marks the active
+ * (in_progress / ready_to_submit) reports of the log's year as stale, and flags
+ * the latest submitted report of each period in periodsRequiringResubmission
+ * as requiring resubmission. Audits each batch in a single call.
  *
  * @param {SummaryLogUploadedRepositories} repositories
  * @returns {OnSummaryLogUploaded}
@@ -42,26 +44,28 @@ export const createOnSummaryLogUploaded =
   async ({
     organisationNumber,
     registrationNumber,
+    year,
     summaryLogId,
     periodsRequiringResubmission = []
   }) => {
     const uploadedAt = new Date().toISOString()
 
     logger.info({
-      message: `Summary log uploaded, marking reports stale for ${organisationNumber}/${registrationNumber}: fileId=${summaryLogId}`
+      message: `Summary log uploaded, marking reports stale for ${organisationNumber}/${registrationNumber} year=${year}: fileId=${summaryLogId}`
     })
 
     const reportsMarkedStale =
-      await reportsRepository.markActiveReportsStaleForSummaryLog(
+      await reportsRepository.markActiveReportsStaleForSummaryLog({
         organisationNumber,
         registrationNumber,
+        year,
         summaryLogId,
         uploadedAt
-      )
+      })
 
     if (reportsMarkedStale.length > 0) {
       logger.info({
-        message: `Reports marked as stale for ${organisationNumber}/${registrationNumber} fileId=${summaryLogId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
+        message: `Reports marked as stale for ${organisationNumber}/${registrationNumber} year=${year} fileId=${summaryLogId}: ${reportsMarkedStale.map((r) => r.reportId).join(', ')}`
       })
 
       await auditMarkReportsStale({
