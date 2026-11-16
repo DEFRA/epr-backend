@@ -11,7 +11,9 @@ import {
 } from '#formsubmission/submission-keys.js'
 import Boom from '@hapi/boom'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
+import { MIN_YEAR } from '#common/validation/year-schema.js'
 
+/** @import { StringSchema } from 'joi' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {RegistrationOrAccreditation} from '#domain/organisations/model.js' */
 
@@ -107,6 +109,21 @@ export const dateRequiredWhenApprovedOrSuspended = () =>
 
 export const dateRequiredWhenApproved = () =>
   isoDateString().when('status', requiredWhenApproved).default(null)
+
+/**
+ * A date no earlier than the service's first year, which catches a mistyped
+ * year (2015 for 2025) before it is stored.
+ * @param {StringSchema} schema
+ * @returns {StringSchema}
+ */
+export const notBeforeMinYear = (schema) =>
+  schema
+    .custom((value, helpers) =>
+      Number(value.slice(0, 4)) < MIN_YEAR
+        ? helpers.error('date.beforeMinYear')
+        : value
+    )
+    .messages({ 'date.beforeMinYear': `must be in ${MIN_YEAR} or later` })
 
 function findAccreditationsWithoutApprovedRegistration(
   accreditations,
