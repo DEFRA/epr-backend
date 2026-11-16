@@ -1,7 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { summaryLogFactory } from './test-data.js'
+import { summaryLogFactory, withoutAccreditationId } from './test-data.js'
 import {
   SUMMARY_LOG_STATUS,
   calculateExpiresAt
@@ -246,6 +246,36 @@ export const testTransitionToSubmittingExclusive = (it) => {
 
       expect(result1.success).toBe(true)
       expect(result2.success).toBe(false)
+    })
+
+    it('blocks a registered-only submission while one stored before accreditations were recorded is submitting in the same year', async () => {
+      const { organisationId, registrationId } = generateOrgReg()
+      const registeredOnlyId = `summary-${randomUUID()}`
+
+      await repository.insert(
+        `summary-${randomUUID()}`,
+        withoutAccreditationId(
+          summaryLogFactory.submitting({
+            organisationId,
+            registrationId,
+            year: toYear(2026)
+          })
+        )
+      )
+      await repository.insert(
+        registeredOnlyId,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          year: toYear(2026),
+          accreditationId: null
+        })
+      )
+
+      const registeredOnly =
+        await repository.transitionToSubmittingExclusive(registeredOnlyId)
+
+      expect(registeredOnly.success).toBe(false)
     })
 
     it('blocks a second submission for the same numbers, whatever ids it is stored under', async () => {
