@@ -31,6 +31,7 @@ import {
   operatorsByKey
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -281,7 +282,7 @@ const publishedTotals = (cells, operators, month) =>
 const publicationCovers =
   (regulator) =>
   ({ registration, year }) => {
-    const status = registration.accreditations[year]?.status.current
+    const status = accreditationForYear(registration, year)?.status.current
     return (
       status !== undefined &&
       HELD_ACCREDITATION_STATUSES.has(status) &&
