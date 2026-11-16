@@ -1,12 +1,15 @@
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 
 /**
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation, Registration } from '#organisation-read-model/domain/model.js'
  *
  * @typedef {{
  *   organisation: Organisation,
- *   registrationNumber: string,
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
  *   registration: Registration,
  *   key: string
  * }} ReportableRegistration
@@ -28,14 +31,16 @@ export const reportableRegistrations = (organisations) =>
     )
     .flatMap((organisation) =>
       Object.entries(organisation.registrations).map(
-        ([registrationNumber, registration]) => ({
-          organisation,
-          registrationNumber,
-          registration,
-          key: registrationKey({
-            organisationNumber: organisation.organisationNumber,
-            registrationNumber
-          })
-        })
+        ([number, registration]) => {
+          const { organisationNumber } = organisation
+          const registrationNumber = toRegistrationNumber(number)
+          return {
+            organisation,
+            organisationNumber,
+            registrationNumber,
+            registration,
+            key: registrationKey({ organisationNumber, registrationNumber })
+          }
+        }
       )
     )
