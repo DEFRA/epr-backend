@@ -43,7 +43,7 @@ const insertAccreditedOperator =
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { AccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus, Material, RegulatorValue } from '#domain/organisations/model.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
@@ -69,7 +69,7 @@ const approvedHistory = [
  * approves only reprocessors, so an exporter is built here for a register to
  * start with.
  *
- * @param {{ material: Material, regulator?: RegulatorValue, validFrom?: string, statusHistory?: { status: AccreditationStatus, updatedAt: string }[] }} options
+ * @param {{ material: Material, regulator?: RegulatorValue, validFrom?: string, statusHistory?: { status: StoredAccreditationStatus, updatedAt: string }[] }} options
  */
 const accreditedExporter = ({
   material,

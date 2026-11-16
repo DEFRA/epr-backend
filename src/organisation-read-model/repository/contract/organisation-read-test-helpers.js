@@ -41,8 +41,8 @@ export const pendingSite = {
 export const overseasSites = [approvedSite, pendingSite]
 
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
-/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { Organisation, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '../port.js' */
 
 /**
@@ -65,32 +65,40 @@ export const findOrganisation = async (
 }
 
 /**
- * @param {AccreditationStatus} status
- * @returns {StatusHistoryEntryOf<AccreditationStatus>[]}
+ * @param {StoredAccreditationStatus} status
+ * @returns {StatusHistoryEntryOf<StoredAccreditationStatus>[]}
  */
 export const granted = (status) => [
   { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
-  { status, updatedAt: '2026-02-01T09:00:00.000Z' }
+  { status, updatedAt: GRANTED_AT }
 ]
+
+/**
+ * When the approval of a record built with `granted('approved')` was recorded.
+ */
+export const GRANTED_AT = '2026-02-01T09:00:00.000Z'
 
 /**
  * The timeline of a record built with `granted('approved')`.
  *
  * @param {string} validFrom
- * @returns {StatusTimeline}
+ * @returns {StatusTimeline<'approved'>}
  */
 export const approvedTimeline = (validFrom) => [
-  {
-    status: 'created',
-    at: '2026-01-01T09:00:00.000Z',
-    updatedAt: '2026-01-01T09:00:00.000Z'
-  },
-  {
-    status: 'approved',
-    at: new Date(validFrom).toISOString(),
-    updatedAt: '2026-02-01T09:00:00.000Z'
-  }
+  { status: 'approved', at: new Date(validFrom).toISOString() }
 ]
+
+/**
+ * The status of a record built with `granted('approved')`.
+ *
+ * @param {string} validFrom
+ * @returns {Status<'approved'>}
+ */
+export const approvedStatus = (validFrom) => ({
+  current: 'approved',
+  lastUpdatedAt: GRANTED_AT,
+  timeline: approvedTimeline(validFrom)
+})
 
 export const accreditation = (overrides = {}) =>
   buildAccreditation({

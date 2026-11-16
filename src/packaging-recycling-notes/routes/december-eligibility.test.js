@@ -7,6 +7,7 @@ import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
@@ -25,15 +26,13 @@ import {
 
 const approved = approvedTimelineFrom('2026-07-01')
 
+/** @type {import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>} */
 const cancelledAfterApproval = {
-  current: /** @type {const} */ ('cancelled'),
+  current: 'cancelled',
+  lastUpdatedAt: '2026-11-01T09:00:00.000Z',
   timeline: [
     ...approved,
-    {
-      status: 'cancelled',
-      at: '2026-11-01T09:00:00.000Z',
-      updatedAt: '2026-11-01T09:00:00.000Z'
-    }
+    { status: 'cancelled', at: '2026-11-01T09:00:00.000Z' }
   ]
 }
 
@@ -41,13 +40,13 @@ const cancelledAfterApproval = {
  * @param {{
  *   exporting?: boolean,
  *   reprocessingType?: 'input' | 'output',
- *   status?: { current: 'approved' | 'cancelled', timeline: import('#organisation-read-model/domain/model.js').StatusTimeline }
+ *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>
  * }} [options]
  */
 const organisationWith = ({
   exporting = false,
   reprocessingType = REPROCESSING_TYPE.OUTPUT,
-  status = { current: 'approved', timeline: approved }
+  status = approvedStatusFrom('2026-07-01')
 } = {}) => {
   const accredited = buildReadAccreditation({
     accreditationNumber: toAccreditationNumber(

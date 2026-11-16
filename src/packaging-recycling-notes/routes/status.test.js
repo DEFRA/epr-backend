@@ -20,6 +20,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadOrganisation,
@@ -93,16 +94,13 @@ const organisationReadRepositoryWith = async ({
             status: laterStatus
               ? {
                   current: laterStatus,
+                  lastUpdatedAt: '2026-08-01T09:00:00.000Z',
                   timeline: [
                     ...timeline,
-                    {
-                      status: laterStatus,
-                      at: '2026-08-01T09:00:00.000Z',
-                      updatedAt: '2026-08-01T09:00:00.000Z'
-                    }
+                    { status: laterStatus, at: '2026-08-01T09:00:00.000Z' }
                   ]
                 }
-              : { current: 'approved', timeline }
+              : approvedStatusFrom('2026-07-01')
           })
         }
       })

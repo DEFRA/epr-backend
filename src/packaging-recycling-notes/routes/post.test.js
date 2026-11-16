@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
@@ -96,22 +97,10 @@ const seedStream = (closingBalance = SEED_BALANCE, year = PRN_YEAR) =>
       : []
   )()
 
+/** @type {import('#organisation-read-model/domain/model.js').StatusTimeline<import('#organisation-read-model/domain/model.js').AccreditationStatus>} */
 const cancelledTimeline = [
-  {
-    status: 'created',
-    at: '2025-12-01T00:00:00.000Z',
-    updatedAt: '2025-12-01T00:00:00.000Z'
-  },
-  {
-    status: 'approved',
-    at: '2026-01-01T00:00:00.000Z',
-    updatedAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    status: 'cancelled',
-    at: '2026-03-01T00:00:00.000Z',
-    updatedAt: '2026-03-01T00:00:00.000Z'
-  }
+  { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
+  { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
 ]
 
 const validPayload = {
@@ -149,7 +138,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    *   year?: number,
    *   material?: string,
    *   reprocessingType?: 'input' | 'output',
-   *   status?: { current: 'approved' | 'suspended' | 'cancelled', timeline: import('#organisation-read-model/domain/model.js').StatusTimeline },
+   *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>,
    *   tradingName?: string
    * }} [options]
    */
@@ -164,19 +153,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const validFrom = `${year}-01-01`
     const served = buildReadAccreditation({
       accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
-      status: status ?? {
-        current: 'approved',
-        timeline: approvedTimelineFrom(validFrom)
-      }
+      status: status ?? approvedStatusFrom(validFrom)
     })
     /** @type {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>} */
     const registrationFields = {
       material: /** @type {any} */ (material),
-      validFrom,
-      status: {
-        current: /** @type {const} */ ('approved'),
-        timeline: approvedTimelineFrom(validFrom)
-      },
+      status: approvedStatusFrom(validFrom),
       standingByDate: { [year]: { [validFrom]: { standing: 'accredited' } } }
     }
     const registration = {
@@ -545,7 +527,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   describe('accreditation status', () => {
     it('returns 403 and does not create a PRN when the accreditation is cancelled', async () => {
       await useAccreditation({
-        status: { current: 'cancelled', timeline: cancelledTimeline }
+        status: {
+          current: 'cancelled',
+          lastUpdatedAt: '2026-03-01T00:00:00.000Z',
+          timeline: cancelledTimeline
+        }
       })
 
       const response = await createPrn()
@@ -561,13 +547,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       await useAccreditation({
         status: {
           current: 'approved',
+          lastUpdatedAt: '2026-04-01T00:00:00.000Z',
           timeline: [
             ...cancelledTimeline,
-            {
-              status: 'approved',
-              at: '2026-04-01T00:00:00.000Z',
-              updatedAt: '2026-04-01T00:00:00.000Z'
-            }
+            { status: 'approved', at: '2026-04-01T00:00:00.000Z' }
           ]
         }
       })
@@ -581,6 +564,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       await useAccreditation({
         status: {
           current: 'suspended',
+          lastUpdatedAt: '2026-01-01T00:00:00.000Z',
           timeline: approvedTimelineFrom('2026-01-01')
         }
       })
