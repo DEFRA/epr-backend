@@ -34,6 +34,7 @@ import { REMOVAL_ACTION, removeTestOrganisationData } from './removal.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { Dependencies } from './removal.js' */
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
@@ -242,7 +243,7 @@ describe('removeTestOrganisationData', () => {
 
   /**
    * @param {boolean} isDryRun
-   * @param {Partial<Awaited<ReturnType<typeof dependencies>>>} [overrides]
+   * @param {Partial<Dependencies>} [overrides]
    */
   const run = async (isDryRun, overrides = {}) =>
     removeTestOrganisationData(
@@ -468,6 +469,56 @@ describe('removeTestOrganisationData', () => {
         'Skipping test organisation 999999: kept records citing a summary log or PRN it would remove=1'
     })
   })
+
+  it.for([
+    {
+      field: 'stale.summaryLogChanged',
+      cite: () => ({
+        stale: {
+          summaryLogChanged: {
+            uploadedAt: '2026-02-01T00:00:00.000Z',
+            summaryLogId: 'unheld-file'
+          }
+        }
+      })
+    },
+    {
+      field: 'stale.prnCancelled',
+      /** @param {string} prnId */
+      cite: (prnId) => ({
+        stale: {
+          prnCancelled: { occurredAt: '2026-02-01T00:00:00.000Z', prnId }
+        }
+      })
+    },
+    {
+      field: 'resubmissionRequired.closedPeriodRestated',
+      cite: () => ({
+        resubmissionRequired: {
+          closedPeriodRestated: {
+            uploadedAt: '2026-02-01T00:00:00.000Z',
+            summaryLogId: 'unheld-file'
+          }
+        }
+      })
+    }
+  ])(
+    'skips an organisation when a kept report cites one it would remove in $field',
+    async ({ cite }) => {
+      const prn = await db.collection('packaging-recycling-notes').findOne({
+        'accreditation.accreditationNumber': UNHELD.accreditationNumber
+      })
+      await db
+        .collection('reports')
+        .insertOne({ ...HELD, ...cite(String(prn?._id)) })
+
+      const result = await run(false)
+
+      expect(result).toEqual(
+        expect.objectContaining({ removed: [], skipped: 1 })
+      )
+    }
+  )
 
   it('removes everything of a test organisation the read model does not hold at all', async () => {
     const absent = {

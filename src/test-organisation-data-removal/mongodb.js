@@ -1,13 +1,12 @@
 import { COLLECTION_NAME as PRNS_COLLECTION_NAME } from '#packaging-recycling-notes/repository/mongodb.js'
 import { COLLECTION_NAME as SUMMARY_LOGS_COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
+import { REPORTS_COLLECTION } from '#reports/repository/mongodb-collection.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 
-/** @import { Collection, Db } from 'mongodb' */
+/** @import { Collection, Db, Document, Filter } from 'mongodb' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-
-const REPORTS_COLLECTION_NAME = 'reports'
 
 /**
  * The numbers a record is stored under. `accreditationNumber` is `null` for a
@@ -31,6 +30,12 @@ const REPORTS_COLLECTION_NAME = 'reports'
 /** @typedef {Record<RecordKind, number>} RecordCounts */
 
 /**
+ * @typedef {{
+ *   _id: Omit<Ledger, 'organisationNumber'> & { hasAccreditation: boolean }
+ * }} LedgerGroup
+ */
+
+/**
  * @typedef {Object} TestOrganisationRecords
  * @property {(organisationNumber: OrganisationNumber) => Promise<Ledger[]>} findLedgers - every ledger the organisation's records are stored under
  * @property {(ledgers: Ledger[]) => Promise<number>} countCitationsOutside - records outside `ledgers` that were derived from a summary log or PRN inside them
@@ -52,7 +57,7 @@ const COLLECTIONS = {
     name: SUMMARY_LOG_ROW_STATES_COLLECTION_NAME,
     fields: TOP_LEVEL
   },
-  reports: { name: REPORTS_COLLECTION_NAME, fields: TOP_LEVEL },
+  reports: { name: REPORTS_COLLECTION, fields: TOP_LEVEL },
   prns: {
     name: PRNS_COLLECTION_NAME,
     fields: {
@@ -123,23 +128,25 @@ export const createTestOrganisationRecords = (db) => {
    */
   const ledgersIn = async (kind, organisationNumber) => {
     const { fields } = COLLECTIONS[kind]
-    const groups = await collection(kind)
-      .aggregate([
-        { $match: { [fields.organisationNumber]: organisationNumber } },
-        {
-          $group: {
-            _id: {
-              registrationNumber: `$${fields.registrationNumber}`,
-              accreditationNumber: `$${fields.accreditationNumber}`,
-              hasAccreditation: {
-                $ne: [{ $type: `$${fields.accreditationNumber}` }, 'missing']
-              },
-              year: `$${fields.year}`
+    const groups = /** @type {LedgerGroup[]} */ (
+      await collection(kind)
+        .aggregate([
+          { $match: { [fields.organisationNumber]: organisationNumber } },
+          {
+            $group: {
+              _id: {
+                registrationNumber: `$${fields.registrationNumber}`,
+                accreditationNumber: `$${fields.accreditationNumber}`,
+                hasAccreditation: {
+                  $ne: [{ $type: `$${fields.accreditationNumber}` }, 'missing']
+                },
+                year: `$${fields.year}`
+              }
             }
           }
-        }
-      ])
-      .toArray()
+        ])
+        .toArray()
+    )
     return groups.map(({ _id }) => ({
       organisationNumber,
       registrationNumber: _id.registrationNumber,
@@ -161,7 +168,7 @@ export const createTestOrganisationRecords = (db) => {
   /**
    * @param {RecordKind} kind
    * @param {Ledger[]} ledgers
-   * @param {object} citing
+   * @param {Filter<Document>} citing
    */
   const countOutside = (kind, ledgers, citing) =>
     collection(kind).countDocuments({
@@ -196,7 +203,16 @@ export const createTestOrganisationRecords = (db) => {
           summaryLogIds: { $in: fileIds }
         }),
         countOutside('reports', ledgers, {
-          'source.summaryLogId': { $in: fileIds }
+          $or: [
+            { 'source.summaryLogId': { $in: fileIds } },
+            { 'stale.summaryLogChanged.summaryLogId': { $in: fileIds } },
+            { 'stale.prnCancelled.prnId': { $in: prnIds } },
+            {
+              'resubmissionRequired.closedPeriodRestated.summaryLogId': {
+                $in: fileIds
+              }
+            }
+          ]
         })
       ])
       return counts.reduce((sum, count) => sum + count, 0)

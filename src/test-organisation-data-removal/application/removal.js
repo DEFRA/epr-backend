@@ -26,7 +26,7 @@ export const REMOVAL_ACTION = 'test-organisation-data-removal'
  * @property {Iterable<OrganisationNumber>} testOrganisationNumbers
  * @property {TestOrganisationRecords} records
  * @property {Pick<OrganisationReadRepository, 'findByOrganisationNumber'>} organisationReadRepository
- * @property {SystemLogsRepository} systemLogsRepository
+ * @property {Pick<SystemLogsRepository, 'insert'>} systemLogsRepository
  * @property {TypedLogger} logger
  */
 
@@ -93,7 +93,7 @@ const heldBy = (organisation) => {
 }
 
 /**
- * @param {SystemLogsRepository} systemLogsRepository
+ * @param {Pick<SystemLogsRepository, 'insert'>} systemLogsRepository
  * @param {Ledger} ledger
  * @param {RecordCounts} removed
  */
