@@ -9,7 +9,8 @@ import {
 import {
   generateFileId,
   buildPendingFile,
-  summaryLogFactory
+  summaryLogFactory,
+  withoutAccreditationId
 } from './test-data.js'
 
 export const testInsertBehaviour = (it) => {
@@ -203,12 +204,25 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
+        it('rejects insert without an accreditation number', async () => {
+          const id = `contract-validation-${randomUUID()}`
+
+          await expect(
+            repository.insert(
+              id,
+              withoutAccreditationId(summaryLogFactory.validating())
+            )
+          ).rejects.toThrow(
+            /Invalid summary log data.*"accreditationNumber" is required/
+          )
+        })
+
         it('accepts an accreditation number without an accreditation id, as for an accreditation held outside this service', async () => {
           const id = `contract-validation-${randomUUID()}`
-          const { accreditationId: _a, ...withoutAccreditationId } =
+          const { accreditationId: _a, ...numberOnly } =
             summaryLogFactory.validating({ accreditationNumber: 'ACC-1' })
 
-          await repository.insert(id, withoutAccreditationId)
+          await repository.insert(id, numberOnly)
           const found = await repository.findById(id)
 
           expect(found?.summaryLog.accreditationNumber).toBe('ACC-1')

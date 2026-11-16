@@ -66,7 +66,7 @@ const numbersSchema = {
       { is: Joi.valid(null).required(), then: Joi.valid(null).required() },
       { is: Joi.string().required(), then: Joi.string().required() }
     ],
-    otherwise: Joi.string().allow(null).optional()
+    otherwise: Joi.string().allow(null).required()
   })
 }
 
