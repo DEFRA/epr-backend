@@ -271,11 +271,23 @@ describe('mongodb external accreditations repository', () => {
         })
       },
       {
+        description: 'an empty timeline',
+        accreditation: buildExternalAccreditation({
+          status: { current: 'approved', timeline: [] }
+        })
+      },
+      {
         description: 'an unknown status',
         accreditation: buildExternalAccreditation({
           status: {
             current: /** @type {any} */ ('pending'),
-            timeline: []
+            timeline: [
+              {
+                status: 'approved',
+                at: '2027-01-01T00:00:00.000Z',
+                updatedAt: '2026-12-14T10:31:00.000Z'
+              }
+            ]
           }
         })
       },

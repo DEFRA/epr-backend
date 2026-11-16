@@ -29,6 +29,7 @@ export const externalAccreditationSchema = Joi.object({
           status: accreditationStatusSchema.required()
         })
       )
+      .min(1)
       .required()
   }).required(),
   overseasSites: accreditedOverseasSitesSchema
