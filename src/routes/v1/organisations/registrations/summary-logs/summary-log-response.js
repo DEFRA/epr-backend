@@ -7,22 +7,10 @@ import { transformValidationResponse } from './transform-validation-response.js'
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 
 /** @param {SummaryLog} summaryLog */
-const ledgerAccreditationOf = ({ accreditationId, accreditationNumber }) => {
-  if (accreditationId === null) {
-    return {
-      ledgerAccreditation: { kind: LEDGER_ACCREDITATION_KIND.REGISTERED_ONLY }
-    }
-  }
-  if (accreditationId && accreditationNumber) {
-    return {
-      ledgerAccreditation: {
-        kind: LEDGER_ACCREDITATION_KIND.ACCREDITED,
-        accreditationNumber
-      }
-    }
-  }
-  return {}
-}
+const ledgerAccreditationOf = ({ accreditationNumber }) =>
+  accreditationNumber === null
+    ? { kind: LEDGER_ACCREDITATION_KIND.REGISTERED_ONLY }
+    : { kind: LEDGER_ACCREDITATION_KIND.ACCREDITED, accreditationNumber }
 
 /**
  * The summary log document as the API answers it, per `summaryLogResponseSchema`.
@@ -39,9 +27,6 @@ export const toSummaryLogResponse = (summaryLog) => ({
       summaryLog.loadsByReportingPeriod ?? emptyLoadsByReportingPeriod()
   }),
   year: summaryLog.year,
-  ...(summaryLog.accreditationId !== undefined && {
-    accreditationId: summaryLog.accreditationId
-  }),
-  ...ledgerAccreditationOf(summaryLog),
+  ledgerAccreditation: ledgerAccreditationOf(summaryLog),
   ...extractResponseMetaFields(summaryLog.meta)
 })

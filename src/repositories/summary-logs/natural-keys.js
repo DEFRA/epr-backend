@@ -14,12 +14,7 @@ export const keyedBy =
   ({
     id,
     version,
-    summaryLog: {
-      organisationId: _o,
-      registrationId: _r,
-      accreditationId: _a,
-      ...summaryLog
-    }
+    summaryLog: { organisationId: _o, registrationId: _r, ...summaryLog }
   }) => ({
     id,
     version,
