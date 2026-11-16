@@ -1,10 +1,9 @@
 /** @import {StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
 /** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
+/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/domain/model.js' */
 
 /**
- * `updatedAt` is a Date at rest (Joi `date()`, BSON Date), but
- * getStatusHistoryDateTimes normalises string inputs via `new Date(...)`, so the
- * consumer contract genuinely accepts either.
+ * `updatedAt` is a Date at rest (Joi `date()`, BSON Date).
  *
  * @template {string} S
  * @typedef {{
@@ -120,7 +119,7 @@
 /**
  * What deciding whether a date is accredited reads of an accreditation.
  *
- * @typedef {StatusHistory & { validFrom?: string | null, validTo?: string | null }} AccreditationValidity
+ * @typedef {{ timeline: StatusTimeline<AccreditationStatus> } & { validFrom?: string | null, validTo?: string | null }} AccreditationValidity
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
