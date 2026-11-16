@@ -18,10 +18,7 @@ import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import {
-  classificationContextOf,
-  ledgerAccreditationFor
-} from '#waste-balances/application/read-model-accreditations.js'
+import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
 import {
   classifyLoads,
   fetchPeriodicReports,
@@ -44,13 +41,11 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
@@ -93,21 +88,21 @@ const extractSummaryLog = async ({
 
 /**
  * @param {{
- *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLog: SubmittedSummaryLog,
  *   loggingContext: string,
  *   logger: TypedLogger
  * }} params
- * @returns {Promise<Registration>}
+ * @returns {Promise<SummaryLogRegistration>}
  */
 const fetchRegistration = async ({
-  organisationAdministrationRepository,
+  organisationReadRepository,
   summaryLog,
   loggingContext,
   logger
 }) => {
   const registration = await registrationForSummaryLog(
-    organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLog
   )
 
@@ -132,7 +127,7 @@ const fetchRegistration = async ({
  * @property {ValidationIssuesCollector} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
- * @property {Registration} [registration] - Registration fetched during validation
+ * @property {SummaryLogRegistration} [registration] - Registration fetched during validation
  * @property {ClassificationContext} [classificationContext] - The read model's accreditation for classifying rows, read with the registration
  * @property {Record<string, TableSchema>} [tableSchemas] - The template's table schemas, once meta syntax has chosen it
  */
@@ -256,7 +251,6 @@ const performValidationChecks = async (params) => {
  *   loggingContext: string,
  *   logger: TypedLogger,
  *   summaryLogExtractor: SummaryLogExtractor,
- *   organisationAdministrationRepository: OrganisationAdministrationRepository,
  *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
@@ -276,7 +270,6 @@ const runValidationChecks = async (
     loggingContext,
     logger,
     summaryLogExtractor,
-    organisationAdministrationRepository,
     organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository
@@ -304,15 +297,13 @@ const runValidationChecks = async (
   result.tableSchemas = tableSchemas
 
   const registration = await fetchRegistration({
-    organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLog,
     loggingContext,
     logger
   })
   result.registration = registration
-  const classificationContext = classificationContextOf(
-    await ledgerAccreditationFor(organisationReadRepository, summaryLog)
-  )
+  const classificationContext = classificationContextOf(registration)
   result.classificationContext = classificationContext
   issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
@@ -472,7 +463,6 @@ const classifyAndPersistResult = async ({
   ledgerRepository,
   version,
   reportsService,
-  overseasSitesRepository,
   logger
 }) => {
   const periodicReports = await fetchPeriodicReports({
@@ -512,7 +502,6 @@ const classifyAndPersistResult = async ({
       summaryLog,
       summaryLogId,
       reportsService,
-      overseasSitesRepository,
       summaryLogRowStatesRepository,
       logger
     }),
@@ -531,12 +520,10 @@ const classifyAndPersistResult = async ({
  * @param {{
  *   logger: TypedLogger,
  *   summaryLogsRepository: SummaryLogsRepository,
- *   organisationAdministrationRepository: OrganisationAdministrationRepository,
  *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
- *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: SummaryLogId) => Promise<void>}
@@ -544,12 +531,10 @@ const classifyAndPersistResult = async ({
 export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,
-  organisationAdministrationRepository,
   organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   reportsService,
-  overseasSitesRepository,
   summaryLogExtractor
 }) => {
   return async (summaryLogId) => {
@@ -579,7 +564,6 @@ export const createSummaryLogsValidator = ({
       loggingContext,
       logger,
       summaryLogExtractor,
-      organisationAdministrationRepository,
       organisationReadRepository,
       summaryLogRowStatesRepository,
       ledgerRepository
@@ -620,7 +604,6 @@ export const createSummaryLogsValidator = ({
       ledgerRepository,
       version,
       reportsService,
-      overseasSitesRepository,
       logger
     })
 
