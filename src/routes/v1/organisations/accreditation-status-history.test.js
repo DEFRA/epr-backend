@@ -590,6 +590,9 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        expect(JSON.parse(response.payload).message).toMatch(
+          new RegExp(`validTo ${validTo} must be 31 December`)
+        )
       }
     )
 

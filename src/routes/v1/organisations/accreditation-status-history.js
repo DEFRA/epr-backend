@@ -20,8 +20,8 @@ export const accreditationStatusHistoryPath =
 
 /**
  * Grant-only validations. Granting sets the whole validity window from the
- * supplied dates, so reject a window that would be inverted. Granting also
- * issues the accreditation number, which must not already be in use by any
+ * supplied dates, so reject a window that would be inverted or that does not
+ * end on 31 December (ADR-0044). Granting also issues the accreditation number, which must not already be in use by any
  * accreditation in any organisation, whatever its status. The unique index on
  * accreditations.accreditationNumber also blocks concurrent grants of the
  * same number; this check gives the clear 422.
@@ -36,6 +36,12 @@ const assertGrantAllowed = async (
   if (new Date(grant.validFrom) > new Date(grant.validTo)) {
     throw Boom.badData(
       `Cannot grant accreditation: validFrom ${grant.validFrom} is after validTo ${grant.validTo}`
+    )
+  }
+
+  if (!grant.validTo.endsWith('-12-31')) {
+    throw Boom.badData(
+      `Cannot grant accreditation: validTo ${grant.validTo} must be 31 December`
     )
   }
 
