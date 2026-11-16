@@ -499,7 +499,7 @@ export const createUploadPayload = (
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       ...(includeS3 && {
         s3Bucket: 're-ex-summary-logs',
-        s3Key: `/organisations/${organisationId}/registrations/${registrationId}/${fileId}/${filename}`
+        s3Key: `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/${fileId}/${filename}`
       })
     }
   },

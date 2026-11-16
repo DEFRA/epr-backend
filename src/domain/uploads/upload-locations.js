@@ -1,4 +1,5 @@
 /** @import {Brand} from '#common/helpers/brand.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * Where CDP Uploader stores an upload's files, under its bucket.
@@ -26,10 +27,28 @@ export const UPLOAD_FILE_STATUS = Object.freeze({
 export const toUploadPath = (value) => /** @type {UploadPath} */ (value)
 
 /**
+ * @param {{ organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber }} numbers
+ * @returns {UploadPath}
+ */
+export const summaryLogUploadPath = ({
+  organisationNumber,
+  registrationNumber
+}) =>
+  toUploadPath(
+    `/organisations/${organisationNumber}/registrations/${registrationNumber}`
+  )
+
+/**
+ * Where summary log uploads started before they moved to numbers were placed.
+ * Remove once none can still be in flight.
+ *
  * @param {{ organisationId: string, registrationId: string }} ids
  * @returns {UploadPath}
  */
-export const summaryLogUploadPath = ({ organisationId, registrationId }) =>
+export const idBasedSummaryLogUploadPath = ({
+  organisationId,
+  registrationId
+}) =>
   toUploadPath(
     `/organisations/${organisationId}/registrations/${registrationId}`
   )

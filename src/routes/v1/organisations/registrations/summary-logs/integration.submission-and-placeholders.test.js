@@ -793,8 +793,8 @@ describe('Submission and placeholder tests', () => {
       )
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId,
-        registrationId,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
         callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`

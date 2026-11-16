@@ -120,8 +120,8 @@ const uploadAddresses = [
 
 const redirect = { redirectUrl: 'https://frontend.test/redirect' }
 
-/** @param {string} uploadRegistrationId */
-const uploadCompletedFor = (uploadRegistrationId) => ({
+/** @param {string} uploadRegistrationNumber */
+const uploadCompletedFor = (uploadRegistrationNumber) => ({
   uploadStatus: 'ready',
   form: {
     summaryLogUpload: {
@@ -129,7 +129,7 @@ const uploadCompletedFor = (uploadRegistrationId) => ({
       filename: 'summary-log.xlsx',
       fileStatus: 'complete',
       s3Bucket: 're-ex-summary-logs',
-      s3Key: `/organisations/${organisation.id}/registrations/${uploadRegistrationId}/upload-1/file-uploaded`
+      s3Key: `/organisations/${organisationNumber}/registrations/${uploadRegistrationNumber}/upload-1/file-uploaded`
     }
   },
   numberOfRejectedFiles: 0
@@ -221,7 +221,7 @@ describe('summary-log routes by natural key', () => {
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
     ({ uploads, registration, accreditationNumber }) => {
-      it('starts the upload with its callback under the same address', async () => {
+      it('starts the upload under the registration numbers, with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
           url: uploads,
@@ -232,8 +232,8 @@ describe('summary-log routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.CREATED)
         const { summaryLogId } = JSON.parse(response.payload)
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber: registration.registrationNumber,
           callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
         })
       })
@@ -244,7 +244,7 @@ describe('summary-log routes by natural key', () => {
         const response = await server.inject({
           method: 'POST',
           url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
-          payload: uploadCompletedFor(registration.id)
+          payload: uploadCompletedFor(registration.registrationNumber)
         })
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -315,7 +315,7 @@ describe('summary-log routes by natural key', () => {
       url: signedCallback(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
       ),
-      payload: uploadCompletedFor(accreditedRegistration.id)
+      payload: uploadCompletedFor(REPROCESSOR_NUMBER)
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -335,7 +335,7 @@ describe('summary-log routes by natural key', () => {
       url: signedCallback(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
       ),
-      payload: uploadCompletedFor(accreditedRegistration.id)
+      payload: uploadCompletedFor(REPROCESSOR_NUMBER)
     })
 
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -479,7 +479,7 @@ describe('summary-log routes by natural key', () => {
       signedCallback(
         `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
       ),
-      uploadCompletedFor(registeredOnlyRegistration.id)
+      uploadCompletedFor(REGISTERED_ONLY_NUMBER)
     ],
     [
       'reading under an unknown registration',
