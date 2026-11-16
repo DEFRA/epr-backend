@@ -14,9 +14,8 @@ import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
 /** @import { CoversRegistration, GrantedRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
@@ -41,13 +40,13 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * latest status change dated in or before the month decides it.
  *
  * @param {YearMonth} month
- * @param {StatusHistoryDateTime[]} history - descending
+ * @param {StatusTimeline} timeline
  */
-const isCancelledByEndOf = (month, history) =>
-  history.find(
-    ({ updatedAt }) =>
+const isCancelledByEndOf = (month, timeline) =>
+  timeline.findLast(
+    ({ at }) =>
       toYearMonth(
-        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
+        formatLocalDateTime(new Date(at), UK_TIME_ZONE)
       ).localeCompare(month) <= 0
   )?.status === ACCREDITATION_STATUS.CANCELLED
 
@@ -61,9 +60,9 @@ const isCancelledByEndOf = (month, history) =>
  *
  * @param {Set<YearMonth>} served
  * @param {Year[]} years
- * @param {Pick<GrantedRegistration, 'window' | 'history'>} granted
+ * @param {Pick<GrantedRegistration, 'window' | 'accreditation'>} granted
  */
-const owedPeriods = (served, years, { window, history }) =>
+const owedPeriods = (served, years, { window, accreditation }) =>
   filterPeriodsFromDate(
     years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
     window.validFrom,
@@ -71,7 +70,7 @@ const owedPeriods = (served, years, { window, history }) =>
   ).filter(
     (period) =>
       served.has(toYearMonth(period.startDate)) &&
-      !isCancelledByEndOf(toYearMonth(period.startDate), history)
+      !isCancelledByEndOf(toYearMonth(period.startDate), accreditation.timeline)
   )
 
 /**
@@ -114,10 +113,10 @@ export function* owedMonthlyReports({
     registration,
     year,
     key,
-    window,
-    history
+    accreditation,
+    window
   } of grantedRegistrations(organisations, years, covers)) {
-    const owed = owedPeriods(served, years, { window, history })
+    const owed = owedPeriods(served, years, { window, accreditation })
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
     const reports = reportsByRegistration.get(key) ?? []
 

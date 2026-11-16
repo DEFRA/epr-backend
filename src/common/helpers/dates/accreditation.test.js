@@ -2,32 +2,29 @@ import { describe, expect, it } from 'vitest'
 import {
   accreditationWindow,
   deriveAccreditationYear,
-  getStatusHistoryDateTimes,
   isAccreditedAtDates,
   isWithinAccreditationDateRange
 } from './accreditation.js'
 
-/** @import {Accreditation, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
-/** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
+/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/domain/model.js' */
 /** @import {AccreditationWindow} from './accreditation.js' */
 
 /**
- * @param {Partial<Accreditation>} [overrides]
- * @returns {Accreditation}
+ * @param {Partial<AccreditationValidity>} [overrides]
+ * @returns {AccreditationValidity}
  */
-const buildAccreditation = (overrides = {}) =>
-  /** @type {Accreditation} */ ({
-    status: 'approved',
-    validFrom: '2025-01-01',
-    validTo: '2025-12-31',
-    statusHistory: [],
-    ...overrides
-  })
+const buildAccreditation = (overrides = {}) => ({
+  validFrom: '2025-01-01',
+  validTo: '2025-12-31',
+  timeline: [],
+  ...overrides
+})
 
 describe('accreditation date helpers', () => {
   describe('accreditationWindow', () => {
     it.each(
-      /** @type {StoredAccreditationStatus[]} */ ([
+      /** @type {AccreditationStatus[]} */ ([
         'approved',
         'suspended',
         'cancelled'
@@ -35,7 +32,11 @@ describe('accreditation date helpers', () => {
     )(
       'builds a window for a %s accreditation carrying both dates',
       (status) => {
-        expect(accreditationWindow(buildAccreditation({ status }))).toEqual({
+        expect(
+          accreditationWindow(
+            buildAccreditation({ timeline: [{ status, at: '2025-01-01' }] })
+          )
+        ).toEqual({
           validFrom: '2025-01-01',
           validTo: '2025-12-31'
         })
@@ -44,7 +45,11 @@ describe('accreditation date helpers', () => {
 
     it('builds a window for a cancelled accreditation, which keeps the window it held while live', () => {
       expect(
-        accreditationWindow(buildAccreditation({ status: 'cancelled' }))
+        accreditationWindow(
+          buildAccreditation({
+            timeline: [{ status: 'cancelled', at: '2025-01-01' }]
+          })
+        )
       ).not.toBeNull()
     })
 
@@ -56,9 +61,7 @@ describe('accreditation date helpers', () => {
       'returns null for an accreditation with $desc, which has never had a window',
       ({ validFrom, validTo }) => {
         expect(
-          accreditationWindow(
-            buildAccreditation({ status: 'created', validFrom, validTo })
-          )
+          accreditationWindow(buildAccreditation({ validFrom, validTo }))
         ).toBeNull()
       }
     )
@@ -92,91 +95,13 @@ describe('accreditation date helpers', () => {
     )
   })
 
-  describe('getStatusHistoryDateTimes', () => {
-    it('should convert updatedAt strings to numeric timestamps', () => {
-      const statusHistory = [
-        /** @type {StatusHistoryEntry} */ ({
-          status: 'created',
-          updatedAt: '2025-01-01T00:00:00.000Z'
-        })
-      ]
-
-      const result = getStatusHistoryDateTimes(statusHistory)
-
-      expect(result).toEqual([
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ])
-    })
-
-    it('should sort entries in descending order by updatedAt', () => {
-      const statusHistory = [
-        /** @type {StatusHistoryEntry} */ ({
-          status: 'created',
-          updatedAt: '2025-01-01T00:00:00.000Z'
-        }),
-        /** @type {StatusHistoryEntry} */ ({
-          status: 'approved',
-          updatedAt: '2025-06-01T00:00:00.000Z'
-        }),
-        /** @type {StatusHistoryEntry} */ ({
-          status: 'suspended',
-          updatedAt: '2025-03-01T00:00:00.000Z'
-        })
-      ]
-
-      const result = getStatusHistoryDateTimes(statusHistory)
-
-      expect(result).toEqual([
-        {
-          status: 'approved',
-          updatedAt: new Date('2025-06-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'suspended',
-          updatedAt: new Date('2025-03-01T00:00:00.000Z').getTime()
-        },
-        {
-          status: 'created',
-          updatedAt: new Date('2025-01-01T00:00:00.000Z').getTime()
-        }
-      ])
-    })
-
-    it('puts the later recorded of two changes at the same time first', () => {
-      const at = '2025-06-01T00:00:00.000Z'
-      const statusHistory = [
-        /** @type {StatusHistoryEntry} */ ({
-          status: 'approved',
-          updatedAt: at
-        }),
-        /** @type {StatusHistoryEntry} */ ({
-          status: 'cancelled',
-          updatedAt: at
-        })
-      ]
-
-      expect(
-        getStatusHistoryDateTimes(statusHistory).map(({ status }) => status)
-      ).toEqual(['cancelled', 'approved'])
-    })
-
-    it('should return an empty array when given an empty array', () => {
-      expect(getStatusHistoryDateTimes([])).toEqual([])
-    })
-  })
-
   describe('isAccreditedAtDates', () => {
-    const approvedStatusHistory = /** @type {StatusHistoryEntry[]} */ ([
-      { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-      { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-    ])
+    /** @type {StatusTimeline<AccreditationStatus>} */
+    const approvedTimeline = [
+      { status: 'approved', at: '2024-12-15T00:00:00.000Z' }
+    ]
 
-    const accreditation = buildAccreditation({
-      statusHistory: approvedStatusHistory
-    })
+    const accreditation = buildAccreditation({ timeline: approvedTimeline })
 
     it('should return true when all dates are within range and approved', () => {
       expect(
@@ -217,12 +142,10 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return false when a date falls during a suspension period', () => {
-      const accreditationWithSuspension = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: [
-          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' },
-          { status: 'suspended', updatedAt: '2025-04-01T00:00:00.000Z' }
+      const accreditationWithSuspension = buildAccreditation({
+        timeline: [
+          { status: 'approved', at: '2024-12-15T00:00:00.000Z' },
+          { status: 'suspended', at: '2025-04-01T00:00:00.000Z' }
         ]
       })
 
@@ -235,11 +158,10 @@ describe('accreditation date helpers', () => {
     })
 
     it('excludes the whole day an accreditation was suspended on, even before the suspension', () => {
-      const suspendedAtTwo = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: [
-          ...approvedStatusHistory,
-          { status: 'suspended', updatedAt: '2025-04-01T14:00:00.000Z' }
+      const suspendedAtTwo = buildAccreditation({
+        timeline: [
+          ...approvedTimeline,
+          { status: 'suspended', at: '2025-04-01T14:00:00.000Z' }
         ]
       })
 
@@ -249,12 +171,11 @@ describe('accreditation date helpers', () => {
     })
 
     it('includes a day the accreditation was suspended and reinstated on', () => {
-      const reinstatedSameDay = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: [
-          ...approvedStatusHistory,
-          { status: 'suspended', updatedAt: '2025-04-01T09:00:00.000Z' },
-          { status: 'approved', updatedAt: '2025-04-01T14:00:00.000Z' }
+      const reinstatedSameDay = buildAccreditation({
+        timeline: [
+          ...approvedTimeline,
+          { status: 'suspended', at: '2025-04-01T09:00:00.000Z' },
+          { status: 'approved', at: '2025-04-01T14:00:00.000Z' }
         ]
       })
 
@@ -280,18 +201,8 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return true when date is before approval in status history but within validFrom/validTo', () => {
-      const accreditationLateApproval = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: [
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'created',
-            updatedAt: '2025-06-01T00:00:00.000Z'
-          }),
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'approved',
-            updatedAt: '2025-09-01T00:00:00.000Z'
-          })
-        ]
+      const accreditationLateApproval = buildAccreditation({
+        timeline: [{ status: 'approved', at: '2025-09-01T00:00:00.000Z' }]
       })
 
       expect(
@@ -302,49 +213,12 @@ describe('accreditation date helpers', () => {
       ).toBe(true)
     })
 
-    it('should handle out-of-order statusHistory entries', () => {
-      const accreditationUnordered = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: [
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'approved',
-            updatedAt: '2024-12-15T00:00:00.000Z'
-          }),
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'created',
-            updatedAt: '2024-12-01T00:00:00.000Z'
-          })
-        ]
-      })
-
-      expect(
-        isAccreditedAtDates(
-          ['2025-06-15T00:00:00.000Z'],
-          accreditationUnordered
-        )
-      ).toBe(true)
-    })
-
     it('should return false when approved then suspended then checking date in suspension', () => {
-      const accreditationWithGap = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: [
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'created',
-            updatedAt: '2024-12-01T00:00:00.000Z'
-          }),
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'approved',
-            updatedAt: '2024-12-15T00:00:00.000Z'
-          }),
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'suspended',
-            updatedAt: '2025-04-01T00:00:00.000Z'
-          }),
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'approved',
-            updatedAt: '2025-08-01T00:00:00.000Z'
-          })
+      const accreditationWithGap = buildAccreditation({
+        timeline: [
+          { status: 'approved', at: '2024-12-15T00:00:00.000Z' },
+          { status: 'suspended', at: '2025-04-01T00:00:00.000Z' },
+          { status: 'approved', at: '2025-08-01T00:00:00.000Z' }
         ]
       })
 
@@ -362,16 +236,7 @@ describe('accreditation date helpers', () => {
       // Loads between 1st-30th Jan must be included — approval is
       // determined by validFrom/validTo, not the status history date.
       const lateApprovalAccreditation = buildAccreditation({
-        statusHistory: [
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'created',
-            updatedAt: '2024-11-15T00:00:00.000Z'
-          }),
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'approved',
-            updatedAt: '2025-01-30T00:00:00.000Z'
-          })
-        ]
+        timeline: [{ status: 'approved', at: '2025-01-30T00:00:00.000Z' }]
       })
 
       expect(
@@ -382,17 +247,16 @@ describe('accreditation date helpers', () => {
       ).toBe(true)
     })
 
+    /** @type {StatusTimeline<AccreditationStatus>} */
     const suspendedThenCancelled = [
-      { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-      { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' },
-      { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' },
-      { status: 'cancelled', updatedAt: '2025-08-01T00:00:00.000Z' }
+      { status: 'approved', at: '2024-12-15T00:00:00.000Z' },
+      { status: 'suspended', at: '2025-06-01T00:00:00.000Z' },
+      { status: 'cancelled', at: '2025-08-01T00:00:00.000Z' }
     ]
 
     it('should return false for a date after cancellation (post-cancellation load not credited)', () => {
-      const cancelledAccreditation = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: suspendedThenCancelled
+      const cancelledAccreditation = buildAccreditation({
+        timeline: suspendedThenCancelled
       })
 
       expect(
@@ -404,9 +268,8 @@ describe('accreditation date helpers', () => {
     })
 
     it('should return true for a date before cancellation within the approved period', () => {
-      const cancelledAccreditation = /** @type {Accreditation} */ ({
-        ...accreditation,
-        statusHistory: suspendedThenCancelled
+      const cancelledAccreditation = buildAccreditation({
+        timeline: suspendedThenCancelled
       })
 
       expect(
