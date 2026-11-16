@@ -3,7 +3,7 @@
  * @import { Report } from './port.js'
  */
 
-const REPORTS_COLLECTION = 'reports'
+export const REPORTS_COLLECTION = 'reports'
 
 /**
  * @param {Db} db
