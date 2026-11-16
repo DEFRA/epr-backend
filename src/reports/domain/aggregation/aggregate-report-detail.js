@@ -14,7 +14,7 @@ import { filterRecordsByDateField } from './filter-records-by-date.js'
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { OrsDetails } from '#reports/domain/ors-details.js'
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Cadence } from '../cadence.js'
  * @import { OperatorCategory } from '../operator-category.js'

@@ -26,6 +26,7 @@ import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
@@ -73,7 +74,7 @@ function transformRegAcc(
   registration,
   reportComplianceFields
 ) {
-  const accreditation = registration.accreditations[currentUtcYear()]
+  const accreditation = accreditationForYear(registration, currentUtcYear())
   return {
     type: capitalize(registration.wasteProcessingType),
     businessName: organisation.name,

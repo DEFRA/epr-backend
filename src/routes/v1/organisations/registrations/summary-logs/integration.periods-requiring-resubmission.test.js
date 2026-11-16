@@ -37,8 +37,7 @@ import {
   pollWhileStatus,
   REPROCESSOR_RECEIVED_HEADERS,
   REPROCESSOR_SENT_ON_HEADERS,
-  setupWasteBalanceIntegrationEnvironment,
-  TEST_OVERSEAS_SITE_ID
+  setupWasteBalanceIntegrationEnvironment
 } from './integration-test-helpers.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
@@ -162,8 +161,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     'CONTAINER_NUMBER'
   ]
 
-  // OSR_ID 100 resolves to a registered overseas site, so the report takes the
-  // site's name and country from the ORS registry, not from these cells.
+  // OSR_ID 100 is one of the registration's overseas sites, so the report takes
+  // the site's name and country from the registration, not from these cells.
   const createLoadsExportedUploadData = ({ osrName, osrCountry }) => ({
     LOADS_EXPORTED: {
       location: { sheet: 'Exported', row: TABLE_HEADER_ROW, column: 'A' },
@@ -355,6 +354,19 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       info.mock.calls
         .slice(callsBefore)
         .map(([entry]) => /** @type {{ message?: string }} */ (entry).message)
+  }
+
+  // From here on, the read model serves the registration as `change` leaves it.
+  const changeServedRegistration = (env, change) => {
+    const { findByOrganisationNumber } = env.organisationReadRepository
+    vi.spyOn(
+      env.organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockImplementation(async (...args) => {
+      const organisation = await findByOrganisationNumber(...args)
+      change(organisation.registrations[env.registrationNumber])
+      return organisation
+    })
   }
 
   // A test that expects no flag must also show the period was compared, or it
@@ -961,8 +973,8 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-first')
     await generateAndSubmitReport(env, Q1_2026)
 
-    // OSR name and country are resolved from the ORS registry by OSR_ID, so the
-    // sheet cells are pass-through: changing them does not change the report.
+    // OSR name and country come from the registration by OSR_ID, so the sheet
+    // cells are pass-through: changing them does not change the report.
     const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
@@ -979,7 +991,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
-  it('does not flag a closed period when the registry renames the site (excluded registry fields)', async () => {
+  it('does not flag a closed period when the registration renames the site', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       accredited: false,
@@ -1000,17 +1012,11 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-first')
     await generateAndSubmitReport(env, Q1_2026)
 
-    // After Q1 closed, the ORS registry renames the site. Site name and country
-    // are excluded from the comparison, so a rename never reaches the diff.
-    const { findByIds } = env.overseasSitesRepository
-    vi.spyOn(env.overseasSitesRepository, 'findByIds').mockImplementation(
-      async (ids) =>
-        (await findByIds(ids)).map((site) =>
-          site.id === TEST_OVERSEAS_SITE_ID
-            ? { ...site, name: 'Renamed Overseas Site' }
-            : site
-        )
-    )
+    // After Q1 closed, the site is renamed. Site name and country are excluded
+    // from the comparison, so a rename never reaches the diff.
+    changeServedRegistration(env, (registration) => {
+      registration.overseasSites[100].name = 'Renamed Overseas Site'
+    })
 
     const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
@@ -1028,7 +1034,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
   })
 
-  it('does not flag a closed period when the registry stops resolving the site after it closed', async () => {
+  it('does not flag a closed period when the accreditation withdraws the site approval after it closed', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       organisationId: new ObjectId().toString(),
@@ -1045,11 +1051,16 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     await submitAndPoll(env, 'sl-first')
     await generateAndSubmitReport(env, JANUARY_2026)
 
-    // After January closed, the site leaves the registry, so its tonnage moves
-    // from overseasSites to unapprovedOverseasSites. Both lists are compared, so
-    // this would read as a change against the stored report; rebuilt with
-    // today's registry on both sides, the upload changes nothing.
-    await env.overseasSitesRepository.remove(TEST_OVERSEAS_SITE_ID)
+    // After January closed, the accreditation withdraws the site's approval, so
+    // its tonnage moves from overseasSites to unapprovedOverseasSites. Both
+    // lists are compared, so this would read as a change against the stored
+    // report; rebuilt with today's approvals on both sides, the upload changes
+    // nothing.
+    changeServedRegistration(env, (registration) => {
+      registration.accreditations[env.year].overseasSites[100] = {
+        status: 'pending'
+      }
+    })
 
     const infoMessages = captureInfoMessages(env)
     const loadsByReportingPeriod = await uploadAndValidate(
