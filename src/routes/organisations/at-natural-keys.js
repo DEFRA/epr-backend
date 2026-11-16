@@ -1,7 +1,9 @@
+import Boom from '@hapi/boom'
 import Joi from 'joi'
 
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 import {
-  findAccreditationForYear,
+  findOrganisationAndRegistrationReadModels,
   findOrganisationByNumber,
   findRegistrationByNumber
 } from './natural-keys.js'
@@ -26,8 +28,7 @@ import {
  *   year?: Year,
  *   organisationId: string,
  *   registrationId: string,
- *   accreditationId: string | null,
- *   accreditationNumber?: AccreditationNumber | null
+ *   accreditationNumber: AccreditationNumber | null
  * }} ResolvedParams
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
@@ -135,11 +136,33 @@ export const atKeys = (
 })
 
 /**
+ * The number of the registration's accreditation for the path's year, as the
+ * organisation read model holds it. Throws not found when it holds none.
+ *
+ * @param {HapiRequest & { params: RegistrationParams & { year?: Year } }} request
+ * @returns {Promise<AccreditationNumber>}
+ */
+const accreditationNumberForYear = async (request) => {
+  const { registration } =
+    await findOrganisationAndRegistrationReadModels(request)
+  const accreditation = accreditationForYear(
+    registration,
+    /** @type {Year} */ (request.params.year)
+  )
+  if (!accreditation) {
+    throw Boom.notFound('Accreditation not found')
+  }
+  return accreditation.accreditationNumber
+}
+
+/**
  * Wraps a route at a natural-key path, resolving
  * - {organisationNumber} to `request.params.organisationId`
  * - {registrationNumber} (if present) to `request.params.registrationId`
- * - {registrationNumber} + {year} to `request.params.accreditationId` and
- *   `request.params.accreditationNumber` if the `accredited` option is true
+ * - {registrationNumber} + {year} to `request.params.accreditationNumber`,
+ *   the number of the registration's accreditation for the year in the
+ *   organisation read model, if the `accredited` option is true, and `null`
+ *   otherwise
  *
  * The organisation the {organisationNumber} key resolved to is added to `request.app`, as
  * `ResolvedRecords`, so a handler need not read it again.
@@ -172,22 +195,13 @@ export const atNaturalKeys = (
       const resolvedRecords = { storedOrganisation: organisation }
       Object.assign(request.app, resolvedRecords)
 
-      const accreditation =
-        registration && accredited
-          ? findAccreditationForYear(
-              organisation,
-              registration,
-              /** @type {Year} */ (request.params.year)
-            )
-          : null
       const ids = registration
         ? {
             organisationId: organisation.id,
             registrationId: registration.id,
-            accreditationId: accreditation?.id ?? null,
-            ...(accreditation && {
-              accreditationNumber: accreditation.accreditationNumber
-            })
+            accreditationNumber: accredited
+              ? await accreditationNumberForYear(request)
+              : null
           }
         : { organisationId: organisation.id }
 

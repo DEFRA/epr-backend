@@ -18,7 +18,7 @@ import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { buildSummaryLogHandlerDeps } from '#server/queue-consumer/summary-log-handler-deps.js'
@@ -34,7 +34,6 @@ import {
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationApproved } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
@@ -125,46 +124,27 @@ const naming = (error, summaryLogId) => {
  */
 
 /**
- * Reads every number a summary log is stored with, refusing where the
- * registration or its live accreditation lacks one.
+ * The numbers a summary log for the year is stored with: the registration's,
+ * and its accreditation's for the year as the organisation read model holds
+ * it. Refuses a year the upload route would refuse.
  *
+ * @param {SubmitRequest} request
  * @param {OrganisationNumber} organisationNumber
- * @param {Registration} registration
- * @returns {RequiredNumbers}
+ * @param {Registration} storedRegistration
+ * @param {Year} year
+ * @returns {Promise<RequiredNumbers>}
  */
-const requiredNumbersOf = (organisationNumber, registration) => {
-  const { registrationNumber } = registration
+const numbersForYear = async (
+  { organisationReadRepository },
+  organisationNumber,
+  { registrationNumber },
+  year
+) => {
   if (!registrationNumber) {
     throw new Error(
       'Cannot store summary logs without their numbers: the registration has no registration number'
     )
   }
-  if (!isRegistrationAccredited(registration)) {
-    return { organisationNumber, registrationNumber, accreditationNumber: null }
-  }
-  const { accreditationNumber } = /** @type {AccreditationApproved} */ (
-    registration.accreditation
-  )
-  if (!accreditationNumber) {
-    throw new Error(
-      'Cannot store summary logs without their numbers: its accreditation has no accreditation number'
-    )
-  }
-  return { organisationNumber, registrationNumber, accreditationNumber }
-}
-
-/**
- * Refuses a year the upload route would refuse.
- *
- * @param {SubmitRequest} request
- * @param {RequiredNumbers} numbers
- * @param {Year} year
- */
-const assertUploadEligible = async (
-  { organisationReadRepository },
-  { organisationNumber, registrationNumber },
-  year
-) => {
   const organisation =
     await organisationReadRepository.findByOrganisationNumber(
       organisationNumber
@@ -181,6 +161,12 @@ const assertUploadEligible = async (
   if (!eligibility.eligible) {
     throw Boom.badData(eligibility.reason)
   }
+  return {
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber:
+      accreditationForYear(registration, year)?.accreditationNumber ?? null
+  }
 }
 
 /**
@@ -190,16 +176,9 @@ const assertUploadEligible = async (
  * @param {SubmitRequest} request
  * @param {SummaryLogId} summaryLogId
  * @param {Year} year
- * @param {Registration} registration
  * @param {RequiredNumbers} numbers
  */
-const insertValidatingLog = async (
-  request,
-  summaryLogId,
-  year,
-  registration,
-  numbers
-) => {
+const insertValidatingLog = async (request, summaryLogId, year, numbers) => {
   const { summaryLogsRepository } = request
   const { organisationId, registrationId } = request.params
 
@@ -212,7 +191,6 @@ const insertValidatingLog = async (
     organisationId,
     registrationId,
     year,
-    accreditationId: accreditationIdFor(registration),
     ...numbers
   }
   const latestSubmitted = await summaryLogsRepository.findLatestSubmitted(
@@ -300,19 +278,6 @@ const templateFor = (payload, registration, year) =>
     year
   )
 
-/**
- * @param {Registration} registration
- * @returns {string | null}
- */
-const accreditationIdFor = (registration) => {
-  if (!isRegistrationAccredited(registration)) {
-    return null
-  }
-
-  return /** @type {{ accreditation: { id: string } }} */ (registration)
-    .accreditation.id
-}
-
 export const devSummaryLogsSubmit = {
   method: 'POST',
   path: devSummaryLogsSubmitPath,
@@ -347,20 +312,18 @@ export const devSummaryLogsSubmit = {
       )
     const { organisationNumber } =
       await organisationAdministrationRepository.findById(organisationId)
-    const numbers = requiredNumbersOf(organisationNumber, registration)
-    await assertUploadEligible(request, numbers, year)
+    const numbers = await numbersForYear(
+      request,
+      organisationNumber,
+      registration,
+      year
+    )
     const parsed = toParsedSummaryLog(
       payload,
       templateFor(payload, registration, year)
     )
 
-    await insertValidatingLog(
-      request,
-      summaryLogId,
-      year,
-      registration,
-      numbers
-    )
+    await insertValidatingLog(request, summaryLogId, year, numbers)
 
     const deps = {
       logger,
