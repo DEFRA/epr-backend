@@ -302,27 +302,22 @@ describe('accreditation date helpers', () => {
       ).toBe(true)
     })
 
-    it('should handle out-of-order statusHistory entries', () => {
-      const accreditationUnordered = /** @type {Accreditation} */ ({
+    it('reads a newest-first history in date order', () => {
+      const accreditationNewestFirst = /** @type {Accreditation} */ ({
         ...accreditation,
         statusHistory: [
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'approved',
-            updatedAt: '2024-12-15T00:00:00.000Z'
-          }),
-          /** @type {StatusHistoryEntry} */ ({
-            status: 'created',
-            updatedAt: '2024-12-01T00:00:00.000Z'
-          })
+          { status: 'suspended', updatedAt: '2025-06-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' },
+          { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' }
         ]
       })
 
       expect(
         isAccreditedAtDates(
-          ['2025-06-15T00:00:00.000Z'],
-          accreditationUnordered
+          ['2025-08-01T00:00:00.000Z'],
+          accreditationNewestFirst
         )
-      ).toBe(true)
+      ).toBe(false)
     })
 
     it('should return false when approved then suspended then checking date in suspension', () => {

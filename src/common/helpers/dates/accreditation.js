@@ -8,6 +8,7 @@ import { statusOn } from '#organisation-read-model/domain/model.js'
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {AccreditationValidity, StatusHistoryEntry} from '#domain/organisations/accreditation.js' */
 /** @import {StoredAccreditationStatus} from '#domain/organisations/model.js' */
+/** @import {StatusTimeline} from '#organisation-read-model/domain/model.js' */
 
 /**
  * @typedef {{ updatedAt: number, status: StoredAccreditationStatus }} StatusHistoryDateTime
@@ -55,6 +56,23 @@ const EXCLUDED_STATUSES = new Set([
 ])
 
 /**
+ * A status history as a timeline for `statusOn`: oldest first, by day.
+ *
+ * @param {StatusHistoryEntry[]} statusHistory - in any order
+ * @returns {StatusTimeline<StoredAccreditationStatus>}
+ */
+export const statusTimelineOf = (statusHistory) =>
+  statusHistory
+    .toSorted(
+      (a, b) =>
+        new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()
+    )
+    .map(({ status, updatedAt }) => ({
+      status,
+      at: toCalendarDate(updatedAt)
+    }))
+
+/**
  * Checks if all dates are accredited. The last status on a day holds for the
  * whole day.
  * @param { (Date|string)[] } dates - The date to check
@@ -69,10 +87,7 @@ export function isAccreditedAtDates(dates, accreditation) {
   if (window === null) {
     return false
   }
-  const timeline = accreditation.statusHistory.map(({ status, updatedAt }) => ({
-    status,
-    at: toCalendarDate(updatedAt)
-  }))
+  const timeline = statusTimelineOf(accreditation.statusHistory)
   return dates.every(
     (date) =>
       isWithinAccreditationDateRange(date, window) &&
@@ -112,21 +127,6 @@ export function isWithinAccreditationDateRange(date, window) {
   const day = toCalendarDate(date)
 
   return day >= window.validFrom && day <= window.validTo
-}
-
-/**
- * The status an accreditation held on a date, read from its history: each
- * entry holds from its `updatedAt` until the next. Before the first entry
- * there is none, so a date there is left to the validity window alone.
- *
- * @param {string|Date} date
- * @param {StatusHistoryDateTime[]} statusHistory - descending
- * @returns {StoredAccreditationStatus | undefined}
- */
-export function statusHeldAt(date, statusHistory) {
-  return statusHistory.find(
-    (entry) => entry.updatedAt <= new Date(date).getTime()
-  )?.status
 }
 
 /**

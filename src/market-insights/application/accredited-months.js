@@ -6,15 +6,16 @@ import { validityOf } from '#waste-balances/application/read-model-accreditation
 import {
   accreditationWindow,
   getStatusHistoryDateTimes,
-  statusHeldAt
+  statusTimelineOf
 } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { statusOn } from '#organisation-read-model/domain/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation, Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, Registration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { AccreditationWindow, StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
@@ -53,7 +54,8 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
  *   key: string,
  *   accreditation: AccreditationValidity,
  *   window: AccreditationWindow,
- *   history: StatusHistoryDateTime[]
+ *   history: StatusHistoryDateTime[],
+ *   timeline: StatusTimeline
  * }} GrantedRegistration
  */
 
@@ -82,11 +84,13 @@ const daysOf = ({ startDate, endDate }) => {
 }
 
 /**
+ * The last status on a day holds for the whole day.
+ *
  * @param {CalendarDate} day
- * @param {StatusHistoryDateTime[]} history
+ * @param {StatusTimeline} timeline
  */
-const isCancelledOn = (day, history) =>
-  statusHeldAt(day, history) === ACCREDITATION_STATUS.CANCELLED
+const isCancelledOn = (day, timeline) =>
+  statusOn(timeline, day) === ACCREDITATION_STATUS.CANCELLED
 
 /**
  * The days of the period inside the accreditation's validity window, none
@@ -109,11 +113,11 @@ const withinWindow = ({ startDate, endDate }, { validFrom, validTo }) => ({
  *
  * @param {Period} period
  * @param {AccreditationWindow} window
- * @param {StatusHistoryDateTime[]} history
+ * @param {StatusTimeline} timeline
  */
-const isAccreditedDuring = (period, window, history) =>
+const isAccreditedDuring = (period, window, timeline) =>
   daysOf(withinWindow(period, window)).some(
-    (day) => !isCancelledOn(day, history)
+    (day) => !isCancelledOn(day, timeline)
   )
 
 /**
@@ -145,7 +149,8 @@ const everyGranted = (organisations, years) =>
                 key,
                 accreditation,
                 window,
-                history: getStatusHistoryDateTimes(accreditation.statusHistory)
+                history: getStatusHistoryDateTimes(accreditation.statusHistory),
+                timeline: statusTimelineOf(accreditation.statusHistory)
               }
             ]
       })
@@ -208,10 +213,10 @@ export function* accreditedMonths({
     registrationNumber,
     registration,
     window,
-    history
+    timeline
   } of grantedRegistrations(organisations, years, covers)) {
     for (const period of periods) {
-      if (isAccreditedDuring(period, window, history)) {
+      if (isAccreditedDuring(period, window, timeline)) {
         yield {
           month: toYearMonth(period.startDate),
           organisationNumber,
