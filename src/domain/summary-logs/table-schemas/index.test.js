@@ -6,7 +6,8 @@ import {
   hasTemplatesForYear,
   findSchemaByWasteRecordType,
   unfilledValuesForYear,
-  tableSchemasOf
+  tableSchemasOf,
+  yearsWithTemplates
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -321,6 +322,12 @@ describe('table-schemas', () => {
       [2026, 'UNKNOWN', false]
     ])('is %s %s: %s', (year, processingType, expected) => {
       expect(hasTemplate(toYear(year), processingType)).toBe(expected)
+    })
+  })
+
+  describe('yearsWithTemplates', () => {
+    it('lists every year with a template once', () => {
+      expect(yearsWithTemplates().toSorted()).toEqual([2026, 2027])
     })
   })
 

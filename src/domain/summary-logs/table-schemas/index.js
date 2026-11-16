@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
 import { templateYear } from '../template-year.js'
 import { EXPORTER_TEMPLATES } from './exporter/index.js'
@@ -84,6 +85,19 @@ export const tableSchemasOf = (year, processingType) =>
  */
 export const hasTemplate = (year, processingType) =>
   TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[year] !== undefined
+
+/**
+ * Every year any processing type has a template for, in no particular order.
+ *
+ * @returns {Year[]}
+ */
+export const yearsWithTemplates = () => [
+  ...new Set(
+    Object.values(TEMPLATES_BY_PROCESSING_TYPE).flatMap((templatesByYear) =>
+      Object.keys(templatesByYear).map((year) => toYear(Number(year)))
+    )
+  )
+]
 
 /**
  * Whether any processing type has a template for the year.
