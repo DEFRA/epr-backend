@@ -139,12 +139,7 @@ export const summaryLogRoutesByNaturalKey = [
     )
   ]),
   summaryLogsList,
-  atNaturalKeys(
-    withoutDatabaseIds(summaryLogsGet, ['accreditationId']),
-    summaryLog,
-    summaryLogParams,
-    ownSummaryLog
-  ),
+  atNaturalKeys(summaryLogsGet, summaryLog, summaryLogParams, ownSummaryLog),
   atNaturalKeys(
     submitLocatedAtNaturalKeys,
     `${summaryLog}/submit`,
@@ -160,8 +155,7 @@ export const summaryLogRoutesByNaturalKey = [
   atNaturalKeys(
     withoutDatabaseIds(summaryLogDocument, [
       'organisationId',
-      'registrationId',
-      'accreditationId'
+      'registrationId'
     ]),
     `${summaryLog}/document`,
     summaryLogParams,

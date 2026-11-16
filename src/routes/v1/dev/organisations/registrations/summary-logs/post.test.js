@@ -228,7 +228,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
   })
 
-  it('stores the year given in the URL, resolves accreditationId from the payload, and stores the numbers', async () => {
+  it('stores the year given in the URL, resolves the accreditation from the payload, and stores the numbers', async () => {
     const env = await createEnvironment()
 
     const response = await submit(
@@ -241,7 +241,6 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const body = JSON.parse(response.payload)
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.year).toBe(ACCREDITED_YEAR)
-    expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
     const { organisationNumber } =
       await env.organisationAdministrationRepository.findById(
         env.organisationId
@@ -282,16 +281,16 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     // for — validateProcessingType reports that mismatch, and the
     // registered-only template uses a different table shape from the
     // fixture above besides, so this always lands on invalid. The
-    // assertions below are only about which template and accreditationId
+    // assertions below are only about which template and accreditation
     // were resolved.
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
     expect(body.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
-    expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
+    expect(stored?.summaryLog.accreditationNumber).toBe('ACC-123')
   })
 
-  it('stores a null accreditationId and accreditation number for a registration with no accreditation', async () => {
+  it('stores a registration with no accreditation as registered-only', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       reprocessingType: 'input',
@@ -322,7 +321,6 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const body = JSON.parse(response.payload)
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
-    expect(stored?.summaryLog.accreditationId).toBeNull()
     expect(stored?.summaryLog.accreditationNumber).toBeNull()
   })
 

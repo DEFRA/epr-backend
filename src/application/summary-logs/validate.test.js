@@ -498,7 +498,6 @@ describe('SummaryLogsValidator', () => {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',
-      accreditationId: FIXTURE_LEDGER.accreditationId,
       organisationNumber: FIXTURE_LEDGER.organisationNumber,
       registrationNumber: FIXTURE_LEDGER.registrationNumber,
       accreditationNumber: FIXTURE_LEDGER.accreditationNumber,
@@ -819,46 +818,40 @@ describe('SummaryLogsValidator', () => {
     }
   )
 
-  it.each([
-    { unset: 'registrationNumber', number: 'registration' },
-    { unset: 'accreditationNumber', number: 'accreditation' }
-  ])(
-    'marks the summary log invalid when it has no $number number, rather than matching a record with none',
-    async ({ unset, number }) => {
-      delete summaryLog[unset]
-      organisationReadRepository.findByOrganisationNumber.mockResolvedValue({
-        organisationNumber: '500123',
-        registrations: {
-          undefined: {
-            ...served.registration,
-            accreditations: {
-              2026: { status: { current: 'approved', timeline: [] } }
-            }
+  it('marks the summary log invalid when it has no registration number, rather than matching a record with none', async () => {
+    delete summaryLog.registrationNumber
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue({
+      organisationNumber: '500123',
+      registrations: {
+        undefined: {
+          ...served.registration,
+          accreditations: {
+            2026: { status: { current: 'approved', timeline: [] } }
           }
         }
-      })
+      }
+    })
 
-      await validateSummaryLog(summaryLogId)
+    await validateSummaryLog(summaryLogId)
 
-      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
-        'summary-log-123',
-        1,
-        expect.objectContaining({
-          status: SUMMARY_LOG_STATUS.INVALID,
-          validation: expect.objectContaining({
-            issues: [
-              {
-                severity: 'fatal',
-                category: 'technical',
-                message: `Summary log has no ${number} number`,
-                code: 'VALIDATION_SYSTEM_ERROR'
-              }
-            ]
-          })
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        validation: expect.objectContaining({
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'Summary log has no registration number',
+              code: 'VALIDATION_SYSTEM_ERROR'
+            }
+          ]
         })
-      )
-    }
-  )
+      })
+    )
+  })
 
   it('ignores rows dated before an approval part-way through the year', async () => {
     givenReadModelAccreditation({ year: '2026', approvedAt: '2026-03-01' })
@@ -941,7 +934,6 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('validates a registered-only summary log against no accreditation', async () => {
-    summaryLog.accreditationId = null
     summaryLog.accreditationNumber = null
 
     await validateSummaryLog(summaryLogId)
@@ -957,7 +949,6 @@ describe('SummaryLogsValidator', () => {
   it('validates a summary log that holds numbers but no database ids', async () => {
     delete summaryLog.organisationId
     delete summaryLog.registrationId
-    delete summaryLog.accreditationId
 
     await validateSummaryLog(summaryLogId)
 
@@ -2546,7 +2537,6 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('resolves the previous submission on the accreditation the summary log was uploaded against', async () => {
-      summaryLog.accreditationId = 'acc-1'
       summaryLog.accreditationNumber = 'ACC-1'
       givenRegistration({
         registrationNumber: 'REG12345',
