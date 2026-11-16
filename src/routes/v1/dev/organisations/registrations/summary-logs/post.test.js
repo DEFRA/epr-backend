@@ -21,6 +21,7 @@ import {
 
 import { devSummaryLogsSubmitPath } from './post.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const ACCREDITED_YEAR = toYear(2026)
 
@@ -36,6 +37,7 @@ const { ACCREDITATION_NUMBER: _accreditationNumber, ...REGISTERED_ONLY_META } =
   META
 
 /** @typedef {Awaited<ReturnType<typeof createEnvironment>>} Environment */
+/** @import { Registration as ReadRegistration } from '#organisation-read-model/domain/model.js' */
 
 // Cell values are the parsed forms, not a sheet's: a row id is a string and a
 // date is a calendar date.
@@ -325,38 +327,88 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(stored?.summaryLog.accreditationNumber).toBeNull()
   })
 
-  it.each([
-    { number: 'registrationNumber', owner: (/** @type {*} */ r) => r },
-    {
-      number: 'accreditationNumber',
-      owner: (/** @type {*} */ r) => r.accreditation
-    }
-  ])(
-    'refuses a summary log, storing nothing, when the $number is missing',
-    async ({ number, owner }) => {
-      const env = await createEnvironment()
-      const { organisationAdministrationRepository } = env
-      const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
-      const findRegistrationById =
-        organisationAdministrationRepository.findRegistrationById
-      vi.spyOn(
-        organisationAdministrationRepository,
-        'findRegistrationById'
-      ).mockImplementation(async (...args) => {
-        const registration = await findRegistrationById(...args)
-        delete owner(registration)[number]
-        return registration
-      })
-
-      const response = await submit(
-        env,
-        payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+  it('refuses a summary log, storing nothing, when the registrationNumber is missing', async () => {
+    const env = await createEnvironment()
+    const { organisationAdministrationRepository } = env
+    const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
+    const findRegistrationById =
+      organisationAdministrationRepository.findRegistrationById
+    vi.spyOn(
+      organisationAdministrationRepository,
+      'findRegistrationById'
+    ).mockImplementation(async (...args) => {
+      const registration = /** @type {{ registrationNumber?: string }} */ (
+        await findRegistrationById(...args)
       )
+      delete registration.registrationNumber
+      return /** @type {*} */ (registration)
+    })
 
-      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-      expect(insert).not.toHaveBeenCalled()
-    }
-  )
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Serves the organisation as the read model would with the registration's
+   * accreditations for each year replaced, as when they are held outside
+   * this service.
+   *
+   * @param {Environment} env
+   * @param {(registration: ReadRegistration) => ReadRegistration['accreditations']} accreditationsOf
+   */
+  const withReadModelAccreditations = (env, accreditationsOf) => {
+    const { organisationReadRepository } = env
+    const findByOrganisationNumber =
+      organisationReadRepository.findByOrganisationNumber
+    vi.spyOn(
+      organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockImplementation(async (...args) => {
+      const organisation = await findByOrganisationNumber(...args)
+      assert(organisation)
+      const registration = organisation.registrations['REG-123']
+      registration.accreditations = accreditationsOf(registration)
+      return organisation
+    })
+  }
+
+  it("stores the number of the read model's accreditation for the year", async () => {
+    const env = await createEnvironment()
+    withReadModelAccreditations(env, (registration) => ({
+      [ACCREDITED_YEAR]: {
+        ...registration.accreditations[ACCREDITED_YEAR],
+        accreditationNumber: toAccreditationNumber('ACC-HELD-ELSEWHERE')
+      }
+    }))
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.accreditationNumber).toBe('ACC-HELD-ELSEWHERE')
+  })
+
+  it('stores a summary log as registered-only when the read model holds no accreditation for the year', async () => {
+    const env = await createEnvironment()
+    withReadModelAccreditations(env, () => ({}))
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.accreditationNumber).toBeNull()
+  })
 
   it('returns 422 for an invalid year', async () => {
     const env = await createEnvironment()
