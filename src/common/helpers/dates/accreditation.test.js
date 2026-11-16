@@ -157,6 +157,24 @@ describe('accreditation date helpers', () => {
       ])
     })
 
+    it('puts the later recorded of two changes at the same time first', () => {
+      const at = '2025-06-01T00:00:00.000Z'
+      const statusHistory = [
+        /** @type {StatusHistoryEntry} */ ({
+          status: 'approved',
+          updatedAt: at
+        }),
+        /** @type {StatusHistoryEntry} */ ({
+          status: 'cancelled',
+          updatedAt: at
+        })
+      ]
+
+      expect(
+        getStatusHistoryDateTimes(statusHistory).map(({ status }) => status)
+      ).toEqual(['cancelled', 'approved'])
+    })
+
     it('should return an empty array when given an empty array', () => {
       expect(getStatusHistoryDateTimes([])).toEqual([])
     })

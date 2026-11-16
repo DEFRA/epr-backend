@@ -1,7 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -19,9 +18,6 @@ const read = (overrides = {}) =>
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationAdministrationRepository: createInMemoryOrganisationsRepository(
-      []
-    )(),
     organisationReadRepository: emptyOrganisationReadRepository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
@@ -33,16 +29,15 @@ const read = (overrides = {}) =>
 
 describe('reading the market insights figures', () => {
   it('reads the register once and gives every builder the same reading', async () => {
-    const organisationAdministrationRepository =
-      createInMemoryOrganisationsRepository([])()
+    const organisationReadRepository = emptyOrganisationReadRepository()
     const reportsRepository = createInMemoryReportsRepository()()
-    const findAll = vi.spyOn(organisationAdministrationRepository, 'findAll')
+    const findAll = vi.spyOn(organisationReadRepository, 'findAll')
     const findReports = vi.spyOn(
       reportsRepository,
       'findPeriodicReportsForYear'
     )
 
-    await read({ organisationAdministrationRepository, reportsRepository })
+    await read({ organisationReadRepository, reportsRepository })
 
     expect(findAll).toHaveBeenCalledOnce()
     expect(findReports).toHaveBeenCalledOnce()

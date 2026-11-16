@@ -4,7 +4,6 @@ import ExcelJS from 'exceljs'
 import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -43,15 +42,12 @@ export const PUBLISHED_EXTRACTION = new Date('2026-08-10T09:00:00.000Z')
  * @returns {ReadMarketInsightsFiguresParams & { served: ReturnType<typeof servedOrganisations> }}
  */
 export const readParamsFor = (months) => {
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository([])()
   const served = servedOrganisations()
   return {
     served,
     ledgerRepository: createInMemoryLedgerRepository()(),
     summaryLogRowStatesRepository:
       createInMemorySummaryLogRowStatesRepository()(),
-    organisationAdministrationRepository,
     organisationReadRepository: served.repository(),
     reportsRepository: createInMemoryReportsRepository()(),
     logger: createMockLogger(),
