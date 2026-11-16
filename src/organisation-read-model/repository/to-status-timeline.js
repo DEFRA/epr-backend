@@ -46,8 +46,9 @@ const sinceLastCreated = (recorded) =>
 
 /**
  * The changes oldest first. Until ADR-0051's events exist, the first approval
- * takes effect from validFrom and every other change when it was recorded. A
- * stable sort keeps recorded order among equal times.
+ * takes effect from validFrom, a later change recorded before validFrom at
+ * validFrom, and every other change when it was recorded. A stable sort keeps
+ * recorded order among equal times.
  *
  * @template {string} T
  * @param {Change<T>[]} recorded - in recorded order
@@ -59,7 +60,9 @@ const setAtDates = (recorded, validFrom) => {
   const approvedFrom = new Date(validFrom)
   return recorded
     .map((change, index) =>
-      index === approval ? { ...change, at: approvedFrom } : change
+      index === approval || (index > approval && change.at < approvedFrom)
+        ? { ...change, at: approvedFrom }
+        : change
     )
     .toSorted((one, other) => one.at.getTime() - other.at.getTime())
 }
@@ -87,7 +90,7 @@ const servedOnly = (changes, statuses) =>
 export const lastRecordedAt = (changes) =>
   changes
     .map(({ updatedAt }) => updatedAt)
-    .toSorted()
+    .toSorted((one, other) => one.localeCompare(other))
     .at(-1)
 
 /**
