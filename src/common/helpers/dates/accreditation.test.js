@@ -49,6 +49,17 @@ describe('accreditation date helpers', () => {
       ).not.toBeNull()
     })
 
+    it.each(/** @type {const} */ (['created', 'rejected']))(
+      'returns null for a %s accreditation, which stores null dates',
+      (status) => {
+        expect(
+          accreditationWindow(
+            buildAccreditation({ status, validFrom: null, validTo: null })
+          )
+        ).toBeNull()
+      }
+    )
+
     it.each([
       { validFrom: undefined, validTo: undefined, desc: 'neither date' },
       { validFrom: '2025-01-01', validTo: undefined, desc: 'no validTo' },

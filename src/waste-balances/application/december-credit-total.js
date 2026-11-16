@@ -65,7 +65,7 @@ const decemberAmountForRow = (row, decemberKey) =>
  * submission: the sum of each classified row's `decemberAmountForRow`.
  *
  * @param {import('./target-amount.js').ClassifiedRow[]} classifiedRows
- * @param {{ validFrom?: string }} accreditation - only the accreditation-year
+ * @param {{ validFrom?: string | null }} accreditation - only the accreditation-year
  *   `validFrom` is read; a full `Accreditation` is assignable.
  * @returns {number}
  */
@@ -89,7 +89,7 @@ export const decemberCreditTotalFor = (classifiedRows, accreditation) => {
  * cancel in `decemberCreditTotalFor` still count here.
  *
  * @param {import('./target-amount.js').ClassifiedRow[]} classifiedRows
- * @param {{ validFrom?: string } | null} accreditation - only the
+ * @param {{ validFrom?: string | null } | null} accreditation - only the
  *   accreditation-year `validFrom` is read; a full `Accreditation` is
  *   assignable.
  * @returns {number}

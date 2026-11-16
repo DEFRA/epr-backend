@@ -97,8 +97,8 @@
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber | null;
  *  status: Extract<StoredAccreditationStatus, 'created'|'rejected'>;
- *  validFrom?: undefined;
- *  validTo?: undefined
+ *  validFrom?: null;
+ *  validTo?: null
  * }} AccreditationUngranted
  */
 
@@ -120,7 +120,7 @@
 /**
  * What deciding whether a date is accredited reads of an accreditation.
  *
- * @typedef {StatusHistory & { validFrom?: string, validTo?: string }} AccreditationValidity
+ * @typedef {StatusHistory & { validFrom?: string | null, validTo?: string | null }} AccreditationValidity
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

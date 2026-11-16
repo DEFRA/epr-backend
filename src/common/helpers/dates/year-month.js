@@ -94,7 +94,7 @@ export const yearOf = (yearMonth) =>
  * against. Null when the value is not a string long enough to carry a year, so a
  * caller that cannot place a December accrues nothing rather than guessing one.
  *
- * @param {string | undefined} isoDate - an ISO date string (`YYYY-MM-DD` or longer)
+ * @param {string | null | undefined} isoDate - an ISO date string (`YYYY-MM-DD` or longer)
  * @returns {string | null}
  */
 export const decemberKeyForYearOf = (isoDate) =>
