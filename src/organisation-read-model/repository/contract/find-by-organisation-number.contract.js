@@ -61,7 +61,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         expect(registration.wasteProcessingType).toBe(wasteProcessingType)
         expect(registration.accreditations).toEqual({
           [SEED_ACCREDITATION_YEAR]: expect.objectContaining({
-            accreditationNumber
+            accreditationNumber,
+            year: SEED_ACCREDITATION_YEAR
           })
         })
       }
