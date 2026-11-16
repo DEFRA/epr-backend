@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
 const FIRST_ROW_ID = 'row-123'
@@ -35,8 +35,7 @@ const RECEIVED_LOADS_HEADERS = [
 const transformWithItsTemplate = (parsedData) =>
   transformFromSummaryLog(
     parsedData,
-    getTemplate(DEFAULT_TEMPLATE_YEAR, parsedData.meta.PROCESSING_TYPE.value)
-      .tableSchemas
+    tableSchemasOf(DEFAULT_TEMPLATE_YEAR, parsedData.meta.PROCESSING_TYPE.value)
   )
 
 describe('transformFromSummaryLog', () => {

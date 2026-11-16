@@ -1,5 +1,8 @@
 import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { findSchemaForProcessingType } from '#domain/summary-logs/table-schemas/index.js'
+import {
+  findSchemaByWasteRecordType,
+  getTemplate
+} from '#domain/summary-logs/table-schemas/index.js'
 import { badRequest } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from '#reports/enums/error-codes.js'
 import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index.js'
@@ -7,6 +10,7 @@ import { reportMandatoryPolicyFor } from '#reports/domain/report-mandatory/index
 /**
  * @import { TableSchema } from '#domain/summary-logs/table-schemas/index.js'
  * @import { ReportMandatoryRule } from '#reports/domain/report-mandatory/index.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  */
 
 /**
@@ -65,13 +69,15 @@ const issuesForRow = (row, schema, rules) => {
  * Applies the report-mandatory policy to every row state, returning one issue
  * per unfilled mandatory field across the whole summary log. Rows whose
  * processing type has no policy (or whose record type has no rules) are skipped.
- * The row's table schema, drift-guarded against the policy, supplies the sheet
- * name and per-field unfilled values.
+ * The row's table schema, from the template for the report's year and the row's
+ * processing type and drift-guarded against the policy, supplies the sheet name
+ * and per-field unfilled values.
  *
  * @param {CompletenessRow[]} rows
+ * @param {Year} year - The report's year
  * @returns {Issue[]}
  */
-const findIssues = (rows) =>
+const findIssues = (rows, year) =>
   rows.flatMap((row) => {
     const rules = reportMandatoryPolicyFor(row.processingType)?.[
       row.wasteRecordType
@@ -80,7 +86,10 @@ const findIssues = (rows) =>
       return []
     }
     const schema = /** @type {TableSchema} */ (
-      findSchemaForProcessingType(row.processingType, row.wasteRecordType)
+      findSchemaByWasteRecordType(
+        row.wasteRecordType,
+        getTemplate(year, row.processingType).tableSchemas
+      )?.schema
     )
     return issuesForRow(row, schema, rules)
   })
@@ -105,10 +114,11 @@ export const MAX_ISSUES_REPORTED = 100
  * body field or the 400 error payload.
  *
  * @param {CompletenessRow[]} rows
+ * @param {Year} year - The report's year
  * @returns {{ total: number, issues: Issue[] } | null}
  */
-export const summariseIncompleteData = (rows) => {
-  const issues = findIssues(rows)
+export const summariseIncompleteData = (rows, year) => {
+  const issues = findIssues(rows, year)
   const total = issues.length
   if (!total) {
     return null
@@ -125,11 +135,12 @@ export const summariseIncompleteData = (rows) => {
  * `MAX_ISSUES_REPORTED`, so `total` can exceed `issues.length`.
  *
  * @param {CompletenessRow[]} rows
+ * @param {Year} year - The report's year
  * @param {string} reference - Ledger/registration reference for CDP log indexing.
  * @returns {void}
  */
-export const assertReportDataComplete = (rows, reference) => {
-  const issues = findIssues(rows)
+export const assertReportDataComplete = (rows, year, reference) => {
+  const issues = findIssues(rows, year)
   const total = issues.length
   if (total) {
     throw badRequest(

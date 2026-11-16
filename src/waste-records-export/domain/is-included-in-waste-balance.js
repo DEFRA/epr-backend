@@ -1,3 +1,5 @@
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import {
   WASTE_BALANCE_OUTCOME,
   classifyRecordForWasteBalance
@@ -42,7 +44,7 @@ export const getWasteBalanceClassification = (
 ) => {
   const { outcome, reasons, transactionAmount } = classifyRecordForWasteBalance(
     record,
-    processingType,
+    tableSchemasOf(DEFAULT_TEMPLATE_YEAR, processingType),
     accreditation,
     overseasSites
   )

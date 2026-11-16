@@ -41,4 +41,40 @@ describe('checkSummaryLogUploadEligibility', () => {
     })
     expect(result).toEqual({ eligible: true })
   })
+
+  it.each([2024, 2025])(
+    'refuses %s, a year with no summary log templates',
+    (year) => {
+      const result = checkSummaryLogUploadEligibility({
+        registration: buildRegistration({ validFrom: '2024-01-01' }),
+        year: toYear(year),
+        latestOpenYear: LATEST_OPEN_YEAR
+      })
+      expect(result).toEqual({
+        eligible: false,
+        reason: `There are no summary log templates for ${year}`
+      })
+    }
+  )
+
+  it('refuses an open year with no summary log templates', () => {
+    const result = checkSummaryLogUploadEligibility({
+      registration: buildRegistration(),
+      year: toYear(2028),
+      latestOpenYear: toYear(2028)
+    })
+    expect(result).toEqual({
+      eligible: false,
+      reason: 'There are no summary log templates for 2028'
+    })
+  })
+
+  it('is allowed for 2027 once it is open', () => {
+    const result = checkSummaryLogUploadEligibility({
+      registration: buildRegistration(),
+      year: toYear(2027),
+      latestOpenYear: toYear(2027)
+    })
+    expect(result).toEqual({ eligible: true })
+  })
 })

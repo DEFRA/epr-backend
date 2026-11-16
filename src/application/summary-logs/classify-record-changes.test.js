@@ -5,8 +5,12 @@ import { RECORD_CHANGE } from './record-change.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const overseasSites = /** @type {any} */ (new Map())
+
+const tableSchemas = tableSchemasOf(toYear(2026), 'REPROCESSOR_REGISTERED_ONLY')
 
 /**
  * @param {Record<string, any>} data
@@ -32,7 +36,7 @@ const buildWasteRecord = (
  */
 const submittedStateOf = (record) => {
   const { rowId, wasteRecordType, processingType, data, classification } =
-    projectSummaryLogRowState(record, null, overseasSites)
+    projectSummaryLogRowState(record, tableSchemas, null, overseasSites)
   return { rowId, wasteRecordType, processingType, data, classification }
 }
 
@@ -45,6 +49,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey: new Map(),
+      tableSchemas,
       accreditation: null,
       overseasSites
     })
@@ -64,6 +69,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
+      tableSchemas,
       accreditation: null,
       overseasSites
     })
@@ -87,6 +93,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
+      tableSchemas,
       accreditation: null,
       overseasSites
     })
@@ -117,6 +124,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
+      tableSchemas,
       accreditation: null,
       overseasSites
     })
@@ -134,6 +142,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
+      tableSchemas,
       accreditation: null,
       overseasSites
     })
