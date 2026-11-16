@@ -7,6 +7,7 @@ import {
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { accreditedMonths } from './accredited-months.js'
 
@@ -50,7 +51,12 @@ const operatorAccredited = (timeline = grantedFrom(), year = 2026) => {
           status: approvedStatusFrom('2025-12-01'),
           accreditations: {
             [year]: buildReadAccreditation({
-              status: { current: last.status, lastUpdatedAt: last.at, timeline }
+              status: {
+                current: last.status,
+                lastUpdatedAt: last.at,
+                timeline
+              },
+              year: toYear(year)
             })
           }
         })

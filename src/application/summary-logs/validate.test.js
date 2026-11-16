@@ -404,7 +404,8 @@ describe('SummaryLogsValidator', () => {
           current: status,
           timeline: [{ status: 'approved', at, updatedAt: at }]
         },
-        overseasSites
+        overseasSites,
+        year: toYear(Number(year))
       }
     }
   }

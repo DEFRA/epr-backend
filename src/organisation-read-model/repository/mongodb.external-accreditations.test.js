@@ -34,7 +34,8 @@ const externalAccreditation2027 = {
     current: 'approved',
     lastUpdatedAt: '2026-12-14T10:31:00.000Z',
     timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
-  }
+  },
+  year: 2027
 }
 
 const storedAccreditation2026 = {
@@ -44,7 +45,8 @@ const storedAccreditation2026 = {
     current: 'approved',
     lastUpdatedAt: GRANTED_AT,
     timeline: approvedTimeline('2026-07-01')
-  }
+  },
+  year: 2026
 }
 
 /** A reprocessor holding a stored 2026 accreditation. */

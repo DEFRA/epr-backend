@@ -215,7 +215,8 @@ const makeOperator = ({
       current: 'approved',
       lastUpdatedAt: '2025-12-01T00:00:00.000Z',
       timeline: [changed('approved', validFrom)]
-    }
+    },
+    year: toYear(2026)
   }
   const siteNumbers = Object.keys(overseasSites ?? {})
   /** @type {import('#organisation-read-model/domain/model.js').Organisation} */
@@ -497,7 +498,8 @@ const heldOutside = (operator, accreditationNumber, approvedOn) => {
           status: {
             current: 'approved',
             timeline: [changed('approved', approvedOn)]
-          }
+          },
+          year: toYear(2026)
         }
       }
     }))

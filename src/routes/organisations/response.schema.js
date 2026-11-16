@@ -5,7 +5,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
-import { openYearSchema } from '#common/validation/year-schema.js'
+import { openYearSchema, yearSchema } from '#common/validation/year-schema.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import {
@@ -99,7 +99,8 @@ const accreditationCommon = {
         'Whether PRNs and PERNs can still be raised and issued for the year: until the end of 31 January after it.'
       )
   }).required(),
-  status: statusSchema(ACCREDITATION_STATUSES)
+  status: statusSchema(ACCREDITATION_STATUSES),
+  year: yearSchema().required()
 }
 
 const reprocessorAccreditationSchema = Joi.object(accreditationCommon)

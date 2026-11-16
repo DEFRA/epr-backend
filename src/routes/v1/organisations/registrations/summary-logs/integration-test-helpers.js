@@ -1093,7 +1093,8 @@ const buildComplexTestReadOrg = ({
         }
   const accreditation = buildReadAccreditation({
     accreditationNumber,
-    status: approvedFrom(accreditationValidFrom)
+    status: approvedFrom(accreditationValidFrom),
+    year: accreditationYear
   })
   const common = {
     material: /** @type {any} */ (material),

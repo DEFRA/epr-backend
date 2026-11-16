@@ -72,6 +72,7 @@ export const buildReadAccreditation = (overrides = {}) => ({
   accreditationNumber: nextReadAccreditationNumber(),
   prnIssuance: { tonnageBand: 'over_10000' },
   status: approvedStatusFrom('2026-07-01'),
+  year: utcYearOf('2026-07-01'),
   ...overrides
 })
 
@@ -213,7 +214,8 @@ export const buildReadApprovedOrganisation = ({
             accreditationNumber: toAccreditationNumber(
               `ACC${organisationNumber}`
             ),
-            status: approved
+            status: approved,
+            year: utcYearOf(`${year}-01-01`)
           })
         },
         ...overrides

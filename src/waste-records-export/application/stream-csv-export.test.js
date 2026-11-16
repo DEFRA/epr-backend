@@ -19,6 +19,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
@@ -36,13 +37,14 @@ const REGISTRATION_NUMBER = 'REG-1'
 /**
  * An accreditation as the read model serves it, approved from `approvedOn`.
  *
- * @param {{ accreditationNumber?: string, status?: string, approvedOn?: string, overseasSites?: Record<string, any> }} [options]
+ * @param {{ accreditationNumber?: string, status?: string, approvedOn?: string, overseasSites?: Record<string, any>, year?: Year }} [options]
  */
 const readModelAccreditation = ({
   accreditationNumber = 'ACC-777',
   status = 'approved',
   approvedOn = '2026-01-01',
-  overseasSites
+  overseasSites,
+  year = toYear(DEFAULT_YEAR)
 } = {}) => ({
   accreditationNumber,
   prnIssuance: { tonnageBand: 'up_to_500' },
@@ -56,7 +58,8 @@ const readModelAccreditation = ({
         : [{ status, at: '2026-10-01T00:00:00.000Z' }])
     ]
   },
-  ...(overseasSites && { overseasSites })
+  ...(overseasSites && { overseasSites }),
+  year
 })
 
 /** @param {object} [overrides] */
@@ -84,18 +87,16 @@ const overseasSite = (name, country) => ({
   address: { line1: '1 Rue', townOrCity: 'Town', country }
 })
 
-// The year `accredited` holds its second accreditation under.
 const NEXT_YEAR = toYear(DEFAULT_YEAR + 1)
 
 /**
- * A reprocessor registration holding `accreditations` by year, the first under
- * `DEFAULT_YEAR` and each after it a year later.
+ * A reprocessor registration holding `accreditations`, each under its year.
  */
 const accredited = (...accreditations) =>
   reprocessorRegistration({
     accreditations: Object.fromEntries(
-      accreditations.map((accreditation, i) => [
-        String(DEFAULT_YEAR + i),
+      accreditations.map((accreditation) => [
+        String(accreditation.year),
         accreditation
       ])
     )
@@ -761,7 +762,10 @@ describe('streamCsvExport', () => {
           registrations: {
             [REGISTRATION_NUMBER]: accredited(
               readModelAccreditation({ accreditationNumber: 'ACC-OLD' }),
-              readModelAccreditation({ accreditationNumber: 'ACC-NEW' })
+              readModelAccreditation({
+                accreditationNumber: 'ACC-NEW',
+                year: NEXT_YEAR
+              })
             )
           }
         })
@@ -836,7 +840,10 @@ describe('streamCsvExport', () => {
           registrations: {
             [REGISTRATION_NUMBER]: accredited(
               readModelAccreditation({ accreditationNumber: 'ACC-B' }),
-              readModelAccreditation({ accreditationNumber: 'ACC-A' })
+              readModelAccreditation({
+                accreditationNumber: 'ACC-A',
+                year: NEXT_YEAR
+              })
             )
           }
         })

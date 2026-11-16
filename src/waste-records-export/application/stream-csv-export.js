@@ -147,8 +147,8 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
   return {
     accreditationNumber: ledgerAccreditation.accreditation.accreditationNumber,
     context: {
-      accreditation: validityOf(ledgerAccreditation),
-      overseasSites: overseasSitesOf(ledgerAccreditation)
+      accreditation: validityOf(ledgerAccreditation.accreditation),
+      overseasSites: overseasSitesOf(ledgerAccreditation.accreditation)
     }
   }
 }

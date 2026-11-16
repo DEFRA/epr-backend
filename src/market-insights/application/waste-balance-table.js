@@ -237,8 +237,8 @@ const resolvePublishedPartitions = (entries, index, logger) => {
       organisationNumber: ledgerAccreditation.organisation.organisationNumber,
       registrationNumber: ledgerAccreditation.registrationNumber,
       registration: ledgerAccreditation.registration,
-      accreditation: validityOf(ledgerAccreditation),
-      overseasSites: overseasSitesOf(ledgerAccreditation)
+      accreditation: validityOf(ledgerAccreditation.accreditation),
+      overseasSites: overseasSitesOf(ledgerAccreditation.accreditation)
     })
   }
   return partitions

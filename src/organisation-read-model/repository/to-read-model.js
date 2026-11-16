@@ -69,7 +69,6 @@ import {
  */
 const toAccreditationCommon = ({
   registrationNumber: _registrationNumber,
-  year: _year,
   status: { current, timeline },
   ...accreditation
 }) => ({
@@ -491,12 +490,14 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
     accreditation.validFrom
   )
 
+  const year = deriveAccreditationYear(accreditation)
   return [
-    String(deriveAccreditationYear(accreditation)),
+    String(year),
     {
       accreditationNumber,
       prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
-      status: { current: status, ...statusTimeline }
+      status: { current: status, ...statusTimeline },
+      year
     }
   ]
 }

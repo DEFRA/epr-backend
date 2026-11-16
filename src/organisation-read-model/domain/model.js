@@ -2,6 +2,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 /** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { TonnageBand } from '#domain/organisations/model.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * The organisation read model (ADR-0052).
@@ -68,6 +69,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   accreditationNumber: AccreditationNumber
  *   prnIssuance: { tonnageBand: TonnageBand }
  *   status: Status<AccreditationStatus>
+ *   year: Year
  * }} AccreditationCommon
  *
  * @typedef {AccreditationCommon} ReprocessorAccreditation

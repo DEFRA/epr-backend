@@ -13,6 +13,7 @@ import {
   servedOrganisations
 } from './read-model-test-data.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 describe('read-model-test-data', () => {
   describe('approvedTimelineFrom', () => {
@@ -79,7 +80,8 @@ describe('read-model-test-data', () => {
       const registration = build({
         accreditations: {
           2027: buildReadExporterAccreditation({
-            status: approvedStatusFrom('2027-01-01')
+            status: approvedStatusFrom('2027-01-01'),
+            year: toYear(2027)
           })
         }
       })
