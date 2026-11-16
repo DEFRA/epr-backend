@@ -230,7 +230,29 @@ const markIgnoredByDateRange = (
  *
  * Converts any exceptions to fatal technical issues.
  *
- * @param {{
+ * @param {ValidationCheckParams} params
+ * @returns {Promise<ValidationResult>}
+ */
+const performValidationChecks = async (params) => {
+  /** @type {ValidationResult} */
+  const result = { issues: createValidationIssues(), wasteRecords: null }
+
+  try {
+    await runValidationChecks(params, result)
+  } catch (error) {
+    handleValidationFailure(
+      /** @type {Error & { code?: string }} */ (error),
+      result.issues,
+      params.loggingContext,
+      params.logger
+    )
+  }
+
+  return result
+}
+
+/**
+ * @typedef {{
  *   summaryLog: SubmittedSummaryLog,
  *   loggingContext: string,
  *   logger: TypedLogger,
@@ -239,136 +261,99 @@ const markIgnoredByDateRange = (
  *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
- * }} params
- * @returns {Promise<ValidationResult>}
+ * }} ValidationCheckParams
  */
-const performValidationChecks = async ({
-  summaryLog,
-  loggingContext,
-  logger,
-  summaryLogExtractor,
-  organisationAdministrationRepository,
-  organisationReadRepository,
-  summaryLogRowStatesRepository,
-  ledgerRepository
-}) => {
-  const issues = createValidationIssues()
-  /** @type {ValidatedWasteRecord[] | null} */
-  let wasteRecords = null
-  /** @type {ExtractedMeta | undefined} */
-  let meta
-  /** @type {Registration | undefined} */
-  let registration
-  /** @type {ClassificationContext | undefined} */
-  let classificationContext
-  /** @type {Record<string, TableSchema> | undefined} */
-  let tableSchemas
 
-  try {
-    const parsed = await extractSummaryLog({
-      summaryLogExtractor,
-      summaryLog,
-      loggingContext,
-      logger
-    })
+/**
+ * Runs the checks in order, recording each step's outcome on `result` as it
+ * goes, and stops at the first fatal issue.
+ *
+ * @param {ValidationCheckParams} params
+ * @param {ValidationResult} result
+ */
+const runValidationChecks = async (
+  {
+    summaryLog,
+    loggingContext,
+    logger,
+    summaryLogExtractor,
+    organisationAdministrationRepository,
+    organisationReadRepository,
+    summaryLogRowStatesRepository,
+    ledgerRepository
+  },
+  result
+) => {
+  const { issues } = result
+  const parsed = await extractSummaryLog({
+    summaryLogExtractor,
+    summaryLog,
+    loggingContext,
+    logger
+  })
 
-    meta = extractMetaValues(parsed.meta)
+  const meta = extractMetaValues(parsed.meta)
+  result.meta = meta
 
-    issues.merge(validateMetaSyntax({ parsed, year: summaryLog.year }))
+  issues.merge(validateMetaSyntax({ parsed, year: summaryLog.year }))
 
-    if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
-    }
-
-    tableSchemas = getTemplate(
-      summaryLog.year,
-      meta.PROCESSING_TYPE
-    ).tableSchemas
-
-    registration = await fetchRegistration({
-      organisationAdministrationRepository,
-      summaryLog,
-      loggingContext,
-      logger
-    })
-    classificationContext = classificationContextOf(
-      await ledgerAccreditationFor(organisationReadRepository, summaryLog),
-      /** @type {ProcessingType} */ (meta.PROCESSING_TYPE)
-    )
-    issues.merge(
-      validateMetaBusiness({
-        parsed,
-        registration,
-        loggingContext
-      })
-    )
-
-    if (issues.isFatal()) {
-      return {
-        issues,
-        wasteRecords,
-        meta,
-        registration,
-        classificationContext,
-        tableSchemas
-      }
-    }
-
-    // Data syntax validation returns validated data with issues attached to rows
-    const { issues: dataSyntaxIssues, validatedData } =
-      createDataSyntaxValidator(tableSchemas)(parsed)
-    issues.merge(dataSyntaxIssues)
-
-    if (issues.isFatal()) {
-      return {
-        issues,
-        wasteRecords,
-        meta,
-        registration,
-        classificationContext,
-        tableSchemas
-      }
-    }
-
-    const dataResult = await transformAndValidateData({
-      summaryLog,
-      validatedData,
-      tableSchemas,
-      summaryLogRowStatesRepository,
-      ledgerRepository
-    })
-
-    wasteRecords = dataResult.wasteRecords
-
-    markIgnoredByDateRange(
-      wasteRecords,
-      classificationContext.accreditation,
-      tableSchemas
-    )
-
-    issues.merge(dataResult.issues)
-  } catch (error) {
-    handleValidationFailure(
-      /** @type {Error & { code?: string }} */ (error),
-      issues,
-      loggingContext,
-      logger
-    )
+  if (issues.isFatal()) {
+    return
   }
 
-  return {
-    issues,
-    wasteRecords,
-    meta,
-    registration,
-    classificationContext,
+  const { tableSchemas } = getTemplate(summaryLog.year, meta.PROCESSING_TYPE)
+  result.tableSchemas = tableSchemas
+
+  const registration = await fetchRegistration({
+    organisationAdministrationRepository,
+    summaryLog,
+    loggingContext,
+    logger
+  })
+  result.registration = registration
+  const classificationContext = classificationContextOf(
+    await ledgerAccreditationFor(organisationReadRepository, summaryLog),
+    /** @type {ProcessingType} */ (meta.PROCESSING_TYPE)
+  )
+  result.classificationContext = classificationContext
+  issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
+
+  if (issues.isFatal()) {
+    return
+  }
+
+  // Data syntax validation returns validated data with issues attached to rows
+  const { issues: dataSyntaxIssues, validatedData } =
+    createDataSyntaxValidator(tableSchemas)(parsed)
+  issues.merge(dataSyntaxIssues)
+
+  if (issues.isFatal()) {
+    return
+  }
+
+  const dataResult = await transformAndValidateData({
+    summaryLog,
+    validatedData,
+    tableSchemas,
+    summaryLogRowStatesRepository,
+    ledgerRepository
+  })
+
+  result.wasteRecords = dataResult.wasteRecords
+
+  markIgnoredByDateRange(
+    dataResult.wasteRecords,
+    classificationContext.accreditation,
     tableSchemas
-  }
+  )
+
+  issues.merge(dataResult.issues)
 }
 
 /**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
  * @param {SummaryLogId} summaryLogId
+ * @returns {{ version: number, summaryLog: SubmittedSummaryLog }}
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {
@@ -382,7 +367,22 @@ const assertValidatingStatus = (result, summaryLogId) => {
       `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
     )
   }
+
+  return /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
+    result
+  )
 }
+
+/**
+ * @param {TypedLogger} logger
+ * @param {string} message
+ * @param {string} action
+ */
+const logServerEvent = (logger, message, action) =>
+  logger.info({
+    message,
+    event: { category: LOGGING_EVENT_CATEGORIES.SERVER, action }
+  })
 
 /**
  * Persists the validation result to the summary log document.
@@ -555,22 +555,18 @@ export const createSummaryLogsValidator = ({
   summaryLogExtractor
 }) => {
   return async (summaryLogId) => {
-    const result = await summaryLogsRepository.findById(summaryLogId)
-    assertValidatingStatus(result, summaryLogId)
-    const { version, summaryLog } =
-      /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
-        result
-      )
+    const { version, summaryLog } = assertValidatingStatus(
+      await summaryLogsRepository.findById(summaryLogId),
+      summaryLogId
+    )
     const { id: fileId, name: filename } = summaryLog.file
     const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
-    logger.info({
-      message: `Summary log validation started: ${loggingContext}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.START_SUCCESS
-      }
-    })
+    logServerEvent(
+      logger,
+      `Summary log validation started: ${loggingContext}`,
+      LOGGING_EVENT_ACTIONS.START_SUCCESS
+    )
 
     const validationStart = Date.now()
     const {
@@ -630,12 +626,10 @@ export const createSummaryLogsValidator = ({
       logger
     })
 
-    logger.info({
-      message: `Summary log updated: ${loggingContext}, status=${status}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-      }
-    })
+    logServerEvent(
+      logger,
+      `Summary log updated: ${loggingContext}, status=${status}`,
+      LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    )
   }
 }
