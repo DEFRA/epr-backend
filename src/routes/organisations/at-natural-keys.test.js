@@ -4,10 +4,12 @@ import Joi from 'joi'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -46,14 +48,15 @@ const readOrganisation = buildReadOrganisation({
   organisationNumber: organisation.organisationNumber,
   registrations: {
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      accreditations: {
-        2026: buildReadAccreditation({
+      accreditations: accreditationsByYear(
+        buildReadAccreditation({
           accreditationNumber: ACCREDITATION_2026
         }),
-        2027: buildReadAccreditation({
+        buildReadAccreditation({
+          year: toYear(2027),
           accreditationNumber: ACCREDITATION_2027
         })
-      }
+      )
     }),
     [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration()
   }

@@ -123,7 +123,7 @@ export const standingByYear = (registration, endDate) => {
   const lastYear = utcYearOf(endDate)
   const years = [
     ...approvedYears(registration.status.timeline, endDate),
-    ...Object.keys(registration.accreditations).map(utcYearOf)
+    ...Object.values(registration.accreditations).map(({ year }) => year)
   ].filter((year) => year <= lastYear)
 
   return Object.fromEntries(

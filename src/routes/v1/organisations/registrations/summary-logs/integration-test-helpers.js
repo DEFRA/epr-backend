@@ -31,6 +31,7 @@ import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
@@ -1133,8 +1134,8 @@ const buildComplexTestReadOrg = ({
                 }
               : {},
             accreditations: accredited
-              ? {
-                  [accreditationYear]: buildReadExporterAccreditation({
+              ? accreditationsByYear(
+                  buildReadExporterAccreditation({
                     ...accreditation,
                     overseasSites: {
                       100: { status: 'approved', approvedOn: VALID_FROM },
@@ -1144,14 +1145,14 @@ const buildComplexTestReadOrg = ({
                       }
                     }
                   })
-                }
+                )
               : {}
           })
         : buildReadReprocessorRegistration({
             ...common,
             reprocessingType: /** @type {any} */ (reprocessingType),
             accreditations: accredited
-              ? { [accreditationYear]: accreditation }
+              ? accreditationsByYear(accreditation)
               : {}
           })
     }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { MATERIAL } from '#domain/organisations/model.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
@@ -49,8 +50,8 @@ const operatorAccredited = (timeline = grantedFrom(), year = 2026) => {
         buildReadReprocessorRegistration({
           material: MATERIAL.PLASTIC,
           status: approvedStatusFrom('2025-12-01'),
-          accreditations: {
-            [year]: buildReadAccreditation({
+          accreditations: accreditationsByYear(
+            buildReadAccreditation({
               status: {
                 current: last.status,
                 lastUpdatedAt: last.at,
@@ -58,7 +59,7 @@ const operatorAccredited = (timeline = grantedFrom(), year = 2026) => {
               },
               year: toYear(year)
             })
-          }
+          )
         })
     }
   })

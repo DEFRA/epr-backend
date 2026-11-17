@@ -1,6 +1,7 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -77,11 +78,12 @@ const servedOrganisation = buildReadOrganisation({
           '2026-07-01': { standing: 'accredited' }
         }
       },
-      accreditations: {
-        [YEAR]: buildReadAccreditation({
+      accreditations: accreditationsByYear(
+        buildReadAccreditation({
+          year: YEAR,
           accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
         })
-      }
+      )
     })
   }
 })

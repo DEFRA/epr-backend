@@ -1,9 +1,19 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import {
+  accreditationsByYear,
+  approvedStatusFrom,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/repository/read-model-test-data.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation, Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
 /**
@@ -12,11 +22,9 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
  *   registrationNumber: RegistrationNumber,
  *   accreditationNumber: AccreditationNumber,
  *   year?: Year,
- *   status?: 'approved' | 'suspended' | 'cancelled',
- *   submittedToRegulator?: 'ea' | 'nrw' | 'sepa' | 'niea',
+ *   status?: AccreditationStatus,
  *   wasteProcessingType?: 'reprocessor' | 'exporter',
  *   reprocessingType?: 'input' | 'output',
- *   siteAddress?: object,
  *   withAccreditation?: boolean
  * }} HeldAccreditation
  */
@@ -29,47 +37,29 @@ const heldRegistration = ({
   accreditationNumber,
   year = toYear(2026),
   status = 'approved',
-  submittedToRegulator = 'ea',
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = 'input',
-  siteAddress = {
-    line1: '1 Test Street',
-    town: 'Testville',
-    postcode: 'SW1A 1AA'
-  },
   withAccreditation = true
 }) => {
-  const accreditations = withAccreditation
-    ? {
-        [String(year)]: {
-          accreditationNumber,
-          prnIssuance: { tonnageBand: 'up_to_500' },
-          status: { current: status, timeline: [] }
-        }
-      }
-    : {}
-  const common = {
-    material: 'plastic',
-    submittedToRegulator: { code: submittedToRegulator }
+  const accreditation = {
+    accreditationNumber,
+    year,
+    status: { ...approvedStatusFrom(`${year}-01-01`), current: status }
   }
-  return /** @type {Registration} */ (
-    /** @type {unknown} */ (
-      wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-        ? {
-            ...common,
-            wasteProcessingType,
-            overseasSites: {},
-            accreditations
-          }
-        : {
-            ...common,
-            wasteProcessingType,
-            reprocessingType,
-            site: { address: siteAddress },
-            accreditations
-          }
-    )
-  )
+  if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
+    return buildReadExporterRegistration({
+      accreditations: withAccreditation
+        ? accreditationsByYear(buildReadExporterAccreditation(accreditation))
+        : {}
+    })
+  }
+  return buildReadReprocessorRegistration({
+    material: 'plastic',
+    reprocessingType,
+    accreditations: withAccreditation
+      ? accreditationsByYear(buildReadAccreditation(accreditation))
+      : {}
+  })
 }
 
 /**
@@ -80,24 +70,11 @@ const heldRegistration = ({
  * @param {HeldAccreditation} held
  * @returns {OrganisationReadRepository}
  */
-export const readRepositoryHolding = (held) => {
-  const organisation = /** @type {Organisation} */ (
-    /** @type {unknown} */ ({
+export const readRepositoryHolding = (held) =>
+  createInMemoryOrganisationReadRepository([
+    buildReadOrganisation({
       organisationNumber: held.organisationNumber,
       name: 'Test Reprocessor',
       registrations: { [held.registrationNumber]: heldRegistration(held) }
     })
-  )
-  return {
-    findByOrganisationNumber: async (organisationNumber) =>
-      organisationNumber === held.organisationNumber ? organisation : null,
-    find: async () => ({
-      items: [organisation],
-      page: 1,
-      pageSize: 1,
-      totalItems: 1,
-      totalPages: 1
-    }),
-    findAll: async () => [organisation]
-  }
-}
+  ])()

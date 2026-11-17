@@ -8,6 +8,7 @@ import { standingByYear } from '#organisation-read-model/domain/registration-sta
 
 /** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * Organisations, registrations and accreditations built directly in the read
@@ -85,6 +86,21 @@ export const buildReadExporterAccreditation = (overrides = {}) => ({
   overseasSites: {},
   ...overrides
 })
+
+/**
+ * Accreditations as a registration holds them, each under its own year.
+ *
+ * @template {{ year: Year }} A
+ * @param {...A} accreditations
+ * @returns {Record<string, A>}
+ */
+export const accreditationsByYear = (...accreditations) =>
+  Object.fromEntries(
+    accreditations.map((accreditation) => [
+      String(accreditation.year),
+      accreditation
+    ])
+  )
 
 /**
  * The registration with `standingByDate` as the read model works it out from
@@ -209,15 +225,15 @@ export const buildReadApprovedOrganisation = ({
       [`REG${organisationNumber}`]: buildReadReprocessorRegistration({
         status: approved,
         standingByDate,
-        accreditations: {
-          [year]: buildReadAccreditation({
+        accreditations: accreditationsByYear(
+          buildReadAccreditation({
             accreditationNumber: toAccreditationNumber(
               `ACC${organisationNumber}`
             ),
             status: approved,
             year: utcYearOf(`${year}-01-01`)
           })
-        },
+        ),
         ...overrides
       })
     }

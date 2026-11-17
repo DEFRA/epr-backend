@@ -3,6 +3,7 @@ import { vi } from 'vitest'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
@@ -56,11 +57,11 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
     registrations: {
       [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
         standingByDate,
-        accreditations: {
-          2026: buildReadAccreditation({
+        accreditations: accreditationsByYear(
+          buildReadAccreditation({
             accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
           })
-        }
+        )
       }),
       [EXPORTER_NUMBER]: buildReadExporterRegistration({
         standingByDate,
@@ -68,8 +69,8 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
           '001': approvedOverseasSite,
           '002': pendingOverseasSite
         },
-        accreditations: {
-          2026: buildReadExporterAccreditation({
+        accreditations: accreditationsByYear(
+          buildReadExporterAccreditation({
             accreditationNumber: toAccreditationNumber(
               EXPORTER_ACCREDITATION_NUMBER
             ),
@@ -78,7 +79,7 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
               '002': { status: 'pending' }
             }
           })
-        }
+        )
       })
     },
     ...overrides
