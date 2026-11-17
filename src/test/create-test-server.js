@@ -23,7 +23,7 @@ import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
 import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 
-import { createInMemoryPublicRegisterRepositoryPlugin } from '#public-register/index.js'
+import { createInMemoryPublicRegisterRepositoryPlugin } from '#public-register/test-support.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
 import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
