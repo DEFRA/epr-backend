@@ -110,8 +110,8 @@ const byRegistrationAndYear = (externalAccreditations, onDrop) =>
  * The stored organisations as the read model shows them, with the external
  * accreditations held for their registrations. An organisation the model
  * cannot represent is left out and reported through `logger.warn`. Without
- * `year`, each organisation is given in every year; with it, as it stood in
- * that year.
+ * `year`, each organisation is given in every year; with it, in that
+ * year.
  *
  * @param {StoredOrganisation[]} stored
  * @param {ExternalAccreditation[]} externalAccreditations
@@ -153,9 +153,7 @@ export async function toReadModelOrganisations(
     )
     .filter((organisation) => organisation !== null)
     .map((organisation) =>
-      year === undefined
-        ? organisation
-        : organisationInYear(organisation, year, context.today)
+      year === undefined ? organisation : organisationInYear(organisation, year)
     )
 }
 
