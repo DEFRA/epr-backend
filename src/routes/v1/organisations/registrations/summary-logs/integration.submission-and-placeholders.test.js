@@ -46,10 +46,7 @@ import {
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -490,7 +487,7 @@ describe('Submission and placeholder tests', () => {
     it('should commit the submission rows as row states', async () => {
       const rowStates = await summaryLogRowStatesForLedger({
         organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+        registrationNumber: TEST_REGISTRATION_NUMBER,
         accreditationNumber: toAccreditationNumber('ACC-2026-001'),
         year: UPLOAD_YEAR,
         ledgerRepository,
@@ -587,7 +584,7 @@ describe('Submission and placeholder tests', () => {
       const worksheet = workbook.addWorksheet('Data')
 
       worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
-      worksheet.getCell('B1').value = 'REG-123'
+      worksheet.getCell('B1').value = 'REG123'
 
       worksheet.getCell('A2').value = '__EPR_META_PROCESSING_TYPE'
       worksheet.getCell('B2').value = 'REPROCESSOR_INPUT'
