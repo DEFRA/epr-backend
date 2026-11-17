@@ -1,6 +1,7 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 /** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { TonnageBand } from '#domain/organisations/model.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -172,7 +173,7 @@ export const ACCREDITATION_STATUSES = Object.freeze([
  * By year, the date each standing starts. A standing holds until the next date,
  * or the end of the year.
  *
- * @typedef {Record<string, Record<string, { standing: Standing }>>} StandingByYear
+ * @typedef {Partial<Record<Year, Record<CalendarDate, { standing: Standing }>>>} StandingByYear
  */
 
 export const STANDING = Object.freeze({
