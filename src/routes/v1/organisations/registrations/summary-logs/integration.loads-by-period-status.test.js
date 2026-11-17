@@ -345,7 +345,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
     ])
   })
 
-  it('classifies an added load dated in a closed period as a closed-period load', async () => {
+  it('classifies an added load dated in a closed period as a closed-period load and leaves the deprecated closedPeriods empty', async () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
     const env = await setupWasteBalanceIntegrationEnvironment({
@@ -380,25 +380,6 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(
       loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting.count
     ).toBe(0)
-  })
-
-  it('no longer populates the deprecated closedPeriods for an upload into a closed period', async () => {
-    const organisationId = new ObjectId().toString()
-    const registrationId = new ObjectId().toString()
-    const env = await setupWasteBalanceIntegrationEnvironment({
-      processingType: 'exporter',
-      organisationId,
-      registrationId
-    })
-    await closeJanuary2026(env)
-
-    const loadsByReportingPeriod = await uploadAndValidate(
-      env,
-      'sl-closed-refs',
-      'file-closed-refs',
-      createUploadData([{ rowId: 1001, osrId: 100, exportTonnage: 100 }])
-    )
-
     expect(loadsByReportingPeriod.closedPeriods).toEqual([])
   })
 
