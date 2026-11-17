@@ -7,7 +7,7 @@ import { registrationStatusWindows } from './registration-status-windows.js'
 
 /**
  * @param {string} status
- * @returns {(date: string, time?: string) => StatusTimeline[number]}
+ * @returns {(date: string, time?: string) => StatusTimeline<string>[number]}
  */
 const changeTo =
   (status) =>
@@ -26,8 +26,8 @@ const REGISTERED_LAST_YEAR = [approvedOn('2025-06-02')]
 /**
  * @param {{
  *   year?: Year,
- *   registration?: StatusTimeline,
- *   accreditations?: Record<number, StatusTimeline>
+ *   registration?: StatusTimeline<string>,
+ *   accreditations?: Record<number, StatusTimeline<string>>
  * }} params
  */
 const windows = ({

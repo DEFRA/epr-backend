@@ -17,7 +17,7 @@ import {
 
 /**
  * @param {string} status
- * @returns {(date: string) => StatusTimeline[number]}
+ * @returns {(date: string) => StatusTimeline<string>[number]}
  */
 const changeTo = (status) => (date) => ({ status, at: `${date}T00:00:00.000Z` })
 
@@ -52,7 +52,7 @@ const withStanding = (fields) => {
 }
 
 /**
- * @param {StatusTimeline} [accreditation]
+ * @param {StatusTimeline<string>} [accreditation]
  * @returns {Registration}
  */
 const registeredSinceLastYear = (accreditation) =>

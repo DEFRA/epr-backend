@@ -13,7 +13,7 @@ import {
 /**
  * Each status and when it takes effect.
  *
- * @typedef {Pick<StatusTimeline[number], 'status' | 'at'>[]} StatusChanges
+ * @typedef {Pick<StatusTimeline<string>[number], 'status' | 'at'>[]} StatusChanges
  */
 
 /**

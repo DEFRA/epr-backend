@@ -126,7 +126,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * effect. Nothing requires two changes to happen at different times, so
  * changes that share a time keep the order they were recorded in.
  *
- * @template {string} [S=string]
+ * @template {string} S
  * @typedef {{ status: S, at: string }[]} StatusTimeline
  */
 
@@ -191,7 +191,7 @@ export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
 /**
  * The status at the end of the latest day on or before `date`.
  *
- * @param {StatusTimeline} timeline
+ * @param {StatusTimeline<string>} timeline
  * @param {CalendarDate} date - ISO 8601 date
  * @returns {string | undefined}
  */

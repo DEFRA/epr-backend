@@ -6,7 +6,7 @@ import { standingByDate, standingByYear } from './registration-standing.js'
 
 /**
  * @param {string} status
- * @returns {(date: string, time?: string) => StatusTimeline[number]}
+ * @returns {(date: string, time?: string) => StatusTimeline<string>[number]}
  */
 const changeTo =
   (status) =>
@@ -18,8 +18,8 @@ const suspendedOn = changeTo('suspended')
 const cancelledOn = changeTo('cancelled')
 
 /**
- * @param {StatusTimeline} registration
- * @param {Record<number, StatusTimeline>} accreditations
+ * @param {StatusTimeline<string>} registration
+ * @param {Record<number, StatusTimeline<string>>} accreditations
  * @returns {Registration}
  */
 const registrationWith = (registration, accreditations) =>
@@ -36,8 +36,8 @@ const registrationWith = (registration, accreditations) =>
   )
 
 /**
- * @param {StatusTimeline} registration
- * @param {Record<number, StatusTimeline>} [accreditations]
+ * @param {StatusTimeline<string>} registration
+ * @param {Record<number, StatusTimeline<string>>} [accreditations]
  * @param {number} [year]
  */
 const byDate = (registration, accreditations = {}, year = 2026) =>
@@ -174,7 +174,7 @@ describe('standingByYear', () => {
     },
     accreditations
   })
-  /** @param {StatusTimeline} timeline */
+  /** @param {StatusTimeline<string>} timeline */
   const registration = (timeline) => partialMock({ status: { timeline } })
 
   it('covers each year from approval up to the year given', () => {

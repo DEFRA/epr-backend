@@ -6,7 +6,7 @@ import {
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
-/** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -109,7 +109,7 @@ export const accreditationsByYear = (...accreditations) =>
  * accredited registration is accredited from its accreditation's approval, as
  * the mapper would make it.
  *
- * @template {Omit<RegistrationCommon, 'standingByDate'> & Partial<Pick<RegistrationCommon, 'standingByDate'>> & { accreditations: Record<string, { status: { timeline: StatusTimeline }, year: Year }> }} R
+ * @template {Omit<RegistrationCommon, 'standingByDate'> & Partial<Pick<RegistrationCommon, 'standingByDate'>> & { accreditations: Record<string, { status: { timeline: StatusTimeline<AccreditationStatus> }, year: Year }> }} R
  * @param {R} registration
  * @returns {R & Pick<RegistrationCommon, 'standingByDate'>}
  */
