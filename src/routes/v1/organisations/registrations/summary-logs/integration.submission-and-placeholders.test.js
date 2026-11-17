@@ -64,7 +64,7 @@ describe('Submission and placeholder tests', () => {
 
     getServer().use(
       http.post(
-        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
+        'http://localhost:3001/v1/organisations/:organisationNumber/registrations/:registrationNumber/accreditations/:year/summary-log/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
@@ -794,7 +794,7 @@ describe('Submission and placeholder tests', () => {
         registrationNumber: TEST_REGISTRATION_NUMBER,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+        callbackUrl: `http://localhost:3001/v1/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,

@@ -57,7 +57,7 @@ export const testUploadsRepositoryContract = (it) => {
         registrationNumber: toRegistrationNumber('R26ER5001180456PL'),
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed`
       })
 
       expect(result).toMatchObject({
@@ -96,7 +96,7 @@ export const testUploadsRepositoryContract = (it) => {
         registrationNumber: toRegistrationNumber('R26ER5001180456PL'),
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed`
       })
 
       expect(uploadId).toBeDefined()
@@ -130,7 +130,7 @@ export const testUploadsRepositoryContract = (it) => {
         registrationNumber: toRegistrationNumber('R26ER5001180777PL'),
         summaryLogId: 'sl-loc',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-loc/registrations/reg-loc/summary-logs/sl-loc/upload-completed`
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/500777/registrations/R26ER5001180777PL/summary-logs/2026/sl-loc/upload-completed`
       })
 
       await performUpload(uploadId, testFileBuffer)
@@ -178,7 +178,7 @@ export const testUploadsRepositoryContract = (it) => {
         registrationNumber: toRegistrationNumber('R26ER5001180888PL'),
         summaryLogId: 'sl-del',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-del/registrations/reg-del/summary-logs/sl-del/upload-completed`
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/500888/registrations/R26ER5001180888PL/summary-logs/2026/sl-del/upload-completed`
       })
 
       await performUpload(uploadId, testFileBuffer)
@@ -209,7 +209,7 @@ export const testUploadsRepositoryContract = (it) => {
         registrationNumber: toRegistrationNumber('R26ER5001180456PL'),
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed`
       })
 
       // Perform upload
@@ -220,7 +220,7 @@ export const testUploadsRepositoryContract = (it) => {
 
       // Verify callback contents
       expect(callback).toMatchObject({
-        path: '/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed',
+        path: '/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed',
         payload: {
           form: {
             file: {

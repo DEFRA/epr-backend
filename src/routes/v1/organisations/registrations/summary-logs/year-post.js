@@ -33,7 +33,7 @@ export const summaryLogsYearCreate = {
   },
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
-   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year },
+   *   params: RegistrationParams & { year: Year },
    *   app: { summaryLogCallbackUrl: (summaryLogId: string) => string },
    *   uploadsRepository: UploadsRepository
    * }} request
