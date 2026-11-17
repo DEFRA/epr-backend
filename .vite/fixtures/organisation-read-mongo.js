@@ -1,7 +1,7 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
 import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
-import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
+import { createOverseasSitesRepository } from '#overseas-sites/index.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import {
