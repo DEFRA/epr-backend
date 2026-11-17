@@ -19,6 +19,11 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
@@ -1263,8 +1268,49 @@ describe('streamCsvExportToReadable', () => {
     const out = await collect(streamCsvExport(deps))
 
     expect(findDistinctDataKeys).toHaveBeenCalledTimes(1)
-    expect(findDistinctDataKeys).toHaveBeenCalledWith(DEFAULT_YEAR)
+    expect(findDistinctDataKeys).toHaveBeenCalledWith([
+      DEFAULT_SUMMARY_LOG_FILE_ID
+    ])
     expect(out[0]).toContain('WASTE_TRANSFER_NOTE')
+  })
+
+  it('leaves out data keys only a summary log with no submitted event holds', async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [{ rows: [receivedRowState()] }]
+    })
+    await deps.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+      {
+        organisationNumber: toOrganisationNumber(ORGANISATION_NUMBER),
+        registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
+        accreditationNumber: null,
+        year: DEFAULT_YEAR
+      },
+      [receivedRowState({ data: { ONLY_UNSUBMITTED: 'x' } })],
+      toSummaryLogFileId('file-never-submitted')
+    )
+
+    const [header] = await collect(streamCsvExport(deps))
+
+    expect(header).not.toContain('ONLY_UNSUBMITTED')
+  })
+
+  it('leaves out data keys only a superseded submission holds', async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [
+        {
+          number: 1,
+          summaryLogId: 'file-old',
+          rows: [receivedRowState({ data: { ONLY_SUPERSEDED: 'x' } })]
+        },
+        { number: 2, summaryLogId: 'file-new', rows: [receivedRowState()] }
+      ]
+    })
+
+    const [header] = await collect(streamCsvExport(deps))
+
+    expect(header).not.toContain('ONLY_SUPERSEDED')
   })
 
   it("composes the header from the year's data keys only", async () => {

@@ -332,8 +332,9 @@ const registrationsInOrder = (org, only) =>
  *
  * Only the year's ledger partitions are exported. The header row is
  * dynamically composed from the union of schema-declared field constants and
- * any keys observed on the year's stored row-state `data` objects. Observed
- * keys are discovered up-front via a server-side aggregation
+ * any keys observed on the `data` of the row states the export covers: the
+ * year's latest submissions. Observed keys are discovered up-front via a
+ * server-side aggregation
  * (`findDistinctDataKeys`) so the export does not need to materialise any row
  * state to compose the header. Each registration's ledger partitions are
  * resolved up-front from a single cross-ledger query
@@ -357,17 +358,18 @@ export async function* streamCsvExport(deps) {
     registrationNumber: onlyRegistration
   } = deps
 
-  const [observedKeys, latestSubmittedEntries] = await Promise.all([
-    summaryLogRowStatesRepository.findDistinctDataKeys(year),
-    ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
-  ])
+  const entriesOfYear = (
+    await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
+  ).filter(({ ledgerId }) => ledgerId.year === year)
 
-  const dataFieldColumns = buildDataFieldColumns(observedKeys)
+  const dataFieldColumns = buildDataFieldColumns(
+    await summaryLogRowStatesRepository.findDistinctDataKeys(
+      entriesOfYear.map(({ summaryLogId }) => summaryLogId)
+    )
+  )
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
-  const entriesByRegistration = groupByRegistration(
-    latestSubmittedEntries.filter(({ ledgerId }) => ledgerId.year === year)
-  )
+  const entriesByRegistration = groupByRegistration(entriesOfYear)
 
   const orgsSorted = organisation
     ? [organisation]

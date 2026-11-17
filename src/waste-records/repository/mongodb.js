@@ -1,4 +1,3 @@
-/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import { Collection, Db } from 'mongodb' */
 
@@ -373,18 +372,19 @@ const performStreamRowStatesForSummaryLogs = (collection) =>
   }
 
 /**
- * The union of keys observed on `data` across the year's state documents,
- * computed server-side so the CSV export composes its dynamic header without
- * pulling any document into memory. Cost scales with the count of distinct
- * field names (typically <200) rather than the document count.
+ * Computed server-side so the CSV export composes its dynamic header without
+ * pulling any document into memory.
  *
  * @param {Collection} collection
- * @returns {(year: Year) => Promise<string[]>}
+ * @returns {(summaryLogIds: SummaryLogFileId[]) => Promise<string[]>}
  */
-const performFindDistinctDataKeys = (collection) => async (year) => {
+const performFindDistinctDataKeys = (collection) => async (summaryLogIds) => {
+  if (summaryLogIds.length === 0) {
+    return []
+  }
   const docs = await collection
     .aggregate([
-      { $match: { year } },
+      { $match: { summaryLogIds: { $in: summaryLogIds } } },
       { $project: { kv: { $objectToArray: '$data' } } },
       { $unwind: '$kv' },
       { $group: { _id: '$kv.k' } }

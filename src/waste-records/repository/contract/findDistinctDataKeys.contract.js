@@ -1,11 +1,8 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import { toYear } from '#common/helpers/dates/year.js'
-
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
-  DEFAULT_YEAR,
   withNumbers
 } from '../test-data.js'
 
@@ -18,10 +15,20 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
     })
 
     it('returns an empty array when no row states exist', async () => {
-      expect(await repository.findDistinctDataKeys(DEFAULT_YEAR)).toEqual([])
+      expect(await repository.findDistinctDataKeys(['log-1'])).toEqual([])
     })
 
-    it('returns the union of data keys across every stored row state', async () => {
+    it('returns an empty array when asked for no summary logs', async () => {
+      await repository.upsertSummaryLogRowStates(
+        withNumbers(DEFAULT_LEDGER_ID),
+        [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { ALPHA: 1 } })],
+        'log-1'
+      )
+
+      expect(await repository.findDistinctDataKeys([])).toEqual([])
+    })
+
+    it('returns the union of data keys across the row states of the given summary logs', async () => {
       await repository.upsertSummaryLogRowStates(
         withNumbers(DEFAULT_LEDGER_ID),
         [
@@ -33,44 +40,61 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        withNumbers({ ...DEFAULT_LEDGER_ID, registrationId: 'reg-2' }),
         [
           buildSummaryLogRowStateEntry({
             rowId: 'row-2',
             data: { BETA: 22, GAMMA: 'g' }
           })
         ],
-        'log-1'
+        'log-2'
       )
 
-      const result = await repository.findDistinctDataKeys(DEFAULT_YEAR)
+      const result = await repository.findDistinctDataKeys(['log-1', 'log-2'])
       expect([...result].sort()).toEqual(['ALPHA', 'BETA', 'GAMMA'])
     })
 
-    it('surfaces keys from superseded states, not just the latest submitted summary log', async () => {
+    it('ignores row states of summary logs not asked for', async () => {
       await repository.upsertSummaryLogRowStates(
         withNumbers(DEFAULT_LEDGER_ID),
-        [
-          buildSummaryLogRowStateEntry({
-            rowId: 'row-1',
-            data: { OLD_ONLY: 1 }
-          })
-        ],
+        [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { ASKED: 1 } })],
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
         withNumbers(DEFAULT_LEDGER_ID),
         [
           buildSummaryLogRowStateEntry({
-            rowId: 'row-1',
-            data: { NEW_ONLY: 2 }
+            rowId: 'row-2',
+            data: { NOT_ASKED: 1 }
           })
         ],
         'log-2'
       )
 
-      const result = await repository.findDistinctDataKeys(DEFAULT_YEAR)
-      expect([...result].sort()).toEqual(['NEW_ONLY', 'OLD_ONLY'])
+      expect(await repository.findDistinctDataKeys(['log-1'])).toEqual([
+        'ASKED'
+      ])
+    })
+
+    it('includes a state shared with a summary log not asked for', async () => {
+      const entry = buildSummaryLogRowStateEntry({
+        rowId: 'row-1',
+        data: { SHARED_STATE: 1 }
+      })
+      await repository.upsertSummaryLogRowStates(
+        withNumbers(DEFAULT_LEDGER_ID),
+        [entry],
+        'log-1'
+      )
+      await repository.upsertSummaryLogRowStates(
+        withNumbers(DEFAULT_LEDGER_ID),
+        [entry],
+        'log-2'
+      )
+
+      expect(await repository.findDistinctDataKeys(['log-2'])).toEqual([
+        'SHARED_STATE'
+      ])
     })
 
     it('deduplicates keys that appear on multiple states', async () => {
@@ -83,38 +107,8 @@ export const testFindDistinctDataKeysBehaviour = (it) => {
         'log-1'
       )
 
-      expect(await repository.findDistinctDataKeys(DEFAULT_YEAR)).toEqual([
+      expect(await repository.findDistinctDataKeys(['log-1'])).toEqual([
         'SHARED'
-      ])
-    })
-
-    it('returns only the keys of the given year', async () => {
-      await repository.upsertSummaryLogRowStates(
-        withNumbers({ ...DEFAULT_LEDGER_ID, year: toYear(2026) }),
-        [
-          buildSummaryLogRowStateEntry({
-            rowId: 'row-1',
-            data: { ONLY_2026: 1 }
-          })
-        ],
-        'log-2026'
-      )
-      await repository.upsertSummaryLogRowStates(
-        withNumbers({ ...DEFAULT_LEDGER_ID, year: toYear(2027) }),
-        [
-          buildSummaryLogRowStateEntry({
-            rowId: 'row-1',
-            data: { ONLY_2027: 1 }
-          })
-        ],
-        'log-2027'
-      )
-
-      expect(await repository.findDistinctDataKeys(toYear(2026))).toEqual([
-        'ONLY_2026'
-      ])
-      expect(await repository.findDistinctDataKeys(toYear(2027))).toEqual([
-        'ONLY_2027'
       ])
     })
   })
