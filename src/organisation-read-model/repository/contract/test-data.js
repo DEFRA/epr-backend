@@ -24,13 +24,8 @@ export const buildExternalAccreditation = (overrides = {}) => ({
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
     current: 'approved',
-    timeline: [
-      {
-        status: 'approved',
-        at: '2027-01-01T00:00:00.000Z',
-        updatedAt: '2026-12-14T10:31:00.000Z'
-      }
-    ]
+    lastUpdatedAt: '2026-12-14T10:31:00.000Z',
+    timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
   },
   ...overrides
 })

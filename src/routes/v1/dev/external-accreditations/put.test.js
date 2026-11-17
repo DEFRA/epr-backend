@@ -23,10 +23,10 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 const {
   registrationNumber,
   year,
-  status: { timeline },
+  status: { current: _current, ...status },
   ...fields
 } = buildExternalAccreditation()
-const payload = { ...fields, status: { timeline } }
+const payload = { ...fields, status }
 const url = `/v1/dev/external-accreditations/${registrationNumber}/${year}`
 
 /** @param {string} number */
@@ -101,24 +101,30 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     })
     const approved = {
       status: /** @type {const} */ ('approved'),
-      at: '2027-01-01T00:00:00.000Z',
-      updatedAt: '2026-12-14T10:31:00.000Z'
+      at: '2027-01-01T00:00:00.000Z'
     }
     const suspended = {
       status: /** @type {const} */ ('suspended'),
-      at: '2027-03-01T00:00:00.000Z',
-      updatedAt: '2027-03-01T00:00:00.000Z'
+      at: '2027-03-01T00:00:00.000Z'
     }
+    const lastUpdatedAt = '2027-03-01T00:00:00.000Z'
 
     await server.inject({
       method: 'PUT',
       url,
-      payload: { ...payload, status: { timeline: [suspended, approved] } }
+      payload: {
+        ...payload,
+        status: { lastUpdatedAt, timeline: [suspended, approved] }
+      }
     })
 
     expect(externalAccreditationsRepository.upsert).toHaveBeenCalledWith(
       buildExternalAccreditation({
-        status: { current: 'suspended', timeline: [approved, suspended] }
+        status: {
+          current: 'suspended',
+          lastUpdatedAt,
+          timeline: [approved, suspended]
+        }
       })
     )
   })
@@ -224,16 +230,27 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
   it.for([
     {
       description: 'an empty timeline',
-      status: { timeline: [] }
+      status: { ...status, timeline: [] }
     },
     {
       description: 'a current status alongside the timeline',
-      status: { current: 'approved', timeline }
+      status: { ...status, current: 'approved' }
     },
     {
-      description: 'a status change with no date it was recorded',
+      description: 'no date its last change was recorded',
+      status: { timeline: status.timeline }
+    },
+    {
+      description: 'a status change that carries when it was recorded',
       status: {
-        timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+        ...status,
+        timeline: [
+          {
+            status: 'approved',
+            at: '2027-01-01T00:00:00.000Z',
+            updatedAt: '2026-12-14T10:31:00.000Z'
+          }
+        ]
       }
     }
   ])('refuses $description', async ({ status }) => {
@@ -318,13 +335,8 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       payload: {
         ...payload,
         status: {
-          timeline: [
-            {
-              status: 'approved',
-              at: '2027',
-              updatedAt: '2026-12-14T10:31:00.000Z'
-            }
-          ]
+          ...status,
+          timeline: [{ status: 'approved', at: '2027' }]
         }
       }
     })
