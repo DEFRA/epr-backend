@@ -5,17 +5,7 @@ import { getMonthNames } from '#common/helpers/date-formatter.js'
 
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from './mongodb.js'
 
-/**
- * @typedef {{
- *   organisationNumber: string
- *   registrationNumber: string
- *   year: number
- *   monthNumber: number
- *   month: string
- *   type: string
- *   totalTonnage: number
- * }} RegistrationTonnage
- */
+/** @import { RegistrationTonnage } from '#application/tonnage-monitoring/aggregate-tonnage.js' */
 
 const PROCESSING_TYPE_FIELD = '$processingType'
 const WASTE_RECORD_TYPE_FIELD = '$wasteRecordType'

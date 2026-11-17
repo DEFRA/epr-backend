@@ -4,7 +4,18 @@ import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisati
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { RegistrationTonnage } from '#waste-records/repository/tonnage-query.mongodb.js' */
+
+/**
+ * @typedef {{
+ *   organisationNumber: string
+ *   registrationNumber: string
+ *   year: number
+ *   monthNumber: number
+ *   month: string
+ *   type: string
+ *   totalTonnage: number
+ * }} RegistrationTonnage
+ */
 
 /**
  * @param {string} organisationNumber
