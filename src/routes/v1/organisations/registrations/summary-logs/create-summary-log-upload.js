@@ -9,6 +9,7 @@ import {
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 
@@ -24,8 +25,8 @@ const FAILURE_MESSAGE = 'Failure initiating summary log upload'
  * @param {{
  *   uploadsRepository: UploadsRepository,
  *   logger: TypedLogger,
- *   organisationId: string,
- *   registrationId: string,
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
  *   redirectUrl: string,
  *   callbackUrlFor: (summaryLogId: SummaryLogId) => string
  * }} args
@@ -34,8 +35,8 @@ const FAILURE_MESSAGE = 'Failure initiating summary log upload'
 export async function createSummaryLogUpload({
   uploadsRepository,
   logger,
-  organisationId,
-  registrationId,
+  organisationNumber,
+  registrationNumber,
   redirectUrl,
   callbackUrlFor
 }) {
@@ -48,8 +49,8 @@ export async function createSummaryLogUpload({
 
   try {
     const cdpResponse = await uploadsRepository.initiateSummaryLogUpload({
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       summaryLogId,
       redirectUrl: resolvedRedirectUrl,
       callbackUrl
