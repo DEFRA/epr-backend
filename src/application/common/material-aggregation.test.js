@@ -28,8 +28,8 @@ describe('material-aggregation', () => {
   describe('formatMaterialResults', () => {
     it('should map results to all materials with the given value field', () => {
       const results = [
-        { _id: 'plastic', totalTonnage: 100 },
-        { _id: 'paper', totalTonnage: 200 }
+        { material: 'plastic', totalTonnage: 100 },
+        { material: 'paper', totalTonnage: 200 }
       ]
 
       const { materials } = formatMaterialResults(results, 'totalTonnage')
@@ -42,7 +42,7 @@ describe('material-aggregation', () => {
     })
 
     it('should default missing materials to zero', () => {
-      const results = [{ _id: 'plastic', availableAmount: 50 }]
+      const results = [{ material: 'plastic', availableAmount: 50 }]
 
       const { materials } = formatMaterialResults(results, 'availableAmount')
 
@@ -68,8 +68,8 @@ describe('material-aggregation', () => {
 
     it('should calculate the total across all materials', () => {
       const results = [
-        { _id: 'aluminium', totalTonnage: 10 },
-        { _id: 'plastic', totalTonnage: 30 }
+        { material: 'aluminium', totalTonnage: 10 },
+        { material: 'plastic', totalTonnage: 30 }
       ]
 
       const { total } = formatMaterialResults(results, 'totalTonnage')
@@ -79,8 +79,8 @@ describe('material-aggregation', () => {
 
     it('should convert Decimal128 values to numbers', () => {
       const results = [
-        { _id: 'aluminium', totalTonnage: Decimal128.fromString('1.25') },
-        { _id: 'plastic', totalTonnage: Decimal128.fromString('2.75') }
+        { material: 'aluminium', totalTonnage: Decimal128.fromString('1.25') },
+        { material: 'plastic', totalTonnage: Decimal128.fromString('2.75') }
       ]
 
       const { materials, total } = formatMaterialResults(

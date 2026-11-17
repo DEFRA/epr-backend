@@ -51,7 +51,7 @@ export const aggregateAvailableBalance = async (
 
   const { materials, total } = formatMaterialResults(
     [...totals].map(([material, availableAmount]) => ({
-      _id: material,
+      material,
       availableAmount
     })),
     'availableAmount'
