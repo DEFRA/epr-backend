@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { organisationYears } from '#organisation-read-model/domain/organisation-years.js'
 import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationYearsResponseSchema } from './response.schema.js'
@@ -42,7 +42,7 @@ export const organisationYearsGet = {
 
     return h
       .response({
-        years: organisationYears(organisation, lastOpenDay())
+        years: organisationYears(organisation, latestOpenYear())
       })
       .code(StatusCodes.OK)
   }

@@ -1,6 +1,10 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { dayBefore } from '#common/helpers/dates/calendar-day.js'
-import { utcYearOf, yearsFromTo } from '#common/helpers/dates/year.js'
+import {
+  lastDayOfYear,
+  utcYearOf,
+  yearsFromTo
+} from '#common/helpers/dates/year.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -66,21 +70,20 @@ const rangeEnd = (nextDate, date) => (nextDate ? dayBefore(nextDate) : date)
  * @param {StatusChanges} timeline
  * @returns {DailyTimeline}
  */
-export const dailyTimeline = (timeline) =>
+const dailyTimeline = (timeline) =>
   Object.fromEntries(
     timeline.map(({ status, at }) => [calendarDate(at), { status }])
   )
 
 /**
- * The date ranges each status was held, keyed by status. The { to } date in the latest status
- * is given by the passed `endDate`. Statuses in the timeline after the passed `endDate` are
- * not included in the result.
+ * The date ranges each status was held, keyed by status. The latest status
+ * holds until `endDate`, and changes after it are left out.
  *
  * @param {StatusChanges} timeline
  * @param {CalendarDate} endDate
  * @returns {Partial<Record<string, CalendarDateRange[]>>}
  */
-export const statusRanges = (timeline, endDate) => {
+const statusRanges = (timeline, endDate) => {
   const daily = dailyTimeline(timeline)
   const dates = datesUpTo(daily, endDate)
 
@@ -100,14 +103,27 @@ export const statusRanges = (timeline, endDate) => {
 }
 
 /**
- * Oldest first, without repeats. The timeline can go approved → cancelled → approved, so years
- * spent wholly cancelled are left out.
+ * Whether the timeline was approved at the end of any day on or before
+ * `date`. An approval cancelled the same day does not count.
  *
  * @param {StatusChanges} timeline
- * @param {CalendarDate} endDate
+ * @param {CalendarDate} date
+ * @returns {boolean}
+ */
+export const approvedBy = (timeline, date) =>
+  statusRanges(timeline, date).approved !== undefined
+
+/**
+ * The years up to `upToYear` approved at some point, oldest first, without
+ * repeats. The timeline can go approved → cancelled → approved, so years spent
+ * wholly cancelled are left out.
+ *
+ * @param {StatusChanges} timeline
+ * @param {Year} upToYear
  * @returns {Year[]}
  */
-export const approvedYears = (timeline, endDate) => {
-  const approvedRanges = statusRanges(timeline, endDate).approved ?? []
+export const approvedYears = (timeline, upToYear) => {
+  const approvedRanges =
+    statusRanges(timeline, lastDayOfYear(upToYear)).approved ?? []
   return [...new Set(approvedRanges.flatMap(yearsIn))]
 }
