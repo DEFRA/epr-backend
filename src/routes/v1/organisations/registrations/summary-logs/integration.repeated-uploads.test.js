@@ -32,7 +32,7 @@ import {
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 
 describe('Repeated uploads of identical data', () => {
   let organisationId

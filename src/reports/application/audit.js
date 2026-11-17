@@ -8,7 +8,7 @@ import {
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AccreditationNumber } from '#shared/organisations/numbers.js'
+ * @import { AccreditationNumber } from '#organisations/index.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import {

@@ -22,10 +22,7 @@ import reprocessorSteelBlankPageTitles from '#data/fixtures/ea/accreditation/rep
 
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import {
-  REGULATOR,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+import { REGULATOR, WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 
 describe('extractRepeaters', () => {
   const ltdPartnershipPage = ORGANISATION.LTD_PARTNERSHIP_DETAILS

@@ -1,10 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { describe, expect, it, vi } from 'vitest'
 import { splitGlassSubmissions } from './split-glass-submissions.js'
-import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL
-} from '#shared/organisations/model.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#organisations/index.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {

@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -19,7 +19,7 @@ import {
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'

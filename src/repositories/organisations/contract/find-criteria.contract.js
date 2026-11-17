@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 

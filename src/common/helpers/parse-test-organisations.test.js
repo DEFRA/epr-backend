@@ -1,4 +1,4 @@
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 import { describe, test, expect, vi } from 'vitest'
 
 vi.mock('#root/config.js', () => ({

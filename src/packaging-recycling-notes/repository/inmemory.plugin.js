@@ -15,7 +15,7 @@ import {
 } from './watermark-guard.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#organisations/index.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
 /** @import { AccreditationTonnage, FindByStatusParams, PaginatedResult, SumTonnageByAccreditationParams, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 

@@ -7,12 +7,12 @@ import {
   MONTHLY_PERIODS,
   QUARTERLY_PERIODS
 } from '#reports/domain/period-labels.js'
-import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import {
+  WASTE_PROCESSING_TYPE,
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_NUMBER,

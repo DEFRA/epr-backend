@@ -15,7 +15,7 @@ import {
   asServiceMaintainerRead
 } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 
 const pathFor = (year, cadence, period) =>

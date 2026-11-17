@@ -6,18 +6,18 @@ import {
   AccreditationStatusError,
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
-import { ACCREDITATION_STATUS } from '#shared/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#organisations/index.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
-import {
-  toAccreditationNumber,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
 import {
   PRN_YEAR,
   buildAccreditationSnapshot,
@@ -189,7 +189,7 @@ const withAccreditationSuspendedDuringFold = (ledgerRepository) => {
     organisationReadRepository: {
       ...readRepositoryHolding(LEDGER),
       findByOrganisationNumber: (
-        /** @type {import('#shared/organisations/numbers.js').OrganisationNumber} */ organisationNumber
+        /** @type {import('#organisations/index.js').OrganisationNumber} */ organisationNumber
       ) =>
         readRepositoryHolding({ ...LEDGER, status }).findByOrganisationNumber(
           organisationNumber

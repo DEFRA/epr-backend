@@ -1,4 +1,4 @@
-import { USER_ROLES } from '#shared/organisations/model.js'
+import { USER_ROLES } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { notFound, versionConflict } from './test-data.js'
 

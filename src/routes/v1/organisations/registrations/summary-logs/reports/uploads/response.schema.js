@@ -1,8 +1,5 @@
 import Joi from 'joi'
-import {
-  REGULATOR,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+import { REGULATOR, WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 import { capitalize } from '#common/helpers/formatters.js'
 
 const summaryLogUploadReportRowSchema = Joi.object({

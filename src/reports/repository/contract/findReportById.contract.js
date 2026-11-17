@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 import {
   buildCreateReportParams,
   DEFAULT_ORG_NUMBER,

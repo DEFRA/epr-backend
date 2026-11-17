@@ -71,7 +71,7 @@ export const createFormsFileUploadsRepository = ({ s3Client }) => {
      *
      * @param {Object} params
      * @param {string} params.fileId - File ID from Forms Submission API (used as S3 key)
-     * @param {import('#shared/organisations/model.js').RegulatorValue} params.regulator - Regulator enum
+     * @param {import('#organisations/index.js').RegulatorValue} params.regulator - Regulator enum
      * @returns {Promise<void>}
      */
     async copyFormFileToS3({ fileId, regulator }) {

@@ -5,7 +5,7 @@ import {
   REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {

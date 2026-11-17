@@ -3,7 +3,7 @@ import { testFindAllBehaviour } from './contract/find-all.contract.js'
 import { testFindByOrganisationNumberBehaviour } from './contract/find-by-organisation-number.contract.js'
 
 /** @import { TestAPI } from 'vitest' */
-/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#organisations/index.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 
 /**

@@ -2,7 +2,7 @@
  * Transforms read-model organisations into public register row objects
  */
 
-/** @import { AppliedForMaterial, Material, TonnageBand } from '#shared/organisations/model.js' */
+/** @import {AppliedForMaterial, Material, TonnageBand} from '#organisations/index.js' */
 /** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData, ReportComplianceEntry} from '#reports/application/report-compliance.js' */
@@ -12,7 +12,7 @@ import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import {
   capitalize,
   formatAddress,

@@ -8,7 +8,7 @@ import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
@@ -53,7 +53,7 @@ const prnAwareClassifier = (data) =>
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
+/** @typedef {import('#waste-records/index.js').WasteRecord} WasteRecord */
 
 const accreditationId = 'acc-1'
 

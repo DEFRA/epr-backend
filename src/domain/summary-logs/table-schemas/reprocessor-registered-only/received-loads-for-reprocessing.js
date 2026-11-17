@@ -15,7 +15,7 @@ import {
   RECYCLABLE_PROPORTION_METHODS,
   createFreeTextFieldSchema
 } from '../shared/index.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'

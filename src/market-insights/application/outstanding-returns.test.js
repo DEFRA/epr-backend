@@ -4,8 +4,11 @@ import { describe, it, expect } from 'vitest'
 import {
   MATERIAL,
   TONNAGE_BAND,
-  TONNAGE_MONITORING_MATERIALS
-} from '#shared/organisations/model.js'
+  TONNAGE_MONITORING_MATERIALS,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#organisations/index.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   approvedStatusFrom,
@@ -17,14 +20,9 @@ import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
-import {
-  toAccreditationNumber,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
 import { countOutstandingReturns } from './outstanding-returns.js'
 
-/** @import { Material, TonnageBand } from '#shared/organisations/model.js' */
+/** @import { Material, TonnageBand } from '#organisations/index.js' */
 /** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)

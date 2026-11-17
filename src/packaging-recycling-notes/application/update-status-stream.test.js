@@ -6,7 +6,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 

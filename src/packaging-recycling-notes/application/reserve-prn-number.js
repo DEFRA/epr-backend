@@ -13,7 +13,7 @@ const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
  * @param {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} prnRepository
  * @param {Object} issuing
  * @param {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} issuing.prn
- * @param {{ submittedToRegulator: import('#shared/organisations/model.js').RegulatorValue }} issuing.accreditation
+ * @param {{ submittedToRegulator: import('#organisations/index.js').RegulatorValue }} issuing.accreditation
  * @returns {Promise<import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
 export async function reservePrnNumber(prnRepository, { prn, accreditation }) {

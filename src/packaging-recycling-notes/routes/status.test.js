@@ -5,8 +5,9 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   toAccreditationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+  toRegistrationNumber,
+  REGULATOR
+} from '#organisations/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -16,7 +17,6 @@ import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { REGULATOR } from '#shared/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {

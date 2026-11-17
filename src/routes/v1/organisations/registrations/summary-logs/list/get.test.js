@@ -19,7 +19,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 const registrationNumber = toRegistrationNumber(REPROCESSOR_NUMBER)

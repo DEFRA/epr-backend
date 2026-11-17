@@ -3,7 +3,7 @@ import { utcYearOf } from '#common/helpers/dates/year.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { RequiredNumbers } from '#shared/organisations/numbers.js' */
+/** @import { RequiredNumbers } from '#organisations/index.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { LedgerRecordCounts, LedgerRecordIds, YearlessEvent, YearlessLedgers, YearlessRowState } from '../mongodb.js' */

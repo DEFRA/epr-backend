@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { ROW_OUTCOME } from '../validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '../shared/classify-helpers.js'
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'

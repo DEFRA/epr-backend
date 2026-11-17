@@ -19,7 +19,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {OrsDetails} from '#reports/domain/ors-details.js' */
-/** @import { WasteRecordType } from '#shared/waste-records/model.js' */
+/** @import {WasteRecordType} from '#waste-records/index.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */

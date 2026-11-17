@@ -5,7 +5,7 @@ import { yearSchema } from '#common/validation/year-schema.js'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { periodRefSchema } from '#reports/domain/period-ref.schema.js'

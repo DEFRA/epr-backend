@@ -2,7 +2,7 @@ import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
-import { LEDGER_ACCREDITATION_KIND } from '#shared/organisations/model.js'
+import { LEDGER_ACCREDITATION_KIND } from '#organisations/index.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 const countSchema = Joi.number().integer().min(0).required()

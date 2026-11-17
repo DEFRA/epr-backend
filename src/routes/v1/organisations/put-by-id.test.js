@@ -14,7 +14,7 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

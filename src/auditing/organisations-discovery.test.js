@@ -3,7 +3,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { randomBytes } from 'crypto'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 
 const mockAudit = vi.fn()
 

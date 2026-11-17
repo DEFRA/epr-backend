@@ -2,7 +2,7 @@ import { transformValidationResponse } from './transform-validation-response.js'
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 import { summaryLogResponseSchema } from './response.schema.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { LEDGER_ACCREDITATION_KIND } from '#shared/organisations/model.js'
+import { LEDGER_ACCREDITATION_KIND } from '#organisations/index.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 describe('transformValidationResponse', () => {

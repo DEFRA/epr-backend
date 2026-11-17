@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 import {
   addMeasures,
   averagePricePerTonne,

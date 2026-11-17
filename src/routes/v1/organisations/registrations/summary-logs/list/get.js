@@ -7,16 +7,13 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
-import {
-  registrationParams,
-  registrationPath
-} from '#shared/organisations/natural-keys.js'
+import { registrationParams, registrationPath } from '#organisations/index.js'
+import { findOrganisationAndRegistrationReadModels } from '#organisation-read-model/index.js'
 import { summaryLogsListResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
+/** @import { RegistrationParams } from '#organisations/index.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 const LIST_FAILURE = 'Failure listing summary logs'

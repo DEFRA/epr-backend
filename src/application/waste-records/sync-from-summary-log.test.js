@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { toYear } from '#common/helpers/dates/year.js'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -12,7 +12,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -49,7 +49,7 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('ACC-1')
 const APPROVED_FROM = '2023-01-01T00:00:00.000Z'
 
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
-/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
+/** @import { AccreditationNumber } from '#organisations/index.js' */
 /** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/domain/model.js' */
 
 /**
@@ -105,7 +105,7 @@ const organisationWith = ({ registration = {} } = {}) => ({
  * registered-only one carries a `null` accreditation number.
  *
  * @param {string} fileId
- * @param {import('#shared/organisations/numbers.js').AccreditationNumber | null} [accreditationNumber]
+ * @param {import('#organisations/index.js').AccreditationNumber | null} [accreditationNumber]
  */
 const summaryLogFor = (fileId, accreditationNumber = null, year = YEAR) => ({
   file: { id: fileId, uri: `s3://test-bucket/${fileId}` },

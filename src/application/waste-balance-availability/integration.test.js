@@ -6,13 +6,11 @@ import {
   MATERIAL,
   GLASS_RECYCLING_PROCESS,
   TONNAGE_BAND,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
-import {
+  WASTE_PROCESSING_TYPE,
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import {
   createMongoLedgerRepository,

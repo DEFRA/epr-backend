@@ -4,7 +4,7 @@ import Boom from '@hapi/boom'
 /**
  * @import { SummaryLogKeyedRequest } from './at-summary-log-keys.js'
  * @import { SummaryLogsRepository, SummaryLogVersion } from '#repositories/summary-logs/port.js'
- * @import { RegistrationParams } from '#shared/organisations/natural-keys.js'
+ * @import { RegistrationParams } from '#organisations/index.js'
  */
 
 /**

@@ -9,9 +9,9 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#organisations/index.js' */
 
 export const generateFileId = () => toSummaryLogFileId(`file-${randomUUID()}`)
 

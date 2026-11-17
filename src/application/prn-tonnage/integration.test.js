@@ -10,8 +10,11 @@ import {
   MATERIAL,
   REPROCESSING_TYPE,
   TONNAGE_BAND,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+  WASTE_PROCESSING_TYPE,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#organisations/index.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildPrn,
@@ -30,11 +33,6 @@ import { config } from '#root/config.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  toAccreditationNumber,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -103,8 +101,8 @@ const contact = { email: 'contact@example.com', fullName: 'A Contact' }
  * @property {string} [accreditationId]
  * @property {string} wasteProcessingType
  * @property {string | null} [reprocessingType]
- * @property {import('#shared/organisations/model.js').AppliedForMaterial} [material]
- * @property {import('#shared/organisations/model.js').GlassRecyclingProcess[]} [glassRecyclingProcess]
+ * @property {import('#organisations/index.js').AppliedForMaterial} [material]
+ * @property {import('#organisations/index.js').GlassRecyclingProcess[]} [glassRecyclingProcess]
  * @property {{ address: { line1: string, town: string, postcode: string } }} [site]
  */
 

@@ -125,7 +125,7 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
 
 /**
  * @import { AccreditationValidity } from '#domain/organisations/accreditation.js'
- * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#organisations/index.js'
  * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  */

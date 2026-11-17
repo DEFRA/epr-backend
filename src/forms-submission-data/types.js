@@ -1,4 +1,4 @@
-/** @import { UserRoles } from '#shared/organisations/model.js' */
+/** @import {UserRoles} from '#organisations/index.js' */
 
 /**
  * @typedef {{

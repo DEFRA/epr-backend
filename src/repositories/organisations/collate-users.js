@@ -1,9 +1,8 @@
-import { REGISTRATION_STATUS, USER_ROLES } from '#shared/organisations/model.js'
+import { REGISTRATION_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import { CollatedUser, Organisation } from '#domain/organisations/model.js' */
-/** @import { StoredOrganisationStatus, StoredRegOrAccStatus, UserRoles } from '#shared/organisations/model.js' */
+/** @import {CollatedUser, Organisation, StoredOrganisationStatus, StoredRegOrAccStatus, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 
 /** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */

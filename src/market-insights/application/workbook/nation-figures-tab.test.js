@@ -5,8 +5,9 @@ import {
   MATERIAL,
   REGULATOR,
   TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+  WASTE_PROCESSING_TYPE,
+  toAccreditationNumber
+} from '#organisations/index.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -20,7 +21,6 @@ import { readMarketInsightsFigures } from '#market-insights/application/read-fig
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { uniqueRegistrationNumber } from '#reports/repository/contract/test-data.js'
 import { frameOf } from './cells.js'
 import { addNationFigures } from './nation-figures-tab.js'
@@ -38,7 +38,7 @@ const insertAccreditedOperator =
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material, RegulatorValue } from '#shared/organisations/model.js' */
+/** @import { Material, RegulatorValue } from '#organisations/index.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */

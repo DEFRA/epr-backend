@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import { USER_ROLES } from '#shared/organisations/model.js'
+import { USER_ROLES } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { buildLinkedDefraOrg, prepareOrgUpdate } from './test-data.js'
 

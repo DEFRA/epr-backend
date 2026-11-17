@@ -3,7 +3,7 @@ import {
   LOADS_EXPORTED_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { REQUIRED_BY } from '../reason-codes.js'
 import { tonnageOverZero } from '../triggers.js'
 

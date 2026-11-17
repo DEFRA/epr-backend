@@ -2,7 +2,7 @@ import { applyRegistrationStatusToLinkedAccreditations } from './status-transiti
 import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import { partialMock } from '#test/type-helpers.js'
 
 /** @import {Registration} from '#domain/organisations/registration.js' */

@@ -21,12 +21,12 @@ import {
   fetchReportBySubmissionNumber,
   createReportsService
 } from './report-service.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {
@@ -38,7 +38,7 @@ import { CADENCE } from '#reports/domain/cadence.js'
 const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
 
 /**
- * @import { AccreditationNumber } from '#shared/organisations/numbers.js'
+ * @import { AccreditationNumber } from '#organisations/index.js'
  * @import { ReprocessorAccreditation, ReprocessorRegistration } from '#organisation-read-model/domain/model.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { Year } from '#common/helpers/dates/year.js'

@@ -2,7 +2,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { ObjectId } from 'mongodb'
 import { it as base, describe, expect } from 'vitest'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 import {
   buildAwaitingAuthorisationPrn,
   buildCancelledPrn,
@@ -11,7 +11,7 @@ import {
 import { createInMemoryPackagingRecyclingNotesRepository } from './inmemory.plugin.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#organisations/index.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { PackagingRecyclingNotesRepository, PackagingRecyclingNotesRepositoryFactory } from './port.js' */
 

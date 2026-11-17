@@ -19,7 +19,7 @@ import {
   MATERIAL,
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { marketInsightsOutstandingReturnsPath } from './outstanding-returns-get.js'

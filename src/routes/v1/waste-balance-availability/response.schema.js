@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { TONNAGE_MONITORING_MATERIALS } from '#shared/organisations/model.js'
+import { TONNAGE_MONITORING_MATERIALS } from '#organisations/index.js'
 
 const materialBalanceSchema = Joi.object({
   material: Joi.string()

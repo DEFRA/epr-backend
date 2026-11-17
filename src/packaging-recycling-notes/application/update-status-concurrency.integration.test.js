@@ -13,7 +13,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import {
   PRN_YEAR,
   buildAccreditationSnapshot,

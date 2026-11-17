@@ -6,7 +6,7 @@ import {
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from '#formsubmission/parsing-common/parse-forms-data.js'
-import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 import {
   convertToNumber,
   mapGlassRecyclingProcess,

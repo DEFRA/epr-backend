@@ -1,4 +1,4 @@
-import { MATERIAL } from '#shared/organisations/model.js'
+import { MATERIAL } from '#organisations/index.js'
 
 /**
  * EU waste recovery operation codes for packaging materials

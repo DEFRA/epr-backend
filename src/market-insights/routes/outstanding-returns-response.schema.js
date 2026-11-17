@@ -3,7 +3,7 @@ import Joi from 'joi'
 import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { byReportingMonth, metaSchema, recordOf } from './response-schema.js'
 
 const outstandingByMaterialSchema = recordOf(

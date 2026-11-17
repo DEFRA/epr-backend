@@ -4,7 +4,7 @@ import {
   ORGANISATION_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import Joi from 'joi'
 import {
   accreditationSchema,

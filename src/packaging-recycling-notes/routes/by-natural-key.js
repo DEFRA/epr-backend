@@ -14,13 +14,11 @@ import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-co
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   REGULATOR,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
-import {
+  WASTE_PROCESSING_TYPE,
   accreditationPath,
   registrationParams
-} from '#shared/organisations/natural-keys.js'
+} from '#organisations/index.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { DECEMBER_WASTE_CONTROL_MODE } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
 import {
@@ -39,12 +37,16 @@ import { createStatusesValidator } from './validation.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { Material, RegulatorValue, WasteProcessingTypeValue } from '#shared/organisations/model.js'
+ * @import {
+ *   Material,
+ *   RegulatorValue,
+ *   WasteProcessingTypeValue
+ * } from '#organisations/index.js'
  * @import { AccreditationSnapshot, BusinessOperation, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  * @import { PrnKeyedRequest } from './at-prn-keys.js'
- * @import { RegistrationParams } from '#shared/organisations/natural-keys.js'
+ * @import { RegistrationParams } from '#organisations/index.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  *

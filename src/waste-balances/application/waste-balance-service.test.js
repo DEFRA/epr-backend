@@ -18,7 +18,7 @@ import {
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 
 const ledgerId = withNumbers({

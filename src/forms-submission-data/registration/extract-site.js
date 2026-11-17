@@ -4,7 +4,7 @@ import {
   mapTimeScale,
   convertToNumber
 } from '#formsubmission/parsing-common/form-data-mapper.js'
-import { MATERIAL } from '#shared/organisations/model.js'
+import { MATERIAL } from '#organisations/index.js'
 
 const SITE_CAPACITY_BY_MATERIALS = [
   {

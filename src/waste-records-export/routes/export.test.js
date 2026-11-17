@@ -3,8 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+} from '#organisations/index.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'

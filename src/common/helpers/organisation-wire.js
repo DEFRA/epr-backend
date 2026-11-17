@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import {OrganisationNumber} from '#organisations/index.js' */
 
 /**
  * The API and the audit trail carry an organisation number as the numeric

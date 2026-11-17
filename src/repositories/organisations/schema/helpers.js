@@ -4,7 +4,7 @@ import {
   REGISTRATION_STATUS,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import {
   getRegAccKey,
   isAccreditationForRegistration
@@ -15,7 +15,7 @@ import { MIN_YEAR } from '#common/validation/year-schema.js'
 
 /** @import { StringSchema } from 'joi' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import { RegistrationOrAccreditation } from '#domain/organisations/model.js' */
+/** @import {RegistrationOrAccreditation} from '#domain/organisations/model.js' */
 
 export const PREVIOUS_SCHEMA_VERSION = 2
 export const CURRENT_SCHEMA_VERSION = 3

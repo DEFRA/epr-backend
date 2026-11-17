@@ -5,14 +5,11 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { openYearSchema } from '#common/validation/year-schema.js'
 import { isRelevantYearOpen } from '#packaging-recycling-notes/index.js'
-import {
-  organisationParams,
-  organisationPath
-} from '#shared/organisations/natural-keys.js'
+import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @typedef {{ year?: Year }} OrganisationQuery */

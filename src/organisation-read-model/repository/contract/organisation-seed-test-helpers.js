@@ -2,7 +2,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 
 /** @import { OrganisationSeed } from '../port.contract.js' */
 

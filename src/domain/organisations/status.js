@@ -3,9 +3,9 @@ import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 
-/** @import { StoredAccreditationStatus, StoredRegistrationStatus } from '#shared/organisations/model.js' */
+/** @import { StoredAccreditationStatus, StoredRegistrationStatus } from '#domain/organisations/model.js' */
 
 const VALID_ORG_TRANSITIONS = {
   [ORGANISATION_STATUS.CREATED]: [

@@ -16,7 +16,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
@@ -56,7 +56,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
-/** @import { AccreditationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import { AccreditationNumber, RegistrationNumber } from '#organisations/index.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportCreate: vi.fn().mockResolvedValue(undefined),
@@ -135,7 +135,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   ]
 
   /**
-   * @param {{ id: string, organisationNumber: import('#shared/organisations/numbers.js').OrganisationNumber }} org
+   * @param {{ id: string, organisationNumber: import('#organisations/index.js').OrganisationNumber }} org
    * @param {Record<string, any>} registration
    * @param {{ id: string, accreditationNumber: AccreditationNumber | null } | undefined} accreditationRecord
    * @param {SummaryLogRowStateEntry[]} [rows]

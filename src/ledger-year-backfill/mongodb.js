@@ -7,7 +7,7 @@ import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repositor
 
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RequiredNumbers } from '#shared/organisations/numbers.js' */
+/** @import { RequiredNumbers } from '#organisations/index.js' */
 
 /**
  * @typedef {Object} LedgerRecordCounts

@@ -2,7 +2,7 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
- * @import { OrganisationNumber } from '#shared/organisations/numbers.js'
+ * @import {OrganisationNumber} from '#domain/organisations/numbers.js'
  *
  * @typedef {{ organisationId: string, organisationNumber: OrganisationNumber }} AuditedOrganisation
  */

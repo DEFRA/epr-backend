@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js' */

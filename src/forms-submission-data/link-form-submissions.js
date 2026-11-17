@@ -2,7 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import {
   ACCREDITATION_STATUS,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { siteInfoToLog } from './parsing-common/site.js'
 import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 

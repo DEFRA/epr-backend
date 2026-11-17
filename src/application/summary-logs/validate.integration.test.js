@@ -7,7 +7,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import {
   ORGANISATION_STATUS,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
@@ -24,7 +24,7 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import {DataSection, MetadataEntry, SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
-/** @import { WasteProcessingTypeValue } from '#shared/organisations/model.js' */
+/** @import {WasteProcessingTypeValue} from '#organisations/index.js' */
 
 describe('SummaryLogsValidator integration', () => {
   let summaryLogsRepository

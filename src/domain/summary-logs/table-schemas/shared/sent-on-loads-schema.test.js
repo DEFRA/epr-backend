@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { assertPresent } from '#test/type-helpers.js'
 import { createSentOnLoadsSchema } from './sent-on-loads-schema.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 
 describe('createSentOnLoadsSchema', () => {
   const ROW_ID_MINIMUM = 4000

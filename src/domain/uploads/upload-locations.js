@@ -1,5 +1,5 @@
 /** @import {Brand} from '#common/helpers/brand.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#organisations/index.js' */
 
 /**
  * Where CDP Uploader stores an upload's files, under its bucket.

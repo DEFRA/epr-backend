@@ -10,7 +10,7 @@ import {
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
-import { toRegistrationNumber } from '#shared/organisations/numbers.js'
+import { toRegistrationNumber } from '#organisations/index.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { getReportSubmissionsPath } from './submissions.js'
 

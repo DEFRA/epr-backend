@@ -5,7 +5,7 @@ import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material } from '#shared/organisations/model.js' */
+/** @import { Material } from '#organisations/index.js' */
 /** @import { MarketInsightsFigures, ScopeFigures } from '#market-insights/application/read-figures.js' */
 /** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 /** @import { Note } from '#market-insights/domain/published-workbook-text.js' */

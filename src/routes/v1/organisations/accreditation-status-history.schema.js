@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { ACCREDITATION_STATUS } from '#shared/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 
 /**

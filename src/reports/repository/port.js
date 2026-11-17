@@ -2,7 +2,7 @@
  * @typedef {import('#reports/domain/report-status.js').ReportStatus} ReportStatus
  */
 
-/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#organisations/index.js' */
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 
 /**

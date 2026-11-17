@@ -4,7 +4,7 @@ import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
+/** @import { AccreditationNumber } from '#organisations/index.js' */
 /** @import { StoredSummaryLog } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 

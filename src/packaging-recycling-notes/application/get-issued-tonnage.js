@@ -3,9 +3,9 @@ import { aggregateIssuedTonnage } from '#packaging-recycling-notes/domain/tonnag
 
 /**
  * @typedef {Object} GetIssuedTonnageParams
- * @property {import('#shared/organisations/numbers.js').OrganisationNumber} organisationNumber
- * @property {import('#shared/organisations/numbers.js').RegistrationNumber} registrationNumber
- * @property {import('#shared/organisations/numbers.js').AccreditationNumber | null} accreditationNumber
+ * @property {import('#organisations/index.js').OrganisationNumber} organisationNumber
+ * @property {import('#organisations/index.js').RegistrationNumber} registrationNumber
+ * @property {import('#organisations/index.js').AccreditationNumber | null} accreditationNumber
  * @property {string} startDate - Calendar-date string e.g. '2025-01-01', bare
  *   or a full ISO datetime — startOfDay()/endOfDay() tolerate either shape.
  * @property {string} endDate - Calendar-date string e.g. '2025-01-31', bare

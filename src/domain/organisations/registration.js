@@ -1,8 +1,7 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {Accreditation, StatusHistoryOf} from '#domain/organisations/accreditation.js' */
-/** @import { AppliedForMaterial, GlassRecyclingProcess, StoredRegistrationStatus, RegulatorValue, ReprocessingType, TimeScale, WastePermitType, WasteProcessingTypeValue } from '#shared/organisations/model.js' */
-/** @import { User } from '#domain/organisations/model.js' */
-/** @import { RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {AppliedForMaterial, GlassRecyclingProcess, StoredRegistrationStatus, RegulatorValue, ReprocessingType, TimeScale, User, WastePermitType, WasteProcessingTypeValue} from '#domain/organisations/model.js' */
+/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {{

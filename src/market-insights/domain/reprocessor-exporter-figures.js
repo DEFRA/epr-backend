@@ -6,11 +6,11 @@ import {
   toDecimal,
   toNumber
 } from '#common/helpers/decimal-utils.js'
-import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 import { recordOf } from '#common/helpers/record-of.js'
 
 /**
- * @typedef {import('#shared/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
+ * @typedef {import('#organisations/index.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorCounts} OperatorCounts
  */
 

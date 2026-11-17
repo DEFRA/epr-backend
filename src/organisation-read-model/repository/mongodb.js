@@ -8,7 +8,7 @@ import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
+/** @import { Organisation as StoredOrganisation } from '#organisations/index.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */

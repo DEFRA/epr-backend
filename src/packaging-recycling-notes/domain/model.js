@@ -1,9 +1,9 @@
-import { ACCREDITATION_STATUS } from '#shared/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#organisations/index.js'
 
 export const PRN_NUMBER_MAX_LENGTH = 20
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { StoredAccreditationStatus } from '#shared/organisations/model.js' */
+/** @import {StoredAccreditationStatus} from '#organisations/index.js' */
 
 /**
  * Status values for Packaging Recycling Notes (PRNs)
@@ -185,7 +185,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
 
 /**
  * @typedef {{
- *   organisationNumber: import('#shared/organisations/numbers.js').OrganisationNumber;
+ *   organisationNumber: import('#organisations/index.js').OrganisationNumber;
  *   name: string;
  *   tradingName?: string;
  * }} OrganisationSnapshot
@@ -193,11 +193,11 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
 
 /**
  * @typedef {{
- *   accreditationNumber: import('#shared/organisations/numbers.js').AccreditationNumber;
+ *   accreditationNumber: import('#organisations/index.js').AccreditationNumber;
  *   accreditationYear: Year;
- *   material: import('#shared/organisations/model.js').AppliedForMaterial;
- *   submittedToRegulator: import('#shared/organisations/model.js').RegulatorValue;
- *   glassRecyclingProcess?: import('#shared/organisations/model.js').GlassRecyclingProcess;
+ *   material: import('#organisations/index.js').AppliedForMaterial;
+ *   submittedToRegulator: import('#organisations/index.js').RegulatorValue;
+ *   glassRecyclingProcess?: import('#organisations/index.js').GlassRecyclingProcess;
  *   siteAddress?: {
  *     line1: string;
  *     line2?: string;
@@ -248,7 +248,7 @@ export function transitionRefusal(currentStatus, newStatus, actor) {
  *   lastAppliedEventNumber?: number;
  *   prnNumber?: string | null;
  *   organisation: OrganisationSnapshot;
- *   registration:{ registrationNumber: import('#shared/organisations/numbers.js').RegistrationNumber };
+ *   registration:{ registrationNumber: import('#organisations/index.js').RegistrationNumber };
  *   accreditation: AccreditationSnapshot;
  *   obligationYear: Year;
  *   issuedToOrganisation: OrganisationNameAndId;

@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -22,9 +22,9 @@ import {
 import { createMockLogger } from '#test/mock-logger.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { toRegistrationNumber } from '#shared/organisations/numbers.js'
+import { toRegistrationNumber } from '#organisations/index.js'
 
-/** @import { RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import { RegistrationNumber } from '#organisations/index.js' */
 
 const mockAuditSummaryLogDownload = vi.fn()
 

@@ -7,7 +7,7 @@ import { auditOrganisationUserAdded } from './audit-organisation-user.js'
 import { StatusCodes } from 'http-status-codes'
 
 /** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { OrganisationParams } from '#shared/organisations/natural-keys.js' */
+/** @import { OrganisationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js' */
 
 /**

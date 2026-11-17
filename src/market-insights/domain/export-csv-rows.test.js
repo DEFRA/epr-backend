@@ -4,7 +4,7 @@ import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { recordOf } from '#common/helpers/record-of.js'
 import {
   noMeasures,

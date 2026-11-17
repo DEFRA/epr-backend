@@ -9,7 +9,7 @@ import {
   groupAndSum,
   isTonnageGreaterThanZero
 } from './helpers.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 
 /**
  * @import { ReportableWasteRecordState } from './aggregate-report-detail.js'

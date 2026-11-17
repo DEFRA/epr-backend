@@ -10,7 +10,7 @@ import {
   registrationFactory
 } from '#common/helpers/collections/factories/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 import { createEprOrganisationScenarios } from './seed-scenarios.js'
 
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }

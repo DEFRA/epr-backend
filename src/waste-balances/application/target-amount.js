@@ -7,8 +7,7 @@ import {
  * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
  * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
  * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
- * @import { WasteRecord } from '#domain/waste-records/model.js'
- * @import { WasteRecordType } from '#shared/waste-records/model.js'
+ * @import {WasteRecord, WasteRecordType} from '#waste-records/index.js'
  * @import {WasteBalanceClassification} from '#waste-balances/domain/waste-balance-classification.js'
  */
 

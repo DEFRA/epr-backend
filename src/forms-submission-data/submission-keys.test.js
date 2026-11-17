@@ -9,7 +9,7 @@ import {
   REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 
 describe('keyForRegAcc', () => {
   describe('exporter', () => {

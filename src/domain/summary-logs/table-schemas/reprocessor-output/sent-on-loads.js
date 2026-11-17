@@ -1,7 +1,7 @@
 import Joi from 'joi'
 import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 

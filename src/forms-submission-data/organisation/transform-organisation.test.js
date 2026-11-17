@@ -6,7 +6,7 @@ import {
   PARTNER_TYPE,
   BUSINESS_TYPE,
   NATION
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 
 import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-ltd-partnership.json' with { type: 'json' }
 import registeredLtdLiability from '#data/fixtures/ea/organisation/registered-ltd-liability.json' with { type: 'json' }

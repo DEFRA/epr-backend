@@ -4,7 +4,7 @@ import { ledgerIdKeys } from '#waste-balances/repository/ledger-schema.js'
 
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * @typedef {import('#waste-balances/domain/waste-balance-classification.js').WasteBalanceOutcome} WasteBalanceOutcome
@@ -37,7 +37,7 @@ import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
  *
  * @typedef {Object} SummaryLogRowStateEntry
  * @property {string} rowId
- * @property {import('#shared/waste-records/model.js').WasteRecordType} wasteRecordType
+ * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
  * @property {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @property {Record<string, any>} data
  * @property {RowClassification} classification
@@ -45,7 +45,7 @@ import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 
 /**
  * @typedef {{
- *   wasteRecordType: import('#shared/waste-records/model.js').WasteRecordType,
+ *   wasteRecordType: import('#domain/waste-records/model.js').WasteRecordType,
  *   rowId: string,
  *   processingType: import('#domain/summary-logs/meta-fields.js').ProcessingType,
  *   data: Record<string, any>,

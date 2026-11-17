@@ -11,7 +11,7 @@ import {
 import {
   ORGANISATION_NUMBER_PATTERN,
   toOrganisationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'

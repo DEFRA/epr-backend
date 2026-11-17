@@ -1,6 +1,6 @@
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { SENT_ON_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/shared/fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { REQUIRED_BY } from '../reason-codes.js'
 import { answeredYes, tonnageOverZero } from '../triggers.js'
 

@@ -42,7 +42,7 @@ import {
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 
 describe('Submission and placeholder tests', () => {
   let organisationId

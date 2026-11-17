@@ -8,7 +8,12 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { REGULATOR } from '#shared/organisations/model.js'
+import {
+  REGULATOR,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#organisations/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
@@ -44,11 +49,6 @@ import { signedCallback } from '#test/upload-callback.js'
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
-import {
-  toAccreditationNumber,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -57,12 +57,12 @@ const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { AppliedForMaterial, StoredRegistrationStatus, ReprocessingType } from '#shared/organisations/model.js' */
+/** @import { AppliedForMaterial, StoredRegistrationStatus, ReprocessingType } from '#organisations/index.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
 /**
- * @typedef {import('#shared/organisations/numbers.js').RequiredNumbers & {
+ * @typedef {import('#organisations/index.js').RequiredNumbers & {
  *   organisationId: string,
  *   registrationId: string,
  *   accreditationId: string | null,
@@ -1041,7 +1041,7 @@ const buildComplexTestOrg = ({
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   withOverseasSites?: boolean,
- *   accreditationNumber?: import('#shared/organisations/numbers.js').AccreditationNumber
+ *   accreditationNumber?: import('#organisations/index.js').AccreditationNumber
  * }} options
  * @returns {import('#organisation-read-model/domain/model.js').Organisation}
  */
@@ -1153,7 +1153,7 @@ const buildComplexTestReadOrg = ({
  *   wasteProcessingType: string,
  *   material?: string,
  *   reprocessingType?: string,
- *   accreditationNumber?: import('#shared/organisations/numbers.js').AccreditationNumber
+ *   accreditationNumber?: import('#organisations/index.js').AccreditationNumber
  * }} options
  */
 export const servedTestReadOrganisation = ({

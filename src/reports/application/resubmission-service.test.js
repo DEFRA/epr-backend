@@ -1,7 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT

@@ -13,8 +13,11 @@ import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   TONNAGE_BAND,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+  WASTE_PROCESSING_TYPE,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#organisations/index.js'
 import {
   buildAwaitingAcceptancePrn,
   buildAccreditationSnapshot,
@@ -23,11 +26,6 @@ import {
 import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  toAccreditationNumber,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
 import { prnTonnagePath } from './get.js'
 
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */

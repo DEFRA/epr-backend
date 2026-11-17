@@ -5,14 +5,14 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
-import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import { findOrganisationAndRegistrationReadModels } from '#organisation-read-model/index.js'
 import { createSummaryLogUpload } from './create-summary-log-upload.js'
 import { summaryLogsYearCreatePayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
-/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
+/** @import { RegistrationParams } from '#organisations/index.js' */
 
 /**
  * @typedef {{redirectUrl: string}} SummaryLogsYearCreatePayload

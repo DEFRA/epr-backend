@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { REPROCESSED_LOADS } from './reprocessed-loads.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 
 describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
   const schema = REPROCESSED_LOADS

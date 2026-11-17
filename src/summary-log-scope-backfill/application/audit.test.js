@@ -5,7 +5,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { auditSummaryLogScopeBackfill } from './audit.js'
 

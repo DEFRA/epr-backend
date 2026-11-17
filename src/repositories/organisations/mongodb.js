@@ -1,6 +1,8 @@
 import { classifierTail } from '#common/helpers/logging/cdp-boom.js'
-import { USER_ROLES } from '#shared/organisations/model.js'
-import { LINKABLE_ORGANISATION_STATUSES } from '#domain/organisations/model.js'
+import {
+  LINKABLE_ORGANISATION_STATUSES,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {

@@ -1,5 +1,5 @@
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#organisations/index.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**

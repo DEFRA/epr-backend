@@ -6,14 +6,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL
-} from '#shared/organisations/model.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#organisations/index.js'
 import { prnTonnageResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { Material } from '#shared/organisations/model.js' */
+/** @import { Material } from '#organisations/index.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 export const prnTonnagePath = '/v1/prn-tonnage'

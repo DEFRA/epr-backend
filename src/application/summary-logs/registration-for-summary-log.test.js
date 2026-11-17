@@ -1,5 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { toRegistrationNumber } from '#shared/organisations/numbers.js'
+import { toRegistrationNumber } from '#organisations/index.js'
 import {
   buildReadAccreditation,
   buildReadExporterRegistration,

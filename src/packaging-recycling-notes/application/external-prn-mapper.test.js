@@ -7,7 +7,7 @@ import {
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote

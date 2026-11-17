@@ -13,7 +13,7 @@ import {
   REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -26,7 +26,7 @@ import {
 } from '#repositories/organisations/helpers.js'
 import { organisationJSONSchemaOverrides } from './organisation-json-schema-overrides.js'
 
-/** @import { StoredAccreditationStatus } from '#shared/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 

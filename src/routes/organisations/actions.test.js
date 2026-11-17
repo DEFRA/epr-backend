@@ -3,7 +3,7 @@ import crypto from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
 
-import { ORGANISATION_STATUS } from '#shared/organisations/model.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'

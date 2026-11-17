@@ -10,7 +10,7 @@ import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import { partialMock } from '#test/type-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()

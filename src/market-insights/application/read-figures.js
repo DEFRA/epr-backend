@@ -10,7 +10,7 @@ import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-seg
  * The five scopes the pages cover: the UK, drawn from every regulator, and one
  * per nation.
  *
- * @type {readonly { name: string, regulator?: import('#shared/organisations/model.js').RegulatorValue }[]}
+ * @type {readonly { name: string, regulator?: import('#organisations/index.js').RegulatorValue }[]}
  */
 const SCOPES = Object.freeze([
   { name: 'uk' },

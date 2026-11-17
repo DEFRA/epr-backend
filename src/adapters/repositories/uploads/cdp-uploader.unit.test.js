@@ -4,7 +4,7 @@ import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { createUploadsRepository } from './cdp-uploader.js'
 
 vi.mock('@aws-sdk/client-s3', async (importOriginal) => {

@@ -6,7 +6,7 @@ import {
   accreditationPath,
   registrationParams,
   registrationPath
-} from '#shared/organisations/natural-keys.js'
+} from '#organisations/index.js'
 import { atSummaryLogKeys } from './at-summary-log-keys.js'
 import { summaryLogDocument } from './document/get.js'
 import { summaryLogFile, summaryLogFileByFileId } from './file/get.js'

@@ -7,10 +7,13 @@ import {
   REGULATOR,
   REPROCESSING_TYPE,
   TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+  WASTE_PROCESSING_TYPE,
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#organisations/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
@@ -22,13 +25,8 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'
-import {
-  toAccreditationNumber,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
 
-/** @import { StoredAccreditationStatus } from '#shared/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#organisations/index.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
@@ -190,7 +188,7 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   overseasSites?: Record<string, { overseasSiteId: string }>,
  *   validFrom?: string,
  *   validTo?: string,
- *   regulator?: import('#shared/organisations/model.js').RegulatorValue,
+ *   regulator?: import('#organisations/index.js').RegulatorValue,
  *   siteApproved?: boolean
  * }} options
  */
@@ -473,7 +471,7 @@ const registeredOnly = ({ organisation }) =>
  * accreditation, approved on `approvedOn`.
  *
  * @param {ReturnType<typeof makeOperator>} operator
- * @param {import('#shared/organisations/numbers.js').AccreditationNumber} accreditationNumber
+ * @param {import('#organisations/index.js').AccreditationNumber} accreditationNumber
  * @param {string} approvedOn - `YYYY-MM-DD`
  */
 const heldOutside = (operator, accreditationNumber, approvedOn) => {

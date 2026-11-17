@@ -19,7 +19,7 @@ import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { assertPresent } from '#test/type-helpers.js'
 

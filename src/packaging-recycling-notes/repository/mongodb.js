@@ -12,7 +12,7 @@ import { validatePrnInsert, validatePrnRead } from './validation.js'
 import { throwWatermarkRegression } from './watermark-guard.js'
 
 /** @import { Collection, Db, Document, Filter, WithId } from 'mongodb' */
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#organisations/index.js' */
 /** @import { PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 /** @import { AccreditationTonnage, FindByIdsParams, FindByStatusParams, PackagingRecyclingNotesRepositoryFactory, SumTonnageByAccreditationParams, PaginatedResult, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */

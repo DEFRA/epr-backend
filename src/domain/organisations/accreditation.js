@@ -1,6 +1,5 @@
-/** @import { StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand } from '#shared/organisations/model.js' */
-/** @import { User } from '#domain/organisations/model.js' */
-/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
+/** @import {StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
+/** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
 /** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/domain/model.js' */
 
 /**

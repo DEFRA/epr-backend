@@ -14,7 +14,7 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult} WasteBalanceClassificationResult */
 /** @typedef {import('joi').ObjectSchema} JoiObjectSchema */
-/** @import { WasteRecordType } from '#shared/waste-records/model.js' */
+/** @import {WasteRecordType} from '#waste-records/index.js' */
 /**
  * @typedef {Object} TableSchema
  * @property {string} rowIdField - Field name containing the row identifier

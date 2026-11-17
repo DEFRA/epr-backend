@@ -21,7 +21,7 @@ import {
   REPROCESSING_TYPE,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import {
   buildAccreditation,
   buildRegistration

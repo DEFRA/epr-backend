@@ -1,5 +1,5 @@
-/** @import { CollatedUser, StoredLinkedDefraOrganisation, Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import {CollatedUser, StoredLinkedDefraOrganisation, Organisation} from '#domain/organisations/model.js' */
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * An organisation as the lookups that only name it return it, without its

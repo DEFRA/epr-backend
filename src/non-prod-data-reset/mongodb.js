@@ -5,8 +5,8 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
 
 /** @import { Db } from 'mongodb' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { Organisation } from '#organisations/index.js' */
+/** @import { OrganisationNumber } from '#organisations/index.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 /**

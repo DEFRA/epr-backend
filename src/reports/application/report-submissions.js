@@ -14,7 +14,7 @@ import {
   formatResolvedMaterial
 } from '#common/helpers/formatters.js'
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
-import { REGULATOR_DISPLAY } from '#shared/organisations/model.js'
+import { REGULATOR_DISPLAY } from '#organisations/index.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
@@ -42,7 +42,7 @@ import { reportableRegistrations } from '#reports/application/reportable-registr
 
 /**
  * @typedef {Object} SubmissionBaseFields
- * @property {import('#shared/organisations/model.js').RegulatorDisplay} regulator
+ * @property {import('#organisations/index.js').RegulatorDisplay} regulator
  * @property {string} organisationName
  * @property {string} submitterPhone
  * @property {string} approvedPersonsPhone

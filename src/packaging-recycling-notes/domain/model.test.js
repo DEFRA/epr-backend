@@ -12,7 +12,7 @@ import {
   UnauthorisedTransitionError
 } from './model.js'
 
-/** @import { StoredAccreditationStatus } from '#shared/organisations/model.js' */
+/** @import {StoredAccreditationStatus} from '#organisations/index.js' */
 /** @import {PrnStatus} from './model.js' */
 
 describe('PRN_STATUS_TRANSITIONS', () => {

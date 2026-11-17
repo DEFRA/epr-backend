@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER

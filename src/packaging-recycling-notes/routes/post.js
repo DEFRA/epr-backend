@@ -12,7 +12,7 @@ import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import {
   WASTE_PROCESSING_TYPE,
   ACCREDITATION_STATUS
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { assertDecemberWasteDeclarable } from '#packaging-recycling-notes/domain/december-waste-window.js'
 import {
   closedYearConflict,
@@ -37,7 +37,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { RegistrationNumber } from '#shared/organisations/numbers.js'
+ * @import { RegistrationNumber } from '#organisations/index.js'
  * @import { Organisation as ReadModelOrganisation } from '#organisation-read-model/domain/model.js'
  * @import { PrnKeys, PrnRecords } from './at-prn-keys.js'
  */

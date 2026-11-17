@@ -19,12 +19,13 @@ import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import {
   MATERIAL,
   REPROCESSING_TYPE,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+  WASTE_PROCESSING_TYPE,
+  toAccreditationNumber
+} from '#organisations/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
@@ -33,7 +34,6 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const organisationBuilders = createOrganisationBuilders()

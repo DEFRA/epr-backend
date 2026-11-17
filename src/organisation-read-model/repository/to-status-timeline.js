@@ -6,7 +6,7 @@ import {
 } from '#organisation-read-model/domain/model.js'
 
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { StoredAccreditationStatus, StoredOrganisationStatus, StoredRegistrationStatus } from '#shared/organisations/model.js' */
+/** @import { StoredAccreditationStatus, StoredOrganisationStatus, StoredRegistrationStatus } from '#organisations/index.js' */
 /** @import { AccreditationStatus, OrganisationStatus, RegistrationStatus, Status } from '#organisation-read-model/domain/model.js' */
 
 /**

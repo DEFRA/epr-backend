@@ -20,8 +20,10 @@ import { DECEMBER_WASTE_NOT_DECLARABLE_CODE } from '#packaging-recycling-notes/d
 import {
   MATERIAL,
   WASTE_PROCESSING_TYPE,
-  REPROCESSING_TYPE
-} from '#shared/organisations/model.js'
+  REPROCESSING_TYPE,
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#organisations/index.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   buildLedgerEvent,
@@ -38,10 +40,6 @@ import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#shared/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

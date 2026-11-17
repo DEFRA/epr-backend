@@ -1,8 +1,8 @@
 import { config } from '#root/config.js'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#organisations/index.js' */
+/** @import { Organisation } from '#organisations/index.js' */
 
 /** @returns {OrganisationNumber[]} */
 export function parseTestOrganisationNumbers() {

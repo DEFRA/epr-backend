@@ -4,7 +4,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber,
   toAccreditationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { buildPrn, buildDraftPrn } from './test-data.js'
 
 export const testCreateBehaviour = (it) => {

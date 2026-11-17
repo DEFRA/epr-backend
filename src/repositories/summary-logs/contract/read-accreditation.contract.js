@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect } from 'vitest'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 import { summaryLogFactory } from './test-data.js'
 
 /**

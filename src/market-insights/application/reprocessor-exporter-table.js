@@ -9,7 +9,7 @@ import { reportableRegistrations } from '#reports/application/reportable-registr
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import {
   addMeasures,
@@ -39,12 +39,12 @@ import { accreditationForYear } from '#organisation-read-model/domain/accreditat
  * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
- * @typedef {import('#shared/organisations/model.js').Material} Material
+ * @typedef {import('#organisations/index.js').Material} Material
  * @typedef {import('#organisation-read-model/domain/model.js').Organisation} Organisation
- * @typedef {import('#shared/organisations/model.js').RegulatorValue} RegulatorValue
+ * @typedef {import('#organisations/index.js').RegulatorValue} RegulatorValue
  * @typedef {import('#organisation-read-model/domain/model.js').Registration} Registration
  * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
- * @typedef {import('#shared/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
+ * @typedef {import('#organisations/index.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/application/accredited-months.js').RegistrationOfOrganisation} RegistrationOfOrganisation
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').Measures} Measures
  * @typedef {import('#market-insights/domain/reprocessor-exporter-figures.js').PublishedFigures} PublishedFigures

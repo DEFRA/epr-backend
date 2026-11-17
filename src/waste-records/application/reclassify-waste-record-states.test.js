@@ -6,7 +6,7 @@ import {
 } from './reclassify-waste-record-states.js'
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'

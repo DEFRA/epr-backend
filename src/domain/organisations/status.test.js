@@ -8,10 +8,10 @@ import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
-} from '#shared/organisations/model.js'
+} from './model.js'
 import Boom from '@hapi/boom'
 
-/** @import { StoredAccreditationStatus, StoredOrganisationStatus, StoredRegistrationStatus } from '#shared/organisations/model.js' */
+/** @import {StoredAccreditationStatus, StoredOrganisationStatus, StoredRegistrationStatus} from './model.js' */
 /** @import {StatusTransitionAsserter} from './status.js' */
 
 /**

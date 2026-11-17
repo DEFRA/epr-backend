@@ -18,7 +18,7 @@ import {
 } from './model.js'
 import { RelevantYearWindowExpiredError } from './relevant-year.js'
 import { PRN_COMMAND_REJECTION } from '#waste-balances/domain/commands.js'
-import { ACCREDITATION_STATUS } from '#shared/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#organisations/index.js'
 
 /**
  * @import {PrnStatus, PrnActor} from './model.js'

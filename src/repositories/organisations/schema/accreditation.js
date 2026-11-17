@@ -6,7 +6,7 @@ import {
   ACCREDITATION_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import {
   accreditationStatusHistoryItemSchema,
   formFileUploadSchema,

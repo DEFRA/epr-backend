@@ -9,7 +9,7 @@ import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import {
   isAccreditationStatusTransitionValid,
   isRegistrationStatusTransitionValid

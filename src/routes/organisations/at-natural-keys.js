@@ -1,13 +1,13 @@
 import Joi from 'joi'
 
-import { findOrganisationByNumber } from './natural-keys.js'
+import { findOrganisationByNumber } from './find-organisation-by-number.js'
 
 /**
  * @import { ResponseObject, ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { ManagedOrganisation } from '#repositories/organisations/linking-port.js'
- * @import { OrganisationParams, RegistrationParams } from '#shared/organisations/natural-keys.js'
+ * @import { OrganisationParams, RegistrationParams } from './natural-keys.js'
  *
  * @typedef {{
  *   method: string,

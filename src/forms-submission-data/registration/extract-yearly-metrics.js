@@ -4,7 +4,7 @@ import {
   mapValueType,
   convertToNumber
 } from '../parsing-common/form-data-mapper.js'
-import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 
 function getInputData(answersByPages) {
   const inputPage = REGISTRATION.INPUT_TO_RECYLING
@@ -84,7 +84,7 @@ function getProductsMadeFromRecycling(rawSubmissionData) {
 
 /**
  * Extract yearly metrics data from form submission
- * @param {import('#shared/organisations/model.js').WasteProcessingTypeValue} wasteProcessingType - Type of waste processing
+ * @param {import('#organisations/index.js').WasteProcessingTypeValue} wasteProcessingType - Type of waste processing
  * @param {Object} rawSubmissionData - Raw form submission data
  * @param {Object} answersByPages - Answers organized by page title
  * @returns {Array | undefined} Yearly metrics data including year, input, output, and products (undefined for non-reprocessors)

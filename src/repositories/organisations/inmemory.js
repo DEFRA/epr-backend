@@ -1,12 +1,14 @@
 /** @import { ObjectId } from 'mongodb' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import { FindParams } from './administration-port.js' */
 /** @import { OrganisationsRepositoryFactory } from './port.js' */
 /** @import { NumberHolder, StoredOrganisation, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
-import { USER_ROLES } from '#shared/organisations/model.js'
-import { LINKABLE_ORGANISATION_STATUSES } from '#domain/organisations/model.js'
+import {
+  LINKABLE_ORGANISATION_STATUSES,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,

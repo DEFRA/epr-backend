@@ -6,7 +6,7 @@ import {
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest} request
- * @param {{ organisationId: string, organisationNumber: import('#shared/organisations/numbers.js').OrganisationNumber }} organisation
+ * @param {{ organisationId: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} organisation
  * @param {import('./add-or-update-organisation-user.js').OrganisationUserResult} result
  * @returns {Promise<void>}
  */

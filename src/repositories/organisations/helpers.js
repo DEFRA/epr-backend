@@ -22,18 +22,17 @@ import {
   assertOrgStatusTransitionValid,
   assertRegistrationStatusTransitionValid
 } from '#domain/organisations/status.js'
-import { ORGANISATION_STATUS } from '#shared/organisations/model.js'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { errorCodes } from './enums/error-codes.js'
 import { collateUsers } from './collate-users.js'
 import { getCurrentStatus } from './status.js'
 
 /** @import { ObjectId, WithId } from 'mongodb' */
-/** @import { StoredLinkedDefraOrganisation, Organisation } from '#domain/organisations/model.js' */
-/** @import { StoredOrganisationStatus } from '#shared/organisations/model.js' */
+/** @import { StoredLinkedDefraOrganisation, Organisation, StoredOrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
-/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { SearchCriteria } from './administration-port.js' */
 
 /**

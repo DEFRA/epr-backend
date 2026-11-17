@@ -3,7 +3,7 @@ import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS,
   REPROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { prepareOrgUpdate, getValidDateRange } from './test-data.js'
 

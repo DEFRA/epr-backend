@@ -7,8 +7,8 @@ import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /** @import { HapiRequest, HapiResponseToolkit, HapiResponseObject } from '#common/hapi-types.js' */
-/** @import { RegistrationNumber } from '#shared/organisations/numbers.js' */
-/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
+/** @import { RegistrationNumber } from '#organisations/index.js' */
+/** @import { RegistrationParams } from '#organisations/index.js' */
 /** @import { DownloadUrlResult, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 
 const downloadAuth = {

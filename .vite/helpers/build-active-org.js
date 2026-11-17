@@ -1,4 +1,4 @@
-import { ORGANISATION_STATUS } from '#shared/organisations/model.js'
+import { ORGANISATION_STATUS } from '#organisations/index.js'
 import { prepareOrgUpdate } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createApprovedOrgBuilder } from './build-approved-org.js'

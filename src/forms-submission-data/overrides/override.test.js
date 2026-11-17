@@ -4,10 +4,7 @@ import {
   applyOrganisationOverrides,
   applyRegistrationOverrides
 } from './override.js'
-import {
-  BUSINESS_TYPE,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+import { BUSINESS_TYPE, WASTE_PROCESSING_TYPE } from '#organisations/index.js'
 
 describe('Override Functions', () => {
   describe('applyRegistrationOverrides', () => {

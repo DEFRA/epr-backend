@@ -14,11 +14,11 @@ import {
   organisationPath,
   registrationParams,
   registrationPath
-} from '#shared/organisations/natural-keys.js'
+} from '#organisations/index.js'
 import {
   findOrganisationAndRegistrationReadModels,
   findOrganisationReadModel
-} from '#routes/organisations/natural-keys.js'
+} from '#organisation-read-model/index.js'
 import { naturalKeyLedgerResponseSchema } from '#routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
 import { toBalanceBody } from './balance-body.js'
@@ -27,10 +27,10 @@ import { wasteBalanceSchema } from './response.schema.js'
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { RegistrationNumber } from '#shared/organisations/numbers.js'
+ * @import { RegistrationNumber } from '#organisations/index.js'
  * @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/domain/model.js'
  * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
- * @import { OrganisationParams, RegistrationParams } from '#shared/organisations/natural-keys.js'
+ * @import { OrganisationParams, RegistrationParams } from '#organisations/index.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'

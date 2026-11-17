@@ -1,6 +1,6 @@
 import { isNil } from '#common/helpers/is-nil.js'
 
-/** @import { Material } from '#shared/organisations/model.js' */
+/** @import {Material} from '#organisations/index.js' */
 
 /**
  * Mapping between spreadsheet material values and registration material types

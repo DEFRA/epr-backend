@@ -1,6 +1,6 @@
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
-/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#organisations/index.js' */
 /** @import {SummaryLogKey} from '#domain/summary-logs/numbers.js' */
 /** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
 

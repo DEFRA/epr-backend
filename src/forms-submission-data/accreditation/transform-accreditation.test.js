@@ -11,7 +11,7 @@ import {
   REGULATOR,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 
 describe('parseAccreditationSubmission - Integration Tests with Fixture Data', () => {
   it('should parse exporter accreditation from fixture', () => {

@@ -5,7 +5,7 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { tableSchemasWith } from '#waste-balances/domain/table-schemas-test-helpers.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 
 /** @type {import('#domain/organisations/accreditation.js').AccreditationValidity} */
 const accreditation = { timeline: [] }

@@ -21,7 +21,7 @@ import {
 
 import { devSummaryLogsSubmitPath } from './post.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 
 const ACCREDITED_YEAR = toYear(2026)
 

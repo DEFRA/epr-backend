@@ -4,7 +4,7 @@ import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import { accreditedOverseasSitesSchema } from '#common/validation/overseas-site-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { ORGANISATION_NUMBER_PATTERN } from '#shared/organisations/numbers.js'
+import { ORGANISATION_NUMBER_PATTERN } from '#organisations/index.js'
 import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import {
   normalisedAccreditationNumberSchema,

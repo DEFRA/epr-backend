@@ -1,9 +1,6 @@
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL
-} from '#shared/organisations/model.js'
+import { GLASS_RECYCLING_PROCESS, MATERIAL } from '#organisations/index.js'
 
 function hasBothGlassProcesses(registration) {
   return (

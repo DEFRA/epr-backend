@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
 import { toYear } from '#common/helpers/dates/year.js'
-import { toRegistrationNumber } from '#shared/organisations/numbers.js'
+import { toRegistrationNumber } from '#organisations/index.js'
 import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'
 import { config } from '#root/config.js'
 import {

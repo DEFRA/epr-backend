@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 

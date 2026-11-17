@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   approvedStatusFrom,

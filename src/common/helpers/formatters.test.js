@@ -15,7 +15,7 @@ import {
   MATERIAL,
   REGULATOR,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 
 describe('formatters', () => {
   describe('formatAddress', () => {

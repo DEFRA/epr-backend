@@ -1,4 +1,4 @@
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'

@@ -12,7 +12,7 @@ import {
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
-import { toRegistrationNumber } from '#shared/organisations/numbers.js'
+import { toRegistrationNumber } from '#organisations/index.js'
 
 /**
  * @param {{ organisationNumber: string }} organisation

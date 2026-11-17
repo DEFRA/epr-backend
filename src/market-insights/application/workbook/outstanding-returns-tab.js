@@ -34,7 +34,7 @@ import {
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material } from '#shared/organisations/model.js' */
+/** @import { Material } from '#organisations/index.js' */
 /** @import { OutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js' */
 /** @import { TabContents } from './cells.js' */
 

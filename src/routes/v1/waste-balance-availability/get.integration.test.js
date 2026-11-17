@@ -8,13 +8,11 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import {
   MATERIAL,
   TONNAGE_BAND,
-  WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
-import {
+  WASTE_PROCESSING_TYPE,
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import {
   createMongoLedgerRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME

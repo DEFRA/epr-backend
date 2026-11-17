@@ -1,7 +1,7 @@
 import Joi from 'joi'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { VALUE_TYPE } from '#shared/organisations/model.js'
+import { VALUE_TYPE } from '#domain/organisations/model.js'
 
 const valueTypeSchema = Joi.string()
   .valid(VALUE_TYPE.ACTUAL, VALUE_TYPE.ESTIMATED)

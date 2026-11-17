@@ -1,16 +1,16 @@
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
 
 /** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#organisations/index.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**

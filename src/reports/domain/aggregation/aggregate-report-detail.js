@@ -1,5 +1,5 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { isExporterCategory } from '../operator-category.js'
 import { periodBounds } from '../reporting-period.js'
 import { aggregateWasteExported } from './aggregate-waste-exported.js'

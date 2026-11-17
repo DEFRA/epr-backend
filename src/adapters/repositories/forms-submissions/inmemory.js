@@ -21,7 +21,7 @@ export const createInMemoryFormsFileUploadsRepository = (config = {}) => {
      *
      * @param {Object} params
      * @param {string} params.fileId - File ID from Forms Submission API (used as S3 key)
-     * @param {import('#shared/organisations/model.js').RegulatorValue} params.regulator - Regulator code (EA, NIEA, NRW, SEPA)
+     * @param {import('#organisations/index.js').RegulatorValue} params.regulator - Regulator code (EA, NIEA, NRW, SEPA)
      * @returns {Promise<void>}
      */
     async copyFormFileToS3({ fileId, regulator }) {

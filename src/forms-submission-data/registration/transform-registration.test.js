@@ -13,7 +13,7 @@ import {
   VALUE_TYPE,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 
 describe('parseRegistrationSubmission - Integration Tests with Fixture Data', () => {
   it('should split exporter glass registration with both processes into remelt and other', async () => {

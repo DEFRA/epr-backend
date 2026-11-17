@@ -4,7 +4,7 @@ import {
   ORGANISATION_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
 import { ObjectId } from 'mongodb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

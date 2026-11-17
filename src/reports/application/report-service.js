@@ -20,7 +20,7 @@ import {
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Material } from '#shared/organisations/model.js'
+ * @import { Material } from '#organisations/index.js'
  * @import { UkAddress } from '#organisation-read-model/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'

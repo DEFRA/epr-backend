@@ -2,7 +2,7 @@ import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
-import { toRegistrationNumber } from '#shared/organisations/numbers.js'
+import { toRegistrationNumber } from '#organisations/index.js'
 import {
   findSchemaByWasteRecordType,
   tableSchemasOf
@@ -23,7 +23,7 @@ import {
 } from '../domain/csv-columns.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
-/** @import { AccreditationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {AccreditationNumber, RegistrationNumber} from '#organisations/index.js' */
 /** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */

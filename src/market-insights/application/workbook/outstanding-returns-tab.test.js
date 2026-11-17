@@ -2,11 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
-import {
-  MATERIAL,
-  REGULATOR,
-  TONNAGE_BAND
-} from '#shared/organisations/model.js'
+import { MATERIAL, REGULATOR, TONNAGE_BAND } from '#organisations/index.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
@@ -31,7 +27,7 @@ const insertAccreditedOperator =
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material, RegulatorValue, TonnageBand } from '#shared/organisations/model.js' */
+/** @import { Material, RegulatorValue, TonnageBand } from '#organisations/index.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */

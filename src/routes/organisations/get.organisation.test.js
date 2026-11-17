@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { toYear } from '#common/helpers/dates/year.js'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   buildReadAccreditation,
   buildReadOrganisation,

@@ -5,7 +5,7 @@ import {
   formatMaterialResults,
   formatTonnageMonitoringResults
 } from './material-aggregation.js'
-import { TONNAGE_MONITORING_MATERIALS } from '#shared/organisations/model.js'
+import { TONNAGE_MONITORING_MATERIALS } from '#organisations/index.js'
 
 /**
  * `formatMaterialResults` keys the metric dynamically (`totalTonnage` /

@@ -1,4 +1,4 @@
-/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
+/** @import { AccreditationNumber } from '#organisations/index.js' */
 
 export const CADENCE = Object.freeze({
   monthly: 'monthly',

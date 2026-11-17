@@ -4,12 +4,12 @@ import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue, ReprocessingType, WasteProcessingTypeValue } from '#shared/organisations/model.js'
- * @import { AccreditationNumber } from '#shared/organisations/numbers.js'
+ * @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue, ReprocessingType, WasteProcessingTypeValue } from '#organisations/index.js'
+ * @import { AccreditationNumber } from '#organisations/index.js'
  * @import { AccreditationCommon, Registration } from '#organisation-read-model/domain/model.js'
  * @import { AccreditationSnapshot } from './model.js'
  */

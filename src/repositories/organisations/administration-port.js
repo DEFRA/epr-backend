@@ -1,7 +1,7 @@
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {Object} OrganisationIds

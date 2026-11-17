@@ -9,7 +9,7 @@ export const MAX_VALIDATION_ISSUES = 100
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {StoredFile, SummaryLog} from '#domain/summary-logs/model.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#organisations/index.js' */
 
 /**
  * SummaryLog after the validator has confirmed it's past PREPROCESSING. The

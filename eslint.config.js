@@ -71,13 +71,6 @@ export default [
               // test data. Nothing else in a repository is available to it.
               except: ['./organisations/contract'],
               message: DOMAIN_LAYERING_MESSAGE
-            },
-            {
-              target: './src/shared',
-              from: './src',
-              except: ['./shared', './common'],
-              message:
-                'Shared code sits below every module and imports only from shared and common.'
             }
           ]
         }

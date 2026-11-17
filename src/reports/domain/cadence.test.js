@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#organisations/index.js'
 import {
   CADENCE,
   MONTHS_PER_PERIOD,

@@ -25,7 +25,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
-import { toOrganisationNumber } from '#shared/organisations/numbers.js'
+import { toOrganisationNumber } from '#organisations/index.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   COMPANY_2_ID,
@@ -38,7 +38,7 @@ const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Organisation } from '#organisations/index.js' */
 
 const mockLogger = createMockLogger()
 

@@ -4,7 +4,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#shared/organisations/numbers.js'
+} from '#organisations/index.js'
 import { CADENCE } from './cadence.js'
 import { findPeriodSlot } from './find-period-slot.js'
 

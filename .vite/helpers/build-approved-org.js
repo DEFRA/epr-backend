@@ -3,14 +3,14 @@ import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
   REPROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import {
   prepareOrgUpdate,
   getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { Organisation } from '#organisations/index.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { RegistrationOther } from '#domain/organisations/registration.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */

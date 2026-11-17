@@ -3,7 +3,7 @@ import Joi from 'joi'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#shared/organisations/model.js'
+} from '#organisations/index.js'
 import {
   byReportingMonth,
   metaSchema,

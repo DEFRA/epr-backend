@@ -3,7 +3,7 @@ import {
   countByValidity,
   mergeLoads
 } from './load-counts.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#waste-records/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { RECORD_CHANGE } from './record-change.js'
 

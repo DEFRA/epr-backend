@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect } from 'vitest'
 import { buildAccreditation } from './test-data.js'
-import { toAccreditationNumber } from '#shared/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 

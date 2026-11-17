@@ -1,6 +1,6 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogFileId, SummaryLogId} from './ids.js' */
-/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#organisations/index.js' */
 
 /**
  * @typedef {Object} FileUpload

@@ -28,7 +28,7 @@ import {
 } from './validation.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#organisations/index.js' */
 
 /**
  * @import {

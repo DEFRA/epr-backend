@@ -1,5 +1,5 @@
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { ORGANISATION_STATUS } from '#shared/organisations/model.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 /** @import {DefraIdTokenPayload, UserRoleAndScopes} from '#auth/types.js' */

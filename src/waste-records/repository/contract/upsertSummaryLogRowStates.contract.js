@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 import {
   buildSummaryLogRowStateEntry,

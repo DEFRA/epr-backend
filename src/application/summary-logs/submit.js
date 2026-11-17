@@ -14,7 +14,7 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#organisations/index.js'
  * @import { SummaryLogExtractor } from '#domain/summary-logs/extractor/port.js'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
