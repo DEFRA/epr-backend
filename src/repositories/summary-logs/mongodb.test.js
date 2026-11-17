@@ -557,4 +557,84 @@ describe('MongoDB summary logs repository', () => {
       expect(registeredOnly.success).toBe(false)
     })
   })
+
+  // Not a contract assertion: only stored documents show what was written.
+  describe('organisation and registration database ids', () => {
+    /** @param {MongoClient} mongoClient */
+    const collection = (mongoClient) =>
+      mongoClient.db(DATABASE_NAME).collection('summary-logs')
+
+    /**
+     * @param {MongoClient} mongoClient
+     * @param {string} id
+     */
+    const storedDocument = (mongoClient, id) =>
+      collection(mongoClient).findOne(/** @type {any} */ ({ _id: id }))
+
+    /**
+     * A summary log stored before summary logs dropped their database ids.
+     *
+     * @param {MongoClient} mongoClient
+     */
+    const insertWithIds = async (mongoClient) => {
+      const id = toSummaryLogId(`with-ids-${randomUUID()}`)
+      await collection(mongoClient).insertOne(
+        /** @type {any} */ ({
+          _id: id,
+          version: 1,
+          ...summaryLogFactory.validating(),
+          organisationId: 'org-1',
+          registrationId: 'reg-1'
+        })
+      )
+      return id
+    }
+
+    it('are not stored with a new summary log', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const id = toSummaryLogId(`new-${randomUUID()}`)
+
+      await summaryLogsRepository.insert(id, {
+        ...summaryLogFactory.validating(),
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      })
+
+      const stored = await storedDocument(mongoClient, id)
+      expect(stored).not.toHaveProperty('organisationId')
+      expect(stored).not.toHaveProperty('registrationId')
+    })
+
+    it('are not read back from a summary log stored with them', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const id = await insertWithIds(mongoClient)
+
+      const found = await summaryLogsRepository.findById(id)
+
+      expect(found?.summaryLog.status).toBe('validating')
+      expect(found?.summaryLog).not.toHaveProperty('organisationId')
+      expect(found?.summaryLog).not.toHaveProperty('registrationId')
+    })
+
+    it('are removed from a summary log stored with them when it is updated', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const id = await insertWithIds(mongoClient)
+
+      await summaryLogsRepository.update(id, 1, {
+        status: 'invalid',
+        expiresAt: null
+      })
+
+      const stored = await storedDocument(mongoClient, id)
+      expect(stored?.status).toBe('invalid')
+      expect(stored).not.toHaveProperty('organisationId')
+      expect(stored).not.toHaveProperty('registrationId')
+    })
+  })
 })

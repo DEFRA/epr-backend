@@ -11,8 +11,6 @@ describe('summaryLogKeyOf', () => {
     /** @type {SummaryLog} */ ({
       status: 'submitted',
       file: { id: 'file-1', name: 'log.xlsx' },
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
       organisationNumber: '500123',
       registrationNumber: 'R25SR500010912PL',
       accreditationNumber: null,

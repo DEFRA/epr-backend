@@ -124,7 +124,7 @@ export const summaryLogsUploadCompletedYear = {
       logger
     } = request
 
-    const { summaryLogId, organisationId, registrationId, year } = params
+    const { summaryLogId, year } = params
     const { summaryLogUpload } = payload.form
     const isInLocation = isUploadedForRegistration(summaryLogUpload, params)
 
@@ -138,12 +138,7 @@ export const summaryLogsUploadCompletedYear = {
         summaryLogId,
         isInLocation ? summaryLogUpload : asRejected(summaryLogUpload),
         logger,
-        {
-          organisationId,
-          registrationId,
-          year,
-          numbers: numbersFromPath(params)
-        }
+        { year, numbers: numbersFromPath(params) }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })

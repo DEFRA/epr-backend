@@ -242,7 +242,9 @@ const seedDownstreamForOrganisation = async (
 
   await repositories.summaryLogs.insert(
     `summary-log-${randomUUID()}`,
-    summaryLogFactory.validating({ organisationId, registrationId })
+    summaryLogFactory.validating({
+      organisationNumber: organisation.organisationNumber
+    })
   )
 
   await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
@@ -415,9 +417,9 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(1)
       expect(
-        await database
-          .collection('summary-logs')
-          .countDocuments({ organisationId: other.organisationId })
+        await database.collection('summary-logs').countDocuments({
+          organisationNumber: other.organisation.organisationNumber
+        })
       ).toBe(1)
       expect(
         await database.collection('overseas-sites').countDocuments({

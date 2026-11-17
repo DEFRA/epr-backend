@@ -116,15 +116,20 @@ const insert = (db) => async (id, summaryLog) => {
   }
 }
 
+// Older summary logs hold these; an update drops them.
+const DATABASE_IDS = { organisationId: '', registrationId: '' }
+
 const update = (db, logger) => async (id, version, updates) => {
   const validatedId = validateId(id)
   const validatedUpdates = validateSummaryLogUpdate(updates)
 
   /** @type {any} */
   const filter = { _id: validatedId, version }
-  const result = await db
-    .collection(COLLECTION_NAME)
-    .updateOne(filter, { $set: validatedUpdates, $inc: { version: 1 } })
+  const result = await db.collection(COLLECTION_NAME).updateOne(filter, {
+    $set: validatedUpdates,
+    $unset: DATABASE_IDS,
+    $inc: { version: 1 }
+  })
 
   if (result.matchedCount === 0) {
     /** @type {any} */
