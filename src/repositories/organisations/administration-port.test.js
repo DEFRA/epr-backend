@@ -38,9 +38,7 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
   'src/server/run-forms-data-migration.js',
   'src/server/seed/create-seed-data.js',
-  'src/server/seed/seed-scenarios.js',
-  'src/summary-log-scope-backfill/application/backfill.js',
-  'src/summary-log-scope-backfill/run.js'
+  'src/server/seed/seed-scenarios.js'
 ]
 
 const productionModules = () =>
