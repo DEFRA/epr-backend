@@ -132,6 +132,19 @@ describe('read-model-test-data', () => {
         2027: { '2027-01-01': { standing: 'accredited' } }
       })
     })
+
+    it('carries its standing to the end of the open year given', () => {
+      const organisation = buildReadApprovedOrganisation({
+        year: 2025,
+        openYear: toYear(2026)
+      })
+      const [registration] = Object.values(organisation.registrations)
+
+      expect(registration.standingByDate).toEqual({
+        2025: { '2025-01-01': { standing: 'accredited' } },
+        2026: { '2026-01-01': { standing: 'registeredOnly' } }
+      })
+    })
   })
 
   describe('buildReadOrganisationWithNumbersOf', () => {

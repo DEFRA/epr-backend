@@ -59,22 +59,13 @@ const registeredOnlyRegistration = {
 }
 const accreditedRegistration = { registrationNumber: REPROCESSOR_NUMBER }
 const accreditedExporter = { registrationNumber: EXPORTER_NUMBER }
-/** @type {import('#organisation-read-model/domain/model.js').StandingByYear} */
-const accreditedStanding = {
-  [YEAR]: {
-    '2026-02-01': { standing: 'registeredOnly' },
-    '2026-07-01': { standing: 'accredited' }
-  }
-}
 const organisation = buildReadOrganisation({
   registrations: {
     [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      standingByDate: accreditedStanding,
       accreditations: accreditationsByYear(accredited)
     }),
     [EXPORTER_NUMBER]: buildReadExporterRegistration({
-      standingByDate: accreditedStanding,
       accreditations: accreditationsByYear({
         ...buildReadAccreditation({
           accreditationNumber: toAccreditationNumber(

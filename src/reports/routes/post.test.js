@@ -87,6 +87,10 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
               lastUpdatedAt: '2026-02-01T09:00:00.000Z',
               timeline: [
                 {
+                  status: /** @type {const} */ ('approved'),
+                  at: '2026-02-01T00:00:00.000Z'
+                },
+                {
                   status: /** @type {const} */ ('cancelled'),
                   at: '2026-02-01T09:00:00.000Z'
                 }
@@ -99,12 +103,6 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
     : {}
   const fields = {
     status: approvedStatusFrom(registration.validFrom),
-    standingByDate: {
-      [YEAR]: {
-        [registration.validFrom]: { standing: 'registeredOnly' },
-        ...(served && approved && { '2026-07-01': { standing: 'accredited' } })
-      }
-    },
     accreditations
   }
   return buildReadOrganisation({

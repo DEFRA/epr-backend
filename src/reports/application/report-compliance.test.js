@@ -34,10 +34,7 @@ const registeredOnlyOrg = () =>
   buildReadOrganisation({
     registrations: {
       REG1: buildReadReprocessorRegistration({
-        status: approvedStatusFrom('2026-01-01'),
-        standingByDate: {
-          2026: { '2026-01-01': { standing: 'registeredOnly' } }
-        }
+        status: approvedStatusFrom('2026-01-01')
       })
     }
   })
@@ -463,15 +460,6 @@ describe('generateReportCompliance', () => {
         registrations: {
           [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
             status: approvedStatusFrom('2026-01-01'),
-            standingByDate: {
-              2026:
-                accreditedFrom === '2026-01-01'
-                  ? { '2026-01-01': { standing: 'accredited' } }
-                  : {
-                      '2026-01-01': { standing: 'registeredOnly' },
-                      [accreditedFrom]: { standing: 'accredited' }
-                    }
-            },
             accreditations: accreditationsByYear(
               buildReadAccreditation({
                 status: approvedStatusFrom(accreditedFrom)

@@ -215,13 +215,14 @@ export const buildReadOrganisation = (overrides = {}) => ({
  * The read model's view of an organisation built by `createApprovedOrgBuilder`:
  * one input reprocessor registered as `REG<organisationNumber>` and
  * accredited as `ACC<organisationNumber>`, both approved from `validFrom`,
- * the first day of `year` unless given.
+ * the first day of `year` unless given. Its standing runs to the end of
+ * `openYear`, or of the last year its timelines name.
  *
  * @param {{
  *   organisationNumber?: Organisation['organisationNumber'],
  *   year?: number,
  *   validFrom?: string,
- *   standingByDate?: ReprocessorRegistration['standingByDate'],
+ *   openYear?: Year,
  *   overrides?: Partial<ReprocessorRegistration>
  * }} [options]
  * @returns {Organisation}
@@ -230,27 +231,27 @@ export const buildReadApprovedOrganisation = ({
   organisationNumber = nextReadOrganisationNumber(),
   year = 2026,
   validFrom = `${year}-01-01`,
-  standingByDate,
+  openYear,
   overrides = {}
 } = {}) => {
   const approved = approvedStatusFrom(validFrom)
+  const registration = buildReadReprocessorRegistration({
+    status: approved,
+    accreditations: accreditationsByYear(
+      buildReadAccreditation({
+        accreditationNumber: toAccreditationNumber(`ACC${organisationNumber}`),
+        status: approved,
+        year: utcYearOf(`${year}-01-01`)
+      })
+    ),
+    ...overrides
+  })
   return buildReadOrganisation({
     organisationNumber,
     registrations: {
-      [`REG${organisationNumber}`]: buildReadReprocessorRegistration({
-        status: approved,
-        standingByDate,
-        accreditations: accreditationsByYear(
-          buildReadAccreditation({
-            accreditationNumber: toAccreditationNumber(
-              `ACC${organisationNumber}`
-            ),
-            status: approved,
-            year: utcYearOf(`${year}-01-01`)
-          })
-        ),
-        ...overrides
-      })
+      [`REG${organisationNumber}`]: openYear
+        ? withStandingThrough(registration, openYear)
+        : registration
     }
   })
 }
