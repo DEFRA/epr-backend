@@ -12,6 +12,7 @@ import {
 import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
+import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mongodb.js'
 import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME,
   createMongoLedgerRepository
@@ -197,7 +198,11 @@ describe('aggregateTonnageByMaterial - Integration', () => {
   let organisationReadRepository
 
   const aggregate = () =>
-    aggregateTonnageByMaterial(db, ledgerRepository, organisationReadRepository)
+    aggregateTonnageByMaterial(
+      createTonnageQuery(db),
+      ledgerRepository,
+      organisationReadRepository
+    )
 
   /**
    * Insert row states and record one submitted summary log per distinct ledger

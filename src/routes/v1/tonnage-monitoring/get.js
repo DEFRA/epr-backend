@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { aggregateTonnageByMaterial } from '#application/tonnage-monitoring/aggregate-tonnage.js'
+import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mongodb.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -33,7 +34,7 @@ export const getTonnageMonitoring = {
 
     try {
       const result = await aggregateTonnageByMaterial(
-        db,
+        createTonnageQuery(db),
         ledgerRepository,
         organisationReadRepository
       )
