@@ -1,16 +1,16 @@
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { generatePublicRegister } from '#application/public-register/generate-public-register.js'
+import { generatePublicRegister } from '#public-register/application/generate-public-register.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import Boom from '@hapi/boom'
-import { auditPublicRegisterGenerate } from '#root/auditing/public-register.js'
+import { auditPublicRegisterGenerate } from '#public-register/auditing.js'
 
 /**
  * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
- * @typedef {import('#domain/public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
+ * @typedef {import('#public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
  * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  */

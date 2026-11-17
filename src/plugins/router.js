@@ -13,7 +13,7 @@ import {
   registrationWasteRecordsExportByNumber,
   availableWasteRecordYearsGet
 } from '#waste-records-export/index.js'
-import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
+import { generateLatestPublicRegister } from '#public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
 import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availability/index.js'
@@ -68,7 +68,7 @@ const router = {
         wasteRecordsExportRoute,
         registrationWasteRecordsExportByNumber,
         availableWasteRecordYearsGet,
-        ...Object.values(publicRegisterRoutes),
+        generateLatestPublicRegister,
         ...Object.values(tonnageMonitoringRoutes),
         ...Object.values(prnTonnageRoutes),
         ...Object.values(wasteBalanceAvailabilityRoutes),

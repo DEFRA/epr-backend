@@ -3,7 +3,7 @@
  * @typedef {import('./helpers/logging/logger.js').IndexedLogProperties} IndexedLogProperties
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
- * @import {PublicRegisterRepository} from '#domain/public-register/repository/port.js'
+ * @import {PublicRegisterRepository} from '#public-register/repository/port.js'
  * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
  * @import {ExternalAccreditationsRepository} from '#external-accreditations/repository/port.js'
  * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
