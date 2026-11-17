@@ -239,7 +239,8 @@ describe('stored and external accreditations together', () => {
       organisation.registrations[EXPORTER_NUMBER].accreditations
     ).toStrictEqual({})
     expect(
-      otherOrganisation.registrations.R26ER5001189999PL.accreditations
+      otherOrganisation.registrations[toRegistrationNumber('R26ER5001189999PL')]
+        .accreditations
     ).toStrictEqual({})
   })
 

@@ -1,5 +1,8 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   accreditationsByYear,
@@ -50,7 +53,7 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportRequestResubmission: vi.fn().mockResolvedValue(undefined)
 }))
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const REGISTERED_ONLY_NUMBER = toRegistrationNumber('R26ER5001180099PL')
 const YEAR = toYear(2026)
 
 const accredited = buildReadAccreditation()
@@ -83,7 +86,8 @@ const registrations = `/organisations/${organisation.organisationNumber}/registr
 /** @param {{ registrationNumber?: string }} registration */
 const numbersOf = (registration) => reportKeyOf(organisation, registration)
 
-const OTHER_ORGANISATION_REGISTRATION_NUMBER = 'R26ER5001180098PL'
+const OTHER_ORGANISATION_REGISTRATION_NUMBER =
+  toRegistrationNumber('R26ER5001180098PL')
 const otherOrganisation = buildReadOrganisation({
   registrations: {
     [OTHER_ORGANISATION_REGISTRATION_NUMBER]: buildReadReprocessorRegistration()

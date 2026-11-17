@@ -16,6 +16,7 @@ import {
   SEED_ACCREDITATION_YEAR,
   SEED_REGISTRATION_APPROVED_ON
 } from './contract/organisation-seed-test-helpers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepositoryServingFixture, OrganisationSeed, OverseasSiteSeed } from './port.contract.js' */
@@ -154,9 +155,10 @@ describe('in-memory organisation read repository', () => {
     const held = () =>
       buildReadOrganisation({
         registrations: {
-          R26ER5001180041PL: buildReadReprocessorRegistration({
-            accreditations: accreditationsByYear(buildReadAccreditation())
-          })
+          [toRegistrationNumber('R26ER5001180041PL')]:
+            buildReadReprocessorRegistration({
+              accreditations: accreditationsByYear(buildReadAccreditation())
+            })
         }
       })
 

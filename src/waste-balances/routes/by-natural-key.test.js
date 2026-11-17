@@ -50,7 +50,7 @@ import {
 const organisationBuilders = createOrganisationBuilders()
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const REGISTERED_ONLY_NUMBER = toRegistrationNumber('R26ER5001180099PL')
 
 const servedExporter = () =>
   buildReadExporterRegistration({

@@ -51,7 +51,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
   auditSummaryLogDownload: vi.fn()
 }))
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const REGISTERED_ONLY_NUMBER = toRegistrationNumber('R26ER5001180099PL')
 const YEAR = toYear(2026)
 
 const accredited = accreditation()

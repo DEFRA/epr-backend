@@ -1,5 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { TonnageBand } from '#domain/organisations/model.js' */
@@ -21,7 +21,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   name: string
  *   organisationNumber: OrganisationNumber
  *   registeredAddress?: OrganisationAddress
- *   registrations: Record<string, Registration>
+ *   registrations: Record<RegistrationNumber, Registration>
  *   status: Status<OrganisationStatus>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact

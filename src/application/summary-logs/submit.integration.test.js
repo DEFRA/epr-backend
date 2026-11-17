@@ -200,7 +200,7 @@ const setupSubmit = async ({
     buildServedOrganisation({
       organisationNumber: organisation.organisationNumber,
       registrations: {
-        'REG-123': withStandingThrough(
+        [toRegistrationNumber('REG-123')]: withStandingThrough(
           buildReadReprocessorRegistration({
             material: 'paper',
             status: approved,

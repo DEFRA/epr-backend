@@ -6,11 +6,12 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber
+  toOrganisationNumber,
+  toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
-export const EXPORTER_NUMBER = 'R26EX5001180042PL'
+export const REPROCESSOR_NUMBER = toRegistrationNumber('R26ER5001180041PL')
+export const EXPORTER_NUMBER = toRegistrationNumber('R26EX5001180042PL')
 export const ACCREDITATION_NUMBER = 'A26ER5001180114PL'
 export const EXPORTER_ACCREDITATION_NUMBER = 'A26EX5001180115PL'
 

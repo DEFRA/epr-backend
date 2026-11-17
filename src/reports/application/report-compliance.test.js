@@ -1,4 +1,7 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportCompliance } from './report-compliance.js'
@@ -33,7 +36,7 @@ import { config } from '#root/config.js'
 const registeredOnlyOrg = () =>
   buildReadOrganisation({
     registrations: {
-      REG1: buildReadReprocessorRegistration({
+      [toRegistrationNumber('REG1')]: buildReadReprocessorRegistration({
         status: approvedStatusFrom('2026-01-01')
       })
     }

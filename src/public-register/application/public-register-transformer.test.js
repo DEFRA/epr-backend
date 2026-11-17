@@ -1,6 +1,9 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import { partialMock } from '#test/type-helpers.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -9,7 +12,7 @@ import { transform } from './public-register-transformer.js'
 /** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { TonnageBand } from '#domain/organisations/model.js' */
 
-const REGISTRATION_NUMBER = 'R26ER5000010001PL'
+const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000010001PL')
 
 const registeredAddress = {
   line1: '1 Waste Road',
@@ -407,11 +410,14 @@ describe('transform', () => {
   it('gives a row for each registration of each organisation', async () => {
     const rows = await rowsFor([
       organisation({
-        registrations: { R1: reprocessor(), R2: exporter() }
+        [toRegistrationNumber('registrations')]: {
+          R1: reprocessor(),
+          R2: exporter()
+        }
       }),
       organisation({
         organisationNumber: toOrganisationNumber('500002'),
-        registrations: { R3: reprocessor() }
+        [toRegistrationNumber('registrations')]: { R3: reprocessor() }
       }),
       organisation({
         organisationNumber: toOrganisationNumber('500003'),
