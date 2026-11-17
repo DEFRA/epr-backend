@@ -10,9 +10,11 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import {
+  waitForVersion,
+  createApprovedOrgBuilder
+} from '#summary-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { generateValidTokenWith } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'

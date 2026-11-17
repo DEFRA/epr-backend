@@ -7,8 +7,10 @@ import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import {
+  createActiveOrgBuilder,
+  createApprovedOrgBuilder
+} from '#summary-logs/test-support.js'
 import {
   defraIdMockAuthTokens,
   generateValidTokenWith

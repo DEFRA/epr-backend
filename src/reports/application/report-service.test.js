@@ -12,9 +12,9 @@ import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-dat
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAcceptancePrn,
-  underAccreditation
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+  underAccreditation,
+  createInMemoryPackagingRecyclingNotesRepository
+} from '#packaging-recycling-notes/test-support.js'
 import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,

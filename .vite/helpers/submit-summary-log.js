@@ -1,5 +1,7 @@
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  createInMemorySummaryLogsRepository,
+  summaryLogFactory
+} from '#summary-logs/test-support.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'

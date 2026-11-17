@@ -2,7 +2,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#summary-logs/test-support.js'
 import {
   defraIdMockAuthTokens,
   generateValidTokenWith

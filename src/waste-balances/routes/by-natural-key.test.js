@@ -18,7 +18,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#summary-logs/test-support.js'
 import {
   COMPANY_2_ID,
   defraIdMockAuthTokens,
@@ -33,9 +33,11 @@ import {
   buildLedgerEvent,
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
+import {
+  buildAccreditationSnapshot,
+  createInMemoryPackagingRecyclingNotesRepository,
+  createMockIssuedPrn
+} from '#packaging-recycling-notes/test-support.js'
 import {
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,

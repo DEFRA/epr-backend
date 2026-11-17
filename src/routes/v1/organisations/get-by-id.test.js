@@ -12,7 +12,7 @@ import {
   testRegulatorCanRead
 } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
+import { createActiveOrgBuilder } from '#summary-logs/test-support.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders

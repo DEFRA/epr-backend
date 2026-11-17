@@ -15,8 +15,10 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  createInMemorySummaryLogsRepository,
+  summaryLogFactory
+} from '#summary-logs/test-support.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'

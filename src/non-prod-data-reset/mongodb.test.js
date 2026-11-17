@@ -6,14 +6,18 @@ import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
+import { createMongoExternalAccreditationsRepository } from '#external-accreditations/test-support.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
-import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
-import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
-import { buildDraftPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import {
+  buildOverseasSite,
+  createOverseasSitesRepository
+} from '#overseas-sites/test-support.js'
+import {
+  buildDraftPrn,
+  createPackagingRecyclingNotesRepository
+} from '#packaging-recycling-notes/test-support.js'
 import {
   buildCreateReportParams,
   uniqueRegistrationNumber
@@ -26,8 +30,10 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import {
+  summaryLogFactory,
+  createSummaryLogsRepository
+} from '#summary-logs/test-support.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'

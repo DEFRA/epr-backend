@@ -8,9 +8,9 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import {
   buildDataFieldColumns,
-  buildSubmissionHeaderRow
-} from '#waste-records-export/domain/csv-columns.js'
-import { encodeRow } from '#waste-records-export/application/stream-csv-export.js'
+  buildSubmissionHeaderRow,
+  encodeRow
+} from '#waste-records-export/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'

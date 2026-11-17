@@ -10,7 +10,7 @@ import {
   buildAccreditation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#summary-logs/test-support.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'

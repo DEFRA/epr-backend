@@ -2,11 +2,11 @@ import { MongoClient } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
 
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 import {
+  COLLECTION_NAME,
   summaryLogFactory,
   withoutAccreditationId
-} from '#repositories/summary-logs/contract/test-data.js'
+} from '#summary-logs/test-support.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildAccreditation,

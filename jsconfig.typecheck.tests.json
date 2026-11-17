@@ -9,6 +9,7 @@
     "**/*-test-helpers.js",
     "**/test-helpers/**/*.js",
     "**/test-fixtures.js",
+    "**/test-support.js",
     "**/*.d.ts"
   ],
   "exclude": ["node_modules", ".vite"]

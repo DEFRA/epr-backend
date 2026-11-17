@@ -9,9 +9,9 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,
-  underAccreditation
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { COLLECTION_NAME as PRNS_COLLECTION } from '#packaging-recycling-notes/repository/mongodb.js'
+  underAccreditation,
+  COLLECTION_NAME as PRNS_COLLECTION
+} from '#packaging-recycling-notes/test-support.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   toStoredFields,

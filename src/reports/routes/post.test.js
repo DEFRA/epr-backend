@@ -25,12 +25,12 @@ import {
 } from '#reports/domain/report-status.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import {
+  createInMemoryPackagingRecyclingNotesRepository,
   buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn,
   underAccreditation
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
+} from '#packaging-recycling-notes/test-support.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   accreditation,
@@ -174,7 +174,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {SummaryLogRowStateEntry[]} [options.rows]
    * @param {boolean} [options.accredited] - Report through the accreditation (monthly cadence).
    * @param {object} [options.accreditationOverrides]
-   * @param {(keys: import('#packaging-recycling-notes/repository/contract/test-data.js').AccreditationKeys) => PackagingRecyclingNote[]} [options.prns]
+   * @param {(keys: import('#packaging-recycling-notes/test-support.js').AccreditationKeys) => PackagingRecyclingNote[]} [options.prns]
    */
   const createServer = async (
     registrationOverrides = {},

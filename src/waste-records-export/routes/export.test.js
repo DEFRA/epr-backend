@@ -20,7 +20,7 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation
 } from '#organisation-read-model/repository/read-model-test-data.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#summary-logs/test-support.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'

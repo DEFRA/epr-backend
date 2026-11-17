@@ -1,4 +1,4 @@
-import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
+import { createInMemoryOrsImportsRepository } from '#overseas-sites/test-support.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import {
   importOverseasSitesHandler,

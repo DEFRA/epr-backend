@@ -6,7 +6,10 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import {
+  waitForVersion,
+  createApprovedOrgBuilder
+} from '#summary-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   asServiceMaintainerRead,
@@ -14,7 +17,6 @@ import {
   asSupport,
   asUnscopedAdminUser
 } from '#test/inject-auth.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME

@@ -24,7 +24,7 @@ import {
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
 } from '#organisation-read-model/repository/mongodb.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'

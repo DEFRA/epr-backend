@@ -1,4 +1,4 @@
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import {
   buildAccreditation,
   buildRegistration,

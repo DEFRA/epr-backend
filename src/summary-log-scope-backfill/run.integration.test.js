@@ -5,8 +5,10 @@ import { describe, expect, vi } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
-import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
+import {
+  createApprovedOrgBuilder,
+  COLLECTION_NAME
+} from '#summary-logs/test-support.js'
 import { config } from '../config.js'
 
 import { runSummaryLogScopeBackfill } from './run.js'

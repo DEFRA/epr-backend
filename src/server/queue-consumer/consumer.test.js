@@ -12,7 +12,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import {
+  createInMemorySummaryLogsRepository,
+  summaryLogFactory
+} from '#summary-logs/test-support.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import {
@@ -24,7 +27,6 @@ import {
   NEXT_YEAR_REPORT,
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
 

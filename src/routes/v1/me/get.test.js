@@ -6,7 +6,7 @@ import {
 } from '#common/helpers/auth/constants.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#summary-logs/test-support.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,

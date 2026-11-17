@@ -3,7 +3,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asUnscopedAdminUser } from '#test/inject-auth.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+import { createApprovedOrgBuilder } from '#summary-logs/test-support.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
