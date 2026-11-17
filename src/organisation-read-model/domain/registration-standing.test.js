@@ -1,4 +1,3 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { partialMock } from '#test/type-helpers.js'
 import { standingByDate, standingByYear } from './registration-standing.js'
@@ -164,7 +163,7 @@ describe('standingByDate', () => {
 })
 
 describe('standingByYear', () => {
-  const END_DATE = calendarDate('2026-12-31')
+  const UP_TO_2026 = toYear(2026)
   const registeredOnly = { standing: 'registeredOnly' }
   const accredited = { standing: 'accredited' }
   const approvedFrom = (date, accreditations = {}) => ({
@@ -178,9 +177,9 @@ describe('standingByYear', () => {
   /** @param {StatusTimeline} timeline */
   const registration = (timeline) => partialMock({ status: { timeline } })
 
-  it('covers each year from approval up to the year of the end date', () => {
+  it('covers each year from approval up to the year given', () => {
     expect(
-      standingByYear(partialMock(approvedFrom('2025-06-02')), END_DATE)
+      standingByYear(partialMock(approvedFrom('2025-06-02')), UP_TO_2026)
     ).toEqual({
       2025: { '2025-06-02': registeredOnly },
       2026: { '2026-01-01': registeredOnly }
@@ -198,23 +197,21 @@ describe('standingByYear', () => {
       Object.keys(
         standingByYear(
           partialMock({ ...registration(timeline), accreditations: {} }),
-          END_DATE
+          UP_TO_2026
         )
       )
     ).toEqual(['2024', '2026'])
   })
 
-  it('covers the year of an accreditation up to the year of the end date', () => {
+  it('covers the year of an accreditation up to the year given', () => {
     const withAccreditationFor2027 = partialMock(
       approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
     )
 
-    expect(standingByYear(withAccreditationFor2027, END_DATE)).toEqual({
+    expect(standingByYear(withAccreditationFor2027, UP_TO_2026)).toEqual({
       2026: { '2026-06-02': registeredOnly }
     })
-    expect(
-      standingByYear(withAccreditationFor2027, calendarDate('2027-12-31'))
-    ).toEqual({
+    expect(standingByYear(withAccreditationFor2027, toYear(2027))).toEqual({
       2026: { '2026-06-02': registeredOnly },
       2027: { '2027-01-01': accredited }
     })
@@ -226,7 +223,7 @@ describe('standingByYear', () => {
     expect(
       standingByYear(
         partialMock({ ...registration(timeline), accreditations: {} }),
-        END_DATE
+        UP_TO_2026
       )
     ).toEqual({})
   })

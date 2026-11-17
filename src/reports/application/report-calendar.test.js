@@ -1,5 +1,5 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { toYear } from '#common/helpers/dates/year.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
@@ -46,7 +46,7 @@ const withStanding = (fields) => {
     ...registration,
     standingByDate: standingByYear(
       registration,
-      utcCalendarDate(AFTER_YEAR_END)
+      utcYearOf(utcCalendarDate(AFTER_YEAR_END))
     )
   }
 }
