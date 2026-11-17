@@ -1,7 +1,10 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, expect, it } from 'vitest'
 
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
@@ -29,6 +32,9 @@ const url = `/v1/dev/external-accreditations/${registrationNumber}/${year}`
 /** @param {string} number */
 const urlFor = (number) => `/v1/dev/external-accreditations/${number}/${year}`
 
+/** A registration only another organisation holds. */
+const OTHER_ORGANISATIONS_NUMBER = 'R26ER5009990001PL'
+
 const overseasSites = {
   '001': { status: 'approved', approvedOn: '2027-01-01' },
   '002': { status: 'pending' }
@@ -46,9 +52,16 @@ const serverWith = async (featureFlags) => {
       externalAccreditationsRepository,
       organisationReadRepository: createInMemoryOrganisationReadRepository([
         buildReadOrganisation({
+          organisationNumber: fields.organisationNumber,
           registrations: {
+            [registrationNumber]: buildReadReprocessorRegistration(),
             [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration(),
             [EXPORTER_NUMBER]: buildReadExporterRegistration()
+          }
+        }),
+        buildReadOrganisation({
+          registrations: {
+            [OTHER_ORGANISATIONS_NUMBER]: buildReadReprocessorRegistration()
           }
         })
       ])
@@ -132,30 +145,57 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     )
   })
 
-  it.for([
-    {
-      description: "overseas sites for a reprocessor's accreditation",
-      number: REPROCESSOR_NUMBER
-    },
-    {
-      description:
-        'overseas sites for an accreditation whose registration no organisation holds',
-      number: registrationNumber
-    }
-  ])('refuses $description', async ({ number }) => {
+  it("refuses overseas sites for a reprocessor's accreditation", async () => {
     const { server, externalAccreditationsRepository } = await serverWith({
       devEndpoints: true
     })
 
     const response = await server.inject({
       method: 'PUT',
-      url: urlFor(number),
+      url: urlFor(REPROCESSOR_NUMBER),
       payload: { ...payload, overseasSites }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
   })
+
+  it.for([
+    {
+      description: 'a registration only another organisation holds',
+      number: OTHER_ORGANISATIONS_NUMBER,
+      organisationNumber: fields.organisationNumber
+    },
+    {
+      description: 'a registration no organisation holds',
+      number: 'R26ER5009990002PL',
+      organisationNumber: fields.organisationNumber
+    },
+    {
+      description: 'an organisation that does not exist',
+      number: REPROCESSOR_NUMBER,
+      organisationNumber: toOrganisationNumber('999999999')
+    }
+  ])(
+    'refuses an accreditation for $description',
+    async ({ number, organisationNumber }) => {
+      const { server, externalAccreditationsRepository } = await serverWith({
+        devEndpoints: true
+      })
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: urlFor(number),
+        payload: { ...payload, organisationNumber }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(JSON.parse(response.payload).message).toBe(
+        `Organisation ${organisationNumber} holds no registration ${number}`
+      )
+      expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+    }
+  )
 
   it.for([
     {
@@ -205,6 +245,30 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       method: 'PUT',
       url,
       payload: { ...payload, status }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+  })
+
+  it.for([
+    {
+      description: 'an accreditation without its organisation number',
+      organisationNumber: undefined
+    },
+    {
+      description: 'an organisation number that is not a number',
+      organisationNumber: 'ABC123'
+    }
+  ])('refuses $description', async ({ organisationNumber }) => {
+    const { server, externalAccreditationsRepository } = await serverWith({
+      devEndpoints: true
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url,
+      payload: { ...payload, organisationNumber }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
