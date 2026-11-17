@@ -2,6 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { partialMock } from '#test/type-helpers.js'
 import { standingByDate, standingByYear } from './registration-standing.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationStatus, Registration, RegistrationStatus, StatusTimeline } from './model.js' */
 
 /**
@@ -19,7 +20,7 @@ const cancelledOn = changeTo('cancelled')
 
 /**
  * @param {StatusTimeline<RegistrationStatus>} registration
- * @param {Record<number, StatusTimeline<AccreditationStatus>>} accreditations
+ * @param {Record<Year, StatusTimeline<AccreditationStatus>>} accreditations
  * @returns {Registration}
  */
 const registrationWith = (registration, accreditations) =>
@@ -37,7 +38,7 @@ const registrationWith = (registration, accreditations) =>
 
 /**
  * @param {StatusTimeline<RegistrationStatus>} registration
- * @param {Record<number, StatusTimeline<AccreditationStatus>>} [accreditations]
+ * @param {Record<Year, StatusTimeline<AccreditationStatus>>} [accreditations]
  * @param {number} [year]
  */
 const byDate = (registration, accreditations = {}, year = 2026) =>
@@ -51,7 +52,7 @@ describe('standingByDate', () => {
   it('starts each status on the date it changes', () => {
     expect(
       byDate([approvedOn('2026-02-01'), cancelledOn('2026-11-20')], {
-        2026: [
+        [toYear(2026)]: [
           approvedOn('2026-07-01'),
           suspendedOn('2026-09-01'),
           cancelledOn('2026-10-15')
@@ -97,7 +98,7 @@ describe('standingByDate', () => {
   it('adds no key for a suspension, which still holds the accreditation', () => {
     expect(
       byDate([approvedOn('2025-06-02')], {
-        2026: [
+        [toYear(2026)]: [
           approvedOn('2026-01-01'),
           suspendedOn('2026-04-01'),
           approvedOn('2026-05-01')
@@ -131,14 +132,16 @@ describe('standingByDate', () => {
 
   it('is accredited only from registration when accredited before registering', () => {
     expect(
-      byDate([approvedOn('2026-03-01')], { 2026: [approvedOn('2026-01-01')] })
+      byDate([approvedOn('2026-03-01')], {
+        [toYear(2026)]: [approvedOn('2026-01-01')]
+      })
     ).toEqual({ '2026-03-01': accredited })
   })
 
   it('is cancelled, not registered-only, when both are cancelled together', () => {
     expect(
       byDate([approvedOn('2025-06-02'), cancelledOn('2026-08-01')], {
-        2026: [approvedOn('2026-01-01'), cancelledOn('2026-08-01')]
+        [toYear(2026)]: [approvedOn('2026-01-01'), cancelledOn('2026-08-01')]
       })
     ).toEqual({
       '2026-01-01': accredited,
@@ -149,14 +152,16 @@ describe('standingByDate', () => {
   it('stays accredited after a cancellation dated after the year', () => {
     expect(
       byDate([approvedOn('2025-06-02')], {
-        2026: [approvedOn('2026-01-01'), cancelledOn('2027-01-15')]
+        [toYear(2026)]: [approvedOn('2026-01-01'), cancelledOn('2027-01-15')]
       })
     ).toEqual({ '2026-01-01': accredited })
   })
 
   it('counts only the accreditation for the given year', () => {
     expect(
-      byDate([approvedOn('2025-06-02')], { 2025: [approvedOn('2025-07-01')] })
+      byDate([approvedOn('2025-06-02')], {
+        [toYear(2025)]: [approvedOn('2025-07-01')]
+      })
     ).toEqual({ '2026-01-01': registeredOnly })
   })
 })
