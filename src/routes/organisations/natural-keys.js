@@ -3,6 +3,7 @@ import Joi from 'joi'
 
 import {
   ORGANISATION_NUMBER_PATTERN,
+  REGISTRATION_NUMBER_PATTERN,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -37,7 +38,10 @@ export const organisationParams = {
 }
 export const registrationParams = {
   ...organisationParams,
-  registrationNumber: Joi.string().custom(toRegistrationNumber).required()
+  registrationNumber: Joi.string()
+    .pattern(REGISTRATION_NUMBER_PATTERN)
+    .custom(toRegistrationNumber)
+    .required()
 }
 
 /**
@@ -115,14 +119,16 @@ export async function findRegistrationByNumber(
  */
 export async function findOrganisationAndRegistrationReadModels(request) {
   const organisation = await findOrganisationReadModel(request)
+  const { registrationNumber } = request.params
 
-  const registration =
-    organisation.registrations[request.params.registrationNumber]
-  if (!registration) {
+  if (!Object.hasOwn(organisation.registrations, registrationNumber)) {
     throw Boom.notFound('Registration not found')
   }
 
-  return { organisation, registration }
+  return {
+    organisation,
+    registration: organisation.registrations[registrationNumber]
+  }
 }
 
 /**
