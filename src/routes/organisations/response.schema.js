@@ -84,9 +84,9 @@ const statusSchema = (statuses) =>
     current: Joi.string()
       .valid(...statuses)
       .required(),
-    lastUpdatedAt: isoDateTime.description(
-      'When the last change in the timeline was recorded.'
-    ),
+    lastUpdatedAt: isoDateTime
+      .required()
+      .description('When the last change in the timeline was recorded.'),
     timeline: statusTimelineSchema(statuses)
   }).required()
 
