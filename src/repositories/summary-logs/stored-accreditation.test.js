@@ -59,14 +59,6 @@ describe('readStoredSummaryLog', () => {
     [
       'an accreditation number that is not a string',
       { accreditationNumber: 123 }
-    ],
-    [
-      'an accreditation id but no accreditation number',
-      { accreditationId: 'acc-1', accreditationNumber: null }
-    ],
-    [
-      'an accreditation number but a null accreditation id',
-      { accreditationId: null, accreditationNumber: 'A26ER123' }
     ]
   ])('refuses a summary log stored with %s', (_, accreditation) => {
     expect(() => readStoredSummaryLog('log-1', stored(accreditation))).toThrow(

@@ -2,30 +2,19 @@
 /** @import { StoredSummaryLog } from './port.js' */
 
 /**
- * An older summary log holds an accreditation id exactly when it holds a number.
- *
- * @param {Pick<StoredSummaryLog, 'accreditationId' | 'accreditationNumber'>} stored
- */
-const idMatchesNumber = ({ accreditationId, accreditationNumber }) =>
-  accreditationId === undefined ||
-  (accreditationId === null) === (accreditationNumber === null)
-
-/**
  * @param {string} id
- * @param {Pick<StoredSummaryLog, 'accreditationId' | 'accreditationNumber'>} stored
+ * @param {Pick<StoredSummaryLog, 'accreditationNumber'>} stored
  * @returns {SummaryLogAccreditation}
  */
-const accreditationOf = (id, stored) => {
-  const { accreditationId, accreditationNumber } = stored
+const accreditationOf = (id, { accreditationNumber }) => {
   if (
-    (accreditationNumber === null ||
-      (typeof accreditationNumber === 'string' && accreditationNumber)) &&
-    idMatchesNumber(stored)
+    accreditationNumber === null ||
+    (typeof accreditationNumber === 'string' && accreditationNumber)
   ) {
     return { accreditationNumber }
   }
   throw new TypeError(
-    `Summary log ${id} is stored with an accreditation in no shape a summary log can take: accreditationId ${accreditationId}, accreditationNumber ${accreditationNumber}`
+    `Summary log ${id} is stored with an accreditation in no shape a summary log can take: accreditationNumber ${accreditationNumber}`
   )
 }
 

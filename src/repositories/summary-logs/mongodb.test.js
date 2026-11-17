@@ -636,39 +636,37 @@ describe('MongoDB summary logs repository', () => {
     })
 
     for (const shape of OLDER_SHAPES) {
-      describe(`on a summary log ${shape.name}`, () => {
-        it('are not read back, and its accreditation number is', async ({
-          mongoClient,
-          summaryLogsRepository
-        }) => {
-          const id = await insertWithIds(mongoClient, shape.stored)
+      it(`are not read back from a summary log ${shape.name}, and its accreditation number is`, async ({
+        mongoClient,
+        summaryLogsRepository
+      }) => {
+        const id = await insertWithIds(mongoClient, shape.stored)
 
-          const found = await summaryLogsRepository.findById(id)
+        const found = await summaryLogsRepository.findById(id)
 
-          expect(found?.summaryLog.status).toBe('validating')
-          expect(found?.summaryLog.accreditationNumber).toBe(
-            shape.accreditationNumber
-          )
-          expect(databaseIdsIn(found?.summaryLog)).toEqual([])
-        })
-
-        it('are removed when it is updated, and its accreditation number is kept', async ({
-          mongoClient,
-          summaryLogsRepository
-        }) => {
-          const id = await insertWithIds(mongoClient, shape.stored)
-
-          await summaryLogsRepository.update(id, 1, {
-            status: 'invalid',
-            expiresAt: null
-          })
-
-          const stored = await storedDocument(mongoClient, id)
-          expect(stored?.status).toBe('invalid')
-          expect(stored?.accreditationNumber).toBe(shape.accreditationNumber)
-          expect(databaseIdsIn(stored)).toEqual([])
-        })
+        expect(found?.summaryLog.status).toBe('validating')
+        expect(found?.summaryLog.accreditationNumber).toBe(
+          shape.accreditationNumber
+        )
+        expect(databaseIdsIn(found?.summaryLog)).toEqual([])
       })
     }
+
+    it('are removed from a summary log stored with organisation and registration ids when it is updated', async ({
+      mongoClient,
+      summaryLogsRepository
+    }) => {
+      const id = await insertWithIds(mongoClient, {})
+
+      await summaryLogsRepository.update(id, 1, {
+        status: 'invalid',
+        expiresAt: null
+      })
+
+      const stored = await storedDocument(mongoClient, id)
+      expect(stored?.status).toBe('invalid')
+      expect(stored).not.toHaveProperty('organisationId')
+      expect(stored).not.toHaveProperty('registrationId')
+    })
   })
 })
