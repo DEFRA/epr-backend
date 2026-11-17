@@ -115,7 +115,7 @@ describe('mapToExternalPrn', () => {
     })
   })
 
-  it('states no issuer or accreditation database id, even those a PRN raised before PAE-2226 stores', () => {
+  it('states no issuer or accreditation database id, even when the stored PRN holds them', () => {
     const prn = buildAwaitingAcceptancePrn()
     const stored = {
       ...prn,

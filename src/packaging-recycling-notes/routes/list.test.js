@@ -236,6 +236,8 @@ describe('GET /v1/packaging-recycling-notes', () => {
         const payload = JSON.parse(response.payload)
         const item = payload.items[0]
 
+        expect(item.issuedByOrganisation).not.toHaveProperty('id')
+        expect(item.accreditation).not.toHaveProperty('id')
         expect(item.issuedByOrganisation.organisationNumber).toBe(
           mockPrn.organisation.organisationNumber
         )
@@ -251,32 +253,6 @@ describe('GET /v1/packaging-recycling-notes', () => {
         expect(item.obligationYear).toBe(mockPrn.obligationYear)
         expect(item.prnNumber).toBe(mockPrn.prnNumber)
         expect(item.issuerNotes).toBe(mockPrn.notes)
-      })
-
-      it('lists a PRN for an accreditation that has never had a database id, naming its issuer and accreditation by number', async () => {
-        const mockPrn = createMockIssuedPrn()
-        packagingRecyclingNotesRepository.findByStatus.mockResolvedValueOnce({
-          items: [mockPrn],
-          nextCursor: null,
-          hasMore: false
-        })
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${listUrl}?statuses=awaiting_acceptance`,
-          headers: authHeaders
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        const [item] = JSON.parse(response.payload).items
-        expect(item.issuedByOrganisation).not.toHaveProperty('id')
-        expect(item.accreditation).not.toHaveProperty('id')
-        expect(item.issuedByOrganisation.organisationNumber).toBe(
-          mockPrn.organisation.organisationNumber
-        )
-        expect(item.accreditation.accreditationNumber).toBe(
-          mockPrn.accreditation.accreditationNumber
-        )
       })
 
       it('uses default limit of 200 when not provided', async () => {
