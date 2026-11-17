@@ -23,8 +23,8 @@ describe('logValidationIssues', () => {
   })
 
   const summaryLog = /** @type {SubmittedSummaryLog} */ ({
-    organisationId: 'org-123',
-    registrationId: 'reg-456',
+    organisationNumber: '500123',
+    registrationNumber: 'R25SR500030912PA',
     file: {
       id: 'file-1',
       name: 'test.xlsx',
@@ -99,5 +99,29 @@ describe('logValidationIssues', () => {
       expect(summaryPayload.message).toContain('total=1')
       expect(summaryPayload.message).toContain('logged=1')
     })
+  })
+
+  it('names the organisation and registration by number in the summary', () => {
+    const issues = createValidationIssues()
+    issues.addError(
+      VALIDATION_CATEGORY.TECHNICAL,
+      'issue',
+      VALIDATION_CODE.FIELD_REQUIRED
+    )
+
+    logValidationIssues({
+      summaryLogId: 'summary-1',
+      summaryLog,
+      issues,
+      logger
+    })
+
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining(
+          'organisationNumber=500123 registrationNumber=R25SR500030912PA'
+        )
+      })
+    )
   })
 })

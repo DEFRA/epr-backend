@@ -133,7 +133,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * last change was recorded.
  *
  * @template {string} S
- * @typedef {{ current: S, lastUpdatedAt: string | undefined, timeline: StatusTimeline<S> }} Status
+ * @typedef {{ current: S, lastUpdatedAt: string, timeline: StatusTimeline<S> }} Status
  */
 
 /**

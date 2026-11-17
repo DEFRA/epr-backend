@@ -212,6 +212,35 @@ describe('stored and external accreditations together', () => {
     })
   })
 
+  it('leaves out and logs an external accreditation with no status changes', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const stored = buildOrganisation({ registrations: [reprocessor()] })
+    const logger = { warn: vi.fn() }
+    const repository = await organisationReadRepositoryWith({
+      organisations: [stored],
+      externalAccreditations: [
+        buildExternalAccreditationFor(stored, {
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+          status: { current: 'approved', timeline: [] }
+        })
+      ],
+      logger
+    })
+
+    const organisation = await findOrganisation(
+      repository,
+      stored.organisationNumber
+    )
+
+    expect(
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations
+    ).toStrictEqual({})
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: `Registration ${REPROCESSOR_NUMBER} external accreditation year 2027 has no status changes`
+    })
+  })
+
   it('gives an external accreditation only to the registration with its number', async ({
     organisationReadRepositoryWith
   }) => {
