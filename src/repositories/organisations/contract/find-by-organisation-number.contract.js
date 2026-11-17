@@ -1,5 +1,7 @@
+import crypto from 'node:crypto'
+import { USER_ROLES } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
-import { prepareOrgUpdate } from './test-data.js'
+import { buildLinkedDefraOrg, prepareOrgUpdate } from './test-data.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 
@@ -35,6 +37,36 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
       expect(found).toMatchObject({
         id: orgData.id,
         organisationNumber: orgData.organisationNumber
+      })
+    })
+
+    it('returns what linking and user management read', async () => {
+      const orgData = buildOrganisation({
+        linkedDefraOrganisation: buildLinkedDefraOrg(
+          crypto.randomUUID(),
+          'Defra Org'
+        )
+      })
+      await repository.insert(orgData)
+      await repository.replaceUsers(orgData.organisationNumber, 1, [
+        {
+          email: 'user@example.com',
+          fullName: 'A User',
+          roles: [USER_ROLES.STANDARD]
+        }
+      ])
+      const stored = await repository.findById(orgData.id, 2)
+
+      const found = await repository.findByOrganisationNumber(
+        orgData.organisationNumber,
+        2
+      )
+
+      expect(found).toMatchObject({
+        linkedDefraOrganisation: stored.linkedDefraOrganisation,
+        users: stored.users,
+        statusHistory: stored.statusHistory,
+        version: 2
       })
     })
 
