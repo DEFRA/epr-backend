@@ -355,6 +355,13 @@ const toSubmittedRowState = ({
 })
 
 /**
+ * @param {SummaryLogFileId[]} summaryLogIds
+ */
+const memberOfAnySummaryLog = (summaryLogIds) => ({
+  summaryLogIds: { $in: summaryLogIds }
+})
+
+/**
  * @param {Collection} collection
  * @returns {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<import('./port.js').SubmittedRowState>}
  */
@@ -364,10 +371,9 @@ const performStreamRowStatesForSummaryLogs = (collection) =>
       return
     }
     yield* collection
-      .find(
-        { summaryLogIds: { $in: summaryLogIds } },
-        { projection: SUBMITTED_ROW_STATE_PROJECTION }
-      )
+      .find(memberOfAnySummaryLog(summaryLogIds), {
+        projection: SUBMITTED_ROW_STATE_PROJECTION
+      })
       .map(toSubmittedRowState)
   }
 
@@ -384,7 +390,7 @@ const performFindDistinctDataKeys = (collection) => async (summaryLogIds) => {
   }
   const docs = await collection
     .aggregate([
-      { $match: { summaryLogIds: { $in: summaryLogIds } } },
+      { $match: memberOfAnySummaryLog(summaryLogIds) },
       { $project: { kv: { $objectToArray: '$data' } } },
       { $unwind: '$kv' },
       { $group: { _id: '$kv.k' } }

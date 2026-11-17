@@ -86,22 +86,29 @@ const rowStatesForSummaryLogFile = (
 /**
  * @param {SummaryLogRowState[]} storage
  * @param {SummaryLogFileId[]} summaryLogIds
+ * @returns {SummaryLogRowState[]}
+ */
+const rowStatesOfAnySummaryLog = (storage, summaryLogIds) => {
+  const asked = new Set(summaryLogIds)
+  return storage.filter((doc) => doc.summaryLogIds.some((id) => asked.has(id)))
+}
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {SummaryLogFileId[]} summaryLogIds
  * @returns {Generator<import('./port.js').SubmittedRowState>}
  */
 function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
-  const asked = new Set(summaryLogIds)
-  for (const doc of storage) {
-    if (doc.summaryLogIds.some((id) => asked.has(id))) {
-      yield structuredClone({
-        organisationNumber: doc.organisationNumber,
-        registrationNumber: doc.registrationNumber,
-        accreditationNumber: doc.accreditationNumber,
-        year: doc.year,
-        wasteRecordType: doc.wasteRecordType,
-        processingType: doc.processingType,
-        data: doc.data
-      })
-    }
+  for (const doc of rowStatesOfAnySummaryLog(storage, summaryLogIds)) {
+    yield structuredClone({
+      organisationNumber: doc.organisationNumber,
+      registrationNumber: doc.registrationNumber,
+      accreditationNumber: doc.accreditationNumber,
+      year: doc.year,
+      wasteRecordType: doc.wasteRecordType,
+      processingType: doc.processingType,
+      data: doc.data
+    })
   }
 }
 
@@ -111,11 +118,8 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
  * @returns {string[]}
  */
 const distinctDataKeys = (storage, summaryLogIds) => {
-  const asked = new Set(summaryLogIds)
   const keys = new Set()
-  for (const doc of storage.filter((stored) =>
-    stored.summaryLogIds.some((id) => asked.has(id))
-  )) {
+  for (const doc of rowStatesOfAnySummaryLog(storage, summaryLogIds)) {
     for (const key of Object.keys(doc.data)) {
       keys.add(key)
     }
