@@ -86,10 +86,10 @@ const servedOnly = (changes, statuses) =>
  * null when there are none.
  *
  * @template {string} S
- * @param {{ status: S, at: string, updatedAt: string }[]} changes - oldest first, each time an ISO 8601 datetime
+ * @param {Change<S>[]} changes - oldest first
  * @returns {Omit<Status<S>, 'current'> | null}
  */
-export const timelineStatusOf = (changes) => {
+const toTimelineStatus = (changes) => {
   const lastUpdatedAt = changes
     .map(({ updatedAt }) => updatedAt)
     .toSorted((one, other) => one.localeCompare(other))
@@ -98,23 +98,12 @@ export const timelineStatusOf = (changes) => {
     ? null
     : {
         lastUpdatedAt,
-        timeline: changes.map(({ status, at }) => ({ status, at }))
+        timeline: changes.map(({ status, at }) => ({
+          status,
+          at: at.toISOString()
+        }))
       }
 }
-
-/**
- * @template {string} S
- * @param {Change<S>[]} changes - oldest first
- * @returns {Omit<Status<S>, 'current'> | null}
- */
-const toTimelineStatus = (changes) =>
-  timelineStatusOf(
-    changes.map(({ status, at, updatedAt }) => ({
-      status,
-      at: at.toISOString(),
-      updatedAt
-    }))
-  )
 
 /**
  * Every change to an organisation, each when it was recorded, oldest first.
