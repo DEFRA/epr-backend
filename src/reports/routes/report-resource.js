@@ -232,7 +232,8 @@ export const REPORT_EXPANSION = Object.freeze({ detail: 'detail' })
  * @returns {Record<string, unknown>}
  */
 export const toReportDetail = (body) => {
-  const { id: _id, ...detail } = /** @type {Record<string, unknown>} */ (body)
+  const { id: _databaseId, ...detail } =
+    /** @type {Record<string, unknown>} */ (body)
   return detail
 }
 
