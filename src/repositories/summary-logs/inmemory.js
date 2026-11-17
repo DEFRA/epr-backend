@@ -9,6 +9,7 @@ import {
 import Boom from '@hapi/boom'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { keyedBy, submittedKeyedBy } from './natural-keys.js'
+import { readStoredSummaryLog } from './stored-accreditation.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -82,40 +83,56 @@ const update =
   }
 
 /**
- * @param {SummaryLogVersion | undefined} doc
+ * @param {SummaryLogId} id
+ * @param {StoredSummaryLog} summaryLog
+ */
+const fromStored = (id, summaryLog) =>
+  readStoredSummaryLog(id, structuredClone(summaryLog))
+
+/**
+ * @param {SummaryLogId} id
+ * @param {StoredVersion | undefined} doc
  * @returns {SummaryLogVersion | null}
  */
-const toVersion = (doc) =>
+const toVersion = (id, doc) =>
   doc
-    ? { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
+    ? { version: doc.version, summaryLog: fromStored(id, doc.summaryLog) }
     : null
 
 /**
  * @param {SummaryLogStore} staleCache
  * @param {SummaryLogFileId} fileId
+ * @returns {[SummaryLogId, StoredVersion] | []}
  */
 const holdingFile = (staleCache, fileId) =>
-  [...staleCache.values()].find((held) => held?.summaryLog?.file?.id === fileId)
+  [...staleCache].find(([, held]) => held?.summaryLog?.file?.id === fileId) ??
+  []
 
 // Read from staleCache to simulate reading from replica
 /** @param {SummaryLogStore} staleCache */
-const findById = (staleCache) => async (/** @type {SummaryLogId} */ id) =>
-  toVersion(staleCache.get(validateId(id)))
+const findById = (staleCache) => async (/** @type {SummaryLogId} */ id) => {
+  const validatedId = validateId(id)
+  return toVersion(validatedId, staleCache.get(validatedId))
+}
 
 /** @param {SummaryLogStore} staleCache */
 const findByFileId =
-  (staleCache) => async (/** @type {SummaryLogFileId} */ fileId) =>
-    toVersion(holdingFile(staleCache, validateId(fileId)))
+  (staleCache) => async (/** @type {SummaryLogFileId} */ fileId) => {
+    const [id, doc] = holdingFile(staleCache, validateId(fileId))
+    return id ? toVersion(id, doc) : null
+  }
 
 /**
- * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
- * @typedef {Map<SummaryLogId, SummaryLogVersion>} SummaryLogStore
- * @typedef {(summaryLog: SummaryLog) => boolean} SummaryLogMatch
+ * @import { StoredSummaryLog } from './port.js'
+ *
+ * @typedef {{ version: number, summaryLog: StoredSummaryLog }} StoredVersion
+ * @typedef {Map<SummaryLogId, StoredVersion>} SummaryLogStore
+ * @typedef {(summaryLog: StoredSummaryLog) => boolean} SummaryLogMatch
  */
 
 /**
@@ -124,7 +141,7 @@ const findByFileId =
  * @returns {SummaryLogWithId | null}
  */
 const latestSubmitted = (staleCache, matches) => {
-  /** @type {{ id: SummaryLogId, doc: SummaryLogVersion, submittedAt: string } | null} */
+  /** @type {{ id: SummaryLogId, doc: StoredVersion, submittedAt: string } | null} */
   let latest = null
 
   for (const [id, doc] of staleCache) {
@@ -148,7 +165,7 @@ const latestSubmitted = (staleCache, matches) => {
   return {
     id: latest.id,
     version: latest.doc.version,
-    summaryLog: structuredClone(latest.doc.summaryLog)
+    summaryLog: fromStored(latest.id, latest.doc.summaryLog)
   }
 }
 
@@ -174,7 +191,7 @@ const uploads = (staleCache, matches) => {
       found.push({
         id,
         version: doc.version,
-        summaryLog: structuredClone(summaryLog),
+        summaryLog: fromStored(id, summaryLog),
         _uploadedAt: summaryLog.submittedAt ?? summaryLog.createdAt
       })
     }
@@ -186,15 +203,11 @@ const uploads = (staleCache, matches) => {
 }
 
 /**
- * A summary log stored before its accreditation was recorded has no
- * accreditation number, and matches every accreditation.
- *
  * @param {SummaryLogKey['accreditationNumber']} accreditationNumber
  * @returns {SummaryLogMatch}
  */
 const matchesAccreditation = (accreditationNumber) => (summaryLog) =>
   accreditationNumber === undefined ||
-  summaryLog.accreditationNumber === undefined ||
   summaryLog.accreditationNumber === accreditationNumber
 
 /**
@@ -273,36 +286,37 @@ const findAllSummaryLogStatsByRegistration = (staleCache) => async () => {
 
 const SIXTY_SECONDS = 60
 
-const signDownload = (doc, reference) => {
-  if (!doc?.summaryLog?.file?.uri) {
+/**
+ * @param {SummaryLogVersion | null} found
+ * @param {string} reference
+ */
+const signDownload = (found, reference) => {
+  const file = found?.summaryLog.file
+  if (!file || !('uri' in file)) {
     throw Boom.notFound('Summary log file not found')
   }
 
-  const { Bucket, Key } = parseSummaryLogUri(doc.summaryLog.file.uri, reference)
+  const { Bucket, Key } = parseSummaryLogUri(file.uri, reference)
   const url = `https://${Bucket}.test/${Key}/download`
   const expiresAt = new Date(Date.now() + SIXTY_SECONDS * 1000).toISOString()
 
   return {
     url,
     expiresAt,
-    accreditationNumber: doc.summaryLog.accreditationNumber
+    accreditationNumber: found.summaryLog.accreditationNumber
   }
 }
 
-const getDownloadUrl = (staleCache) => async (summaryLogId) => {
-  const validatedId = validateId(summaryLogId)
+/** @param {SummaryLogStore} staleCache */
+const getDownloadUrl = (staleCache) => async (summaryLogId) =>
+  signDownload(
+    await findById(staleCache)(summaryLogId),
+    validateId(summaryLogId)
+  )
 
-  return signDownload(staleCache.get(validatedId), validatedId)
-}
-
-const getDownloadUrlByFileId = (staleCache) => async (fileId) => {
-  const validatedId = validateId(fileId)
-
-  return signDownload(holdingFile(staleCache, validatedId), validatedId)
-}
-
-// A missing accreditation number indexes as null in MongoDB's lock index.
-const sameAccreditationNumber = (a, b) => (a ?? null) === (b ?? null)
+/** @param {SummaryLogStore} staleCache */
+const getDownloadUrlByFileId = (staleCache) => async (fileId) =>
+  signDownload(await findByFileId(staleCache)(fileId), validateId(fileId))
 
 /**
  * Whether `candidate` collides with `subject` for the submitting-lock check:
@@ -313,10 +327,7 @@ const collidesOnSubmittingLock = (candidate, subject) =>
   candidate.registrationNumber === subject.registrationNumber &&
   candidate.status === 'submitting' &&
   candidate.year === subject.year &&
-  sameAccreditationNumber(
-    candidate.accreditationNumber,
-    subject.accreditationNumber
-  )
+  candidate.accreditationNumber === subject.accreditationNumber
 
 const transitionToSubmittingExclusive =
   (storage, staleCache) => async (logId) => {
@@ -365,7 +376,7 @@ const transitionToSubmittingExclusive =
 
     return {
       success: true,
-      summaryLog: structuredClone(updatedSummaryLog),
+      summaryLog: fromStored(validatedId, updatedSummaryLog),
       version: newVersion
     }
   }

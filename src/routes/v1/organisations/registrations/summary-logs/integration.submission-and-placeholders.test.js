@@ -15,7 +15,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -372,18 +371,25 @@ describe('Submission and placeholder tests', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper',
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
+          })
+        ])()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger,
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
-        ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        )
       })
 
       const syncWasteRecords = syncFromSummaryLog({
@@ -391,13 +397,7 @@ describe('Submission and placeholder tests', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: createInMemoryOrganisationReadRepository([
-          servedTestReadOrganisation({
-            wasteProcessingType: 'reprocessor',
-            material: 'paper',
-            accreditationNumber: toAccreditationNumber('ACC-2026-001')
-          })
-        ])(),
+        organisationReadRepository,
         logger: mockLogger
       })
 
@@ -434,14 +434,7 @@ describe('Submission and placeholder tests', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'paper',
-                accreditationNumber: toAccreditationNumber('ACC-2026-001')
-              })
-            ])(),
+          organisationReadRepository: () => organisationReadRepository,
           systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
@@ -817,9 +810,17 @@ describe('Submission and placeholder tests', () => {
         uploadsRepository
       })
 
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper',
+            accreditationNumber: toAccreditationNumber('ACC-PLACEHOLDER-001')
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -827,8 +828,7 @@ describe('Submission and placeholder tests', () => {
         logger: mockLogger,
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
-        ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        )
       })
       server = await createTestServer({
         repositories: {
@@ -836,16 +836,7 @@ describe('Submission and placeholder tests', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'paper',
-                accreditationNumber: toAccreditationNumber(
-                  'ACC-PLACEHOLDER-001'
-                )
-              })
-            ])()
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }

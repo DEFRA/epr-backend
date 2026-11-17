@@ -2,6 +2,7 @@ import { transformValidationResponse } from './transform-validation-response.js'
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 import { summaryLogResponseSchema } from './response.schema.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { LEDGER_ACCREDITATION_KIND } from '#domain/organisations/model.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 describe('transformValidationResponse', () => {
@@ -159,6 +160,9 @@ describe('transformValidationResponse', () => {
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.INVALID,
         year: 2026,
+        ledgerAccreditation: {
+          kind: LEDGER_ACCREDITATION_KIND.REGISTERED_ONLY
+        },
         ...result
       }
       const { error } = summaryLogResponseSchema.validate(httpResponse)
@@ -766,6 +770,9 @@ describe('transformValidationResponse', () => {
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.VALIDATED,
         year: 2026,
+        ledgerAccreditation: {
+          kind: LEDGER_ACCREDITATION_KIND.REGISTERED_ONLY
+        },
         processingType: 'EXPORTER',
         ...transformValidationResponse(validation),
         loadsByReportingPeriod: emptyLoadsByReportingPeriod()
@@ -790,6 +797,9 @@ describe('transformValidationResponse', () => {
       const httpResponse = {
         status: SUMMARY_LOG_STATUS.INVALID,
         year: 2026,
+        ledgerAccreditation: {
+          kind: LEDGER_ACCREDITATION_KIND.REGISTERED_ONLY
+        },
         ...transformValidationResponse(validation)
       }
       const { error } = summaryLogResponseSchema.validate(httpResponse)

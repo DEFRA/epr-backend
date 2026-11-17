@@ -67,12 +67,9 @@ const withDefaultNumbers = (summaryLog) => ({
   registrationNumber: toRegistrationNumber(
     numberFor(summaryLog.registrationId)
   ),
-  ...(summaryLog.accreditationId !== undefined && {
-    accreditationNumber:
-      summaryLog.accreditationId === null
-        ? null
-        : toAccreditationNumber(numberFor(summaryLog.accreditationId))
-  }),
+  accreditationNumber: summaryLog.accreditationId
+    ? toAccreditationNumber(numberFor(summaryLog.accreditationId))
+    : null,
   ...summaryLog
 })
 

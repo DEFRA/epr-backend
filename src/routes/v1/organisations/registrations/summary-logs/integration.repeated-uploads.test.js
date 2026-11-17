@@ -17,7 +17,6 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -261,18 +260,23 @@ describe('Repeated uploads of identical data', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'glass_re_melt',
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
-        }),
-        overseasSitesRepository: createMockOverseasSitesRepository({
-          findByIds: vi.fn().mockResolvedValue([])
         })
       })
 
@@ -281,13 +285,7 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: createInMemoryOrganisationReadRepository([
-          servedTestReadOrganisation({
-            wasteProcessingType: 'reprocessor',
-            material: 'glass_re_melt',
-            accreditationNumber: toAccreditationNumber('ACC-2026-001')
-          })
-        ])(),
+        organisationReadRepository,
         logger: mockLogger
       })
 
@@ -319,14 +317,7 @@ describe('Repeated uploads of identical data', () => {
           uploadsRepository,
           organisationAdministrationRepository: () =>
             organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            createInMemoryOrganisationReadRepository([
-              servedTestReadOrganisation({
-                wasteProcessingType: 'reprocessor',
-                material: 'glass_re_melt',
-                accreditationNumber: toAccreditationNumber('ACC-2026-001')
-              })
-            ])()
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker

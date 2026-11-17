@@ -20,7 +20,7 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLog, SummaryLogFile } from '#domain/summary-logs/model.js' */
-/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { NewSummaryLog, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 /**
@@ -28,7 +28,6 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
  *   organisationId: string,
  *   registrationId: string,
  *   year: Year,
- *   accreditationId: string | null,
  *   numbers: RequiredNumbers
  * }} UploadLocation
  */
@@ -55,7 +54,7 @@ export const buildFileData = (upload, existingFile) => {
  * @param {SummaryLogFile | undefined} existingFile
  * @param {string} organisationId
  * @param {string} registrationId
- * @returns {Omit<SummaryLog, 'year'>}
+ * @returns {Omit<SummaryLog, 'year' | 'accreditationNumber'>}
  */
 const buildSummaryLogData = (
   upload,
@@ -65,7 +64,7 @@ const buildSummaryLogData = (
 ) => {
   const status = determineStatusFromUpload(upload.fileStatus)
 
-  /** @type {Omit<SummaryLog, 'year'>} */
+  /** @type {Omit<SummaryLog, 'year' | 'accreditationNumber'>} */
   const data = {
     status,
     expiresAt: calculateExpiresAt(status),
@@ -115,13 +114,12 @@ const insertNewSummaryLog = async (
   summaryLogsRepository,
   summaryLogId,
   upload,
-  { organisationId, registrationId, year, accreditationId, numbers }
+  { organisationId, registrationId, year, numbers }
 ) => {
-  /** @type {SummaryLog} */
+  /** @type {NewSummaryLog} */
   const summaryLog = {
     ...buildSummaryLogData(upload, undefined, organisationId, registrationId),
     year,
-    accreditationId,
     ...numbers
   }
 

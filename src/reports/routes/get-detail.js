@@ -8,6 +8,7 @@ import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
@@ -90,7 +91,7 @@ export const reportsGetDetail = {
       year,
       cadenceAccreditation: cadenceAccreditationFor(
         cadence,
-        registration.accreditations[year]?.accreditationNumber
+        accreditationForYear(registration, year)?.accreditationNumber
       ),
       period,
       submissionNumber,

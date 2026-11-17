@@ -14,6 +14,7 @@ import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import { buildDownloadDisposition } from './download-disposition.js'
 import { parseSummaryLogUri } from './parse-uri.js'
 import { normaliseStoredSummaryLog } from './normalise-load-row-ids.js'
+import { readStoredSummaryLog } from './stored-accreditation.js'
 import { keyedBy, submittedKeyedBy } from './natural-keys.js'
 import {
   validateId,
@@ -152,13 +153,34 @@ const update = (db, logger) => async (id, version, updates) => {
 
 /**
  * @import { Collection, Db, Filter } from 'mongodb'
- * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
- * @typedef {SummaryLog & { _id: SummaryLogId, version: number }} SummaryLogDocument
+ * @import { StoredSummaryLog } from './port.js'
+ *
+ * @typedef {StoredSummaryLog & { _id: SummaryLogId, version: number }} SummaryLogDocument
  */
+
+/**
+ * Production holds two summary logs that record no accreditation, which no
+ * backfill could give one and which nobody can delete. Every read that returns
+ * a summary log leaves them out, so the domain never sees them.
+ */
+const RECORDS_ITS_ACCREDITATION = { accreditationNumber: { $exists: true } }
+
+/**
+ * @param {Filter<SummaryLogDocument>} filter
+ * @returns {Filter<SummaryLogDocument>}
+ */
+const recorded = (filter) => ({ $and: [filter, RECORDS_ITS_ACCREDITATION] })
+
+/**
+ * @param {SummaryLogId} id
+ * @param {StoredSummaryLog} summaryLog
+ */
+const fromStored = (id, summaryLog) =>
+  readStoredSummaryLog(id, normaliseStoredSummaryLog(summaryLog))
 
 /**
  * @param {Db} db
@@ -173,12 +195,12 @@ const summaryLogs = (db) =>
  * @returns {Promise<SummaryLogVersion | null>}
  */
 const findOneVersion = async (db, filter) => {
-  const doc = await summaryLogs(db).findOne(filter)
+  const doc = await summaryLogs(db).findOne(recorded(filter))
   if (!doc) {
     return null
   }
   const { _id, version, ...summaryLog } = doc
-  return { version, summaryLog: normaliseStoredSummaryLog(summaryLog) }
+  return { version, summaryLog: fromStored(_id, summaryLog) }
 }
 
 /** @param {Db} db */
@@ -196,7 +218,7 @@ const findByFileId = (db) => async (/** @type {SummaryLogFileId} */ fileId) =>
  */
 const latestSubmitted = async (db, filter) => {
   const doc = await summaryLogs(db).findOne(
-    { ...filter, status: SUMMARY_LOG_STATUS.SUBMITTED },
+    recorded({ ...filter, status: SUMMARY_LOG_STATUS.SUBMITTED }),
     { sort: { submittedAt: -1 } }
   )
 
@@ -205,11 +227,7 @@ const latestSubmitted = async (db, filter) => {
   }
 
   const { _id, version, ...summaryLog } = doc
-  return {
-    id: _id,
-    version,
-    summaryLog: normaliseStoredSummaryLog(summaryLog)
-  }
+  return { id: _id, version, summaryLog: fromStored(_id, summaryLog) }
 }
 
 /**
@@ -223,12 +241,12 @@ const uploads = async (db, filter) => {
   const docs = await summaryLogs(db)
     .aggregate([
       {
-        $match: {
+        $match: recorded({
           ...filter,
           status: {
             $in: [SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS]
           }
-        }
+        })
       },
       {
         $addFields: {
@@ -243,41 +261,22 @@ const uploads = async (db, filter) => {
     docs
   ).map((doc) => {
     const { _id, version, _uploadedAt: _u, ...summaryLog } = doc
-    return {
-      id: _id,
-      version,
-      summaryLog: normaliseStoredSummaryLog(summaryLog)
-    }
+    return { id: _id, version, summaryLog: fromStored(_id, summaryLog) }
   })
 }
 
 /**
- * A summary log stored before its accreditation was recorded has no
- * accreditation number, and matches every accreditation.
- *
  * @param {SummaryLogKey} key
  * @returns {Filter<SummaryLogDocument>}
  */
 const keyFilter = (key) => {
   const { organisationNumber, registrationNumber, accreditationNumber, year } =
     validateSummaryLogKey(key)
-  /** @type {Filter<SummaryLogDocument>[]} */
-  const clauses = []
-  if (accreditationNumber !== undefined) {
-    clauses.push({
-      $or: [
-        { accreditationNumber },
-        { accreditationNumber: { $exists: false } }
-      ]
-    })
-  }
-  if (year !== undefined) {
-    clauses.push({ year })
-  }
   return {
     organisationNumber,
     registrationNumber,
-    ...(clauses.length > 0 && { $and: clauses })
+    ...(accreditationNumber !== undefined && { accreditationNumber }),
+    ...(year !== undefined && { year })
   }
 }
 
@@ -380,7 +379,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   }
 
   /** @type {any} */
-  const findFilter = { _id: validatedId }
+  const findFilter = recorded({ _id: validatedId })
   let before
   try {
     before = await db
@@ -410,7 +409,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
 
   return {
     success: true,
-    summaryLog: normaliseStoredSummaryLog({ ...summaryLog, ...submitted }),
+    summaryLog: fromStored(_id, { ...summaryLog, ...submitted }),
     version: version + 1
   }
 }
@@ -422,7 +421,7 @@ const XLSX_EXTENSION = 'xlsx'
 const signDownload =
   (db, s3Client, preSignedUrlExpiry) =>
   async (filter, reference, registrationNumber) => {
-    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+    const doc = await db.collection(COLLECTION_NAME).findOne(recorded(filter))
 
     if (!doc?.file?.uri) {
       throw Boom.notFound('Summary log file not found')
@@ -447,7 +446,8 @@ const signDownload =
       Date.now() + preSignedUrlExpiry * 1000
     ).toISOString()
 
-    return { url, expiresAt, accreditationNumber: doc.accreditationNumber }
+    const { accreditationNumber } = readStoredSummaryLog(doc._id, doc)
+    return { url, expiresAt, accreditationNumber }
   }
 
 const getDownloadUrl =

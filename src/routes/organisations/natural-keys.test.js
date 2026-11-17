@@ -1,17 +1,13 @@
-import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { vi } from 'vitest'
 import {
   REPROCESSOR_NUMBER,
-  accreditation,
-  granted,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import Joi from 'joi'
 import {
-  findAccreditationForYear,
   findOrganisationAndRegistrationReadModels,
   findOrganisationByNumber,
   findRegistrationByNumber,
@@ -154,61 +150,6 @@ describe('findRegistrationByNumber', () => {
     const found = await findIn(organisation)
 
     expect(found.registration.id).toBe(registration.id)
-  })
-})
-
-describe('findAccreditationForYear', () => {
-  /**
-   * @param {Parameters<typeof accreditation>[0]} [overrides]
-   */
-  const accreditedRegistration = async (overrides = {}) => {
-    const accredited = accreditation(overrides)
-    const { organisation, registration } = await findIn(
-      buildOrganisation({
-        registrations: [reprocessor({ accreditationId: accredited.id })],
-        accreditations: [accredited]
-      })
-    )
-    return { accredited, organisation, registration }
-  }
-
-  it("finds a registration's accreditation for a year", async () => {
-    const { accredited, organisation, registration } =
-      await accreditedRegistration()
-
-    expect(
-      findAccreditationForYear(organisation, registration, toYear(2026)).id
-    ).toBe(accredited.id)
-  })
-
-  it.each([
-    ['another year', {}, toYear(2027)],
-    [
-      'an accreditation with no number',
-      { accreditationNumber: undefined },
-      toYear(2026)
-    ],
-    [
-      'an accreditation with no start date',
-      { validFrom: undefined },
-      toYear(2026)
-    ],
-    [
-      'an accreditation the read model does not serve',
-      { statusHistory: granted('rejected') },
-      toYear(2026)
-    ]
-  ])('rejects %s', async (_, overrides, year) => {
-    const { organisation, registration } =
-      await accreditedRegistration(overrides)
-
-    expect(() =>
-      findAccreditationForYear(organisation, registration, year)
-    ).toThrow(
-      expect.objectContaining({
-        output: expect.objectContaining({ statusCode: 404 })
-      })
-    )
   })
 })
 

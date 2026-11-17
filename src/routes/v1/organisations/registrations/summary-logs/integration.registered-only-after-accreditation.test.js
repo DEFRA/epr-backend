@@ -147,7 +147,7 @@ describe('an operator accredited in July uploading their registered-only summary
       2
     )
     expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-    expect(validated.accreditationId).toBeNull()
+    expect(validated.accreditationNumber).toBeNull()
     expect(
       validated.loadsByReportingPeriod.closedPeriodLoads.added
         .nonBalanceAffecting.count

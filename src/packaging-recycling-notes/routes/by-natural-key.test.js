@@ -3,6 +3,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
+import { toYear } from '#common/helpers/dates/year.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   buildReadAccreditation,
@@ -629,6 +630,28 @@ describe('PRN routes by natural key', () => {
         by: { name: 'Operator User' }
       })
       expect(body(response)).not.toHaveProperty('prnNumber')
+    })
+
+    it('draws a raised PRN from the ledger of an accreditation that has no database id', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `${prns}/${draft.id}/status`,
+        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION },
+        ...asOperator()
+      })
+
+      const latest = await ledgerRepository.findLatestInLedger({
+        ...ownNumbers,
+        year: toYear(2026)
+      })
+      expect(latest).toMatchObject({
+        kind: 'prn-created',
+        payload: { prnId: draft.id },
+        closingBalance: {
+          amount: 500,
+          availableAmount: 500 - draft.tonnage
+        }
+      })
     })
 
     it("refuses a status change to another accreditation's PRN", async () => {

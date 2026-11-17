@@ -7,18 +7,14 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { accreditationsForRegistration } from '#domain/organisations/registration-utils.js'
 import {
   servesOrganisationOn,
-  toAccreditationEntry,
   toRegistrationEntry
 } from '#organisation-read-model/repository/to-read-model.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
- * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Accreditation } from '#domain/organisations/accreditation.js'
  * @import { Organisation } from '#domain/organisations/model.js'
  * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
@@ -142,7 +138,7 @@ export async function findOrganisationAndRegistrationReadModels(request) {
  * @param {HapiRequest & { params: OrganisationParams }} request
  * @returns {Promise<ReadModelOrganisation>}
  */
-async function findOrganisationReadModel({
+export async function findOrganisationReadModel({
   organisationReadRepository,
   params: { organisationNumber }
 }) {
@@ -154,23 +150,6 @@ async function findOrganisationReadModel({
     throw Boom.notFound('Organisation not found')
   }
   return organisation
-}
-
-/**
- * The registrations the organisation read model serves.
- *
- * @param {Organisation} organisation
- * @returns {Registration[]}
- */
-export function servedRegistrations(organisation) {
-  const numbers = new Set(
-    organisation.registrations.flatMap(
-      ({ registrationNumber }) => registrationNumber ?? []
-    )
-  )
-  return [...numbers].flatMap(
-    (number) => servedRegistrationByNumber(organisation, number) ?? []
-  )
 }
 
 /**
@@ -189,53 +168,4 @@ function servedRegistrationByNumber(organisation, registrationNumber) {
       toRegistrationEntry(candidate, organisation, lookupContext()) !== null
   )
   return served.length === 1 ? served[0] : null
-}
-
-/**
- * A registration's stored accreditations for a year, by the read model's
- * rules.
- *
- * @param {Organisation} organisation
- * @param {Registration} registration
- * @param {Year} year
- * @returns {Accreditation[]}
- */
-export function accreditationsForYear(organisation, registration, year) {
-  return accreditationsForRegistration(registration, organisation).filter(
-    (candidate) =>
-      toAccreditationEntry(candidate, lookupContext())?.[0] === String(year)
-  )
-}
-
-/**
- * Finds a registration's stored accreditation for a year, the slot the
- * accredited routes address, by the read model's rules.
- *
- * @param {Organisation} organisation
- * @param {Registration} registration
- * @param {Year} year
- * @returns {Accreditation}
- */
-export function findAccreditationForYear(organisation, registration, year) {
-  return onlyOne(
-    accreditationsForYear(organisation, registration, year),
-    'Accreditation'
-  )
-}
-
-/**
- * A key shared by more than one served record names none of them, as in the
- * read model.
- *
- * @template T
- * @param {T[]} matches
- * @param {string} what
- * @returns {T}
- */
-function onlyOne(matches, what) {
-  const [match, ...others] = matches
-  if (match === undefined || others.length > 0) {
-    throw Boom.notFound(`${what} not found`)
-  }
-  return match
 }

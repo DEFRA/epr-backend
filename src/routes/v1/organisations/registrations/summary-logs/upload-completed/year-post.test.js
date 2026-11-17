@@ -143,7 +143,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       organisationId,
       registrationId,
       year: 2026,
-      accreditationId: null,
       organisationNumber,
       registrationNumber,
       accreditationNumber: null
@@ -157,6 +156,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   describe('when the path names an accreditation', () => {
+    // Held by the read model alone, as an accreditation held outside this
+    // service is: the stored organisation has no accreditation for 2027.
+    const EXTERNAL_ACCREDITATION_NUMBER =
+      toAccreditationNumber('A27ER5001180041PL')
     const accreditedOrganisationId = '507f1f77bcf86cd799439013'
     const accreditedRegistrationId = '507f1f77bcf86cd799439014'
     const accredited = accreditation()
@@ -205,6 +208,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
                     2026: buildReadAccreditation({
                       accreditationNumber:
                         toAccreditationNumber(ACCREDITATION_NUMBER)
+                    }),
+                    2027: buildReadAccreditation({
+                      accreditationNumber: EXTERNAL_ACCREDITATION_NUMBER
                     })
                   }
                 })
@@ -223,13 +229,15 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       await accreditedServer.stop()
     })
 
-    it('stores the accreditation the path names, and its number', async () => {
-      const summaryLogId = randomUUID()
-
-      const response = await accreditedServer.inject({
+    /**
+     * @param {number} year
+     * @param {string} summaryLogId
+     */
+    const completeAccreditedUpload = (year, summaryLogId) =>
+      accreditedServer.inject({
         method: 'POST',
         url: signedCallback(
-          `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+          `/organisations/${accreditedOrganisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/${year}/summary-log/${summaryLogId}/upload-completed`
         ),
         payload: {
           uploadStatus: 'ready',
@@ -239,7 +247,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           },
           form: {
             summaryLogUpload: createFileDetails({
-              fileId: 'file-accredited',
+              fileId: `file-accredited-${summaryLogId}`,
               s3Key: uploadedKeyFor(
                 accreditedOrganisationId,
                 accreditedRegistrationId
@@ -250,17 +258,35 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
-      const stored = await waitForVersion(
-        accreditedSummaryLogsRepository,
-        summaryLogId,
-        1
-      )
-      expect(stored.summaryLog).toMatchObject({
-        year: 2026,
-        accreditationId: accredited.id,
-        accreditationNumber: ACCREDITATION_NUMBER
-      })
+    it.each([
+      [2026, ACCREDITATION_NUMBER],
+      [2027, EXTERNAL_ACCREDITATION_NUMBER]
+    ])(
+      'stores the %i accreditation the read model holds, by its number',
+      async (year, accreditationNumber) => {
+        const summaryLogId = randomUUID()
+
+        const response = await completeAccreditedUpload(year, summaryLogId)
+
+        expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+        const stored = await waitForVersion(
+          accreditedSummaryLogsRepository,
+          summaryLogId,
+          1
+        )
+        expect(stored.summaryLog).toMatchObject({ year, accreditationNumber })
+      }
+    )
+
+    it('returns 404 for a year the read model holds no accreditation for, and stores nothing', async () => {
+      const summaryLogId = randomUUID()
+
+      const response = await completeAccreditedUpload(2028, summaryLogId)
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(
+        await accreditedSummaryLogsRepository.findById(summaryLogId)
+      ).toBeNull()
     })
 
     it('finds no accreditation without a number, and stores nothing', async () => {

@@ -13,7 +13,6 @@ import {
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
@@ -41,64 +40,15 @@ import {
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  exporter,
-  exporterAccreditation,
-  reprocessor
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation } = organisationBuilders
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
-
-const registeredOnly = reprocessor({
-  registrationNumber: REGISTERED_ONLY_NUMBER,
-  validFrom: '2024-02-01',
-  statusHistory: [
-    { status: 'created', updatedAt: '2024-01-01T09:00:00.000Z' },
-    { status: 'approved', updatedAt: '2024-02-01T09:00:00.000Z' }
-  ]
-})
-const accredited = accreditation()
-const accreditedRegistration = reprocessor({ accreditationId: accredited.id })
-const accreditedExport = exporterAccreditation()
-const accreditedExporter = exporter({ accreditationId: accreditedExport.id })
-const unnumberedAccreditation = accreditation({
-  accreditationNumber: 'A26ER5001180116PL'
-})
-const unnumbered = reprocessor({
-  registrationNumber: undefined,
-  accreditationId: unnumberedAccreditation.id
-})
-const organisation = buildOrganisation({
-  registrations: [
-    registeredOnly,
-    accreditedRegistration,
-    accreditedExporter,
-    unnumbered
-  ],
-  accreditations: [accredited, accreditedExport, unnumberedAccreditation]
-})
-
-const sharedNumberAccreditations = [accreditation(), accreditation()]
-const sharedNumberExportAccreditation = exporterAccreditation()
-const sharedNumberOrganisation = buildOrganisation({
-  registrations: [
-    ...sharedNumberAccreditations.map(({ id }) =>
-      reprocessor({ accreditationId: id })
-    ),
-    exporter({ accreditationId: sharedNumberExportAccreditation.id })
-  ],
-  accreditations: [
-    ...sharedNumberAccreditations,
-    sharedNumberExportAccreditation
-  ]
-})
 
 const accreditedStanding = {
   2026: {
@@ -119,13 +69,7 @@ const servedExporter = () =>
     }
   })
 
-/**
- * The organisations as the read model serves them: one registration each
- * that carries a number held by no other, and in the shared-number
- * organisation only the exporter.
- */
-const servedOrganisation = buildReadOrganisation({
-  organisationNumber: organisation.organisationNumber,
+const organisation = buildReadOrganisation({
   registrations: {
     [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration({
       status: {
@@ -150,8 +94,7 @@ const servedOrganisation = buildReadOrganisation({
     [EXPORTER_NUMBER]: servedExporter()
   }
 })
-const servedSharedNumberOrganisation = buildReadOrganisation({
-  organisationNumber: sharedNumberOrganisation.organisationNumber,
+const otherOrganisation = buildReadOrganisation({
   registrations: { [EXPORTER_NUMBER]: servedExporter() }
 })
 
@@ -162,24 +105,21 @@ const accreditationPath = (year) =>
   `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${year}`
 
 /**
- * A ledger of the test organisation, under its registration's and
- * accreditation's ids and numbers.
+ * The numbers of a ledger of the test organisation.
  *
- * @param {Record<string, any>} registration
- * @param {Record<string, any> | null} accreditation
+ * @param {string} registrationNumber
+ * @param {string | null} accreditationNumber
  */
-const numbered = (registration, accreditation) => ({
-  organisationId: organisation.id,
-  registrationId: registration.id,
-  accreditationId: accreditation?.id ?? null,
+const numbered = (registrationNumber, accreditationNumber) => ({
   organisationNumber: organisation.organisationNumber,
-  registrationNumber: toRegistrationNumber(registration.registrationNumber),
-  accreditationNumber: accreditation
-    ? toAccreditationNumber(accreditation.accreditationNumber)
-    : null
+  registrationNumber: toRegistrationNumber(registrationNumber),
+  accreditationNumber:
+    accreditationNumber === null
+      ? null
+      : toAccreditationNumber(accreditationNumber)
 })
 
-const accreditedLedgerId = numbered(accreditedRegistration, accredited)
+const accreditedLedgerId = numbered(REPROCESSOR_NUMBER, ACCREDITATION_NUMBER)
 
 const issuedNote = createMockIssuedPrn({
   id: 'prn-numbered',
@@ -200,7 +140,7 @@ const body = (response) => JSON.parse(response.payload)
 /** @param {object} overrides */
 const registeredOnlyEvent = (overrides) =>
   buildLedgerEvent({
-    ...numbered(registeredOnly, null),
+    ...numbered(REGISTERED_ONLY_NUMBER, null),
     ...overrides
   })
 
@@ -213,14 +153,9 @@ describe('ledger and waste balance routes by natural key', () => {
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([
-            partialMock(organisation),
-            partialMock(sharedNumberOrganisation)
-          ]),
         organisationReadRepository: createInMemoryOrganisationReadRepository([
-          servedOrganisation,
-          servedSharedNumberOrganisation
+          organisation,
+          otherOrganisation
         ]),
         packagingRecyclingNotesRepository:
           createInMemoryPackagingRecyclingNotesRepository([issuedNote], [])
@@ -349,7 +284,7 @@ describe('ledger and waste balance routes by natural key', () => {
     it('returns 404 for a registration that belongs to another organisation', async () => {
       const underItsOwner = await get(registeredOnlyLedger(2026))
       const underAnother = await get(
-        `/organisations/${sharedNumberOrganisation.organisationNumber}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
+        `/organisations/${otherOrganisation.organisationNumber}/registrations/${REGISTERED_ONLY_NUMBER}/ledger/2026`
       )
 
       expect(underItsOwner.statusCode).toBe(StatusCodes.OK)
@@ -546,13 +481,13 @@ describe('ledger and waste balance routes by natural key', () => {
     const wasteBalances = (year) =>
       `/organisations/${organisation.organisationNumber}/waste-balances/${year}`
 
-    it('serves a balance for each accreditation in the year, keyed by accreditation number, leaving out a registration with no number', async () => {
+    it('serves a balance for each accreditation in the year, keyed by accreditation number', async () => {
       await server.app.ledgerRepository.appendEvents([
         buildLedgerEvent(accreditedLedgerId)
       ])
       await server.app.ledgerRepository.appendEvents([
         buildLedgerEvent({
-          ...numbered(accreditedExporter, accreditedExport),
+          ...numbered(EXPORTER_NUMBER, EXPORTER_ACCREDITATION_NUMBER),
           closingBalance: {
             amount: 120,
             availableAmount: 100,
@@ -586,16 +521,6 @@ describe('ledger and waste balance routes by natural key', () => {
       })
     })
 
-    it('leaves out registrations that share a number', async () => {
-      const response = await get(
-        `/organisations/${sharedNumberOrganisation.organisationNumber}/waste-balances/2026`
-      )
-
-      expect(body(response)).toEqual({
-        [EXPORTER_ACCREDITATION_NUMBER]: { amount: 0, availableAmount: 0 }
-      })
-    })
-
     it('serves none for a year with no accreditations', async () => {
       const response = await get(wasteBalances(2027))
 
@@ -613,6 +538,96 @@ describe('ledger and waste balance routes by natural key', () => {
       const response = await get('/organisations/999999/waste-balances/2026')
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+  })
+})
+
+describe('an accreditation held outside re-ex, with no database id', () => {
+  setupAuthContext()
+
+  const EXTERNAL_ACCREDITATION_NUMBER =
+    toAccreditationNumber('A27ER5001180200PL')
+  const externalLedgerId = {
+    organisationNumber: organisation.organisationNumber,
+    registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+    accreditationNumber: EXTERNAL_ACCREDITATION_NUMBER,
+    year: toYear(2027)
+  }
+
+  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  let server
+
+  beforeEach(async () => {
+    server = await createTestServer({
+      repositories: {
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          buildReadOrganisation({
+            organisationNumber: organisation.organisationNumber,
+            registrations: {
+              [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+                accreditations: {
+                  2026: buildReadAccreditation({
+                    accreditationNumber:
+                      toAccreditationNumber(ACCREDITATION_NUMBER)
+                  }),
+                  2027: buildReadAccreditation({
+                    accreditationNumber: EXTERNAL_ACCREDITATION_NUMBER,
+                    status: {
+                      current: 'approved',
+                      lastUpdatedAt: '2027-01-01T00:00:00.000Z',
+                      timeline: [
+                        { status: 'approved', at: '2027-01-01T00:00:00.000Z' }
+                      ]
+                    }
+                  })
+                }
+              })
+            }
+          })
+        ])
+      }
+    })
+    await server.app.ledgerRepository.appendEvents([
+      buildLedgerEvent({
+        ...externalLedgerId,
+        number: 1,
+        createdAt: new Date('2027-02-01T10:00:00.000Z'),
+        payload: { summaryLogId: 'file-2027', creditTotal: 40 },
+        closingBalance: { amount: 40, availableAmount: 40 }
+      })
+    ])
+  })
+
+  /** @param {string} url */
+  const get = (url) =>
+    server.inject({ method: 'GET', url, ...asServiceMaintainer() })
+
+  const externalPath = `/organisations/${organisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2027`
+
+  it('serves its ledger', async () => {
+    const response = await get(`${externalPath}/ledger`)
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(body(response).events.map((event) => event.summaryLog.id)).toEqual([
+      'file-2027'
+    ])
+  })
+
+  it('serves its balance', async () => {
+    const response = await get(`${externalPath}/waste-balance`)
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(body(response)).toEqual({ amount: 40, availableAmount: 40 })
+  })
+
+  it('serves its balance among the organisation’s balances for the year', async () => {
+    const response = await get(
+      `/organisations/${organisation.organisationNumber}/waste-balances/2027`
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(body(response)).toEqual({
+      [EXTERNAL_ACCREDITATION_NUMBER]: { amount: 40, availableAmount: 40 }
     })
   })
 })
@@ -825,10 +840,8 @@ describe('GET R/accreditations/{year}/ledger response validation', () => {
     }
     const server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: createInMemoryOrganisationReadRepository([
-          servedOrganisation
+          organisation
         ]),
         ledgerRepository
       }

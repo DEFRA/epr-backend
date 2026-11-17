@@ -4,8 +4,7 @@
 
 /**
  * The numbers a summary log stores beside the ids it holds. The accreditation
- * number is `null` for a registered-only summary log, and absent when the
- * summary log holds no accreditation id.
+ * number is `null` for a registered-only summary log.
  *
  * @typedef {Pick<SummaryLog, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber'>} SummaryLogNumbers
  */
@@ -23,7 +22,7 @@
  */
 
 /**
- * Whether a summary log holds a number beside each of the ids it holds.
+ * Whether a summary log holds its organisation and registration numbers.
  *
  * @param {SummaryLog} summaryLog
  * @returns {summaryLog is SummaryLog & {
@@ -33,9 +32,7 @@
  */
 export const holdsNumbers = (summaryLog) =>
   summaryLog.organisationNumber !== undefined &&
-  summaryLog.registrationNumber !== undefined &&
-  (summaryLog.accreditationId === undefined ||
-    summaryLog.accreditationNumber !== undefined)
+  summaryLog.registrationNumber !== undefined
 
 /**
  * The key naming the summary logs that share this one's registration, year
@@ -53,7 +50,7 @@ export const summaryLogKeyOf = (summaryLog) => {
   return {
     organisationNumber,
     registrationNumber,
-    ...(accreditationNumber !== undefined && { accreditationNumber }),
+    accreditationNumber,
     ...(year !== undefined && { year })
   }
 }

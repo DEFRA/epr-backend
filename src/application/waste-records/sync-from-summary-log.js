@@ -1,11 +1,7 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
-import {
-  indexByLedger,
-  overseasSitesOf,
-  validityOf
-} from '#waste-balances/application/read-model-accreditations.js'
+import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
+import { registrationForSummaryLog } from '#application/summary-logs/registration-for-summary-log.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { classifyRecordChanges } from '#application/summary-logs/classify-record-changes.js'
@@ -18,7 +14,6 @@ import {
   SKIP_HEADER_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
@@ -132,56 +127,8 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
  * @import { AccreditationValidity } from '#domain/organisations/accreditation.js'
  * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
- * @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  */
-
-/**
- * The accreditation a submission writes to, found by the summary log's
- * numbers, and the ledger it names. A registered-only submission writes to no
- * accreditation.
- *
- * @param {OrganisationReadRepository} organisationReadRepository
- * @param {WasteBalanceLedgerId} summaryLog
- * @returns {Promise<{ ledgerAccreditation: LedgerAccreditation | null, ledgerId: WasteBalanceLedgerId }>}
- */
-const resolveSubmissionLedger = async (
-  organisationReadRepository,
-  summaryLog
-) => {
-  const { organisationNumber, registrationNumber, accreditationNumber, year } =
-    summaryLog
-  const ledgerId = {
-    organisationNumber,
-    registrationNumber,
-    accreditationNumber,
-    year
-  }
-
-  const organisation =
-    await organisationReadRepository.findByOrganisationNumber(
-      organisationNumber
-    )
-  if (!organisation) {
-    throw new Error(`Organisation not found: ${organisationNumber}`)
-  }
-  if (!Object.hasOwn(organisation.registrations, registrationNumber)) {
-    throw new Error(`Registration not found: ${registrationNumber}`)
-  }
-  if (accreditationNumber === null) {
-    return { ledgerAccreditation: null, ledgerId }
-  }
-
-  const ledgerAccreditation = indexByLedger([organisation], {
-    includeTestOrganisations: true
-  }).get(ledgerKey(ledgerId))
-  if (!ledgerAccreditation) {
-    throw new Error(
-      `Accreditation not found: ${accreditationNumber} for ${ledgerId.year}`
-    )
-  }
-  return { ledgerAccreditation, ledgerId }
-}
 
 /**
  * @param {object} params
@@ -451,22 +398,27 @@ export const syncFromSummaryLog = (dependencies) => {
     const { tableSchemas } = getTemplate(summaryLog.year, processingType)
     const preparedData = prepareRowsForTransformation(parsedData, tableSchemas)
 
-    const { ledgerAccreditation, ledgerId } = await resolveSubmissionLedger(
-      organisationReadRepository,
-      summaryLog
+    const {
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber,
+      year
+    } = summaryLog
+    /** @type {WasteBalanceLedgerId} */
+    const ledgerId = {
+      organisationNumber,
+      registrationNumber,
+      accreditationNumber,
+      year
+    }
+    const { accreditation, overseasSites } = classificationContextOf(
+      await registrationForSummaryLog(organisationReadRepository, summaryLog)
     )
-    const accreditation = ledgerAccreditation && validityOf(ledgerAccreditation)
 
     // 3. Transform to waste records
     const wasteRecords = transformFromSummaryLog(preparedData, tableSchemas)
 
-    // 4. Resolve overseas sites for exporter ORS validation (VAL014)
-    const overseasSites =
-      processingType === PROCESSING_TYPES.EXPORTER && ledgerAccreditation
-        ? overseasSitesOf(ledgerAccreditation)
-        : ORS_VALIDATION_DISABLED
-
-    // 5. Classify created/updated against the committed head, before committing
+    // 4. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
       tableSchemas,
@@ -477,7 +429,7 @@ export const syncFromSummaryLog = (dependencies) => {
       summaryLogRowStatesRepository
     })
 
-    // 6. Commit per-row state for every submission and the balance for
+    // 5. Commit per-row state for every submission and the balance for
     // accredited balance-bearing ones.
     await commitStateAndBalance({
       summaryLogId: summaryLog.file.id,

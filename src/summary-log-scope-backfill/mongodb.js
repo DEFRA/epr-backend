@@ -5,7 +5,7 @@ import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 /** @import { Db } from 'mongodb' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { StoredSummaryLog } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 
 /**
@@ -23,7 +23,7 @@ import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 /**
  * @typedef {Object} UnscopedSummaryLogs
  * @property {() => Promise<SummaryLogId[]>} findIdsWithoutScope - summary logs lacking an accreditation number or a year
- * @property {(id: SummaryLogId) => Promise<{ summaryLog: SummaryLog, version: number } | null>} findById
+ * @property {(id: SummaryLogId) => Promise<{ summaryLog: StoredSummaryLog, version: number } | null>} findById
  * @property {(id: SummaryLogId, version: number, scope: SummaryLogScope) => Promise<void>} assignScope - refuses a summary log that has moved on from `version` or already holds a field of `scope`
  */
 
