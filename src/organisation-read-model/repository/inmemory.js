@@ -1,4 +1,3 @@
-import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { organisationInYear } from './organisation-in-year.js'
 import { findPage } from '#repositories/organisations/inmemory-find.js'
 
@@ -28,8 +27,8 @@ const searchable = (organisation) => ({
 
 /**
  * Holds organisations already in the read model's shape, and serves them as
- * given. Given a `year`, `findByOrganisationNumber` serves the organisation as
- * it stood in that year, as the MongoDB adapter does.
+ * given. Given a `year`, `findByOrganisationNumber` serves the organisation in
+ * that year, as the MongoDB adapter does.
  *
  * It shares the in-memory organisations repository's search through the
  * `#repositories/organisations/inmemory-find.js` import, so both match
@@ -57,7 +56,7 @@ export const createInMemoryOrganisationReadRepository = (
       const organisation = structuredClone(found)
       return year === undefined
         ? organisation
-        : organisationInYear(organisation, year, toCalendarDate(new Date()))
+        : organisationInYear(organisation, year)
     },
 
     find: async (params) => {
