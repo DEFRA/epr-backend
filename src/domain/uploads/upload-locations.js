@@ -39,8 +39,8 @@ export const summaryLogUploadPath = ({
   )
 
 /**
- * Where summary log uploads started before they moved to numbers were placed.
- * Remove once none can still be in flight.
+ * Where summary log uploads were placed before numbers. Remove a week after
+ * uploads start under numbers, the CDP Uploader session lifetime.
  *
  * @param {{ organisationId: string, registrationId: string }} ids
  * @returns {UploadPath}

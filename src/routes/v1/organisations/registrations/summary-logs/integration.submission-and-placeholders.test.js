@@ -46,10 +46,7 @@ import {
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -490,7 +487,7 @@ describe('Submission and placeholder tests', () => {
     it('should commit the submission rows as row states', async () => {
       const rowStates = await summaryLogRowStatesForLedger({
         organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+        registrationNumber: TEST_REGISTRATION_NUMBER,
         accreditationNumber: toAccreditationNumber('ACC-2026-001'),
         year: UPLOAD_YEAR,
         ledgerRepository,
@@ -793,8 +790,8 @@ describe('Submission and placeholder tests', () => {
       )
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+        organisationId,
+        registrationId,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
         callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`

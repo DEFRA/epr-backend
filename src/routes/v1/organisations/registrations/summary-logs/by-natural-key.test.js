@@ -221,7 +221,7 @@ describe('summary-log routes by natural key', () => {
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
     ({ uploads, registration, accreditationNumber }) => {
-      it('starts the upload under the registration numbers, with its callback under the same address', async () => {
+      it('starts the upload with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
           url: uploads,
@@ -232,8 +232,8 @@ describe('summary-log routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.CREATED)
         const { summaryLogId } = JSON.parse(response.payload)
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
-          organisationNumber,
-          registrationNumber: registration.registrationNumber,
+          organisationId: organisation.id,
+          registrationId: registration.id,
           callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
         })
       })

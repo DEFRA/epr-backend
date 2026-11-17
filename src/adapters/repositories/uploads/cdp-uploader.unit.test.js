@@ -1,10 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { assertPresent, partialMock } from '#test/type-helpers.js'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
-import {
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
 import { createUploadsRepository } from './cdp-uploader.js'
 
 vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
@@ -91,17 +87,14 @@ describe('bucket routing', () => {
     })
 
     await repository.initiateSummaryLogUpload({
-      organisationNumber: toOrganisationNumber('500001'),
-      registrationNumber: toRegistrationNumber('R26ER5001180001PL'),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
       callbackUrl: 'https://backend.test/callback'
     })
 
-    expect(parseFetchBody()).toMatchObject({
-      s3Bucket: 'test-summary-logs-bucket',
-      s3Path: '/organisations/500001/registrations/R26ER5001180001PL'
-    })
+    expect(parseFetchBody().s3Bucket).toBe('test-summary-logs-bucket')
   })
 
   it('sends only xlsx MIME type for summary log uploads', async () => {
@@ -113,8 +106,8 @@ describe('bucket routing', () => {
     })
 
     await repository.initiateSummaryLogUpload({
-      organisationNumber: toOrganisationNumber('500001'),
-      registrationNumber: toRegistrationNumber('R26ER5001180001PL'),
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
       callbackUrl: 'https://backend.test/callback'
