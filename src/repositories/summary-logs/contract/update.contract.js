@@ -70,8 +70,8 @@ export const testUpdateBehaviour = (it) => {
         await repository.insert(
           id,
           summaryLogFactory.preprocessing({
-            organisationId: 'org-123',
-            registrationId: 'reg-456',
+            organisationNumber: '500123',
+            registrationNumber: 'R25SR500010456PL',
             file: buildPendingFile()
           })
         )
@@ -85,8 +85,25 @@ export const testUpdateBehaviour = (it) => {
 
         const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe(SUMMARY_LOG_STATUS.REJECTED)
-        expect(found.summaryLog.organisationId).toBe('org-123')
-        expect(found.summaryLog.registrationId).toBe('reg-456')
+        expect(found.summaryLog.organisationNumber).toBe('500123')
+        expect(found.summaryLog.registrationNumber).toBe('R25SR500010456PL')
+      })
+
+      it('stores no organisation or registration ids an update names', async () => {
+        const id = `contract-update-without-ids-${randomUUID()}`
+
+        await repository.insert(id, summaryLogFactory.validating())
+        const current = await repository.findById(id)
+
+        await repository.update(id, current.version, {
+          ...transitionStatus(current.summaryLog, SUMMARY_LOG_STATUS.INVALID),
+          organisationId: 'org-123',
+          registrationId: 'reg-456'
+        })
+
+        const found = await waitForVersion(repository, id, current.version + 1)
+        expect(found.summaryLog).not.toHaveProperty('organisationId')
+        expect(found.summaryLog).not.toHaveProperty('registrationId')
       })
     })
 

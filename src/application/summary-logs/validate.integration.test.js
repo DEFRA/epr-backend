@@ -1158,7 +1158,7 @@ describe('SummaryLogsValidator integration', () => {
         }
       }
 
-      const { summaryLogId, testOrg } = await runValidation({
+      const { summaryLogId, summaryLog } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         metadata
@@ -1169,7 +1169,7 @@ describe('SummaryLogsValidator integration', () => {
       )
 
       expect(summaryLogPayload).toStrictEqual({
-        message: `Summary log validation completed: fatal=1 error=0 warning=0 total=1 logged=1 org=${testOrg.id} reg=${testOrg.registrations[0].id}`,
+        message: `Summary log validation completed: fatal=1 error=0 warning=0 total=1 logged=1 organisationNumber=${summaryLog.organisationNumber} registrationNumber=${summaryLog.registrationNumber}`,
         event: {
           kind: 'event',
           category: 'server',

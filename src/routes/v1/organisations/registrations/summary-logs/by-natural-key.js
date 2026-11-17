@@ -2,12 +2,12 @@ import Joi from 'joi'
 
 import { uploadCallbackUrl } from '#common/helpers/auth/upload-callback-signature.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
   registrationParams,
   registrationPath
 } from '#routes/organisations/natural-keys.js'
+import { atSummaryLogKeys } from './at-summary-log-keys.js'
 import { summaryLogDocument } from './document/get.js'
 import { summaryLogFile, summaryLogFileByFileId } from './file/get.js'
 import { summaryLogsGet } from './get.js'
@@ -15,14 +15,18 @@ import { summaryLogsList } from './list/get.js'
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { summaryLogRecordsCsv } from './records/get.js'
 import { summaryLogsSubmit } from './submit/post.js'
-import { assertSummaryLogMatchesPath } from './summary-log-matches-path.js'
+import {
+  assertSummaryLogFileMatchesPath,
+  assertSummaryLogMatchesPath
+} from './summary-log-matches-path.js'
 import { summaryLogsUploadCompletedYear } from './upload-completed/year-post.js'
 import { summaryLogsYearCreate } from './year-post.js'
 
 /**
  * @import { ResponseObject } from '@hapi/hapi'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { NaturalKeyRoute, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
+ * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
+ * @import { SummaryLogKeyedRequest } from './at-summary-log-keys.js'
  */
 
 const yearParams = { ...registrationParams, year: yearSchema().required() }
@@ -45,7 +49,7 @@ const uploadAddresses = [
 
 /**
  * @param {boolean} accredited
- * @returns {(request: ResolvedRequest & { params: { year: Year } }) => void}
+ * @returns {(request: SummaryLogKeyedRequest & { params: { year: Year } }) => void}
  */
 const callbackToNaturalKeys = (accredited) => (request) => {
   const { organisationNumber, registrationNumber, year } = request.params
@@ -85,7 +89,7 @@ const submitLocatedAtNaturalKeys = {
       organisationNumber,
       registrationNumber,
       summaryLogId: id
-    } = /** @type {ResolvedRequest & { params: { summaryLogId: string } }} */ (
+    } = /** @type {SummaryLogKeyedRequest & { params: { summaryLogId: string } }} */ (
       request
     ).params
     return response.header(
@@ -94,29 +98,6 @@ const submitLocatedAtNaturalKeys = {
     )
   }
 }
-
-/**
- * Answers without the database ids the stored summary log carries: these
- * routes address the organisation, registration and accreditation by their
- * domain keys.
- *
- * @param {NaturalKeyRoute} route
- * @param {string[]} ids
- * @returns {NaturalKeyRoute}
- */
-const withoutDatabaseIds = (route, ids) => ({
-  ...route,
-  handler: async (request, h) => {
-    const response = /** @type {ResponseObject} */ (
-      await route.handler(request, h)
-    )
-    const body = /** @type {Record<string, unknown>} */ (response.source)
-    for (const id of ids) {
-      delete body[id]
-    }
-    return response
-  }
-})
 
 const ownSummaryLog = { before: assertSummaryLogMatchesPath }
 
@@ -127,11 +108,11 @@ const ownSummaryLog = { before: assertSummaryLogMatchesPath }
  */
 export const summaryLogRoutesByNaturalKey = [
   ...uploadAddresses.flatMap(({ address, accredited }) => [
-    atNaturalKeys(summaryLogsYearCreate, address, yearParams, {
+    atSummaryLogKeys(summaryLogsYearCreate, address, yearParams, {
       accredited,
       before: callbackToNaturalKeys(accredited)
     }),
-    atNaturalKeys(
+    atSummaryLogKeys(
       summaryLogsUploadCompletedYear,
       `${address}/{summaryLogId}/upload-completed`,
       uploadParams,
@@ -139,32 +120,30 @@ export const summaryLogRoutesByNaturalKey = [
     )
   ]),
   summaryLogsList,
-  atNaturalKeys(summaryLogsGet, summaryLog, summaryLogParams, ownSummaryLog),
-  atNaturalKeys(
+  atSummaryLogKeys(summaryLogsGet, summaryLog, summaryLogParams, ownSummaryLog),
+  atSummaryLogKeys(
     submitLocatedAtNaturalKeys,
     `${summaryLog}/submit`,
     summaryLogParams,
     ownSummaryLog
   ),
-  atNaturalKeys(
+  atSummaryLogKeys(
     summaryLogFile,
     `${summaryLog}/file`,
     summaryLogParams,
     ownSummaryLog
   ),
-  atNaturalKeys(
-    withoutDatabaseIds(summaryLogDocument, [
-      'organisationId',
-      'registrationId'
-    ]),
+  atSummaryLogKeys(
+    summaryLogDocument,
     `${summaryLog}/document`,
     summaryLogParams,
     ownSummaryLog
   ),
-  atNaturalKeys(
+  atSummaryLogKeys(
     summaryLogFileByFileId,
     `${summaryLogs}/files/{fileId}`,
-    fileParams
+    fileParams,
+    { before: assertSummaryLogFileMatchesPath }
   ),
   summaryLogRecordsCsv
 ]

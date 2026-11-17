@@ -3,10 +3,8 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { partialMock } from '#test/type-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -35,8 +33,6 @@ describe('POST upload-completed validation', () => {
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository(),
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           buildReadOrganisationWithNumbersOf(organisation)
         ])

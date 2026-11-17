@@ -1,21 +1,12 @@
-import Boom from '@hapi/boom'
 import Joi from 'joi'
 
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
-import {
-  findOrganisationAndRegistrationReadModels,
-  findOrganisationByNumber,
-  findRegistrationByNumber
-} from './natural-keys.js'
+import { findOrganisationByNumber } from './natural-keys.js'
 
 /**
  * @import { ResponseObject, ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation } from '#domain/organisations/model.js'
- * @import { Registration } from '#domain/organisations/registration.js'
- * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { OrganisationParams, RegistrationParams } from './natural-keys.js'
  *
  * @typedef {{
@@ -24,22 +15,13 @@ import {
  *   handler(request: HapiRequest, h: ResponseToolkit | HapiResponseToolkit): Promise<unknown>
  * }} NaturalKeyRoute
  *
- * @typedef {RegistrationParams & {
- *   year?: Year,
- *   organisationId: string,
- *   registrationId: string,
- *   accreditationNumber: AccreditationNumber | null
- * }} ResolvedParams
+ * @typedef {OrganisationParams & { organisationId: string }} ResolvedParams
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
  *
  * @typedef {{ storedOrganisation: Organisation }} ResolvedRecords
  *
- * @typedef {{ organisation: Organisation, registration?: Registration }} ResolvedOrginisationAndRegistration
- *
  * @typedef {KeyedResponse<ResolvedRequest>} NaturalKeyResponse
- *
- * @typedef {KeyedOptions<ResolvedRequest> & { accredited?: boolean }} NaturalKeyOptions
  */
 
 /**
@@ -60,35 +42,6 @@ import {
  *   respond?: KeyedResponse<R>
  * }} KeyedOptions
  */
-
-/**
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
- * @param {OrganisationParams} params
- * @returns {Promise<ResolvedOrginisationAndRegistration>}
- */
-const resolveOrganisation = async (
-  organisationAdministrationRepository,
-  params
-) => ({
-  organisation: await findOrganisationByNumber(
-    organisationAdministrationRepository,
-    params.organisationNumber
-  )
-})
-
-/**
- * Throws if the path's keys don't resolve to a registration
- *
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
- * @param {RegistrationParams} params
- * @returns {Promise<ResolvedOrginisationAndRegistration>}
- */
-const resolveRegistration = (organisationAdministrationRepository, params) =>
-  findRegistrationByNumber(
-    organisationAdministrationRepository,
-    params.organisationNumber,
-    params.registrationNumber
-  )
 
 /**
  * Wraps a route at a natural-key path. `resolve` reads what the keys name onto
@@ -136,83 +89,37 @@ export const atKeys = (
 })
 
 /**
- * The number of the registration's accreditation for the path's year, as the
- * organisation read model holds it. Throws not found when it holds none.
+ * Wraps a route at an organisation's natural-key path, resolving
+ * {organisationNumber} to `request.params.organisationId`.
  *
- * @param {HapiRequest & { params: RegistrationParams & { year?: Year } }} request
- * @returns {Promise<AccreditationNumber>}
- */
-const accreditationNumberForYear = async (request) => {
-  const { registration } =
-    await findOrganisationAndRegistrationReadModels(request)
-  const accreditation = accreditationForYear(
-    registration,
-    /** @type {Year} */ (request.params.year)
-  )
-  if (!accreditation) {
-    throw Boom.notFound('Accreditation not found')
-  }
-  return accreditation.accreditationNumber
-}
-
-/**
- * Wraps a route at a natural-key path, resolving
- * - {organisationNumber} to `request.params.organisationId`
- * - {registrationNumber} (if present) to `request.params.registrationId`
- * - {registrationNumber} + {year} to `request.params.accreditationNumber`,
- *   the number of the registration's accreditation for the year in the
- *   organisation read model, if the `accredited` option is true, and `null`
- *   otherwise
- *
- * The organisation the {organisationNumber} key resolved to is added to `request.app`, as
+ * The organisation it resolved to is added to `request.app`, as
  * `ResolvedRecords`, so a handler need not read it again.
  *
  * @param {NaturalKeyRoute} route
  * @param {string} path
  * @param {Joi.PartialSchemaMap} params
- * @param {NaturalKeyOptions} [options]
+ * @param {KeyedOptions<ResolvedRequest>} [options]
  */
-export const atNaturalKeys = (
-  route,
-  path,
-  params,
-  { accredited = false, ...options } = {}
-) => {
-  const resolveRecords =
-    'registrationNumber' in params ? resolveRegistration : resolveOrganisation
-
-  return atKeys(
+export const atNaturalKeys = (route, path, params, options) =>
+  atKeys(
     route,
     path,
     params,
     async (request) => {
-      const { organisation, registration } = await resolveRecords(
+      const organisation = await findOrganisationByNumber(
         request.organisationAdministrationRepository,
-        request.params
+        request.params.organisationNumber
       )
 
       /** @type {ResolvedRecords} */
       const resolvedRecords = { storedOrganisation: organisation }
       Object.assign(request.app, resolvedRecords)
 
-      const ids = registration
-        ? {
-            organisationId: organisation.id,
-            registrationId: registration.id,
-            accreditationNumber: accredited
-              ? await accreditationNumberForYear(request)
-              : null
-          }
-        : { organisationId: organisation.id }
-
-      const resolved = /** @type {ResolvedRequest} */ (request)
-      // An organisation route's handler reads the organisation id alone.
-      resolved.params = /** @type {ResolvedParams} */ ({
-        ...request.params,
-        ...ids
-      })
-      return resolved
+      return /** @type {ResolvedRequest} */ (
+        Object.assign(request, {
+          params: { ...request.params, organisationId: organisation.id }
+        })
+      )
     },
     options
   )
-}

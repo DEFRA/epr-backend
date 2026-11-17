@@ -1,25 +1,11 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import {
-  accreditationsByYear,
-  buildReadAccreditation,
-  buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
-import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { atNaturalKeys } from './at-natural-keys.js'
-import { organisationParams, registrationParams } from './natural-keys.js'
-import {
-  REPROCESSOR_NUMBER,
-  accreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { organisationParams } from './natural-keys.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -28,39 +14,7 @@ const { buildOrganisation } = createOrganisationBuilders()
  * @import { NaturalKeyResponse } from './at-natural-keys.js'
  */
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
-
-const accredited = accreditation()
-const registeredOnlyRegistration = reprocessor({
-  registrationNumber: REGISTERED_ONLY_NUMBER
-})
-const accreditedRegistration = reprocessor({ accreditationId: accredited.id })
-const organisation = buildOrganisation({
-  registrations: [registeredOnlyRegistration, accreditedRegistration],
-  accreditations: [accredited]
-})
-
-// The read model holds the 2027 accreditation outside this service's
-// stored accreditations, as it holds the external accreditations.
-const ACCREDITATION_2026 = toAccreditationNumber('A26ER5001180041PL')
-const ACCREDITATION_2027 = toAccreditationNumber('A27ER5001180041PL')
-const readOrganisation = buildReadOrganisation({
-  organisationNumber: organisation.organisationNumber,
-  registrations: {
-    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      accreditations: accreditationsByYear(
-        buildReadAccreditation({
-          accreditationNumber: ACCREDITATION_2026
-        }),
-        buildReadAccreditation({
-          year: toYear(2027),
-          accreditationNumber: ACCREDITATION_2027
-        })
-      )
-    }),
-    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration()
-  }
-})
+const organisation = buildOrganisation()
 
 const scopes = { scope: ['organisation:read'] }
 const payloadSchema = Joi.object({ name: Joi.string() })
@@ -80,17 +34,14 @@ const requestFor = (params) =>
     params,
     organisationAdministrationRepository: createInMemoryOrganisationsRepository(
       [partialMock(organisation)]
-    )(),
-    organisationReadRepository: createInMemoryOrganisationReadRepository([
-      readOrganisation
-    ])()
+    )()
   })
 
 const h = partialMock({})
 
 describe('atNaturalKeys', () => {
   it('keeps the route options and swaps the params validation', () => {
-    const served = atNaturalKeys(route, '/served', registrationParams)
+    const served = atNaturalKeys(route, '/served', organisationParams)
 
     expect(served).toMatchObject({
       method: 'GET',
@@ -99,8 +50,7 @@ describe('atNaturalKeys', () => {
     })
     expect(
       served.options.validate.params.validate({
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: REPROCESSOR_NUMBER
+        organisationNumber: organisation.organisationNumber
       }).error
     ).toBeUndefined()
   })
@@ -109,59 +59,13 @@ describe('atNaturalKeys', () => {
     const served = atNaturalKeys(
       { ...route, options: { auth: scopes } },
       '/served',
-      registrationParams
+      organisationParams
     )
 
     expect(served.options.validate.params).toBeDefined()
   })
 
-  it('passes the stored ids to the handler, with no accreditation', async () => {
-    const served = atNaturalKeys(route, '/served', registrationParams)
-
-    const params = await served.handler(
-      requestFor({
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: REGISTERED_ONLY_NUMBER
-      }),
-      h
-    )
-
-    expect(params).toMatchObject({
-      organisationId: organisation.id,
-      registrationId: registeredOnlyRegistration.id,
-      accreditationNumber: null
-    })
-    expect(params).not.toHaveProperty('accreditationId')
-  })
-
-  it.each([
-    [2026, ACCREDITATION_2026],
-    [2027, ACCREDITATION_2027]
-  ])(
-    "passes the read model's accreditation number for %i to an accredited route's handler",
-    async (year, accreditationNumber) => {
-      const served = atNaturalKeys(route, '/served', registrationParams, {
-        accredited: true
-      })
-
-      const params = await served.handler(
-        requestFor({
-          organisationNumber: organisation.organisationNumber,
-          registrationNumber: REPROCESSOR_NUMBER,
-          year
-        }),
-        h
-      )
-
-      expect(params).toMatchObject({
-        registrationId: accreditedRegistration.id,
-        accreditationNumber
-      })
-      expect(params).not.toHaveProperty('accreditationId')
-    }
-  )
-
-  it('passes the organisation alone to an organisation route', async () => {
+  it('passes the organisation id to the handler', async () => {
     const served = atNaturalKeys(route, '/served', organisationParams)
 
     const params = await served.handler(
@@ -176,10 +80,9 @@ describe('atNaturalKeys', () => {
   })
 
   it('puts the organisation it resolved on the request', async () => {
-    const served = atNaturalKeys(route, '/served', registrationParams)
+    const served = atNaturalKeys(route, '/served', organisationParams)
     const request = requestFor({
-      organisationNumber: organisation.organisationNumber,
-      registrationNumber: REGISTERED_ONLY_NUMBER
+      organisationNumber: organisation.organisationNumber
     })
 
     await served.handler(request, h)
@@ -189,82 +92,41 @@ describe('atNaturalKeys', () => {
     })
   })
 
-  it('runs the before step with the stored ids, before the handler', async () => {
+  it('runs the before step with the organisation id, before the handler', async () => {
     const calls = []
     const before = vi.fn((request) => {
-      calls.push(['before', request.params.registrationId])
+      calls.push(['before', request.params.organisationId])
     })
     const handler = vi.fn(async () => calls.push(['handler']))
     const served = atNaturalKeys(
       { ...route, handler },
       '/served',
-      registrationParams,
+      organisationParams,
       { before }
     )
 
     await served.handler(
-      requestFor({
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: REGISTERED_ONLY_NUMBER
-      }),
+      requestFor({ organisationNumber: organisation.organisationNumber }),
       h
     )
 
-    expect(calls).toEqual([
-      ['before', registeredOnlyRegistration.id],
-      ['handler']
-    ])
+    expect(calls).toEqual([['before', organisation.id], ['handler']])
   })
 
-  it.each([
-    [
-      'an unknown organisation',
-      { organisationNumber: '999999', registrationNumber: REPROCESSOR_NUMBER },
-      false
-    ],
-    [
-      'an unknown registration',
-      {
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: 'R26XX0000000000PL'
-      },
-      false
-    ],
-    [
-      'a year the registration has no accreditation for',
-      {
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: REPROCESSOR_NUMBER,
-        year: 2028
-      },
-      true
-    ],
-    [
-      'a registration with no accreditation',
-      {
-        organisationNumber: organisation.organisationNumber,
-        registrationNumber: REGISTERED_ONLY_NUMBER,
-        year: 2026
-      },
-      true
-    ]
-  ])('rejects %s as not found', async (_, params, isAccredited) => {
-    const served = atNaturalKeys(route, '/served', registrationParams, {
-      accredited: isAccredited
-    })
+  it('rejects an unknown organisation as not found', async () => {
+    const served = atNaturalKeys(route, '/served', organisationParams)
 
-    await expect(served.handler(requestFor(params), h)).rejects.toMatchObject({
-      output: { statusCode: 404 }
-    })
+    await expect(
+      served.handler(requestFor({ organisationNumber: '999999' }), h)
+    ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 
   describe('with a respond option', () => {
-    const servedPath =
-      '/organisations/{organisationNumber}/registrations/{registrationNumber}'
-    const url = `/organisations/${organisation.organisationNumber}/registrations/${REGISTERED_ONLY_NUMBER}`
+    const servedPath = '/organisations/{organisationNumber}'
+    const url = `/organisations/${organisation.organisationNumber}`
     const mappedSchema = Joi.object({
       mapped: Joi.string().required(),
-      registrationId: Joi.string().required()
+      organisationId: Joi.string().required()
     })
     const failAction = () => {
       throw Boom.teapot()
@@ -304,13 +166,13 @@ describe('atNaturalKeys', () => {
       const served = atNaturalKeys(
         unmappedRoute,
         servedPath,
-        registrationParams,
+        organisationParams,
         {
           respond: respondWith((request, h, response) =>
             h
               .response({
                 mapped: /** @type {{ raw: string }} */ (response.source).raw,
-                registrationId: request.params.registrationId
+                organisationId: request.params.organisationId
               })
               .code(201)
           )
@@ -322,7 +184,7 @@ describe('atNaturalKeys', () => {
       expect(response.statusCode).toBe(201)
       expect(JSON.parse(response.payload)).toEqual({
         mapped: 'body',
-        registrationId: registeredOnlyRegistration.id
+        organisationId: organisation.id
       })
     })
 
@@ -330,12 +192,12 @@ describe('atNaturalKeys', () => {
       const served = atNaturalKeys(
         unmappedRoute,
         servedPath,
-        registrationParams,
+        organisationParams,
         {
           respond: respondWith(async (request, h) =>
             h.response({
               mapped: 'later',
-              registrationId: request.params.registrationId
+              organisationId: request.params.organisationId
             })
           )
         }
@@ -350,7 +212,7 @@ describe('atNaturalKeys', () => {
       const served = atNaturalKeys(
         unmappedRoute,
         servedPath,
-        registrationParams,
+        organisationParams,
         {
           respond: respondWith((_request, h) => h.response({ raw: 'body' }))
         }
@@ -367,7 +229,7 @@ describe('atNaturalKeys', () => {
       const served = atNaturalKeys(
         unmappedRoute,
         servedPath,
-        registrationParams,
+        organisationParams,
         {
           respond: respondWith((_request, h) => h.response({}))
         }
@@ -390,7 +252,7 @@ describe('atNaturalKeys', () => {
           })
         },
         servedPath,
-        registrationParams,
+        organisationParams,
         { respond: respondWith(map) }
       )
 
@@ -399,13 +261,5 @@ describe('atNaturalKeys', () => {
       expect(response.statusCode).toBe(409)
       expect(map).not.toHaveBeenCalled()
     })
-  })
-
-  it('rejects an unknown organisation on an organisation route', async () => {
-    const served = atNaturalKeys(route, '/served', organisationParams)
-
-    await expect(
-      served.handler(requestFor({ organisationNumber: '999999' }), h)
-    ).rejects.toMatchObject({ output: { statusCode: 404 } })
   })
 })

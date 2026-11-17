@@ -688,8 +688,6 @@ export const createRegisteredOnlyReceivedRow = (
 })
 
 export const createTestInfrastructure = async (
-  organisationId,
-  registrationId,
   extractorData,
   { reprocessingType = 'input' } = {}
 ) => {
@@ -699,14 +697,6 @@ export const createTestInfrastructure = async (
   const uploadsRepository = createInMemoryUploadsRepository()
   const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-  const testOrg = buildComplexTestOrg({
-    registrationId,
-    accreditationId: 'ACC-123',
-    processingType: 'reprocessor',
-    reprocessingType,
-    material: 'paper'
-  })
-  testOrg.id = organisationId
   const organisationReadRepository = createInMemoryOrganisationReadRepository([
     buildComplexTestReadOrg({
       processingType: 'reprocessor',
@@ -715,8 +705,6 @@ export const createTestInfrastructure = async (
     })
   ])()
 
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
   const ledgerRepository = createInMemoryLedgerRepository()()
   const summaryLogRowStatesRepository =
@@ -737,8 +725,6 @@ export const createTestInfrastructure = async (
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
-      organisationAdministrationRepository: () =>
-        organisationAdministrationRepository,
       organisationReadRepository: () => organisationReadRepository,
       uploadsRepository
     },

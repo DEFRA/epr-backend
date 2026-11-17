@@ -18,9 +18,9 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -147,15 +147,9 @@ describe('summary-log routes by natural key', () => {
   /** @type {SummaryLogsRepository} */
   let summaryLogsRepository
 
-  beforeEach(async () => {
-    uploadsRepository = createInMemoryUploadsRepository()
-    summaryLogsRepository =
-      createInMemorySummaryLogsRepository()(createMockLogger())
-
-    server = await createTestServer({
+  const startServer = () =>
+    createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           servedOrganisation
         ]),
@@ -169,6 +163,13 @@ describe('summary-log routes by natural key', () => {
         }
       }
     })
+
+  beforeEach(async () => {
+    uploadsRepository = createInMemoryUploadsRepository()
+    summaryLogsRepository =
+      createInMemorySummaryLogsRepository()(createMockLogger())
+
+    server = await startServer()
   })
 
   afterEach(async () => {
@@ -182,8 +183,7 @@ describe('summary-log routes by natural key', () => {
    */
 
   /**
-   * Stores a summary log under its ids and the numbers an upload stores
-   * beside them.
+   * Stores a summary log under the numbers an upload stores.
    *
    * @param {SeedOverrides} overrides
    * @param {(overrides: object) => object} build
@@ -223,7 +223,7 @@ describe('summary-log routes by natural key', () => {
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
     ({ uploads, registration, accreditationNumber }) => {
-      it('starts the upload with its callback under the same address', async () => {
+      it('starts the upload under the registration numbers, with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
           url: uploads,
@@ -234,8 +234,8 @@ describe('summary-log routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.CREATED)
         const { summaryLogId } = JSON.parse(response.payload)
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber: registration.registrationNumber,
           callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
         })
       })
@@ -256,11 +256,13 @@ describe('summary-log routes by natural key', () => {
           1
         )
         expect(stored.summaryLog).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber: registration.registrationNumber,
           year: YEAR,
           accreditationNumber
         })
+        expect(stored.summaryLog).not.toHaveProperty('organisationId')
+        expect(stored.summaryLog).not.toHaveProperty('registrationId')
       })
     }
   )
@@ -323,7 +325,7 @@ describe('summary-log routes by natural key', () => {
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
-      registrationId: accreditedRegistration.id,
+      registrationNumber: REPROCESSOR_NUMBER,
       accreditationNumber: null
     })
   })
@@ -418,19 +420,14 @@ describe('summary-log routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
       expect(body).toMatchObject({ year: YEAR, status: 'validated' })
-      expect(body).not.toHaveProperty('organisationId')
-      expect(body).not.toHaveProperty('registrationId')
       expect(body).not.toHaveProperty('accreditationId')
     })
 
     it.each([
-      ['another organisation', { organisationId: 'another-organisation' }],
+      ['another organisation', { organisationNumber: '999999' }],
       [
         'another registration',
-        {
-          registrationId: registeredOnlyLog.registrationId,
-          registrationNumber: registeredOnlyLog.registrationNumber
-        }
+        { registrationNumber: registeredOnlyLog.registrationNumber }
       ]
     ])('is not found when it belongs to %s', async (_, overrides) => {
       const summaryLogId = toSummaryLogId(await seedOwn(overrides))
@@ -454,6 +451,50 @@ describe('summary-log routes by natural key', () => {
         Array(4).fill(StatusCodes.NOT_FOUND)
       )
     })
+
+    it.each([
+      [
+        'another organisation',
+        { organisationNumber: toOrganisationNumber('999999') }
+      ],
+      [
+        'another registration',
+        { registrationNumber: registeredOnlyLog.registrationNumber }
+      ]
+    ])(
+      'has no file downloaded by its file id when it belongs to %s',
+      async (_, overrides) => {
+        const fileId = `file-${randomUUID()}`
+        await seed(
+          { ...accreditedLog, ...overrides, file: { id: fileId } },
+          summaryLogFactory.submitted
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${summaryLogs}/files/${fileId}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      }
+    )
+
+    it('has a file downloaded by its file id', async () => {
+      const fileId = `file-${randomUUID()}`
+      await seed(
+        { ...accreditedLog, file: { id: fileId } },
+        summaryLogFactory.submitted
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/files/${fileId}`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+    })
   })
 
   it.each([
@@ -474,6 +515,14 @@ describe('summary-log routes by natural key', () => {
       'POST',
       `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}`,
       redirect
+    ],
+    [
+      'completing an upload under an unknown registration',
+      'POST',
+      signedCallback(
+        `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}/${randomUUID()}/upload-completed`
+      ),
+      uploadCompletedFor('R26XX0000000000PL')
     ],
     [
       'completing an upload under a registration with no accreditation',

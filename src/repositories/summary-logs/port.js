@@ -13,9 +13,11 @@
 
 /**
  * A summary log document as the collection may hold it, before it is read
- * into one of the shapes the domain declares.
+ * into one of the shapes the domain declares. Older ones hold database ids.
  *
  * @typedef {Omit<SummaryLog, 'accreditationNumber'> & {
+ *   organisationId?: string,
+ *   registrationId?: string,
  *   accreditationId?: string | null,
  *   accreditationNumber?: AccreditationNumber | null
  * }} StoredSummaryLog
@@ -52,10 +54,9 @@
  */
 
 /**
- * A summary log named by its organisation and registration numbers in place
- * of their database ids.
+ * A summary log named by its organisation and registration numbers.
  *
- * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId'> & {
+ * @typedef {SummaryLog & {
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber
  * }} KeyedSummaryLog

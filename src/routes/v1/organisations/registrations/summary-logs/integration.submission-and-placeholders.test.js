@@ -13,8 +13,6 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -39,21 +37,16 @@ import {
   buildSubmitUrl,
   createUploadPayload,
   pollForValidation,
-  servedTestAccreditation,
   servedTestReadOrganisation,
-  servedTestRegistration,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
-const { buildReadOrganisation } = createOrganisationBuilders()
-
 describe('Submission and placeholder tests', () => {
   let organisationId
   let registrationId
-  const VALID_FROM = '2026-01-01'
   const VALID_TO = '2026-12-31'
 
   const { getServer } = setupAuthContext()
@@ -64,7 +57,7 @@ describe('Submission and placeholder tests', () => {
 
     getServer().use(
       http.post(
-        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
+        'http://localhost:3001/v1/organisations/:organisationNumber/registrations/:registrationNumber/accreditations/:year/summary-log/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
@@ -79,7 +72,6 @@ describe('Submission and placeholder tests', () => {
     const secondFilename = 'waste-data-2.xlsx'
     let summaryLogRowStatesRepository
     let ledgerRepository
-    let accreditationId
     let submitResponse
     let server
 
@@ -88,44 +80,6 @@ describe('Submission and placeholder tests', () => {
       const mockLogger = createMockLogger()
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
-      accreditationId = new ObjectId().toString()
-      const testOrg = buildReadOrganisation({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrations: [
-          servedTestRegistration({
-            id: registrationId,
-            status: 'approved',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            submittedToRegulator: 'ea',
-            validFrom: VALID_FROM,
-            accreditationId
-          })
-        ],
-        accreditations: [
-          servedTestAccreditation({
-            id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-2026-001'),
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            validFrom: VALID_FROM,
-            validTo: VALID_TO,
-            submittedToRegulator: 'ea',
-            statusHistory: [
-              { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
-            ]
-          })
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          { ...testOrg, status: 'active' }
-        ])()
 
       const sharedMeta = {
         REGISTRATION_NUMBER: {
@@ -429,8 +383,6 @@ describe('Submission and placeholder tests', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
           organisationReadRepository: () => organisationReadRepository,
           systemLogsRepository: createSystemLogsRepository()
         },
@@ -750,51 +702,16 @@ describe('Submission and placeholder tests', () => {
       uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-      const accreditationId = 'acc-placeholder-test'
-      const testOrg = buildReadOrganisation({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrations: [
-          servedTestRegistration({
-            id: registrationId,
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            submittedToRegulator: 'ea',
-            accreditationId
-          })
-        ],
-        accreditations: [
-          servedTestAccreditation({
-            id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-PLACEHOLDER-001'),
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            submittedToRegulator: 'ea',
-            statusHistory: [
-              { status: 'created', updatedAt: '2025-01-01' },
-              { status: 'approved', updatedAt: '2025-02-01' }
-            ]
-          })
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          { ...testOrg, status: 'active' }
-        ])()
-
       const excelBuffer = /** @type {Buffer<ArrayBufferLike>} */ (
         /** @type {unknown} */ (await createExcelWithPlaceholders())
       )
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId,
-        registrationId,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: TEST_REGISTRATION_NUMBER,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+        callbackUrl: `http://localhost:3001/v1/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,
@@ -831,8 +748,6 @@ describe('Submission and placeholder tests', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
           organisationReadRepository: () => organisationReadRepository
         },
         workers: {
