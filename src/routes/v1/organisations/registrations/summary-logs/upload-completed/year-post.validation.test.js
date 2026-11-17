@@ -17,11 +17,12 @@ const organisation = buildOrganisation({
   registrations: [reprocessor({ id: 'reg-456' })]
 })
 const organisationId = organisation.id
-const uploadedKey = `/organisations/${organisationId}/registrations/reg-456/upload-1/file-1`
+const registrationPath = `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}`
+const uploadedKey = `${registrationPath}/upload-1/file-1`
 
 const buildPostUrl = (summaryLogId) =>
   signedCallback(
-    `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+    `${registrationPath}/summary-logs/2026/${summaryLogId}/upload-completed`
   )
 
 describe('POST upload-completed validation', () => {
