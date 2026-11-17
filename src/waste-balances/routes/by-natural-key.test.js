@@ -8,7 +8,8 @@ import {
   buildReadApprovedOrganisation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  withStandingThrough
 } from '#organisation-read-model/repository/read-model-test-data.js'
 
 import { config } from '#root/config.js'
@@ -51,16 +52,8 @@ const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 
 const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
 
-const accreditedStanding = {
-  2026: {
-    '2026-02-01': { standing: /** @type {const} */ ('registeredOnly') },
-    '2026-07-01': { standing: /** @type {const} */ ('accredited') }
-  }
-}
-
 const servedExporter = () =>
   buildReadExporterRegistration({
-    standingByDate: accreditedStanding,
     accreditations: accreditationsByYear(
       buildReadExporterAccreditation({
         accreditationNumber: toAccreditationNumber(
@@ -72,20 +65,17 @@ const servedExporter = () =>
 
 const organisation = buildReadOrganisation({
   registrations: {
-    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration({
-      status: {
-        current: 'approved',
-        lastUpdatedAt: '2024-02-01T09:00:00.000Z',
-        timeline: [{ status: 'approved', at: '2024-02-01T00:00:00.000Z' }]
-      },
-      standingByDate: {
-        2024: { '2024-02-01': { standing: 'registeredOnly' } },
-        2025: { '2025-01-01': { standing: 'registeredOnly' } },
-        2026: { '2026-01-01': { standing: 'registeredOnly' } }
-      }
-    }),
+    [REGISTERED_ONLY_NUMBER]: withStandingThrough(
+      buildReadReprocessorRegistration({
+        status: {
+          current: 'approved',
+          lastUpdatedAt: '2024-02-01T09:00:00.000Z',
+          timeline: [{ status: 'approved', at: '2024-02-01T00:00:00.000Z' }]
+        }
+      }),
+      toYear(2026)
+    ),
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      standingByDate: accreditedStanding,
       accreditations: accreditationsByYear(
         buildReadAccreditation({
           accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)

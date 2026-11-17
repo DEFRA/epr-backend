@@ -55,9 +55,6 @@ const accreditedFrom2026 = (
       [registrationNumber]: buildReadReprocessorRegistration({
         material: 'plastic',
         status: approved,
-        standingByDate: {
-          2026: { '2026-01-01': { standing: 'accredited' } }
-        },
         accreditations: accreditationsByYear(
           buildReadAccreditation({
             accreditationNumber: toAccreditationNumber(accreditationNumber),

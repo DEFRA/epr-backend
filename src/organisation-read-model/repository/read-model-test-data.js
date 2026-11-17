@@ -6,7 +6,7 @@ import {
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
-/** @import { AccreditationStatus, Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, Registration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -132,6 +132,20 @@ const withStanding = (registration) => {
     standingByDate: standingByYear(registration, lastYear)
   }
 }
+
+/**
+ * The registration with its standing worked out up to the end of `year`, as
+ * the read model serves it while `year` is open.
+ *
+ * @template {Registration} R
+ * @param {R} registration
+ * @param {Year} year
+ * @returns {R}
+ */
+export const withStandingThrough = (registration, year) => ({
+  ...registration,
+  standingByDate: standingByYear(registration, year)
+})
 
 const commonRegistrationDefaults = () => ({
   applicationContactDetails: contact,

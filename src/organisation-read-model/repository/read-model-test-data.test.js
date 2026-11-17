@@ -11,10 +11,11 @@ import {
   buildReadOrganisation,
   buildReadOrganisationWithNumbersOf,
   buildReadReprocessorRegistration,
-  servedOrganisations
+  servedOrganisations,
+  withStandingThrough
 } from './read-model-test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
 describe('read-model-test-data', () => {
   describe('approvedTimelineFrom', () => {
@@ -101,6 +102,21 @@ describe('read-model-test-data', () => {
       }
 
       expect(build({ standingByDate }).standingByDate).toBe(standingByDate)
+    })
+  })
+
+  describe('withStandingThrough', () => {
+    it('carries the standing into each year up to the year given', () => {
+      const registration = withStandingThrough(
+        buildReadReprocessorRegistration(),
+        toYear(2028)
+      )
+
+      expect(registration.standingByDate).toEqual({
+        2026: { '2026-02-01': { standing: 'registeredOnly' } },
+        2027: { '2027-01-01': { standing: 'registeredOnly' } },
+        2028: { '2028-01-01': { standing: 'registeredOnly' } }
+      })
     })
   })
 
