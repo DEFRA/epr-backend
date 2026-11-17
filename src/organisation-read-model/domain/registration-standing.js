@@ -3,7 +3,7 @@ import { utcYearOf, yearBounds } from '#common/helpers/dates/year.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { accreditationForYear } from './accreditation-for-year.js'
 import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
-import { approvedYears, firstApprovedAt } from './status-timeline.js'
+import { approvedBy, approvedYears } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -12,18 +12,6 @@ import { approvedYears, firstApprovedAt } from './status-timeline.js'
 /**
  * @typedef {Pick<Registration, 'status' | 'accreditations'>} StandingSource
  */
-
-/**
- * @param {StatusTimeline} registrationTimeline
- * @param {CalendarDate} date
- */
-const hasBeenApprovedBy = (registrationTimeline, date) => {
-  const approvedAt = firstApprovedAt(registrationTimeline)
-  return (
-    approvedAt !== undefined &&
-    calendarDate(approvedAt).localeCompare(date) <= 0
-  )
-}
 
 /**
  * @param {StatusTimeline} accreditationTimeline
@@ -42,7 +30,7 @@ const holdsAccreditationOn = (accreditationTimeline, date) => {
  * @returns {Standing | undefined}
  */
 const standingOn = (registrationTimeline, accreditationTimeline, date) => {
-  if (!hasBeenApprovedBy(registrationTimeline, date)) {
+  if (!approvedBy(registrationTimeline, date)) {
     return undefined
   }
 

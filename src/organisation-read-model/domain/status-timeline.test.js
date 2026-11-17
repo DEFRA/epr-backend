@@ -1,5 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { approvedYears } from './status-timeline.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { approvedBy, approvedYears } from './status-timeline.js'
 
 const UP_TO_2028 = toYear(2028)
 
@@ -72,5 +73,30 @@ describe('approvedYears', () => {
     const timeline = [{ status: 'cancelled', at: '2026-02-01T00:00:00.000Z' }]
 
     expect(approvedYears(timeline, UP_TO_2028)).toEqual([])
+  })
+})
+
+describe('approvedBy', () => {
+  const JUNE_1ST_2026 = calendarDate('2026-06-01')
+
+  it('is true once an approval has taken effect', () => {
+    const timeline = [{ status: 'approved', at: '2026-06-01T09:00:00.000Z' }]
+
+    expect(approvedBy(timeline, JUNE_1ST_2026)).toBe(true)
+  })
+
+  it('is false before the approval takes effect', () => {
+    const timeline = [{ status: 'approved', at: '2026-06-02T00:00:00.000Z' }]
+
+    expect(approvedBy(timeline, JUNE_1ST_2026)).toBe(false)
+  })
+
+  it('does not count an approval cancelled the same day', () => {
+    const timeline = [
+      { status: 'approved', at: '2026-06-01T00:00:00.000Z' },
+      { status: 'cancelled', at: '2026-06-01T00:00:00.000Z' }
+    ]
+
+    expect(approvedBy(timeline, JUNE_1ST_2026)).toBe(false)
   })
 })

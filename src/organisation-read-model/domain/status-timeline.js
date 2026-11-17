@@ -103,6 +103,17 @@ const statusRanges = (timeline, endDate) => {
 }
 
 /**
+ * Whether the timeline was approved at the end of any day on or before
+ * `date`. An approval cancelled the same day does not count.
+ *
+ * @param {StatusChanges} timeline
+ * @param {CalendarDate} date
+ * @returns {boolean}
+ */
+export const approvedBy = (timeline, date) =>
+  statusRanges(timeline, date).approved !== undefined
+
+/**
  * The years up to `upToYear` approved at some point, oldest first, without
  * repeats. The timeline can go approved → cancelled → approved, so years spent
  * wholly cancelled are left out.
