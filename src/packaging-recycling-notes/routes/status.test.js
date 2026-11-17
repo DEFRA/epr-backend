@@ -83,12 +83,6 @@ const organisationReadRepositoryWith = async ({
     registrations: {
       [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
         submittedToRegulator,
-        standingByDate: {
-          2026: {
-            '2026-02-01': { standing: 'registeredOnly' },
-            '2026-07-01': { standing: 'accredited' }
-          }
-        },
         accreditations: accreditationsByYear(
           buildReadAccreditation({
             accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),

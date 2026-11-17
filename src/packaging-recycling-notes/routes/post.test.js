@@ -160,8 +160,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     /** @type {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>} */
     const registrationFields = {
       material: /** @type {any} */ (material),
-      status: approvedStatusFrom(validFrom),
-      standingByDate: { [year]: { [validFrom]: { standing: 'accredited' } } }
+      status: approvedStatusFrom(validFrom)
     }
     const registration = {
       registrationNumber: exporting ? EXPORTER_NUMBER : REPROCESSOR_NUMBER
