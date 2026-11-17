@@ -1,3 +1,13 @@
+/**
+ * Organisations Module
+ *
+ * The organisations vocabulary other modules use: its enums, the
+ * organisation, registration and accreditation numbers, and the route paths
+ * and params that name them.
+ *
+ * @module organisations
+ */
+
 export {
   ACCREDITATION_STATUS,
   BUSINESS_TYPE,

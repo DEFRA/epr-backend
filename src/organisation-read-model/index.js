@@ -1,5 +1,13 @@
+/**
+ * Organisation Read Model Module
+ *
+ * Looks up the organisations and registrations the read model serves.
+ *
+ * @module organisation-read-model
+ */
+
 export {
   findOrganisationAndRegistrationReadModels,
   findOrganisationReadModel
-} from '#organisation-read-model/find-by-natural-keys.js'
-export { servesOrganisationOn } from '#organisation-read-model/repository/to-read-model.js'
+} from './find-by-natural-keys.js'
+export { servesOrganisationOn } from './repository/to-read-model.js'
