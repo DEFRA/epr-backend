@@ -224,7 +224,7 @@ describe('GET /organisations/{organisationNumber}', () => {
       config.reset('openNextYear')
     })
 
-    it('asks the repository for the organisation as it stood in that year', async () => {
+    it('asks the repository for the organisation in that year', async () => {
       const organisation = buildAccreditedOrganisation()
       const repository = await serve(organisation)
 
