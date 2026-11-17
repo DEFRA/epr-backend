@@ -152,18 +152,21 @@ describe('findOrganisationAndRegistrationReadModels', () => {
     ).resolves.toEqual({ organisation, registration })
   })
 
-  it('is not found when the organisation does not hold the registration', async () => {
-    await expect(
-      findOrganisationAndRegistrationReadModels(
-        requestFor(organisation, 'R26ER5001180098PL')
-      )
-    ).rejects.toMatchObject({
-      output: {
-        statusCode: 404,
-        payload: { message: 'Registration not found' }
-      }
-    })
-  })
+  it.each(['R26ER5001180098PL', 'constructor', 'toString', '__proto__'])(
+    'is not found when the organisation does not hold registration %s',
+    async (registrationNumber) => {
+      await expect(
+        findOrganisationAndRegistrationReadModels(
+          requestFor(organisation, registrationNumber)
+        )
+      ).rejects.toMatchObject({
+        output: {
+          statusCode: 404,
+          payload: { message: 'Registration not found' }
+        }
+      })
+    }
+  )
 
   it('is not found when there is no organisation', async () => {
     await expect(
