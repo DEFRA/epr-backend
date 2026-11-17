@@ -17,7 +17,7 @@ import {
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { organisationInYear } from './organisation-in-year.js'
 import {
-  lastRecordedAt,
+  timelineStatusOf,
   toAccreditationStatusTimeline,
   toOrganisationStatusTimeline,
   toRegistrationStatusTimeline
@@ -28,7 +28,7 @@ import {
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress, AccreditationStatus } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
@@ -50,6 +50,7 @@ import {
  * as it is stored: each change carries when it was recorded.
  *
  * @typedef {(Omit<ReprocessorAccreditation, 'status'> | Omit<ExporterAccreditation, 'status'>) & {
+ *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  *   year: Year
  *   status: {
@@ -64,50 +65,54 @@ import {
  */
 
 /**
+ * An external accreditation with no status changes is dropped.
+ *
  * @param {ExternalAccreditation} externalAccreditation
- * @returns {ReprocessorAccreditation | ExporterAccreditation}
+ * @param {OnDrop} onDrop
+ * @returns {[string, ReprocessorAccreditation | ExporterAccreditation] | null}
  */
-const toAccreditationCommon = ({
-  registrationNumber: _registrationNumber,
-  year: _year,
-  status: { current, timeline },
-  ...accreditation
-}) => ({
-  ...accreditation,
-  status: {
-    current,
-    lastUpdatedAt: lastRecordedAt(timeline),
-    timeline: timeline.map(({ status, at }) => ({ status, at }))
+const toAccreditationEntryOfYear = (
+  {
+    organisationNumber: _organisationNumber,
+    registrationNumber,
+    year,
+    status: { current, timeline },
+    ...accreditation
+  },
+  onDrop
+) => {
+  const statusTimeline = timelineStatusOf(timeline)
+  if (!statusTimeline) {
+    onDrop(
+      `Registration ${registrationNumber} external accreditation year ${year} has no status changes`
+    )
+    return null
   }
-})
+  return [
+    String(year),
+    { ...accreditation, status: { current, ...statusTimeline } }
+  ]
+}
 
 /**
  * Each registration's external accreditations, keyed by year.
  *
  * @param {ExternalAccreditation[]} externalAccreditations
+ * @param {OnDrop} onDrop
  * @returns {ExternalAccreditationsByRegistration}
  */
-const byRegistrationAndYear = (externalAccreditations) =>
+const byRegistrationAndYear = (externalAccreditations, onDrop) =>
   new Map(
     [...Map.groupBy(externalAccreditations, (a) => a.registrationNumber)].map(
       ([registrationNumber, held]) => [
         registrationNumber,
         Object.fromEntries(
-          held.map((a) => [String(a.year), toAccreditationCommon(a)])
+          held
+            .map((a) => toAccreditationEntryOfYear(a, onDrop))
+            .filter((entry) => entry !== null)
         )
       ]
     )
-  )
-
-/**
- * The registration numbers granted across the stored organisations.
- *
- * @param {StoredOrganisation[]} stored
- * @returns {RegistrationNumber[]}
- */
-export const registrationNumbersOf = (stored) =>
-  stored.flatMap(({ registrations }) =>
-    registrations.flatMap(({ registrationNumber }) => registrationNumber ?? [])
   )
 
 /**
@@ -147,7 +152,10 @@ export async function toReadModelOrganisations(
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
     today: toCalendarDate(new Date())
   }
-  const externalByRegistration = byRegistrationAndYear(externalAccreditations)
+  const externalByRegistration = byRegistrationAndYear(
+    externalAccreditations,
+    context.onDrop
+  )
   return stored
     .map((organisation) =>
       toOrganisation(organisation, context, externalByRegistration)
@@ -247,6 +255,48 @@ export function toLinkedDefraOrganisation(linked) {
 }
 
 /**
+ * A registration's stored and external accreditations by year, up to the open
+ * year. An external accreditation replaces a stored one for the same year.
+ *
+ * @param {{
+ *   openYear: Year
+ *   registration: StoredRegistration
+ *   organisation: StoredOrganisation
+ *   context: Context
+ *   externalAccreditations: Record<string, ReprocessorAccreditation | ExporterAccreditation>
+ * }} options
+ * @returns {Record<string, ReprocessorAccreditation | ExporterAccreditation>}
+ */
+function accreditationsUpTo({
+  openYear,
+  registration,
+  organisation,
+  context,
+  externalAccreditations
+}) {
+  const { registrationNumber } = registration
+  const storedAccreditations = keyedRecords(
+    accreditationsForRegistration(registration, organisation),
+    (accreditation) => toAccreditationEntry(accreditation, context),
+    `Registration ${registrationNumber} accreditation year`,
+    context.onDrop
+  )
+  Object.keys(externalAccreditations)
+    .filter((year) => Object.hasOwn(storedAccreditations, year))
+    .forEach((year) =>
+      context.onDrop(
+        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
+      )
+    )
+  return Object.fromEntries(
+    Object.entries({
+      ...storedAccreditations,
+      ...externalAccreditations
+    }).filter(([year]) => Number(year) <= openYear)
+  )
+}
+
+/**
  * @param {StoredRegistration} registration
  * @param {StoredOrganisation} organisation
  * @param {Context} context
@@ -278,6 +328,10 @@ export function toRegistrationEntry(
     registration.statusHistory,
     validFrom
   )
+  if (!statusTimeline) {
+    onDrop(`Registration ${registrationNumber} has no served status changes`)
+    return null
+  }
   if (!applicationContactDetails) {
     onDrop(
       `Registration ${registrationNumber} has no application contact details`
@@ -285,28 +339,14 @@ export function toRegistrationEntry(
     return null
   }
 
-  const storedAccreditations = keyedRecords(
-    accreditationsForRegistration(registration, organisation),
-    (accreditation) => toAccreditationEntry(accreditation, context),
-    `Registration ${registrationNumber} accreditation year`,
-    onDrop
-  )
-  const externalAccreditations =
-    externalByRegistration.get(registrationNumber) ?? {}
-  Object.keys(externalAccreditations)
-    .filter((year) => Object.hasOwn(storedAccreditations, year))
-    .forEach((year) =>
-      onDrop(
-        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
-      )
-    )
   const openYear = latestOpenYear(new Date(context.today))
-  const accreditations = Object.fromEntries(
-    Object.entries({
-      ...storedAccreditations,
-      ...externalAccreditations
-    }).filter(([year]) => Number(year) <= openYear)
-  )
+  const accreditations = accreditationsUpTo({
+    openYear,
+    registration,
+    organisation,
+    context,
+    externalAccreditations: externalByRegistration.get(registrationNumber) ?? {}
+  })
   const registrationStatus = { current: status, ...statusTimeline }
 
   /** @type {RegistrationCommon} */
@@ -490,6 +530,10 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
     accreditation.statusHistory,
     accreditation.validFrom
   )
+  if (!statusTimeline) {
+    onDrop(`Accreditation ${accreditationNumber} has no served status changes`)
+    return null
+  }
 
   return [
     String(deriveAccreditationYear(accreditation)),

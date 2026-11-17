@@ -20,6 +20,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -468,6 +469,34 @@ describe('summary-log routes by natural key', () => {
       )
     })
 
+    it.each([
+      [
+        'another organisation',
+        { organisationNumber: toOrganisationNumber('999999') }
+      ],
+      [
+        'another registration',
+        { registrationNumber: registeredOnlyLog.registrationNumber }
+      ]
+    ])(
+      'has no file downloaded by its file id when it belongs to %s',
+      async (_, overrides) => {
+        const fileId = `file-${randomUUID()}`
+        await seed(
+          { ...accreditedLog, ...overrides, file: { id: fileId } },
+          summaryLogFactory.submitted
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${summaryLogs}/files/${fileId}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      }
+    )
+
     it('is found under its numbers whatever database ids it holds', async () => {
       const summaryLogId = toSummaryLogId(
         await seedOwn({
@@ -485,7 +514,7 @@ describe('summary-log routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
-    describe('of an organisation only the read model holds', () => {
+    describe('without consulting the legacy organisations repository', () => {
       beforeEach(async () => {
         await server.stop()
         server = await startServer([])

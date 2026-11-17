@@ -75,6 +75,13 @@ const OPERATOR_UNHELD = {
   accreditationNumber: toAccreditationNumber('OPERATOR-ACC'),
   year: YEAR
 }
+const EVERY_LEDGER = [
+  HELD,
+  REGISTERED_ONLY,
+  UNHELD,
+  UNHELD_REGISTERED_ONLY,
+  UNHELD_YEAR
+]
 
 const approved = [
   { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
@@ -89,7 +96,13 @@ const testOrganisation = {
   statusHistory: approved,
   submittedToRegulator: 'ea',
   submitterContactDetails: contact,
-  users: [],
+  users: [
+    {
+      email: 'tester@example.com',
+      fullName: 'A Tester',
+      roles: ['standard_user']
+    }
+  ],
   version: 1,
   accreditations: [
     {
@@ -224,6 +237,37 @@ const countEverywhere = async (db, numbers) => {
 
 const NOTHING = { summaryLogs: 0, prns: 0, events: 0, rowStates: 0, reports: 0 }
 
+const testOrganisationId = testOrganisation._id.toHexString()
+
+/**
+ * Two summary logs stored under the test organisation's database id with no
+ * numbers, and one under another organisation's.
+ *
+ * @param {Db} db
+ */
+const seedUnnumberedSummaryLogs = (db) => {
+  /**
+   * @param {string} _id
+   * @param {string} organisationId
+   */
+  const unnumbered = (_id, organisationId) => ({
+    _id,
+    version: 1,
+    status: 'validated',
+    file: { id: `${_id}-file`, name: 'x.xlsx', status: 'complete' },
+    organisationId
+  })
+  return db
+    .collection('summary-logs')
+    .insertMany(
+      /** @type {*} */ ([
+        unnumbered('unnumbered-1', testOrganisationId),
+        unnumbered('unnumbered-2', testOrganisationId),
+        unnumbered('other-unnumbered', new ObjectId().toHexString())
+      ])
+    )
+}
+
 describe('removeTestOrganisationData', () => {
   /** @type {Db} */
   let db
@@ -233,10 +277,6 @@ describe('removeTestOrganisationData', () => {
   const dependencies = async () => ({
     testOrganisationNumbers: [TEST_ORGANISATION],
     records: createTestOrganisationRecords(db),
-    organisationReadRepository: createOrganisationReadRepository(db)({
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-      logger
-    }),
     systemLogsRepository: (await createSystemLogsRepository(db))(logger),
     logger
   })
@@ -295,12 +335,110 @@ describe('removeTestOrganisationData', () => {
     await seedAcceptedPrn(db, OPERATOR_UNHELD)
   })
 
-  it('removes every record on a ledger the read model does not hold', async () => {
+  it('removes every record on every ledger of a test organisation, held or not', async () => {
     await run(false)
 
-    expect(await countEverywhere(db, UNHELD)).toEqual(NOTHING)
-    expect(await countEverywhere(db, UNHELD_YEAR)).toEqual(NOTHING)
-    expect(await countEverywhere(db, UNHELD_REGISTERED_ONLY)).toEqual(NOTHING)
+    for (const ledger of EVERY_LEDGER) {
+      expect(await countEverywhere(db, ledger)).toEqual(NOTHING)
+    }
+  })
+
+  it('keeps the test organisation itself, and its users', async () => {
+    await run(false)
+
+    expect(
+      await db
+        .collection('epr-organisations')
+        .findOne({ _id: testOrganisation._id })
+    ).toEqual(testOrganisation)
+  })
+
+  it("removes the summary logs held under the test organisation's database id with no numbers, and audits them", async () => {
+    await seedUnnumberedSummaryLogs(db)
+
+    const result = await run(false)
+
+    expect(
+      await db
+        .collection('summary-logs')
+        .distinct('_id', { organisationNumber: { $exists: false } })
+    ).toEqual(['other-unnumbered'])
+    expect(result.unnumbered).toEqual([
+      {
+        organisationNumber: TEST_ORGANISATION,
+        organisationId: testOrganisationId,
+        summaryLogIds: ['unnumbered-1', 'unnumbered-2'],
+        removed: 2
+      }
+    ])
+    expect(
+      await db
+        .collection('system-logs')
+        .findOne({ 'context.organisationId': testOrganisationId })
+    ).toEqual(
+      expect.objectContaining({
+        event: expect.objectContaining({ action: REMOVAL_ACTION }),
+        context: {
+          organisationNumber: TEST_ORGANISATION,
+          organisationId: testOrganisationId,
+          removed: { summaryLogs: 2 },
+          summaryLogIds: ['unnumbered-1', 'unnumbered-2']
+        }
+      })
+    )
+  })
+
+  it('removes no unnumbered summary log on a dry run, and reports what it would remove', async () => {
+    await seedUnnumberedSummaryLogs(db)
+
+    const result = await run(true)
+
+    expect(
+      await db
+        .collection('summary-logs')
+        .countDocuments({ organisationNumber: { $exists: false } })
+    ).toBe(3)
+    expect(result.unnumbered).toEqual([
+      expect.objectContaining({
+        summaryLogIds: ['unnumbered-1', 'unnumbered-2'],
+        removed: 2
+      })
+    ])
+  })
+
+  it('counts unnumbered summary logs it fails to remove as failed', async () => {
+    await seedUnnumberedSummaryLogs(db)
+    const records = createTestOrganisationRecords(db)
+    const error = new Error('remove failed')
+
+    const result = await run(false, {
+      records: {
+        ...records,
+        removeUnnumberedSummaryLogs: () => Promise.reject(error)
+      }
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({ unnumbered: [], failed: 1 })
+    )
+    expect(logger.error).toHaveBeenCalledWith({
+      err: error,
+      message: `Failed to remove test organisation 999999's summary logs under organisationId=${testOrganisationId}`
+    })
+  })
+
+  it("skips an organisation when another organisation's record cites an unnumbered summary log it would remove", async () => {
+    await seedUnnumberedSummaryLogs(db)
+    await db.collection('reports').insertOne({
+      ...OPERATOR_UNHELD,
+      source: { summaryLogId: 'unnumbered-1-file' }
+    })
+
+    const result = await run(false)
+
+    expect(result).toEqual(
+      expect.objectContaining({ removed: [], unnumbered: [], skipped: 1 })
+    )
   })
 
   it('removes a summary log that names no accreditation', async () => {
@@ -311,24 +449,6 @@ describe('removeTestOrganisationData', () => {
         .collection('summary-logs')
         .countDocuments({ _id: /** @type {*} */ ('no-accreditation-log') })
     ).toBe(0)
-  })
-
-  it('keeps the records the read model holds, registered-only ones included', async () => {
-    await run(false)
-
-    expect(await countEverywhere(db, HELD)).toEqual({
-      summaryLogs: 1,
-      prns: 1,
-      events: 1,
-      rowStates: 1,
-      reports: 1
-    })
-    expect(await countEverywhere(db, REGISTERED_ONLY)).toEqual({
-      ...NOTHING,
-      summaryLogs: 1,
-      rowStates: 1,
-      reports: 1
-    })
   })
 
   it('leaves an operator alone, whatever the read model holds', async () => {
@@ -343,7 +463,7 @@ describe('removeTestOrganisationData', () => {
     })
   })
 
-  it("lets the PRN tonnage report place the test organisation's PRNs again", async () => {
+  it('lets the PRN tonnage report run over what is left', async () => {
     await db
       .collection('packaging-recycling-notes')
       .deleteMany({ 'organisation.organisationNumber': OPERATOR })
@@ -354,15 +474,7 @@ describe('removeTestOrganisationData', () => {
     await run(false)
 
     const { rows } = await reportPrnTonnage()
-    expect(rows).toEqual([
-      expect.objectContaining({
-        organisationNumber: TEST_ORGANISATION,
-        registrationNumber: HELD.registrationNumber,
-        accreditationNumber: HELD.accreditationNumber,
-        acceptedTonnage: 40,
-        wasteBalance: 100
-      })
-    ])
+    expect(rows).toEqual([])
   })
 
   it('audits each ledger it removes, with what it removed', async () => {
@@ -374,6 +486,18 @@ describe('removeTestOrganisationData', () => {
       .toArray()
     expect(audits.map(({ context }) => context)).toEqual(
       expect.arrayContaining([
+        {
+          ...HELD,
+          removed: {
+            summaryLogs: 1,
+            prns: 1,
+            events: 1,
+            rowStates: 1,
+            reports: 1
+          },
+          summaryLogIds: ['held-log'],
+          prnIds: [expect.any(String)]
+        },
         {
           ...UNHELD,
           removed: {
@@ -452,7 +576,7 @@ describe('removeTestOrganisationData', () => {
 
     expect(result).toEqual({
       removed: [],
-      undecided: 0,
+      unnumbered: [],
       skipped: 0,
       failed: 0,
       auditFailed: 0
@@ -471,7 +595,7 @@ describe('removeTestOrganisationData', () => {
             : records.remove(kind, ledger)
       }
     })
-    expect(first.failed).toBe(4)
+    expect(first.failed).toBe(6)
     expect(await countEverywhere(db, UNHELD)).toEqual({
       ...NOTHING,
       prns: 1,
@@ -492,17 +616,19 @@ describe('removeTestOrganisationData', () => {
     expect(await countEverywhere(db, UNHELD_YEAR)).toEqual(NOTHING)
   })
 
-  it('skips an organisation when a record it would keep cites one it would remove', async () => {
-    await db.collection('waste-balance-events').insertOne(
-      buildLedgerEvent({
-        ...HELD,
-        number: 2,
-        payload: {
-          summaryLogId: toSummaryLogFileId('unheld-file'),
-          creditTotal: 1
-        }
-      })
-    )
+  it("skips an organisation when another organisation's record cites one it would remove, naming each such record", async () => {
+    const { insertedId } = await db
+      .collection('waste-balance-events')
+      .insertOne(
+        buildLedgerEvent({
+          ...OPERATOR_UNHELD,
+          number: 2,
+          payload: {
+            summaryLogId: toSummaryLogFileId('unheld-file'),
+            creditTotal: 1
+          }
+        })
+      )
 
     const result = await run(false)
 
@@ -516,7 +642,8 @@ describe('removeTestOrganisationData', () => {
     })
     expect(logger.error).toHaveBeenCalledWith({
       message:
-        'Skipping test organisation 999999: kept records citing a summary log or PRN it would remove: events=1 rowStates=0 reports=0'
+        'Skipping test organisation 999999: records the removal keeps cite a summary log or PRN it would remove: events=1 rowStates=0 reports=0' +
+        `; events id=${insertedId} organisationNumber=100234 registrationNumber=OPERATOR-REG accreditationNumber=OPERATOR-ACC year=2026`
     })
   })
 
@@ -553,14 +680,14 @@ describe('removeTestOrganisationData', () => {
       })
     }
   ])(
-    'skips an organisation when a kept report cites one it would remove in $field',
+    "skips an organisation when another organisation's report cites one it would remove in $field",
     async ({ cite }) => {
       const prn = await db.collection('packaging-recycling-notes').findOne({
         'accreditation.accreditationNumber': UNHELD.accreditationNumber
       })
       await db
         .collection('reports')
-        .insertOne({ ...HELD, ...cite(String(prn?._id)) })
+        .insertOne({ ...OPERATOR_UNHELD, ...cite(String(prn?._id)) })
 
       const result = await run(false)
 
@@ -570,46 +697,135 @@ describe('removeTestOrganisationData', () => {
     }
   )
 
-  it('leaves a yearless ledger under a held accreditation, and removes one under an unheld registration', async () => {
-    const { year: _, ...heldYearless } = HELD
-    const { year: __, ...unheldYearless } = UNHELD
-    for (const numbers of [heldYearless, unheldYearless]) {
-      const { year: ___, ...yearlessEvent } = buildLedgerEvent({
-        ...numbers,
-        number: 9,
-        payload: { creditTotal: 1 }
-      })
-      await db.collection('waste-balance-events').insertOne(yearlessEvent)
-      await db
-        .collection('summary-log-row-states')
-        .insertOne({ ...numbers, summaryLogIds: [] })
+  it("removes a test organisation whose records another test organisation's records cite", async () => {
+    const otherTest = {
+      ...UNHELD,
+      organisationNumber: toOrganisationNumber('888888'),
+      registrationNumber: toRegistrationNumber('OTHER-TEST-REG'),
+      accreditationNumber: toAccreditationNumber('OTHER-TEST-ACC')
     }
+    await db.collection('waste-balance-events').insertOne(
+      buildLedgerEvent({
+        ...otherTest,
+        payload: {
+          summaryLogId: toSummaryLogFileId('unheld-file'),
+          creditTotal: 1
+        }
+      })
+    )
 
-    const result = await run(false)
+    const result = await run(false, {
+      testOrganisationNumbers: [TEST_ORGANISATION, otherTest.organisationNumber]
+    })
 
-    expect(result.undecided).toBe(1)
-    expect(
-      await db
-        .collection('waste-balance-events')
-        .countDocuments({ ...heldYearless, year: { $exists: false } })
-    ).toBe(1)
-    expect(
-      await db
-        .collection('summary-log-row-states')
-        .countDocuments({ ...heldYearless, year: { $exists: false } })
-    ).toBe(1)
-    expect(
-      await db
-        .collection('waste-balance-events')
-        .countDocuments({ ...unheldYearless, year: { $exists: false } })
-    ).toBe(0)
-    expect(logger.warn).toHaveBeenCalledWith({
-      message:
-        'Leaving test organisation ledger organisationNumber=999999 registrationNumber=REG-1 accreditationNumber=ACC-1 year=undefined: it has no year to judge its accreditation by'
+    expect(result.skipped).toBe(0)
+    expect(await countEverywhere(db, UNHELD)).toEqual(NOTHING)
+    expect(await countEverywhere(db, otherTest)).toEqual(NOTHING)
+  })
+
+  it("skips a test organisation whose records a skipped test organisation's records cite", async () => {
+    const otherTest = {
+      ...UNHELD,
+      organisationNumber: toOrganisationNumber('888888'),
+      registrationNumber: toRegistrationNumber('OTHER-TEST-REG'),
+      accreditationNumber: toAccreditationNumber('OTHER-TEST-ACC')
+    }
+    await seedSummaryLog(db, 'other-test', otherTest)
+    await db.collection('waste-balance-events').insertMany([
+      buildLedgerEvent({
+        ...otherTest,
+        number: 2,
+        payload: {
+          summaryLogId: toSummaryLogFileId('unheld-file'),
+          creditTotal: 1
+        }
+      }),
+      buildLedgerEvent({
+        ...OPERATOR_UNHELD,
+        number: 2,
+        payload: {
+          summaryLogId: toSummaryLogFileId('other-test-file'),
+          creditTotal: 1
+        }
+      })
+    ])
+
+    const result = await run(false, {
+      testOrganisationNumbers: [TEST_ORGANISATION, otherTest.organisationNumber]
+    })
+
+    expect(result).toEqual(expect.objectContaining({ removed: [], skipped: 2 }))
+    expect(await countEverywhere(db, UNHELD)).not.toEqual(NOTHING)
+    expect(await countEverywhere(db, otherTest)).not.toEqual(NOTHING)
+  })
+
+  it('counts an organisation it cannot check for citations as failed, and removes nothing of it', async () => {
+    const error = new Error('check failed')
+    const records = createTestOrganisationRecords(db)
+
+    const result = await run(false, {
+      records: { ...records, findCitationsOutside: () => Promise.reject(error) }
+    })
+
+    expect(result).toEqual(expect.objectContaining({ removed: [], failed: 1 }))
+    expect(await countEverywhere(db, UNHELD)).not.toEqual(NOTHING)
+    expect(logger.error).toHaveBeenCalledWith({
+      err: error,
+      message: 'Failed to remove the data of test organisation 999999'
     })
   })
 
-  it('removes everything of a test organisation the read model does not hold at all', async () => {
+  it("counts a ledger whose sources it cannot read as failed, and still removes the organisation's other records", async () => {
+    const error = new Error('sources failed')
+    const records = createTestOrganisationRecords(db)
+    await seedUnnumberedSummaryLogs(db)
+
+    const result = await run(false, {
+      records: {
+        ...records,
+        findSourceIds: (ledger) =>
+          ledger.accreditationNumber === UNHELD.accreditationNumber &&
+          ledger.year === UNHELD.year
+            ? Promise.reject(error)
+            : records.findSourceIds(ledger)
+      }
+    })
+
+    expect(result.failed).toBe(1)
+    expect(await countEverywhere(db, UNHELD)).not.toEqual(NOTHING)
+    expect(await countEverywhere(db, UNHELD_YEAR)).toEqual(NOTHING)
+    expect(result.unnumbered).toHaveLength(1)
+    expect(logger.error).toHaveBeenCalledWith({
+      err: error,
+      message:
+        'Failed to remove test organisation ledger organisationNumber=999999 registrationNumber=TEST-REG-0123 accreditationNumber=test-acc-0123 year=2026'
+    })
+  })
+
+  it('removes a ledger with no year', async () => {
+    const { year: _, ...yearless } = HELD
+    const { year: __, ...yearlessEvent } = buildLedgerEvent({
+      ...yearless,
+      number: 9,
+      payload: { creditTotal: 1 }
+    })
+    await db.collection('waste-balance-events').insertOne(yearlessEvent)
+    await db
+      .collection('summary-log-row-states')
+      .insertOne({ ...yearless, summaryLogIds: [] })
+
+    await run(false)
+
+    for (const name of ['waste-balance-events', 'summary-log-row-states']) {
+      expect(
+        await db
+          .collection(name)
+          .countDocuments({ organisationNumber: TEST_ORGANISATION })
+      ).toBe(0)
+    }
+  })
+
+  it('removes everything of a test organisation epr-organisations does not hold', async () => {
     const absent = {
       ...UNHELD,
       organisationNumber: toOrganisationNumber('888888'),
@@ -633,7 +849,7 @@ describe('removeTestOrganisationData', () => {
       records: { ...records, remove: () => Promise.reject(error) }
     })
 
-    expect(result).toEqual(expect.objectContaining({ removed: [], failed: 4 }))
+    expect(result).toEqual(expect.objectContaining({ removed: [], failed: 6 }))
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
       message:
@@ -649,7 +865,7 @@ describe('removeTestOrganisationData', () => {
     })
 
     expect(result).toEqual(
-      expect.objectContaining({ failed: 0, auditFailed: 4 })
+      expect.objectContaining({ failed: 0, auditFailed: 6 })
     )
     expect(await countEverywhere(db, UNHELD)).toEqual(NOTHING)
     expect(logger.error).toHaveBeenCalledWith({
@@ -661,10 +877,12 @@ describe('removeTestOrganisationData', () => {
 
   it('counts an organisation it cannot read as failed, and removes nothing of it', async () => {
     const error = new Error('read failed')
+    const records = createTestOrganisationRecords(db)
 
     const result = await run(false, {
-      organisationReadRepository: {
-        findByOrganisationNumber: () => Promise.reject(error)
+      records: {
+        ...records,
+        findUnnumberedSummaryLogs: () => Promise.reject(error)
       }
     })
 
@@ -672,7 +890,7 @@ describe('removeTestOrganisationData', () => {
     expect(await countEverywhere(db, UNHELD)).not.toEqual(NOTHING)
     expect(logger.error).toHaveBeenCalledWith({
       err: error,
-      message: 'Failed to remove the invalid data of test organisation 999999'
+      message: 'Failed to remove the data of test organisation 999999'
     })
   })
 })
