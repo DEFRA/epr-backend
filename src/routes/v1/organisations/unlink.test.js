@@ -6,10 +6,8 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import {
-  waitForVersion,
-  createApprovedOrgBuilder
-} from '#summary-logs/test-support.js'
+import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
+import { createApprovedOrgBuilder } from '#summary-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
   asServiceMaintainerRead,

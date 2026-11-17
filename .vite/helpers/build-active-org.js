@@ -1,6 +1,6 @@
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { prepareOrgUpdate } from '#repositories/organisations/contract/test-data.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createApprovedOrgBuilder } from './build-approved-org.js'
 import {
   COMPANY_1_ID,

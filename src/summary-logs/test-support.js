@@ -5,7 +5,6 @@ export {
   summaryLogFactory,
   withoutAccreditationId
 } from '#repositories/summary-logs/contract/test-data.js'
-export { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 export { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 export {
   COLLECTION_NAME,
