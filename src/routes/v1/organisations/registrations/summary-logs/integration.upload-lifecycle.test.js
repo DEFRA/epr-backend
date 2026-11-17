@@ -35,16 +35,12 @@ describe('Summary logs upload lifecycle', () => {
     organisationId = new ObjectId().toString()
     registrationId = new ObjectId().toString()
 
-    const result = await createTestInfrastructure(
-      organisationId,
-      registrationId,
-      {
-        'file-123': {
-          meta: createStandardMeta('REPROCESSOR_INPUT'),
-          data: {}
-        }
+    const result = await createTestInfrastructure({
+      'file-123': {
+        meta: createStandardMeta('REPROCESSOR_INPUT'),
+        data: {}
       }
-    )
+    })
     server = result.server
     summaryLogsRepository = result.summaryLogsRepository
   })

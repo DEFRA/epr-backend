@@ -12,7 +12,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import {
   formatS3Info,
-  idBasedSummaryLogUploadPath,
   isInUploadLocation,
   summaryLogUploadPath
 } from '#domain/uploads/upload-locations.js'
@@ -33,7 +32,7 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
  *
  * @typedef {HapiRequest<UploadCompletedPayload> & {
- *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationNumber: AccreditationNumber | null },
+ *   params: RegistrationParams & { year: Year, summaryLogId: SummaryLogId, accreditationNumber: AccreditationNumber | null },
  *   summaryLogsRepository: SummaryLogsRepository,
  *   summaryLogsWorker: SummaryLogsCommandExecutor
  * }} UploadCompletedRequest
@@ -69,20 +68,15 @@ const numbersFromPath = ({
 }) => ({ organisationNumber, registrationNumber, accreditationNumber })
 
 /**
- * Under the registration's numbers, or its ids for an upload started before
- * uploads moved to numbers.
- *
  * @param {SummaryLogUpload} upload
  * @param {UploadCompletedRequest['params']} params
  * @returns {boolean}
  */
-const isUploadedForRegistration = (upload, params) => {
-  const bucket = config.get('cdpUploader.summaryLogsBucket')
-  return [
-    summaryLogUploadPath(params),
-    idBasedSummaryLogUploadPath(params)
-  ].some((path) => isInUploadLocation(upload, { bucket, path }))
-}
+const isUploadedForRegistration = (upload, params) =>
+  isInUploadLocation(upload, {
+    bucket: config.get('cdpUploader.summaryLogsBucket'),
+    path: summaryLogUploadPath(params)
+  })
 
 /**
  * @param {TypedLogger} logger
