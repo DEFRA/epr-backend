@@ -100,12 +100,14 @@ const withStanding = (registration) => {
   if (registration.standingByDate) {
     return /** @type {any} */ (registration)
   }
-  const lastYear = [
-    ...Object.keys(registration.accreditations),
-    ...registration.status.timeline.map(({ at }) => at)
-  ]
-    .map(utcYearOf)
-    .reduce((latest, year) => (year > latest ? year : latest))
+  const [firstYear, ...years] = [
+    ...registration.status.timeline.map(({ at }) => at),
+    ...Object.keys(registration.accreditations)
+  ].map(utcYearOf)
+  const lastYear = years.reduce(
+    (latest, year) => (year > latest ? year : latest),
+    firstYear
+  )
   return {
     ...registration,
     standingByDate: standingByYear(/** @type {any} */ (registration), lastYear)
