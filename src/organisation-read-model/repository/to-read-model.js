@@ -246,12 +246,18 @@ export function toLinkedDefraOrganisation(linked) {
  * A registration's stored and external accreditations by year, up to the open
  * year. An external accreditation replaces a stored one for the same year.
  *
+ * A stored accreditation holds no overseas sites, so until per-year approvals
+ * come from the registration service an exporter's lists every registration
+ * site, `registrationSites`, with the site's stored approval. An external
+ * accreditation holds its own sites when it is read, so never gets these.
+ *
  * @param {{
  *   openYear: Year
  *   registration: StoredRegistration
  *   organisation: StoredOrganisation
  *   context: Context
  *   externalAccreditations: Record<string, ReprocessorAccreditation | ExporterAccreditation>
+ *   registrationSites?: Record<string, AccreditedOverseasSite>
  * }} options
  * @returns {Record<string, ReprocessorAccreditation | ExporterAccreditation>}
  */
@@ -260,12 +266,20 @@ function accreditationsUpTo({
   registration,
   organisation,
   context,
-  externalAccreditations
+  externalAccreditations,
+  registrationSites
 }) {
   const { registrationNumber } = registration
   const storedAccreditations = keyedRecords(
     accreditationsForRegistration(registration, organisation),
-    (accreditation) => toAccreditationEntry(accreditation, context),
+    (accreditation) => {
+      const entry = toAccreditationEntry(accreditation, context)
+      if (!entry || !registrationSites) {
+        return entry
+      }
+      const [year, stored] = entry
+      return [year, { ...stored, overseasSites: registrationSites }]
+    },
     `Registration ${registrationNumber} accreditation year`,
     context.onDrop
   )
@@ -327,13 +341,22 @@ export function toRegistrationEntry(
     return null
   }
 
+  const isExporter =
+    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+  const overseasSites = isExporter
+    ? toStoredOverseasSites(registration, context)
+    : {}
   const openYear = latestOpenYear(new Date(context.today))
   const accreditations = accreditationsUpTo({
     openYear,
     registration,
     organisation,
     context,
-    externalAccreditations: externalByRegistration.get(registrationNumber) ?? {}
+    externalAccreditations:
+      externalByRegistration.get(registrationNumber) ?? {},
+    registrationSites: isExporter
+      ? mapValues(overseasSites, toAccreditedOverseasSite)
+      : undefined
   })
   const registrationStatus = { current: status, ...statusTimeline }
 
@@ -351,33 +374,25 @@ export function toRegistrationEntry(
     submitterContactDetails: toContact(registration.submitterContactDetails)
   }
 
-  const converted =
-    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-      ? toExporterRegistration(registration, common, accreditations, context)
-      : toReprocessorRegistration(registration, common, accreditations, onDrop)
+  const converted = isExporter
+    ? toExporterRegistration(common, accreditations, overseasSites)
+    : toReprocessorRegistration(registration, common, accreditations, onDrop)
 
   return converted && [registrationNumber, converted]
 }
 
 /**
- * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
  * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
- * @param {Context} context
+ * @param {Record<string, StoredOverseasSite>} overseasSites
  * @returns {ExporterRegistration}
  */
-function toExporterRegistration(registration, common, accreditations, context) {
-  const overseasSites = toStoredOverseasSites(registration, context)
+function toExporterRegistration(common, accreditations, overseasSites) {
   return {
     ...common,
     wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
     overseasSites: mapValues(overseasSites, toOverseasSite),
-    accreditations: withAccreditedSites(
-      accreditations,
-      overseasSites,
-      registration,
-      context.onDrop
-    )
+    accreditations: withAccreditedSites(accreditations)
   }
 }
 
@@ -441,58 +456,18 @@ function withoutOverseasSites(accreditations, registrationNumber, onDrop) {
 }
 
 /**
- * Until per-year approvals come from the registration service, an exporter's
- * accreditation without its own sites lists every registration site with the
- * site's stored approval.
+ * Each exporter accreditation lists the sites it holds, including any the
+ * registration does not, and none when it holds none.
  *
  * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
- * @param {Record<string, StoredOverseasSite>} overseasSites
- * @param {StoredRegistration} registration
- * @param {OnDrop} onDrop
  * @returns {Record<string, ExporterAccreditation>}
  */
-function withAccreditedSites(
-  accreditations,
-  overseasSites,
-  registration,
-  onDrop
-) {
-  const registrationSites = mapValues(overseasSites, toAccreditedOverseasSite)
-  return Object.fromEntries(
-    Object.entries(accreditations).map(([year, accreditation]) => [
-      year,
-      {
-        ...accreditation,
-        overseasSites:
-          'overseasSites' in accreditation
-            ? ownSites(accreditation, year, registration, overseasSites, onDrop)
-            : registrationSites
-      }
-    ])
-  )
-}
-
-/**
- * @param {ExporterAccreditation} accreditation
- * @param {string} year
- * @param {StoredRegistration} registration
- * @param {Record<string, StoredOverseasSite>} overseasSites
- * @param {OnDrop} onDrop
- * @returns {Record<string, AccreditedOverseasSite>}
- */
-function ownSites(accreditation, year, registration, overseasSites, onDrop) {
-  Object.keys(accreditation.overseasSites)
-    .filter((orsId) => !Object.hasOwn(registration.overseasSites ?? {}, orsId))
-    .forEach((orsId) =>
-      onDrop(
-        `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
-      )
-    )
-  return Object.fromEntries(
-    Object.entries(accreditation.overseasSites).filter(([orsId]) =>
-      Object.hasOwn(overseasSites, orsId)
-    )
-  )
+function withAccreditedSites(accreditations) {
+  return mapValues(accreditations, (accreditation) => ({
+    ...accreditation,
+    overseasSites:
+      'overseasSites' in accreditation ? accreditation.overseasSites : {}
+  }))
 }
 
 /**

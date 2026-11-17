@@ -11,6 +11,7 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExternalAccreditationsRepository } from '#external-accreditations/repository/port.js' */
+/** @import { ExporterAccreditation } from '#organisation-read-model/domain/model.js' */
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
@@ -19,6 +20,7 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
  *
  * @typedef {Omit<ExternalAccreditation, 'registrationNumber' | 'year' | 'status'> & {
  *   status: Omit<ExternalAccreditation['status'], 'current'>
+ *   overseasSites?: ExporterAccreditation['overseasSites']
  * }} ExternalAccreditationPayload
  *
  * @typedef {HapiRequest & {
@@ -87,12 +89,16 @@ export const devExternalAccreditationPut = {
         `Organisation ${fields.organisationNumber} holds no registration ${registrationNumber}`
       )
     }
-    if (
-      'overseasSites' in fields &&
-      registration.wasteProcessingType !== WASTE_PROCESSING_TYPE.EXPORTER
-    ) {
+    const isExporter =
+      registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+    if ('overseasSites' in fields && !isExporter) {
       throw Boom.badData(
         `Registration ${registrationNumber} is not an exporter, so its accreditation has no overseas sites`
+      )
+    }
+    if (isExporter && !('overseasSites' in fields)) {
+      throw Boom.badData(
+        `Registration ${registrationNumber} is an exporter, so its accreditation lists its overseas sites`
       )
     }
     const timeline = status.timeline.toSorted((a, b) =>
