@@ -84,8 +84,6 @@
  *   loads?: Loads,
  *   loadsByReportingPeriod?: LoadsByReportingPeriod,
  *   meta?: SummaryLogMeta,
- *   organisationId?: string,
- *   registrationId?: string,
  *   year: Year,
  *   organisationNumber?: OrganisationNumber,
  *   registrationNumber?: RegistrationNumber,

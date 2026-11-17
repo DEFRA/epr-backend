@@ -180,7 +180,6 @@ const numbersForYear = async (
  */
 const insertValidatingLog = async (request, summaryLogId, year, numbers) => {
   const { summaryLogsRepository } = request
-  const { organisationId, registrationId } = request.params
 
   /** @type {NewSummaryLog} */
   const summaryLog = {
@@ -188,8 +187,6 @@ const insertValidatingLog = async (request, summaryLogId, year, numbers) => {
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
     createdAt: new Date().toISOString(),
     file: { id: toSummaryLogFileId(randomUUID()), name: 'summary-log.json' },
-    organisationId,
-    registrationId,
     year,
     ...numbers
   }

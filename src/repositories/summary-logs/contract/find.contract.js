@@ -31,7 +31,7 @@ export const testFindBehaviour = (it) => {
         await repository.insert(
           id,
           summaryLogFactory.validating({
-            organisationId: 'org-holding-file',
+            organisationNumber: 'org-holding-file',
             file: { id: fileId }
           })
         )
@@ -52,21 +52,19 @@ export const testFindBehaviour = (it) => {
         await repository.insert(
           idA,
           summaryLogFactory.validating({
-            organisationId: 'org-1',
-            registrationId: 'reg-1'
+            organisationNumber: 'org-1'
           })
         )
         await repository.insert(
           idB,
           summaryLogFactory.validating({
-            organisationId: 'org-2',
-            registrationId: 'reg-2'
+            organisationNumber: 'org-2'
           })
         )
 
         const result = await repository.findById(idA)
 
-        expect(result.summaryLog.organisationId).toBe('org-1')
+        expect(result.summaryLog.organisationNumber).toBe('org-1')
       })
     })
 
@@ -86,20 +84,20 @@ export const testFindBehaviour = (it) => {
         await repository.insert(
           id,
           summaryLogFactory.validating({
-            organisationId: 'org-holding-file',
+            organisationNumber: 'org-holding-file',
             file: { id: fileId }
           })
         )
         await repository.insert(
           fileId,
-          summaryLogFactory.validating({ organisationId: 'org-other' })
+          summaryLogFactory.validating({ organisationNumber: 'org-other' })
         )
 
         const result = await repository.findByFileId(fileId)
 
         expect(result.version).toBe(1)
         expect(result.summaryLog.file.id).toBe(fileId)
-        expect(result.summaryLog.organisationId).toBe('org-holding-file')
+        expect(result.summaryLog.organisationNumber).toBe('org-holding-file')
       })
 
       it('rejects null file id', async () => {

@@ -78,8 +78,6 @@ export const summaryLogInsertSchema = Joi.object({
     then: fileSchema.optional(),
     otherwise: fileSchema.required()
   }),
-  organisationId: Joi.string().optional(),
-  registrationId: Joi.string().optional(),
   year: yearSchema().required(),
   accreditationId: Joi.string().allow(null).optional(),
   ...numbersSchema,
@@ -115,8 +113,6 @@ export const summaryLogUpdateSchema = Joi.object({
   loads: loadsSchema.optional(),
   loadsByReportingPeriod: loadsByReportingPeriodSchema.optional(),
   file: fileSchema.optional(),
-  organisationId: Joi.string().optional(),
-  registrationId: Joi.string().optional(),
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).optional(),
   submittedAt: Joi.string().isoDate().optional(),

@@ -123,8 +123,7 @@ export const testOptimisticConcurrency = (it) => {
           repository,
           'contract-version-integrity',
           summaryLogFactory.preprocessing({
-            organisationId: 'org-123',
-            registrationId: 'reg-456',
+            organisationNumber: '500123',
             file: buildPendingFile()
           })
         )
@@ -141,8 +140,7 @@ export const testOptimisticConcurrency = (it) => {
         })
 
         expect(updated.version).toBe(2)
-        expect(updated.summaryLog.organisationId).toBe('org-123')
-        expect(updated.summaryLog.registrationId).toBe('reg-456')
+        expect(updated.summaryLog.organisationNumber).toBe('500123')
       })
 
       it('throws conflict with descriptive message for version mismatch', async () => {
