@@ -279,6 +279,20 @@ describe('loading external accreditations', () => {
       })
     })
 
+    it('makes no request to Reg Accred in findAll when there are no organisations', async ({
+      organisationReadRepositoryWith,
+      mongoClient
+    }) => {
+      const requested = serveRegAccred()
+      await organisationReadRepositoryWith({ organisations: [] })
+      const repository = await repositoryWith(mongoClient, options)
+
+      const organisations = await repository.findAll()
+
+      expect(organisations).toStrictEqual([])
+      expect(requested).toStrictEqual([])
+    })
+
     it('makes no request to Reg Accred for a year other than 2027', async ({
       organisationReadRepositoryWith,
       mongoClient

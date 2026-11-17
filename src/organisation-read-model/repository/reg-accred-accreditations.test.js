@@ -62,7 +62,7 @@ const firstPage = { year: '2027', pageNumber: '1', limit: '100' }
  * Serves `GET /v1/accreditations` with `items` on one page, recording each
  * request.
  *
- * @param {object[]} [items]
+ * @param {unknown[]} [items]
  * @param {{ totalItems?: number }} [page]
  * @returns {Request[]} the requests received
  */
@@ -285,6 +285,23 @@ describe('createRegAccredAccreditationsLoader', () => {
 
     expect(dropped).toStrictEqual([
       'Reg Accred accreditation with no number is invalid: "accreditationNumber" is required'
+    ])
+  })
+
+  it('drops and reports an item that is not an accreditation', async () => {
+    serveAccreditations([null, validItem])
+    /** @type {string[]} */
+    const dropped = []
+
+    const accreditations = await loadFor('990001', {
+      onDrop: (message) => dropped.push(message)
+    })
+
+    expect(
+      accreditations.map(({ accreditationNumber }) => accreditationNumber)
+    ).toStrictEqual([validItem.accreditationNumber])
+    expect(dropped).toStrictEqual([
+      'Reg Accred accreditation with no number is invalid: "value" must be of type object'
     ])
   })
 
