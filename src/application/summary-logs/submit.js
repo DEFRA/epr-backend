@@ -47,8 +47,6 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * without its numbers, so these fields are always present.
  * @typedef {SummaryLog & {
  *   createdAt: string
- *   organisationId: string
- *   registrationId: string
  *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  * }} SubmittableSummaryLog
