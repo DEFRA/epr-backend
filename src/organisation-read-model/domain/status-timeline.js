@@ -25,7 +25,8 @@ import {
 /**
  * One status per day, keyed by ISO 8601 date (ADR-0051).
  *
- * @typedef {Record<CalendarDate, { status: string }>} DailyTimeline
+ * @template {string} S
+ * @typedef {Record<CalendarDate, { status: S }>} DailyTimeline
  */
 
 /**
@@ -45,7 +46,7 @@ export const firstApprovedAt = (timeline) =>
 const yearsIn = ({ from, to }) => yearsFromTo(utcYearOf(from), utcYearOf(to))
 
 /**
- * @param {DailyTimeline} daily
+ * @param {DailyTimeline<string>} daily
  * @param {CalendarDate} date
  * @returns {CalendarDate[]}
  */
@@ -67,8 +68,9 @@ const rangeEnd = (nextDate, date) => (nextDate ? dayBefore(nextDate) : date)
 /**
  * The status at the end of each UTC day with a change.
  *
- * @param {StatusChanges} timeline
- * @returns {DailyTimeline}
+ * @template {string} S
+ * @param {StatusTimeline<S>} timeline
+ * @returns {DailyTimeline<S>}
  */
 const dailyTimeline = (timeline) =>
   Object.fromEntries(
