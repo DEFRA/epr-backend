@@ -16,6 +16,12 @@
  */
 
 /**
+ * An organisation as linking and user management read it: its summary, link,
+ * users, status history and the version a write must name.
+ * @typedef {OrganisationSummary & Pick<Organisation, 'linkedDefraOrganisation' | 'users' | 'statusHistory' | 'version'>} ManagedOrganisation
+ */
+
+/**
  * Linking organisations to Defra ID organisations and managing their users.
  * Kept apart from the administration port, which serves the registration and
  * accreditation context.
@@ -24,7 +30,7 @@
  * @property {(organisationNumber: OrganisationNumber, version: number, linkedDefraOrganisation: StoredLinkedDefraOrganisation) => Promise<void>} linkDefraOrganisation - Link the organisation to a Defra organisation and make it active. Throws 409 when the stored version is not `version`
  * @property {(organisationNumber: OrganisationNumber, version: number) => Promise<void>} unlinkDefraOrganisation - Remove the organisation's link to a Defra organisation, leaving its status as it is. Throws 409 when the stored version is not `version`
  * @property {(organisationNumber: OrganisationNumber, version: number, users: CollatedUser[]) => Promise<void>} replaceUsers - Replace the organisation's users with `users`, which must be the full list. Throws 409 when the stored version is not `version`
- * @property {(organisationNumber: OrganisationNumber, minimumVersion?: number) => Promise<(OrganisationSummary & Pick<Organisation, 'linkedDefraOrganisation'>)|null>} findByOrganisationNumber - Find the organisation with this number, with its link. With `minimumVersion`, waits for that version to be readable, and throws 500 if it never is
+ * @property {(organisationNumber: OrganisationNumber, minimumVersion?: number) => Promise<ManagedOrganisation|null>} findByOrganisationNumber - Find the organisation with this number. With `minimumVersion`, waits for that version to be readable, and throws 500 if it never is
  * @property {(defraOrgId: string) => Promise<LinkedOrganisationSummary|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
  * @property {(filter?: { name?: string }) => Promise<LinkedOrganisationSummary[]>} findAllLinked - Find all organisations linked to a Defra organisation, optionally filtered by name
  * @property {(email: string) => Promise<OrganisationSummary[]>} findAllLinkableForUser - Find unlinked approved organisations where user is an initial user
