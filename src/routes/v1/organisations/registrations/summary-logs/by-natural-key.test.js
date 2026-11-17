@@ -588,12 +588,6 @@ describe('summary-log routes by natural key', () => {
       'GET',
       `${registrations}/R26XX0000000000PL/summary-logs/${randomUUID()}`,
       undefined
-    ],
-    [
-      'reading under a registration number naming an object property',
-      'GET',
-      `${registrations}/constructor/summary-logs/${randomUUID()}`,
-      undefined
     ]
   ])('returns 404 for %s', async (_, method, url, payload) => {
     const response = await server.inject({

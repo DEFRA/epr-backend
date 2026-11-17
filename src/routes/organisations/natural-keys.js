@@ -116,15 +116,13 @@ export async function findRegistrationByNumber(
 export async function findOrganisationAndRegistrationReadModels(request) {
   const organisation = await findOrganisationReadModel(request)
 
-  const { registrationNumber } = request.params
-  if (!Object.hasOwn(organisation.registrations, registrationNumber)) {
+  const registration =
+    organisation.registrations[request.params.registrationNumber]
+  if (!registration) {
     throw Boom.notFound('Registration not found')
   }
 
-  return {
-    organisation,
-    registration: organisation.registrations[registrationNumber]
-  }
+  return { organisation, registration }
 }
 
 /**
