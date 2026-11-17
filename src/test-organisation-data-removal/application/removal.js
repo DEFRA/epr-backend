@@ -39,9 +39,16 @@ export const REMOVAL_ACTION = 'test-organisation-data-removal'
  * @typedef {Object} RemovalResult
  * @property {RemovedLedger[]} removed - each ledger removed (would be, on a dry run)
  * @property {RemovedUnnumberedSummaryLogs[]} unnumbered - each organisation's summary logs removed from under its database id (would be, on a dry run)
- * @property {number} skipped - organisations left whole, because a record outside the test organisations cites one they would remove
+ * @property {number} skipped - organisations left whole, because a record the removal keeps cites one they would remove
  * @property {number} failed - organisations, ledgers or unnumbered summary logs not fully removed; retried on the next run
- * @property {number} auditFailed - ledgers removed but not audited
+ * @property {number} auditFailed - ledgers or unnumbered summary logs removed but not audited
+ */
+
+/**
+ * @typedef {Object} Holdings
+ * @property {OrganisationNumber} organisationNumber
+ * @property {Ledger[]} ledgers
+ * @property {UnnumberedSummaryLogs | undefined} unnumbered
  */
 
 /**
@@ -164,14 +171,24 @@ const clearLedger = async (records, ledger, isDryRun) => {
  */
 const removeLedger = async (dependencies, ledger, isDryRun, result) => {
   const { records, logger } = dependencies
-  const sources = await records.findSourceIds(ledger)
-  const { counts, error } = await clearLedger(records, ledger, isDryRun)
-  if (error) {
+  /** @param {Error} error */
+  const fail = (error) => {
     logger.error({
       err: error,
       message: `Failed to remove test organisation ledger ${describeLedger(ledger)}`
     })
     result.failed++
+  }
+  let sources
+  try {
+    sources = await records.findSourceIds(ledger)
+  } catch (error) {
+    fail(error)
+    return
+  }
+  const { counts, error } = await clearLedger(records, ledger, isDryRun)
+  if (error) {
+    fail(error)
   }
   if (!holdsAny(counts)) {
     return
@@ -241,48 +258,105 @@ const removeUnnumberedSummaryLogs = async (
 
 /**
  * @param {Dependencies} dependencies
- * @param {OrganisationNumber} organisationNumber
- * @param {boolean} isDryRun
  * @param {RemovalResult} result
+ * @returns {Promise<Holdings[]>} each test organisation that holds any records
  */
-const removeFromOrganisation = async (
-  dependencies,
-  organisationNumber,
-  isDryRun,
+const findHoldings = async (
+  { testOrganisationNumbers, records, logger },
   result
 ) => {
-  const { records, logger } = dependencies
-  const ledgers = await records.findLedgers(organisationNumber)
-  const unnumbered = await records.findUnnumberedSummaryLogs(organisationNumber)
-  if (ledgers.length === 0 && !unnumbered) {
-    return
+  /** @type {Holdings[]} */
+  const holdings = []
+  for (const organisationNumber of testOrganisationNumbers) {
+    try {
+      const ledgers = await records.findLedgers(organisationNumber) // NOSONAR(javascript:S9382) one organisation at a time, to spare the database
+      const unnumbered =
+        await records.findUnnumberedSummaryLogs(organisationNumber) // NOSONAR(javascript:S9382) one organisation at a time, to spare the database
+      if (ledgers.length > 0 || unnumbered) {
+        holdings.push({ organisationNumber, ledgers, unnumbered })
+      }
+    } catch (error) {
+      logger.error({
+        err: error,
+        message: `Failed to remove the data of test organisation ${organisationNumber}`
+      })
+      result.failed++
+    }
   }
+  return holdings
+}
 
-  const citations = await records.findCitationsOutside(
-    organisationNumber,
-    unnumbered?.summaryLogIds ?? [],
-    [...dependencies.testOrganisationNumbers]
-  )
-  if (citations.length > 0) {
+/**
+ * @param {Dependencies} dependencies
+ * @param {Holdings} holdings
+ * @param {OrganisationNumber[]} removedOrganisationNumbers
+ * @param {RemovalResult} result
+ * @returns {Promise<boolean>} whether a record the removal keeps cites one the organisation would remove
+ */
+const isCited = async (
+  { records, logger },
+  { organisationNumber, unnumbered },
+  removedOrganisationNumbers,
+  result
+) => {
+  try {
+    const citations = await records.findCitationsOutside(
+      organisationNumber,
+      unnumbered?.summaryLogIds ?? [],
+      removedOrganisationNumbers
+    )
+    if (citations.length === 0) {
+      return false
+    }
     logger.error({
-      message: `Skipping test organisation ${organisationNumber}: records outside the test organisations cite a summary log or PRN it would remove: ${describeCitations(citations)}`
+      message: `Skipping test organisation ${organisationNumber}: records the removal keeps cite a summary log or PRN it would remove: ${describeCitations(citations)}`
     })
     result.skipped++
-    return
+  } catch (error) {
+    logger.error({
+      err: error,
+      message: `Failed to remove the data of test organisation ${organisationNumber}`
+    })
+    result.failed++
   }
+  return true
+}
 
-  for (const ledger of ledgers) {
-    await removeLedger(dependencies, ledger, isDryRun, result) // NOSONAR(javascript:S9382) one ledger at a time, to spare the database
-  }
-  if (unnumbered) {
-    await removeUnnumberedSummaryLogs(
-      dependencies,
-      organisationNumber,
-      unnumbered,
-      isDryRun,
-      result
+/**
+ * Keeps back each organisation that a record the removal keeps cites. A kept
+ * organisation's records are kept too, so the check repeats until it keeps
+ * back no more.
+ *
+ * @param {Dependencies} dependencies
+ * @param {Holdings[]} holdings
+ * @param {RemovalResult} result
+ * @returns {Promise<Holdings[]>} the organisations safe to remove
+ */
+const uncited = async (dependencies, holdings, result) => {
+  let removable = holdings
+  let keptBack
+  do {
+    const removedOrganisationNumbers = removable.map(
+      ({ organisationNumber }) => organisationNumber
     )
-  }
+    /** @type {Holdings[]} */
+    const next = []
+    for (const organisation of removable) {
+      if (
+        !(await isCited(
+          dependencies,
+          organisation,
+          removedOrganisationNumbers,
+          result
+        )) // NOSONAR(javascript:S9382) one organisation at a time, to spare the database
+      ) {
+        next.push(organisation)
+      }
+    }
+    keptBack = next.length < removable.length
+    removable = next
+  } while (keptBack)
+  return removable
 }
 
 /**
@@ -308,19 +382,20 @@ export const removeTestOrganisationData = async (
     auditFailed: 0
   }
 
-  /** @param {OrganisationNumber} organisationNumber */
-  const removeFrom = (organisationNumber) =>
-    removeFromOrganisation(dependencies, organisationNumber, isDryRun, result)
-
-  for (const organisationNumber of dependencies.testOrganisationNumbers) {
-    try {
-      await removeFrom(organisationNumber) // NOSONAR(javascript:S9382) one organisation at a time, to spare the database
-    } catch (error) {
-      dependencies.logger.error({
-        err: error,
-        message: `Failed to remove the data of test organisation ${organisationNumber}`
-      })
-      result.failed++
+  const holdings = await findHoldings(dependencies, result)
+  const removable = await uncited(dependencies, holdings, result)
+  for (const { organisationNumber, ledgers, unnumbered } of removable) {
+    for (const ledger of ledgers) {
+      await removeLedger(dependencies, ledger, isDryRun, result) // NOSONAR(javascript:S9382) one ledger at a time, to spare the database
+    }
+    if (unnumbered) {
+      await removeUnnumberedSummaryLogs(
+        dependencies,
+        organisationNumber,
+        unnumbered,
+        isDryRun,
+        result
+      )
     }
   }
 

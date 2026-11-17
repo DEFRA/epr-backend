@@ -96,7 +96,13 @@ const testOrganisation = {
   statusHistory: approved,
   submittedToRegulator: 'ea',
   submitterContactDetails: contact,
-  users: [],
+  users: [
+    {
+      email: 'tester@example.com',
+      fullName: 'A Tester',
+      roles: ['standard_user']
+    }
+  ],
   version: 1,
   accreditations: [
     {
@@ -636,7 +642,7 @@ describe('removeTestOrganisationData', () => {
     })
     expect(logger.error).toHaveBeenCalledWith({
       message:
-        'Skipping test organisation 999999: records outside the test organisations cite a summary log or PRN it would remove: events=1 rowStates=0 reports=0' +
+        'Skipping test organisation 999999: records the removal keeps cite a summary log or PRN it would remove: events=1 rowStates=0 reports=0' +
         `; events id=${insertedId} organisationNumber=100234 registrationNumber=OPERATOR-REG accreditationNumber=OPERATOR-ACC year=2026`
     })
   })
@@ -715,6 +721,85 @@ describe('removeTestOrganisationData', () => {
     expect(result.skipped).toBe(0)
     expect(await countEverywhere(db, UNHELD)).toEqual(NOTHING)
     expect(await countEverywhere(db, otherTest)).toEqual(NOTHING)
+  })
+
+  it("skips a test organisation whose records a skipped test organisation's records cite", async () => {
+    const otherTest = {
+      ...UNHELD,
+      organisationNumber: toOrganisationNumber('888888'),
+      registrationNumber: toRegistrationNumber('OTHER-TEST-REG'),
+      accreditationNumber: toAccreditationNumber('OTHER-TEST-ACC')
+    }
+    await seedSummaryLog(db, 'other-test', otherTest)
+    await db.collection('waste-balance-events').insertMany([
+      buildLedgerEvent({
+        ...otherTest,
+        number: 2,
+        payload: {
+          summaryLogId: toSummaryLogFileId('unheld-file'),
+          creditTotal: 1
+        }
+      }),
+      buildLedgerEvent({
+        ...OPERATOR_UNHELD,
+        number: 2,
+        payload: {
+          summaryLogId: toSummaryLogFileId('other-test-file'),
+          creditTotal: 1
+        }
+      })
+    ])
+
+    const result = await run(false, {
+      testOrganisationNumbers: [TEST_ORGANISATION, otherTest.organisationNumber]
+    })
+
+    expect(result).toEqual(expect.objectContaining({ removed: [], skipped: 2 }))
+    expect(await countEverywhere(db, UNHELD)).not.toEqual(NOTHING)
+    expect(await countEverywhere(db, otherTest)).not.toEqual(NOTHING)
+  })
+
+  it('counts an organisation it cannot check for citations as failed, and removes nothing of it', async () => {
+    const error = new Error('check failed')
+    const records = createTestOrganisationRecords(db)
+
+    const result = await run(false, {
+      records: { ...records, findCitationsOutside: () => Promise.reject(error) }
+    })
+
+    expect(result).toEqual(expect.objectContaining({ removed: [], failed: 1 }))
+    expect(await countEverywhere(db, UNHELD)).not.toEqual(NOTHING)
+    expect(logger.error).toHaveBeenCalledWith({
+      err: error,
+      message: 'Failed to remove the data of test organisation 999999'
+    })
+  })
+
+  it("counts a ledger whose sources it cannot read as failed, and still removes the organisation's other records", async () => {
+    const error = new Error('sources failed')
+    const records = createTestOrganisationRecords(db)
+    await seedUnnumberedSummaryLogs(db)
+
+    const result = await run(false, {
+      records: {
+        ...records,
+        findSourceIds: (ledger) =>
+          ledger.accreditationNumber === UNHELD.accreditationNumber &&
+          ledger.year === UNHELD.year
+            ? Promise.reject(error)
+            : records.findSourceIds(ledger)
+      }
+    })
+
+    expect(result.failed).toBe(1)
+    expect(await countEverywhere(db, UNHELD)).not.toEqual(NOTHING)
+    expect(await countEverywhere(db, UNHELD_YEAR)).toEqual(NOTHING)
+    expect(result.unnumbered).toHaveLength(1)
+    expect(logger.error).toHaveBeenCalledWith({
+      err: error,
+      message:
+        'Failed to remove test organisation ledger organisationNumber=999999 registrationNumber=TEST-REG-0123 accreditationNumber=test-acc-0123 year=2026'
+    })
   })
 
   it('removes a ledger with no year', async () => {

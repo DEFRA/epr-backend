@@ -61,7 +61,8 @@ const runRemoval = async (server) => {
 /**
  * Startup removal of every record test organisations hold, keeping the
  * organisations themselves. Flag off (the default) only reports what it would
- * remove; on removes it, auditing each ledger. Both modes log one summary
+ * remove; on removes it, auditing each ledger and the summary logs under each
+ * organisation's database id. Both modes log one summary
  * line, and an error for each failure. It is removed once it has run.
  *
  * @param {StartedServer} server
