@@ -72,8 +72,8 @@ const buildIssueLogPayload = (issue, summaryLogId) => {
  *   counts: ValidationIssueCounts,
  *   logged: number,
  *   summaryLogId: string,
- *   organisationId: string,
- *   registrationId: string
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber
  * }} params
  * @returns {IndexedLogProperties}
  */
@@ -81,10 +81,10 @@ const buildSummaryLogPayload = ({
   counts,
   logged,
   summaryLogId,
-  organisationId,
-  registrationId
+  organisationNumber,
+  registrationNumber
 }) => ({
-  message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} total=${counts.total} logged=${logged} org=${organisationId} reg=${registrationId}`,
+  message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} total=${counts.total} logged=${logged} organisationNumber=${organisationNumber} registrationNumber=${registrationNumber}`,
   event: {
     kind: 'event',
     category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -125,8 +125,8 @@ export const logValidationIssues = ({
       counts: issues.getCounts(),
       logged: issuesToLog.length,
       summaryLogId,
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId
+      organisationNumber: summaryLog.organisationNumber,
+      registrationNumber: summaryLog.registrationNumber
     })
   )
 }

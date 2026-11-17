@@ -23,8 +23,8 @@ describe('logValidationIssues', () => {
   })
 
   const summaryLog = /** @type {SubmittedSummaryLog} */ ({
-    organisationId: 'org-123',
-    registrationId: 'reg-456',
+    organisationNumber: '500123',
+    registrationNumber: 'R25SR500030912PA',
     file: {
       id: 'file-1',
       name: 'test.xlsx',
