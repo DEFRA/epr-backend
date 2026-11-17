@@ -371,7 +371,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     ).mockImplementation(async (...args) => {
       const organisation = await findByOrganisationNumber(...args)
       assert(organisation)
-      const registration = organisation.registrations['REG-123']
+      const registration = organisation.registrations['REG123']
       registration.accreditations = accreditationsOf(registration)
       return organisation
     })

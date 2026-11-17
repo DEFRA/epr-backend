@@ -37,7 +37,9 @@ import {
   pollWhileStatus,
   REPROCESSOR_RECEIVED_HEADERS,
   REPROCESSOR_SENT_ON_HEADERS,
-  setupWasteBalanceIntegrationEnvironment
+  setupWasteBalanceIntegrationEnvironment,
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 
@@ -218,7 +220,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
             detectedContentType:
               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             s3Bucket: 're-ex-summary-logs',
-            s3Key: `/organisations/${organisationId}/registrations/${registrationId}/${fileId}/waste-data.xlsx`
+            s3Key: `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/${fileId}/waste-data.xlsx`
           }
         },
         numberOfRejectedFiles: 0
