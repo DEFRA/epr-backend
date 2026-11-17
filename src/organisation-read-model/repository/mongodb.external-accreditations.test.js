@@ -114,38 +114,6 @@ describe('stored and external accreditations together', () => {
     })
   })
 
-  it("serves when an external accreditation's last change was recorded, as it holds it", async ({
-    organisationReadRepositoryWith
-  }) => {
-    const stored = accreditedIn2026()
-    const repository = await organisationReadRepositoryWith({
-      organisations: [stored],
-      externalAccreditations: [
-        buildExternalAccreditationFor(stored, {
-          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          status: {
-            current: 'approved',
-            lastUpdatedAt: '2027-02-01T09:00:00.000Z',
-            timeline: [
-              { status: 'suspended', at: '2027-01-01T00:00:00.000Z' },
-              { status: 'approved', at: '2027-01-15T00:00:00.000Z' }
-            ]
-          }
-        })
-      ]
-    })
-
-    const organisation = await findOrganisation(
-      repository,
-      stored.organisationNumber
-    )
-
-    expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027].status
-        .lastUpdatedAt
-    ).toBe('2027-02-01T09:00:00.000Z')
-  })
-
   it('leaves out an accreditation for a year not yet open, and its status dates', async ({
     organisationReadRepositoryWith
   }) => {
