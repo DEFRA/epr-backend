@@ -184,16 +184,17 @@ export const STANDING = Object.freeze({
 /**
  * A suspended accreditation is still accredited.
  *
- * @type {ReadonlySet<string>}
+ * @type {ReadonlySet<AccreditationStatus>}
  */
 export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
 
 /**
  * The status at the end of the latest day on or before `date`.
  *
- * @param {StatusTimeline<string>} timeline
+ * @template {string} S
+ * @param {StatusTimeline<S>} timeline
  * @param {CalendarDate} date - ISO 8601 date
- * @returns {string | undefined}
+ * @returns {S | undefined}
  */
 export const statusOn = (timeline, date) =>
   timeline.findLast(({ at }) => calendarDate(at).localeCompare(date) <= 0)
