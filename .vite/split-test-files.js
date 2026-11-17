@@ -11,7 +11,7 @@ const leaksStateUndetected = new Set([
   'src/waste-records/application/project-summary-log-row-state.test.js'
 ])
 
-const testSupport = /\.contract\.js$|test-helpers/
+const testSupport = /\.contract\.js$|test-helpers|test-support\.js$/
 
 const aliases = Object.entries(
   JSON.parse(readFileSync('package.json', 'utf8')).imports

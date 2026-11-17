@@ -38,6 +38,7 @@ export default defineConfig({
         '**/*.port.js',
         '**/*.sh',
         '**/*-test-helpers.js',
+        '**/test-support.js',
         '**/*.xlsx',
         '**/.DS_Store',
         '**/types.js',
