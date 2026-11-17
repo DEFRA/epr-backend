@@ -346,7 +346,7 @@ describe('2027 summary logs', () => {
       const validated = await upload(env, ids, {
         meta: {
           REGISTRATION_NUMBER: {
-            value: 'REG-123',
+            value: 'REG123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {

@@ -159,66 +159,17 @@ describe('mongodb external accreditations repository', () => {
     })
   })
 
-  describe('remove', () => {
-    it('returns the removed accreditation', async ({
-      externalAccreditationsRepository
-    }) => {
-      const accreditation = buildExternalAccreditation()
-      await externalAccreditationsRepository.upsert(accreditation)
-
-      const removed = await externalAccreditationsRepository.remove(
-        registrationNumber,
-        year
-      )
-
-      expect(removed).toStrictEqual(accreditation)
-    })
-
-    it('leaves the accreditations held for other years', async ({
-      externalAccreditationsRepository,
-      held
-    }) => {
-      const followingYear = buildExternalAccreditation({ year: nextYear })
-      await externalAccreditationsRepository.upsert(
-        buildExternalAccreditation()
-      )
-      await externalAccreditationsRepository.upsert(followingYear)
-
-      await externalAccreditationsRepository.remove(registrationNumber, year)
-
-      expect(await held()).toStrictEqual([followingYear])
-    })
-
-    it('matches the registration number trimmed and upper-cased, as it is held', async ({
-      externalAccreditationsRepository,
-      held
-    }) => {
-      await externalAccreditationsRepository.upsert(
-        buildExternalAccreditation()
-      )
-
-      await externalAccreditationsRepository.remove(
-        toRegistrationNumber(` ${registrationNumber.toLowerCase()} `),
-        year
-      )
-
-      expect(await held()).toStrictEqual([])
-    })
-
-    it('returns null when no accreditation is held for the year', async ({
-      externalAccreditationsRepository
-    }) => {
-      expect(
-        await externalAccreditationsRepository.remove(registrationNumber, year)
-      ).toBeNull()
-    })
-  })
-
   describe('validation', () => {
     it.for([
       {
         description: 'a year the service holds no data for',
         accreditation: buildExternalAccreditation({ year: toYear(2023) })
+      },
+      {
+        description: 'no organisation number',
+        accreditation: buildExternalAccreditation({
+          organisationNumber: /** @type {any} */ (undefined)
+        })
       },
       {
         description: 'no accreditation number',
@@ -311,7 +262,7 @@ describe('mongodb external accreditations repository', () => {
     )
   })
 
-  it('holds one accreditation per registration and year', async ({
+  it('holds one accreditation per organisation, registration and year', async ({
     database
   }) => {
     await createMongoExternalAccreditationsRepository(database)
@@ -322,9 +273,26 @@ describe('mongodb external accreditations repository', () => {
 
     expect(indexes).toContainEqual(
       expect.objectContaining({
-        key: { registrationNumber: 1, year: 1 },
+        key: { organisationNumber: 1, registrationNumber: 1, year: 1 },
         unique: true
       })
     )
+  })
+
+  it('drops the registration and year index it replaces', async ({
+    database
+  }) => {
+    const collection = database.collection(
+      EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
+    )
+    await collection.createIndex(
+      { registrationNumber: 1, year: 1 },
+      { name: 'registration_year', unique: true }
+    )
+
+    await createMongoExternalAccreditationsRepository(database)
+
+    const names = (await collection.indexes()).map(({ name }) => name)
+    expect(names).not.toContain('registration_year')
   })
 })
