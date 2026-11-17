@@ -13,11 +13,11 @@ export const externalAccreditationPayloadSchema = Joi.object({
     tonnageBand: tonnageBandSchema.required()
   }).required(),
   status: Joi.object({
+    lastUpdatedAt: isoDateTimeString().required(),
     timeline: Joi.array()
       .items(
         Joi.object({
           at: isoDateTimeString().required(),
-          updatedAt: isoDateTimeString().required(),
           status: Joi.string()
             .valid(...ACCREDITATION_STATUSES)
             .required()

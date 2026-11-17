@@ -18,7 +18,6 @@ import { standingByYear } from '#organisation-read-model/domain/registration-sta
 import { accreditationsForRegistration } from './accreditations-for-registration.js'
 import { organisationInYear } from './organisation-in-year.js'
 import {
-  timelineStatusOf,
   toAccreditationStatusTimeline,
   toOrganisationStatusTimeline,
   toRegistrationStatusTimeline
@@ -31,7 +30,7 @@ import {
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress, AccreditationStatus } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -48,16 +47,12 @@ import {
 
 /**
  * A registration's accreditation for a year, held outside the REEX database,
- * as it is stored: each change carries when it was recorded.
+ * in the read model's shape, with the registration and year it is for.
  *
- * @typedef {(Omit<ReprocessorAccreditation, 'status'> | Omit<ExporterAccreditation, 'status'>) & {
+ * @typedef {(ReprocessorAccreditation | ExporterAccreditation) & {
  *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  *   year: Year
- *   status: {
- *     current: AccreditationStatus
- *     timeline: { status: AccreditationStatus, at: string, updatedAt: string }[]
- *   }
  * }} ExternalAccreditation
  */
 
@@ -77,22 +72,17 @@ const toAccreditationEntryOfYear = (
     organisationNumber: _organisationNumber,
     registrationNumber,
     year,
-    status: { current, timeline },
     ...accreditation
   },
   onDrop
 ) => {
-  const statusTimeline = timelineStatusOf(timeline)
-  if (!statusTimeline) {
+  if (accreditation.status.timeline.length === 0) {
     onDrop(
       `Registration ${registrationNumber} external accreditation year ${year} has no status changes`
     )
     return null
   }
-  return [
-    String(year),
-    { ...accreditation, status: { current, ...statusTimeline } }
-  ]
+  return [String(year), accreditation]
 }
 
 /**
@@ -513,7 +503,7 @@ function ownSites(accreditation, year, registration, overseasSites, onDrop) {
  * @param {Context} context
  * @returns {[string, AccreditationCommon] | null}
  */
-export function toAccreditationEntry(accreditation, { onDrop }) {
+function toAccreditationEntry(accreditation, { onDrop }) {
   const { accreditationNumber, prnIssuance, status } = accreditation
   // Not served by design, so not logged
   if (!isOneOf(ACCREDITATION_STATUSES, status)) {
