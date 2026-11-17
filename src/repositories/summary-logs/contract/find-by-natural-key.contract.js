@@ -14,7 +14,8 @@ import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 /**
  * @import { TestAPI } from 'vitest'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { KeyedSummaryLogWithId, NewSummaryLog, SummaryLogsRepository } from '../port.js'
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
+ * @import { KeyedSummaryLogWithId, SummaryLogsRepository } from '../port.js'
  *
  * @typedef {{ summaryLogsRepository: SummaryLogsRepository }} NaturalKeyFixtures
  */
@@ -43,11 +44,9 @@ const aRegistration = () => {
       registrationId: new ObjectId().toString()
     },
     current: {
-      id: new ObjectId().toString(),
       accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
     },
     previous: {
-      id: new ObjectId().toString(),
       accreditationNumber: toAccreditationNumber(uniqueNumber('ACC'))
     }
   }
@@ -78,7 +77,7 @@ export const testFindByNaturalKey = (it) => {
      * Stores a summary log under the registration's ids and numbers, as an
      * upload does.
      *
-     * @param {Omit<NewSummaryLog, 'organisationId' | 'registrationId'>} summaryLog
+     * @param {SummaryLog} summaryLog
      * @param {ReturnType<typeof aRegistration>} [registration]
      */
     const insert = async (summaryLog, registration = stored) => {
@@ -91,13 +90,10 @@ export const testFindByNaturalKey = (it) => {
       return id
     }
 
-    /** @param {{ id: string, accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber }} accreditation */
-    const accredited = ({ id, accreditationNumber }) => ({
-      accreditationId: id,
-      accreditationNumber
-    })
+    /** @param {{ accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber }} accreditation */
+    const accredited = ({ accreditationNumber }) => ({ accreditationNumber })
 
-    const registeredOnly = { accreditationId: null, accreditationNumber: null }
+    const registeredOnly = { accreditationNumber: null }
 
     describe('refusing a key without its numbers', () => {
       for (const missing of ['organisationNumber', 'registrationNumber']) {

@@ -5,13 +5,6 @@
 /** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
 
 /**
- * A summary log as it is stored. One uploaded for an accreditation the
- * organisation read model holds outside this service has no accreditation id.
- *
- * @typedef {SummaryLog & { accreditationId?: string | null }} NewSummaryLog
- */
-
-/**
  * A summary log document as the collection may hold it, before it is read
  * into one of the shapes the domain declares. Older ones hold database ids.
  *
@@ -91,7 +84,7 @@
 
 /**
  * @typedef {Object} SummaryLogsRepository
- * @property {(id: SummaryLogId, summaryLog: NewSummaryLog) => Promise<void>} insert
+ * @property {(id: SummaryLogId, summaryLog: SummaryLog) => Promise<void>} insert
  * @property {(id: SummaryLogId, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: SummaryLogId) => Promise<SummaryLogVersion|null>} findById
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records

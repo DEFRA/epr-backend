@@ -30,6 +30,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 
@@ -172,7 +173,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asServiceMaintainer()
       })
 
@@ -217,7 +218,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asServiceMaintainer()
       })
 
@@ -236,6 +237,16 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
   })
 
   describe('year', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-16') })
+      config.set('openNextYear', true)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      config.reset('openNextYear')
+    })
+
     it('names the download by the year', async () => {
       const server = await createServerWithRepos()
 
@@ -285,7 +296,21 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       expect(response.payload).not.toContain('1001')
     })
 
-    it.each(['2023', '2101', 'next'])(
+    it('returns 422 when no year is given', async () => {
+      const server = await createServerWithRepos()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: getWasteRecordsExportPath,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it.each(['2023', '2024', '2025', '2028', '2101', 'next'])(
       'returns 422 for year %s, which the service does not serve',
       async (year) => {
         const server = await createServerWithRepos()
@@ -301,6 +326,21 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       }
     )
+
+    it('returns 422 for next year while it is not open', async () => {
+      config.set('openNextYear', false)
+      const server = await createServerWithRepos()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${getWasteRecordsExportPath}?year=2027`,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
   })
 
   describe('scoping', () => {
@@ -315,7 +355,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `${getWasteRecordsExportPath}?${query}`,
+        url: `${getWasteRecordsExportPath}?year=2026&${query}`,
         ...asServiceMaintainer()
       })
 
@@ -335,7 +375,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asServiceMaintainer()
       })
 
@@ -356,7 +396,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath
+        url: `${getWasteRecordsExportPath}?year=2026`
       })
 
       await server.stop()
@@ -369,7 +409,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asOperator()
       })
 

@@ -7,16 +7,12 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import {
-  servesOrganisationOn,
-  toRegistrationEntry
-} from '#organisation-read-model/repository/to-read-model.js'
+import { servesOrganisationOn } from '#organisation-read-model/repository/to-read-model.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Organisation } from '#domain/organisations/model.js'
- * @import { Registration } from '#domain/organisations/registration.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
@@ -45,16 +41,6 @@ export const registrationParams = {
 }
 
 /**
- * Finding a record needs only its key. Overseas sites and the reasons a record
- * is not served matter to the view alone.
- */
-const lookupContext = () => ({
-  onDrop: () => {},
-  overseasSitesById: new Map(),
-  today: toCalendarDate(new Date())
-})
-
-/**
  * Finds the stored organisation a route names by its number. Only an
  * organisation the organisation read model serves can be found.
  *
@@ -72,42 +58,11 @@ export async function findOrganisationByNumber(
     )
   if (
     !organisation ||
-    !servesOrganisationOn(organisation, lookupContext().today)
+    !servesOrganisationOn(organisation, toCalendarDate(new Date()))
   ) {
     throw Boom.notFound('Organisation not found')
   }
   return organisation
-}
-
-/**
- * Finds the stored registration a route names by its natural keys. Only a
- * registration the organisation read model serves can be found, so a link
- * built from the read model resolves and nothing else does.
- *
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
- * @param {OrganisationNumber} organisationNumber
- * @param {RegistrationNumber} registrationNumber
- * @returns {Promise<{ organisation: Organisation, registration: Registration }>}
- */
-export async function findRegistrationByNumber(
-  organisationAdministrationRepository,
-  organisationNumber,
-  registrationNumber
-) {
-  const organisation = await findOrganisationByNumber(
-    organisationAdministrationRepository,
-    organisationNumber
-  )
-
-  const registration = servedRegistrationByNumber(
-    organisation,
-    registrationNumber
-  )
-  if (!registration) {
-    throw Boom.notFound('Registration not found')
-  }
-
-  return { organisation, registration }
 }
 
 /**
@@ -150,22 +105,4 @@ export async function findOrganisationReadModel({
     throw Boom.notFound('Organisation not found')
   }
   return organisation
-}
-
-/**
- * A number shared by more than one served registration names none of them.
- * Only registrations with the number are read, so a record the read model
- * cannot show elsewhere in the organisation does not stop the lookup.
- *
- * @param {Organisation} organisation
- * @param {RegistrationNumber} registrationNumber
- * @returns {Registration | null}
- */
-function servedRegistrationByNumber(organisation, registrationNumber) {
-  const served = organisation.registrations.filter(
-    (candidate) =>
-      candidate.registrationNumber === registrationNumber &&
-      toRegistrationEntry(candidate, organisation, lookupContext()) !== null
-  )
-  return served.length === 1 ? served[0] : null
 }
