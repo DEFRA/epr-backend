@@ -584,7 +584,7 @@ describe('Submission and placeholder tests', () => {
       const worksheet = workbook.addWorksheet('Data')
 
       worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
-      worksheet.getCell('B1').value = 'REG-123'
+      worksheet.getCell('B1').value = 'REG123'
 
       worksheet.getCell('A2').value = '__EPR_META_PROCESSING_TYPE'
       worksheet.getCell('B2').value = 'REPROCESSOR_INPUT'
