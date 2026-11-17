@@ -3,11 +3,12 @@ import { standingByDate } from './registration-standing.js'
 import { registrationStatusWindows } from './registration-status-windows.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Registration, StatusTimeline } from './model.js' */
+/** @import { AccreditationStatus, Registration, RegistrationStatus, StatusTimeline } from './model.js' */
 
 /**
- * @param {string} status
- * @returns {(date: string, time?: string) => StatusTimeline<string>[number]}
+ * @template {string} S
+ * @param {S} status
+ * @returns {(date: string, time?: string) => StatusTimeline<S>[number]}
  */
 const changeTo =
   (status) =>
@@ -16,7 +17,6 @@ const changeTo =
     return { status, at, updatedAt: at }
   }
 
-const createdOn = changeTo('created')
 const approvedOn = changeTo('approved')
 const suspendedOn = changeTo('suspended')
 const cancelledOn = changeTo('cancelled')
@@ -26,8 +26,8 @@ const REGISTERED_LAST_YEAR = [approvedOn('2025-06-02')]
 /**
  * @param {{
  *   year?: Year,
- *   registration?: StatusTimeline<string>,
- *   accreditations?: Record<number, StatusTimeline<string>>
+ *   registration?: StatusTimeline<RegistrationStatus>,
+ *   accreditations?: Record<number, StatusTimeline<AccreditationStatus>>
  * }} params
  */
 const windows = ({
@@ -112,15 +112,6 @@ describe('registrationStatusWindows', () => {
           range('2026-01-01', '2026-07-31'),
           range('2026-10-01', '2026-12-31')
         ],
-        accredited: []
-      })
-    })
-
-    it('stays registered-only while an accreditation is not yet approved', () => {
-      expect(
-        windows({ accreditations: { 2026: [createdOn('2026-03-01')] } })
-      ).toEqual({
-        registeredOnly: [WHOLE_YEAR],
         accredited: []
       })
     })

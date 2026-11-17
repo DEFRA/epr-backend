@@ -11,13 +11,14 @@ import {
 } from './report-calendar.js'
 
 /**
- * @import { Registration, StatusTimeline } from '#organisation-read-model/domain/model.js'
+ * @import { AccreditationStatus, Registration, StatusTimeline } from '#organisation-read-model/domain/model.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
- * @param {string} status
- * @returns {(date: string) => StatusTimeline<string>[number]}
+ * @template {string} S
+ * @param {S} status
+ * @returns {(date: string) => StatusTimeline<S>[number]}
  */
 const changeTo = (status) => (date) => ({ status, at: `${date}T00:00:00.000Z` })
 
@@ -52,7 +53,7 @@ const withStanding = (fields) => {
 }
 
 /**
- * @param {StatusTimeline<string>} [accreditation]
+ * @param {StatusTimeline<AccreditationStatus>} [accreditation]
  * @returns {Registration}
  */
 const registeredSinceLastYear = (accreditation) =>
