@@ -20,7 +20,7 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLog, SummaryLogFile } from '#domain/summary-logs/model.js' */
-/** @import { NewSummaryLog, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 /**
@@ -102,7 +102,7 @@ const insertNewSummaryLog = async (
   upload,
   { year, numbers }
 ) => {
-  /** @type {NewSummaryLog} */
+  /** @type {SummaryLog} */
   const summaryLog = {
     ...buildSummaryLogData(upload),
     year,

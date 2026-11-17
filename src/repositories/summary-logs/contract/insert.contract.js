@@ -37,25 +37,29 @@ export const testInsertBehaviour = (it) => {
         expect(found).toBeTruthy()
       })
 
-      it('stores a summary log by its numbers, without organisation or registration ids', async () => {
+      it('stores a summary log by its numbers, without organisation, registration or accreditation ids', async () => {
         const id = `contract-without-ids-${randomUUID()}`
 
         await repository.insert(id, {
           ...summaryLogFactory.validating({
             organisationNumber: '500456',
-            registrationNumber: 'R25SR500010789PL'
+            registrationNumber: 'R25SR500010789PL',
+            accreditationNumber: 'ACC500456'
           }),
           organisationId: 'org-456',
-          registrationId: 'reg-789'
+          registrationId: 'reg-789',
+          accreditationId: 'acc-456'
         })
         const found = await repository.findById(id)
 
         expect(found.summaryLog).toMatchObject({
           organisationNumber: '500456',
-          registrationNumber: 'R25SR500010789PL'
+          registrationNumber: 'R25SR500010789PL',
+          accreditationNumber: 'ACC500456'
         })
         expect(found.summaryLog).not.toHaveProperty('organisationId')
         expect(found.summaryLog).not.toHaveProperty('registrationId')
+        expect(found.summaryLog).not.toHaveProperty('accreditationId')
       })
 
       it('stores the numbers', async () => {
@@ -65,7 +69,6 @@ export const testInsertBehaviour = (it) => {
           id,
           summaryLogFactory.validating({
             year: toYear(2026),
-            accreditationId: 'acc-123',
             organisationNumber: '500123',
             registrationNumber: 'R25SR500010912PL',
             accreditationNumber: 'ACC500123'
@@ -170,35 +173,16 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
-        it('rejects an accredited insert without an accreditation number', async () => {
+        it('rejects an empty accreditation number', async () => {
           const id = `contract-validation-${randomUUID()}`
 
           await expect(
             repository.insert(
               id,
-              summaryLogFactory.validating({
-                accreditationId: 'acc-1',
-                accreditationNumber: null
-              })
+              summaryLogFactory.validating({ accreditationNumber: '' })
             )
           ).rejects.toThrow(
-            /Invalid summary log data.*"accreditationNumber" must be a string/
-          )
-        })
-
-        it('rejects an accreditation number on a registered-only insert', async () => {
-          const id = `contract-validation-${randomUUID()}`
-
-          await expect(
-            repository.insert(
-              id,
-              summaryLogFactory.validating({
-                accreditationId: null,
-                accreditationNumber: 'ACC-1'
-              })
-            )
-          ).rejects.toThrow(
-            /Invalid summary log data.*"accreditationNumber" must be one of \[null\]/
+            /Invalid summary log data.*"accreditationNumber" cannot be empty/
           )
         })
 
@@ -213,17 +197,6 @@ export const testInsertBehaviour = (it) => {
           ).rejects.toThrow(
             /Invalid summary log data.*"accreditationNumber" is required/
           )
-        })
-
-        it('accepts an accreditation number without an accreditation id, as for an accreditation held outside this service', async () => {
-          const id = `contract-validation-${randomUUID()}`
-          const { accreditationId: _a, ...numberOnly } =
-            summaryLogFactory.validating({ accreditationNumber: 'ACC-1' })
-
-          await repository.insert(id, numberOnly)
-          const found = await repository.findById(id)
-
-          expect(found?.summaryLog.accreditationNumber).toBe('ACC-1')
         })
 
         it('rejects insert with missing URI when file status is complete', async () => {

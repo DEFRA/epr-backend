@@ -6,24 +6,23 @@ import { summaryLogFactory } from './test-data.js'
 
 /**
  * @import { TestAPI } from 'vitest'
- * @import { NewSummaryLog, SummaryLogsRepository } from '../port.js'
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
+ * @import { SummaryLogsRepository } from '../port.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
  *
  * @typedef {{ summaryLogsRepository: SummaryLogsRepository }} ReadAccreditationFixtures
  */
 
+// Stored by number alone, as for an accreditation with no database id.
 const SHAPES = [
   {
     name: 'uploaded for an accreditation',
-    stored: {
-      accreditationId: 'acc-read-back',
-      accreditationNumber: toAccreditationNumber('ACC-READ-BACK')
-    },
+    stored: { accreditationNumber: toAccreditationNumber('ACC-READ-BACK') },
     read: { accreditationNumber: 'ACC-READ-BACK' }
   },
   {
     name: 'uploaded registered only',
-    stored: { accreditationId: null, accreditationNumber: null },
+    stored: { accreditationNumber: null },
     read: { accreditationNumber: null }
   }
 ]
@@ -66,7 +65,7 @@ export const testReadAccreditation = (it) => {
       }
     )
 
-    /** @param {NewSummaryLog} summaryLog */
+    /** @param {SummaryLog} summaryLog */
     const insert = async (summaryLog) => {
       const id = toSummaryLogId(`contract-read-${randomUUID()}`)
       await repository.insert(id, summaryLog)
