@@ -14,7 +14,7 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 
-/** @import { Organisation, StandingByYear } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 
 export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
 export const EXPORTER_NUMBER = 'R26EX5001180042PL'
@@ -37,7 +37,7 @@ export const pendingOverseasSite = {
   address: { line1: '1 Rue de Test', townOrCity: 'Paris', country: 'France' }
 }
 
-/** @type {StandingByYear} */
+/** What `buildAccreditedOrganisation` serves as each registration's standing. */
 const standingByDate = {
   2026: {
     '2026-02-01': { standing: 'registeredOnly' },
@@ -56,7 +56,6 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
   buildReadOrganisation({
     registrations: {
       [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-        standingByDate,
         accreditations: accreditationsByYear(
           buildReadAccreditation({
             accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
@@ -64,7 +63,6 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
         )
       }),
       [EXPORTER_NUMBER]: buildReadExporterRegistration({
-        standingByDate,
         overseasSites: {
           '001': approvedOverseasSite,
           '002': pendingOverseasSite
