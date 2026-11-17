@@ -43,15 +43,15 @@ const registrationId = '507f1f77bcf86cd799439012'
 const organisationNumber = toOrganisationNumber('500123')
 const registrationNumber = REPROCESSOR_NUMBER
 
-const uploadedKeyFor = (uploadOrganisationId, uploadRegistrationId) =>
-  `/organisations/${uploadOrganisationId}/registrations/${uploadRegistrationId}/upload-1/file-1`
+const uploadedKeyFor = (uploadOrganisation, uploadRegistration) =>
+  `/organisations/${uploadOrganisation}/registrations/${uploadRegistration}/upload-1/file-1`
 
 const createFileDetails = (overrides) => ({
   fileId: 'file-123',
   filename: 'test.xlsx',
   fileStatus: 'complete',
   s3Bucket: 're-ex-summary-logs',
-  s3Key: uploadedKeyFor(organisationId, registrationId),
+  s3Key: uploadedKeyFor(organisationNumber, registrationNumber),
   ...overrides
 })
 
@@ -247,8 +247,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
             summaryLogUpload: createFileDetails({
               fileId: `file-accredited-${summaryLogId}`,
               s3Key: uploadedKeyFor(
-                accreditedOrganisationId,
-                accreditedRegistrationId
+                accreditedOrganisation.organisationNumber,
+                REPROCESSOR_NUMBER
               )
             })
           },
@@ -376,20 +376,47 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
+  it('completes an upload started under the registration ids, before uploads moved to numbers', async () => {
+    const summaryLogId = randomUUID()
+
+    const response = await server.inject({
+      method: 'POST',
+      url: uploadCompletedUrl(2026, summaryLogId),
+      payload: {
+        ...createCompletePayload(),
+        form: {
+          summaryLogUpload: createFileDetails({
+            s3Key: uploadedKeyFor(organisationId, registrationId)
+          })
+        }
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+    const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
+    expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
+    expect(summaryLogsWorker.validate).toHaveBeenCalledWith(summaryLogId)
+  })
+
   describe('when the upload is not where this registration sends its uploads', () => {
     it.for([
       {
         description: 'another bucket',
         s3Bucket: 'some-other-bucket',
-        s3Key: uploadedKeyFor(organisationId, registrationId)
+        s3Key: uploadedKeyFor(organisationNumber, registrationNumber)
       },
       {
         description: 'another organisation',
         s3Bucket: 're-ex-summary-logs',
-        s3Key: uploadedKeyFor('507f1f77bcf86cd799439099', registrationId)
+        s3Key: uploadedKeyFor('500999', registrationNumber)
       },
       {
         description: 'another registration',
+        s3Bucket: 're-ex-summary-logs',
+        s3Key: uploadedKeyFor(organisationNumber, 'R26ER5001189999PL')
+      },
+      {
+        description: 'another registration, by its ids',
         s3Bucket: 're-ex-summary-logs',
         s3Key: uploadedKeyFor(organisationId, '507f1f77bcf86cd799439099')
       }

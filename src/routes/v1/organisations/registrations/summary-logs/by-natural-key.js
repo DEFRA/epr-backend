@@ -16,7 +16,10 @@ import { summaryLogsList } from './list/get.js'
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { summaryLogRecordsCsv } from './records/get.js'
 import { summaryLogsSubmit } from './submit/post.js'
-import { assertSummaryLogMatchesPath } from './summary-log-matches-path.js'
+import {
+  assertSummaryLogFileMatchesPath,
+  assertSummaryLogMatchesPath
+} from './summary-log-matches-path.js'
 import { summaryLogsUploadCompletedYear } from './upload-completed/year-post.js'
 import { summaryLogsYearCreate } from './year-post.js'
 
@@ -141,7 +144,8 @@ export const summaryLogRoutesByNaturalKey = [
   atSummaryLogKeys(
     summaryLogFileByFileId,
     `${summaryLogs}/files/{fileId}`,
-    fileParams
+    fileParams,
+    { before: assertSummaryLogFileMatchesPath }
   ),
   summaryLogRecordsCsv
 ]

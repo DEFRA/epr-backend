@@ -215,7 +215,10 @@ const seedDownstreamForOrganisation = async (
   }
 ) => {
   await repositories.externalAccreditations.upsert(
-    buildExternalAccreditation({ registrationNumber })
+    buildExternalAccreditation({
+      organisationNumber: organisation.organisationNumber,
+      registrationNumber
+    })
   )
 
   await repositories.prns.create(
@@ -467,7 +470,9 @@ describe('non-prod data reset (mongo)', () => {
       expect(
         await database
           .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
-          .countDocuments({ registrationNumber: other.registrationNumber })
+          .countDocuments({
+            organisationNumber: other.organisation.organisationNumber
+          })
       ).toBe(1)
     })
 

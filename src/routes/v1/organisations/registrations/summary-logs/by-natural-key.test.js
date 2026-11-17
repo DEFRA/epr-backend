@@ -20,6 +20,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -120,8 +121,8 @@ const uploadAddresses = [
 
 const redirect = { redirectUrl: 'https://frontend.test/redirect' }
 
-/** @param {string} uploadRegistrationId */
-const uploadCompletedFor = (uploadRegistrationId) => ({
+/** @param {string} uploadRegistrationNumber */
+const uploadCompletedFor = (uploadRegistrationNumber) => ({
   uploadStatus: 'ready',
   form: {
     summaryLogUpload: {
@@ -129,7 +130,7 @@ const uploadCompletedFor = (uploadRegistrationId) => ({
       filename: 'summary-log.xlsx',
       fileStatus: 'complete',
       s3Bucket: 're-ex-summary-logs',
-      s3Key: `/organisations/${organisation.id}/registrations/${uploadRegistrationId}/upload-1/file-uploaded`
+      s3Key: `/organisations/${organisationNumber}/registrations/${uploadRegistrationNumber}/upload-1/file-uploaded`
     }
   },
   numberOfRejectedFiles: 0
@@ -250,7 +251,7 @@ describe('summary-log routes by natural key', () => {
         const response = await server.inject({
           method: 'POST',
           url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
-          payload: uploadCompletedFor(registration.id)
+          payload: uploadCompletedFor(registration.registrationNumber)
         })
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -321,7 +322,7 @@ describe('summary-log routes by natural key', () => {
       url: signedCallback(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
       ),
-      payload: uploadCompletedFor(accreditedRegistration.id)
+      payload: uploadCompletedFor(REPROCESSOR_NUMBER)
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -341,7 +342,7 @@ describe('summary-log routes by natural key', () => {
       url: signedCallback(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
       ),
-      payload: uploadCompletedFor(accreditedRegistration.id)
+      payload: uploadCompletedFor(REPROCESSOR_NUMBER)
     })
 
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -456,6 +457,34 @@ describe('summary-log routes by natural key', () => {
       )
     })
 
+    it.each([
+      [
+        'another organisation',
+        { organisationNumber: toOrganisationNumber('999999') }
+      ],
+      [
+        'another registration',
+        { registrationNumber: registeredOnlyLog.registrationNumber }
+      ]
+    ])(
+      'has no file downloaded by its file id when it belongs to %s',
+      async (_, overrides) => {
+        const fileId = `file-${randomUUID()}`
+        await seed(
+          { ...accreditedLog, ...overrides, file: { id: fileId } },
+          summaryLogFactory.submitted
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${summaryLogs}/files/${fileId}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      }
+    )
+
     it('is found under its numbers whatever database ids it holds', async () => {
       const summaryLogId = toSummaryLogId(
         await seedOwn({
@@ -473,7 +502,7 @@ describe('summary-log routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
-    describe('of an organisation only the read model holds', () => {
+    describe('without consulting the legacy organisations repository', () => {
       beforeEach(async () => {
         await server.stop()
         server = await startServer([])
@@ -552,7 +581,7 @@ describe('summary-log routes by natural key', () => {
       signedCallback(
         `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
       ),
-      uploadCompletedFor(registeredOnlyRegistration.id)
+      uploadCompletedFor(REGISTERED_ONLY_NUMBER)
     ],
     [
       'reading under an unknown registration',

@@ -339,6 +339,8 @@ export const withPeriodsRequiringResubmission = async ({
 
   return {
     ...loadsByReportingPeriod,
+    // Overrides the classifier's candidates carried in by the spread: the
+    // deprecated field stays in the contract but is never populated.
     closedPeriods: [],
     periodsRequiringResubmission
   }
