@@ -43,6 +43,18 @@ const expectedSignature = (headers) =>
     )
     .digest('base64')
 
+/** A reprocessor accreditation as Reg Accred serves it. */
+const validItem = {
+  organisationNumber: 990001,
+  registrationNumber: 'R26ER9900010001PA',
+  accreditationNumber: 'A27ER9900010001PA',
+  accreditationYear: 2027,
+  material: 'Paper',
+  wasteProcessingType: 'reprocessor',
+  status: 'approved',
+  tonnageBand: 'up_to_5000'
+}
+
 /** The query of the first page of a search for 2027 accreditations. */
 const firstPage = { year: '2027', pageNumber: '1', limit: '100' }
 
@@ -117,10 +129,10 @@ const servePagedAccreditations = (total) => {
  * Loads 2027 accreditations.
  *
  * @param {string} [organisationNumber]
- * @param {() => Date} [now]
+ * @param {{ now?: () => Date, onDrop?: (message: string) => void }} [options]
  */
-const loadFor = (organisationNumber, now) =>
-  createRegAccredAccreditationsLoader(config, now)(
+const loadFor = (organisationNumber, { now, onDrop = () => {} } = {}) =>
+  createRegAccredAccreditationsLoader(config, { now, onDrop })(
     toYear(2027),
     organisationNumber === undefined
       ? undefined
@@ -128,16 +140,38 @@ const loadFor = (organisationNumber, now) =>
   )
 
 describe('signedHeaders', () => {
-  it('signs the client id, timestamp and nonce with the shared secret', () => {
+  it("matches the worked example in Reg Accred's onboarding guide", () => {
+    // From "Worked example (not a real credential)" in
+    // DEFRA/epr-register-enrol-backend docs/reex-api-onboarding.md
     const headers = signedHeaders(
-      config,
-      () => new Date('2027-01-02T03:04:05.678Z')
+      { clientId: 'example-client', sharedSecret: 'example-secret-do-not-use' },
+      {
+        now: () => new Date('2027-01-15T10:30:00Z'),
+        newNonce: () => 'bm9uY2UtZXhhbXBsZS0wMDAx'
+      }
     )
 
+    expect(headers).toStrictEqual({
+      'x-cdp-client-id': 'example-client',
+      'x-cdp-auth-timestamp': '2027-01-15T10:30:00Z',
+      'x-cdp-auth-nonce': 'bm9uY2UtZXhhbXBsZS0wMDAx',
+      'x-cdp-auth-signature': 'mJPc+QOEbTNBzB60Pj2NjSOy8bOYmvoCjCwPQS2CSTk='
+    })
+  })
+
+  it('leaves the milliseconds out of the timestamp', () => {
+    const headers = signedHeaders(config, {
+      now: () => new Date('2027-01-02T03:04:05.678Z')
+    })
+
     expect(headers['x-cdp-auth-timestamp']).toBe('2027-01-02T03:04:05Z')
-    expect(headers['x-cdp-auth-signature']).toBe(
-      expectedSignature(new Headers(headers))
-    )
+  })
+
+  it('signs each request with a new nonce', () => {
+    const first = signedHeaders(config)
+    const second = signedHeaders(config)
+
+    expect(first['x-cdp-auth-nonce']).not.toBe(second['x-cdp-auth-nonce'])
   })
 })
 
@@ -156,10 +190,9 @@ describe('createRegAccredAccreditationsLoader', () => {
       }
     ])
 
-    const accreditations = await loadFor(
-      '990001',
-      () => new Date('2027-03-10T09:15:00Z')
-    )
+    const accreditations = await loadFor('990001', {
+      now: () => new Date('2027-03-10T09:15:00Z')
+    })
 
     expect(accreditations).toStrictEqual([
       {
@@ -195,6 +228,64 @@ describe('createRegAccredAccreditationsLoader', () => {
     const [accreditation] = await loadFor('990001')
 
     expect(accreditation).not.toHaveProperty('overseasSites')
+  })
+
+  it('trims and upper-cases the registration and accreditation numbers', async () => {
+    serveAccreditations([
+      {
+        ...validItem,
+        registrationNumber: ' r26er9900010001pa ',
+        accreditationNumber: ' a27er9900010001pa '
+      }
+    ])
+
+    const [accreditation] = await loadFor('990001')
+
+    expect(accreditation).toMatchObject({
+      registrationNumber: 'R26ER9900010001PA',
+      accreditationNumber: 'A27ER9900010001PA'
+    })
+  })
+
+  it.for([
+    { field: 'status', item: { status: 'withdrawn' } },
+    { field: 'tonnageBand', item: { tonnageBand: 'up_to_a_lot' } },
+    { field: 'registrationNumber', item: { registrationNumber: null } },
+    { field: 'accreditationNumber', item: { accreditationNumber: null } },
+    { field: 'wasteProcessingType', item: { wasteProcessingType: 'trader' } }
+  ])(
+    'drops and reports an accreditation with an invalid $field',
+    async ({ field, item }) => {
+      serveAccreditations([
+        { ...validItem, accreditationNumber: 'A27ER9900010002PA' },
+        { ...validItem, accreditationNumber: 'A27ER9900010003PA', ...item }
+      ])
+      /** @type {string[]} */
+      const dropped = []
+
+      const accreditations = await loadFor('990001', {
+        onDrop: (message) => dropped.push(message)
+      })
+
+      expect(
+        accreditations.map(({ accreditationNumber }) => accreditationNumber)
+      ).toStrictEqual(['A27ER9900010002PA'])
+      expect(dropped).toHaveLength(1)
+      expect(dropped[0]).toContain(`"${field}"`)
+    }
+  )
+
+  it('reports an accreditation with no number as one with no number', async () => {
+    const { accreditationNumber: _, ...withNoNumber } = validItem
+    serveAccreditations([withNoNumber])
+    /** @type {string[]} */
+    const dropped = []
+
+    await loadFor('990001', { onDrop: (message) => dropped.push(message) })
+
+    expect(dropped).toStrictEqual([
+      'Reg Accred accreditation with no number is invalid: "accreditationNumber" is required'
+    ])
   })
 
   it("asks for the organisation's 2027 accreditations", async () => {

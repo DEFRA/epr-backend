@@ -575,6 +575,15 @@ function getConfig(overrides = {}) {
     throw new Error('OPEN_NEXT_YEAR must not be true when ENVIRONMENT is prod')
   }
 
+  if (
+    cfg.get('featureFlags.regAccredExternalAccreditations') &&
+    !cfg.get('regAccredApi.sharedSecret')
+  ) {
+    throw new Error(
+      'REG_ACCRED_API_SHARED_SECRET must be set when FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS is true'
+    )
+  }
+
   return cfg
 }
 

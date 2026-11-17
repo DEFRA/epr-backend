@@ -91,60 +91,64 @@ const createMongoExternalAccreditationsLoader =
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
  */
-export const createOrganisationReadRepository = (db, { regAccredApi } = {}) => {
-  const loadExternalAccreditations = whileYearIsOpen(
-    regAccredApi
-      ? createRegAccredAccreditationsLoader(regAccredApi)
-      : createMongoExternalAccreditationsLoader(db)
-  )
+export const createOrganisationReadRepository =
+  (db, { regAccredApi } = {}) =>
+  (dependencies) => {
+    const loadExternalAccreditations = whileYearIsOpen(
+      regAccredApi
+        ? createRegAccredAccreditationsLoader(regAccredApi, {
+            onDrop: (message) => dependencies.logger.warn({ message })
+          })
+        : createMongoExternalAccreditationsLoader(db)
+    )
 
-  /**
-   * @param {StoredOrganisation} stored
-   * @param {Year} [year]
-   * @returns {Promise<ExternalAccreditation[]>}
-   */
-  const findExternalAccreditationsOf = async (stored, year) =>
-    year !== undefined && year !== REG_ACCRED_ACCREDITATION_YEAR
-      ? []
-      : loadExternalAccreditations(
-          REG_ACCRED_ACCREDITATION_YEAR,
-          stored.organisationNumber
+    /**
+     * @param {StoredOrganisation} stored
+     * @param {Year} [year]
+     * @returns {Promise<ExternalAccreditation[]>}
+     */
+    const findExternalAccreditationsOf = async (stored, year) =>
+      year !== undefined && year !== REG_ACCRED_ACCREDITATION_YEAR
+        ? []
+        : loadExternalAccreditations(
+            REG_ACCRED_ACCREDITATION_YEAR,
+            stored.organisationNumber
+          )
+
+    return {
+      findByOrganisationNumber: async (organisationNumber, { year } = {}) => {
+        const stored = await findOne(db, {
+          orgId: storedOrgId(organisationNumber)
+        })
+        if (!stored) {
+          return null
+        }
+        const [organisation] = await toReadModelOrganisations(
+          [stored],
+          await findExternalAccreditationsOf(stored, year),
+          dependencies,
+          year
         )
+        return organisation ?? null
+      },
 
-  return (dependencies) => ({
-    findByOrganisationNumber: async (organisationNumber, { year } = {}) => {
-      const stored = await findOne(db, {
-        orgId: storedOrgId(organisationNumber)
-      })
-      if (!stored) {
-        return null
+      find: async (params) => {
+        const { items, ...page } = await findPage(db, params)
+        return {
+          ...page,
+          items: await toReadModelOrganisations(items, [], dependencies)
+        }
+      },
+
+      findAll: async () => {
+        const stored = await findAll(db)
+        return toReadModelOrganisations(
+          stored,
+          stored.length === 0
+            ? []
+            : await loadExternalAccreditations(REG_ACCRED_ACCREDITATION_YEAR),
+          dependencies
+        )
       }
-      const [organisation] = await toReadModelOrganisations(
-        [stored],
-        await findExternalAccreditationsOf(stored, year),
-        dependencies,
-        year
-      )
-      return organisation ?? null
-    },
-
-    find: async (params) => {
-      const { items, ...page } = await findPage(db, params)
-      return {
-        ...page,
-        items: await toReadModelOrganisations(items, [], dependencies)
-      }
-    },
-
-    findAll: async () => {
-      const stored = await findAll(db)
-      return toReadModelOrganisations(
-        stored,
-        stored.length === 0
-          ? []
-          : await loadExternalAccreditations(REG_ACCRED_ACCREDITATION_YEAR),
-        dependencies
-      )
     }
-  })
-}
+  }

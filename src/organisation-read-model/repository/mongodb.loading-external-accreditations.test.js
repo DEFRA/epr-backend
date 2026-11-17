@@ -23,6 +23,7 @@ import {
 import { createOrganisationReadRepository } from './mongodb.js'
 
 /** @import { MongoClient } from 'mongodb' */
+/** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationReadRepositoryOptions } from './mongodb.js' */
 
@@ -47,19 +48,21 @@ const mswServer = setupMsw()
  * the reprocessor registration, or the given registration, of whichever
  * organisation is asked for, or of `organisationNumber` when none is.
  *
+ * A search of every organisation's accreditations names no organisation, so
+ * a test that makes one gives `organisationNumber`.
+ *
  * @param {{
- *   registrationNumber: string
- *   wasteProcessingType: 'reprocessor' | 'exporter'
+ *   registrationNumber?: string
+ *   wasteProcessingType?: 'reprocessor' | 'exporter'
  *   organisationNumber?: string
  * }} [registration]
  * @returns {URL[]} the URLs requested
  */
-const serveRegAccred = (
-  { registrationNumber, wasteProcessingType, organisationNumber } = {
-    registrationNumber: REPROCESSOR_NUMBER,
-    wasteProcessingType: 'reprocessor'
-  }
-) => {
+const serveRegAccred = ({
+  registrationNumber = REPROCESSOR_NUMBER,
+  wasteProcessingType = 'reprocessor',
+  organisationNumber
+} = {}) => {
   /** @type {URL[]} */
   const requested = []
   mswServer.use(
@@ -93,15 +96,20 @@ const serveRegAccred = (
 /**
  * @param {MongoClient} mongoClient
  * @param {OrganisationReadRepositoryOptions} [options]
+ * @param {Pick<TypedLogger, 'warn'>} [logger]
  */
-const repositoryWith = async (mongoClient, options) => {
+const repositoryWith = async (
+  mongoClient,
+  options,
+  logger = { warn: () => {} }
+) => {
   const database = mongoClient.db('epr-backend')
   return createOrganisationReadRepository(
     database,
     options
   )({
     overseasSitesRepository: (await createOverseasSitesRepository(database))(),
-    logger: { warn: () => {} }
+    logger
   })
 }
 
@@ -227,6 +235,50 @@ describe('loading external accreditations', () => {
       ).toHaveProperty('overseasSites', {})
     })
 
+    it('leaves out and logs an accreditation from Reg Accred with a status the read model does not know', async ({
+      organisationReadRepositoryWith,
+      mongoClient
+    }) => {
+      mswServer.use(
+        http.get(`${regAccredApi.baseUrl}/v1/accreditations`, () =>
+          HttpResponse.json({
+            pageNumber: 1,
+            limit: 100,
+            totalItems: 1,
+            items: [
+              {
+                organisationNumber: 500056,
+                registrationNumber: REPROCESSOR_NUMBER,
+                accreditationNumber: REG_ACCRED_ACCREDITATION_NUMBER,
+                accreditationYear: 2027,
+                wasteProcessingType: 'reprocessor',
+                status: 'withdrawn',
+                tonnageBand: 'up_to_500'
+              }
+            ]
+          })
+        )
+      )
+      const stored = buildOrganisation({ registrations: [reprocessor()] })
+      await organisationReadRepositoryWith({ organisations: [stored] })
+      const warn = vi.fn()
+      const repository = await repositoryWith(mongoClient, options, { warn })
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(
+        organisation.registrations[REPROCESSOR_NUMBER].accreditations
+      ).not.toHaveProperty('2027')
+      expect(warn).toHaveBeenCalledWith({
+        message: expect.stringContaining(
+          `Reg Accred accreditation ${REG_ACCRED_ACCREDITATION_NUMBER} is invalid`
+        )
+      })
+    })
+
     it('makes no request to Reg Accred for a year other than 2027', async ({
       organisationReadRepositoryWith,
       mongoClient
@@ -252,8 +304,6 @@ describe('loading external accreditations', () => {
         organisationReadRepositoryWith
       )
       const requested = serveRegAccred({
-        registrationNumber: REPROCESSOR_NUMBER,
-        wasteProcessingType: 'reprocessor',
         organisationNumber: stored.organisationNumber
       })
       const repository = await repositoryWith(mongoClient, options)
@@ -297,10 +347,12 @@ describe('loading external accreditations', () => {
       organisationReadRepositoryWith,
       mongoClient
     }) => {
-      const requested = serveRegAccred()
-      await storeReprocessorWithExternalAccreditation(
+      const stored = await storeReprocessorWithExternalAccreditation(
         organisationReadRepositoryWith
       )
+      const requested = serveRegAccred({
+        organisationNumber: stored.organisationNumber
+      })
       const repository = await repositoryWith(mongoClient, { regAccredApi })
 
       await repository.findAll()
@@ -313,15 +365,20 @@ describe('loading external accreditations', () => {
       mongoClient
     }) => {
       config.set('openNextYear', true) // opens 2027
-      const requested = serveRegAccred()
-      await storeReprocessorWithExternalAccreditation(
+      const stored = await storeReprocessorWithExternalAccreditation(
         organisationReadRepositoryWith
       )
+      const requested = serveRegAccred({
+        organisationNumber: stored.organisationNumber
+      })
       const repository = await repositoryWith(mongoClient, { regAccredApi })
 
-      await repository.findAll()
+      const [organisation] = await repository.findAll()
 
       expect(requested).toHaveLength(1)
+      expect(accreditationNumber2027(organisation)).toBe(
+        REG_ACCRED_ACCREDITATION_NUMBER
+      )
     })
 
     it.for(
@@ -343,7 +400,9 @@ describe('loading external accreditations', () => {
             buildExternalAccreditationFor(stored, {
               registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
               year: toYear(2027),
-              accreditationNumber: toAccreditationNumber('A27ER5000560000AL')
+              accreditationNumber: toAccreditationNumber(
+                STORED_ACCREDITATION_NUMBER
+              )
             })
           ]
         })

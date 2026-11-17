@@ -1,9 +1,12 @@
 import { createHmac, randomBytes } from 'node:crypto'
+import Joi from 'joi'
 
 import { fetchJson } from '#common/helpers/fetch-json.js'
+import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
+import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { ExternalAccreditation } from './to-read-model.js' */
+/** @import { ExternalAccreditation, OnDrop } from './to-read-model.js' */
 /** @import { ExternalAccreditationsLoader } from './mongodb.js' */
 
 /** The only year Reg Accred holds accreditations for. */
@@ -18,7 +21,7 @@ export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
  */
 
 /**
- * An accreditation as `GET /v1/accreditations` serves it.
+ * An accreditation as `GET /v1/accreditations` serves it, once validated.
  *
  * @typedef {{
  *   organisationNumber: number
@@ -35,18 +38,21 @@ export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
  * The CDP v3 HMAC headers Reg Accred authenticates callers with.
  *
  * @param {Pick<RegAccredApiConfig, 'clientId' | 'sharedSecret'>} config
- * @param {() => Date} [now]
+ * @param {{ now?: () => Date, newNonce?: () => string }} [sources]
  * @returns {Record<string, string>}
  */
 export const signedHeaders = (
   { clientId, sharedSecret },
-  now = () => new Date()
+  {
+    now = () => new Date(),
+    newNonce = () => randomBytes(16).toString('base64')
+  } = {}
 ) => {
   // yyyy-MM-ddTHH:mm:ssZ (no milliseconds)
   const timestamp = now()
     .toISOString()
     .replace(/\.\d{3}Z$/, 'Z')
-  const nonce = randomBytes(16).toString('base64')
+  const nonce = newNonce()
   const payload = ['v3', clientId, '', '', timestamp, nonce].join('\n')
   const signature = createHmac('sha256', sharedSecret)
     .update(payload)
@@ -68,6 +74,45 @@ export const signedHeaders = (
 const REG_ACCRED_STATUS_SINCE = '2027-01-01T00:00:00.000Z'
 
 /**
+ * The fields of a `GET /v1/accreditations` item the read model uses. Reg
+ * Accred asks callers to ignore fields they do not know, so other fields are
+ * allowed. It also asks them to handle a status or tonnage band they do not
+ * know, so one of those fails validation.
+ */
+const regAccredAccreditationSummarySchema = Joi.object({
+  organisationNumber: Joi.number().integer().required(),
+  registrationNumber: Joi.string().trim().uppercase().required(),
+  accreditationNumber: Joi.string().trim().uppercase().required(),
+  accreditationYear: Joi.number().integer().required(),
+  wasteProcessingType: Joi.string().valid('reprocessor', 'exporter').required(),
+  status: Joi.string()
+    .valid(...ACCREDITATION_STATUSES)
+    .required(),
+  tonnageBand: tonnageBandSchema.required()
+}).unknown(true)
+
+/**
+ * The item with its numbers trimmed and upper-cased, or `null`, reported
+ * through `onDrop`, when the read model cannot represent it.
+ *
+ * @param {unknown} item
+ * @param {OnDrop} onDrop
+ * @returns {RegAccredAccreditationSummary | null}
+ */
+const toValidSummary = (item, onDrop) => {
+  const { value, error } = regAccredAccreditationSummarySchema.validate(item)
+  if (error) {
+    const { accreditationNumber = 'with no number' } =
+      /** @type {{ accreditationNumber?: unknown }} */ (item ?? {})
+    onDrop(
+      `Reg Accred accreditation ${accreditationNumber} is invalid: ${error.message}`
+    )
+    return null
+  }
+  return value
+}
+
+/**
  * @param {RegAccredAccreditationSummary} summary
  * @param {Date} loadedAt
  * @returns {ExternalAccreditation}
@@ -76,9 +121,9 @@ const toExternalAccreditation = (summary, loadedAt) =>
   /** @type {ExternalAccreditation} */ (
     /** @type {unknown} */ ({
       organisationNumber: String(summary.organisationNumber),
-      registrationNumber: summary.registrationNumber.trim().toUpperCase(),
+      registrationNumber: summary.registrationNumber,
       year: /** @type {Year} */ (summary.accreditationYear),
-      accreditationNumber: summary.accreditationNumber.trim().toUpperCase(),
+      accreditationNumber: summary.accreditationNumber,
       prnIssuance: { tonnageBand: summary.tonnageBand },
       status: {
         current: summary.status,
@@ -99,13 +144,13 @@ const toExternalAccreditation = (summary, loadedAt) =>
 const PAGE_LIMIT = 100
 
 /**
- * A page of `GET /v1/accreditations`.
+ * A page of `GET /v1/accreditations`, its items not yet validated.
  *
  * @typedef {{
  *   pageNumber: number
  *   limit: number
  *   totalItems: number
- *   items: RegAccredAccreditationSummary[]
+ *   items: unknown[]
  * }} RegAccredAccreditationsPage
  */
 
@@ -117,10 +162,10 @@ const PAGE_LIMIT = 100
  * @param {RegAccredApiConfig} config
  * @param {Year} year
  * @param {Record<string, string>} [filter]
- * @returns {Promise<RegAccredAccreditationSummary[]>}
+ * @returns {Promise<unknown[]>}
  */
 const fetchEveryAccreditation = async (config, year, filter) => {
-  /** @type {RegAccredAccreditationSummary[]} */
+  /** @type {unknown[]} */
   const accreditations = []
   for (let pageNumber = 1; ; pageNumber++) {
     const query = new URLSearchParams({
@@ -148,14 +193,16 @@ const fetchEveryAccreditation = async (config, year, filter) => {
 
 /**
  * Loads the year's accreditations from Reg Accred, every page of them: the
- * given organisation's, or every organisation's when none is given.
+ * given organisation's, or every organisation's when none is given. An
+ * accreditation the read model cannot represent, such as one with a status it
+ * does not know, is dropped and reported through `onDrop`.
  *
  * @param {RegAccredApiConfig} config
- * @param {() => Date} [now]
+ * @param {{ onDrop: OnDrop, now?: () => Date }} options
  * @returns {ExternalAccreditationsLoader}
  */
 export const createRegAccredAccreditationsLoader =
-  (config, now = () => new Date()) =>
+  (config, { onDrop, now = () => new Date() }) =>
   async (year, organisationNumber) => {
     const accreditations = await fetchEveryAccreditation(
       config,
@@ -163,7 +210,8 @@ export const createRegAccredAccreditationsLoader =
       organisationNumber && { organisationNumber }
     )
     const loadedAt = now()
-    return accreditations.map((summary) =>
-      toExternalAccreditation(summary, loadedAt)
-    )
+    return accreditations
+      .map((item) => toValidSummary(item, onDrop))
+      .filter((summary) => summary !== null)
+      .map((summary) => toExternalAccreditation(summary, loadedAt))
   }
