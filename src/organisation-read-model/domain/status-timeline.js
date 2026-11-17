@@ -76,30 +76,19 @@ const dailyTimeline = (timeline) =>
   )
 
 /**
- * The date ranges each status was held, keyed by status. The latest status
+ * The date ranges the timeline was approved, oldest first. The latest status
  * holds until `endDate`, and changes after it are left out.
  *
  * @param {StatusChanges} timeline
  * @param {CalendarDate} endDate
- * @returns {Partial<Record<string, CalendarDateRange[]>>}
+ * @returns {CalendarDateRange[]}
  */
-const statusRanges = (timeline, endDate) => {
+const approvedRanges = (timeline, endDate) => {
   const daily = dailyTimeline(timeline)
   const dates = datesUpTo(daily, endDate)
-
-  /** @type {Partial<Record<string, CalendarDateRange[]>>} */
-  const ranges = {}
-
-  for (let i = 0; i < dates.length; i++) {
-    const from = dates[i]
-    const to = rangeEnd(dates[i + 1], endDate)
-    const { status } = daily[from]
-
-    ranges[status] ??= []
-    ranges[status].push({ from, to })
-  }
-
-  return ranges
+  return dates
+    .map((from, index) => ({ from, to: rangeEnd(dates[index + 1], endDate) }))
+    .filter(({ from }) => daily[from].status === 'approved')
 }
 
 /**
@@ -111,7 +100,7 @@ const statusRanges = (timeline, endDate) => {
  * @returns {boolean}
  */
 export const approvedBy = (timeline, date) =>
-  statusRanges(timeline, date).approved !== undefined
+  approvedRanges(timeline, date).length > 0
 
 /**
  * The years up to `upToYear` approved at some point, oldest first, without
@@ -122,8 +111,6 @@ export const approvedBy = (timeline, date) =>
  * @param {Year} upToYear
  * @returns {Year[]}
  */
-export const approvedYears = (timeline, upToYear) => {
-  const approvedRanges =
-    statusRanges(timeline, lastDayOfYear(upToYear)).approved ?? []
-  return [...new Set(approvedRanges.flatMap(yearsIn))]
-}
+export const approvedYears = (timeline, upToYear) => [
+  ...new Set(approvedRanges(timeline, lastDayOfYear(upToYear)).flatMap(yearsIn))
+]
