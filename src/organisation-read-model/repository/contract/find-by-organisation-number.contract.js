@@ -131,8 +131,8 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
   })
 
   describe('findByOrganisationNumber for a year', () => {
-    // Statuses for a year are judged as of the earlier of its end and today,
-    // so today is fixed after every year these tests ask for has started.
+    // Accreditations are served up to the latest open year, so today is fixed
+    // in the latest year these tests ask for.
     beforeEach(() => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
     })

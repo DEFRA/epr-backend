@@ -3,10 +3,10 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
- * Without `year`, every year is given. With it, the organisation as it stood
- * in that year: only registrations approved at some point in it, each with
- * only that year's accreditation and standing, and statuses as they stood at
- * the end of the year, or today if the year has not yet ended.
+ * Without `year`, every year is given. With it, the organisation in that
+ * year: only registrations approved at some point in it, each with only that
+ * year's accreditation and standing. Statuses are the latest, whatever the
+ * year.
  *
  * @typedef {{
  *   year?: Year

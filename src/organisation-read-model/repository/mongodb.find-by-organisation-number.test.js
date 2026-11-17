@@ -743,7 +743,7 @@ describe('findByOrganisationNumber for years', () => {
     expect(registrations[REPROCESSOR_NUMBER].status.current).toBe('cancelled')
   })
 
-  it('serves a past year’s statuses as they stood on 31 December', async ({
+  it('serves a past year with the latest statuses', async ({
     organisationReadRepositoryWith
   }) => {
     const stored = buildOrganisation({
@@ -766,7 +766,7 @@ describe('findByOrganisationNumber for years', () => {
     expect([
       organisation.status.current,
       organisation.registrations[REPROCESSOR_NUMBER].status.current
-    ]).toStrictEqual(['approved', 'approved'])
+    ]).toStrictEqual(['active', 'cancelled'])
   })
 
   it('serves the current year’s statuses as they stand today', async ({
@@ -790,7 +790,7 @@ describe('findByOrganisationNumber for years', () => {
     expect(status.current).toBe('active')
   })
 
-  it('serves a registration with a change still to come as it stands today', async ({
+  it('serves a registration’s status as it is served without a year', async ({
     organisationReadRepositoryWith
   }) => {
     const stored = buildOrganisation({
@@ -805,61 +805,7 @@ describe('findByOrganisationNumber for years', () => {
       2027
     )
 
-    expect(registrations[REPROCESSOR_NUMBER].status.current).toBe('approved')
-  })
-
-  it('serves a registration approved later in the year with its current status, as it has none yet today', async ({
-    organisationReadRepositoryWith
-  }) => {
-    const stored = buildOrganisation({
-      registrations: [reprocessorFrom('2027-06-01')]
-    })
-
-    const { registrations } = await findInYear(
-      organisationReadRepositoryWith,
-      stored,
-      2027
-    )
-
-    expect(registrations[REPROCESSOR_NUMBER].status.current).toBe('approved')
-  })
-
-  it('serves the last status on a year’s final day when it changed several times that day', async ({
-    organisationReadRepositoryWith
-  }) => {
-    const stored = buildOrganisation({
-      statusHistory: [
-        { status: 'approved', updatedAt: '2025-01-01T09:00:00.000Z' },
-        { status: 'rejected', updatedAt: '2025-12-31T09:00:00.000Z' },
-        { status: 'active', updatedAt: '2025-12-31T15:00:00.000Z' }
-      ],
-      registrations: [reprocessorFrom('2025-02-01')]
-    })
-
-    const { status } = await findInYear(
-      organisationReadRepositoryWith,
-      stored,
-      2025
-    )
-
-    expect(status.current).toBe('active')
-  })
-
-  it('keeps the current organisation status when its timeline starts later', async ({
-    organisationReadRepositoryWith
-  }) => {
-    const stored = buildOrganisation({
-      statusHistory: history([['active', '2026-06-01']]),
-      registrations: [reprocessorFrom('2025-02-01')]
-    })
-
-    const { status } = await findInYear(
-      organisationReadRepositoryWith,
-      stored,
-      2025
-    )
-
-    expect(status.current).toBe('active')
+    expect(registrations[REPROCESSOR_NUMBER].status.current).toBe('cancelled')
   })
 
   it('serves a registration in a year not yet started, with its standing based on the status today', async ({

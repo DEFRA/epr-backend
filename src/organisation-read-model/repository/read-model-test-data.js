@@ -3,7 +3,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber
 } from '#domain/organisations/numbers.js'
-import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
 /** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
@@ -109,26 +109,27 @@ export const accreditationsByYear = (...accreditations) =>
  * accredited registration is accredited from its accreditation's approval, as
  * the mapper would make it.
  *
- * @template {Omit<RegistrationCommon, 'standingByDate'> & Partial<Pick<RegistrationCommon, 'standingByDate'>> & { accreditations: Record<string, { status: { timeline: StatusTimeline } }> }} R
+ * @template {Omit<RegistrationCommon, 'standingByDate'> & Partial<Pick<RegistrationCommon, 'standingByDate'>> & { accreditations: Record<string, { status: { timeline: StatusTimeline }, year: Year }> }} R
  * @param {R} registration
  * @returns {R & Pick<RegistrationCommon, 'standingByDate'>}
  */
 const withStanding = (registration) => {
   if (registration.standingByDate) {
-    return /** @type {any} */ (registration)
+    return /** @type {R & Pick<RegistrationCommon, 'standingByDate'>} */ (
+      registration
+    )
   }
-  const lastYear = Math.max(
-    ...[
-      ...Object.keys(registration.accreditations),
-      ...registration.status.timeline.map(({ at }) => at)
-    ].map(utcYearOf)
+  const [firstYear, ...years] = [
+    ...registration.status.timeline.map(({ at }) => at),
+    ...Object.keys(registration.accreditations)
+  ].map(utcYearOf)
+  const lastYear = years.reduce(
+    (latest, year) => (year > latest ? year : latest),
+    firstYear
   )
   return {
     ...registration,
-    standingByDate: standingByYear(
-      /** @type {any} */ (registration),
-      lastDayOfYear(utcYearOf(`${lastYear}-12-31`))
-    )
+    standingByDate: standingByYear(registration, lastYear)
   }
 }
 
