@@ -16,7 +16,7 @@ import { utcYearOf } from '#common/helpers/dates/year.js'
 import { buildReadApprovedOrganisation } from '#organisation-read-model/test-support.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
+/** @import { OrganisationBuilders } from '#organisations/test-support.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { RegistrationOrAccreditationId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 

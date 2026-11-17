@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { assertPresent } from '#test/type-helpers.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#organisations/test-support.js'
 import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,

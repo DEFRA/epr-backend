@@ -9,7 +9,7 @@ import {
   VALID_TOKEN_CONTACT_ID
 } from './create-defra-id-test-tokens.js'
 
-/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
+/** @import { OrganisationBuilders } from '#organisations/test-support.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 /** @param {OrganisationBuilders} builders */

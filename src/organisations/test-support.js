@@ -19,3 +19,5 @@ export {
   validateOrganisationInsert,
   validateRegistration
 } from '#repositories/organisations/schema/validation.js'
+
+/** @typedef {import('#repositories/organisations/contract/test-data.js').OrganisationBuilders} OrganisationBuilders */

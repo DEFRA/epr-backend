@@ -1,4 +1,4 @@
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#organisations/test-support.js'
 import { describe, expect, it, vi } from 'vitest'
 import { createSeedData } from './create-seed-data.js'
 import { createMockDb as createSharedMockDb } from '#test/mock-db.js'

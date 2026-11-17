@@ -13,7 +13,7 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { RegistrationOther } from '#domain/organisations/registration.js' */
-/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
+/** @import { OrganisationBuilders } from '#organisations/test-support.js' */
 
 /**
  * Approves organisations built by the caller's builders, so they draw numbers
