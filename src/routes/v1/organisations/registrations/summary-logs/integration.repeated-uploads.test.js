@@ -36,10 +36,7 @@ import {
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -402,7 +399,7 @@ describe('Repeated uploads of identical data', () => {
       async () => {
         const ledgerId = {
           organisationNumber: TEST_ORGANISATION_NUMBER,
-          registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+          registrationNumber: TEST_REGISTRATION_NUMBER,
           accreditationNumber: toAccreditationNumber('ACC-2026-001'),
           year: UPLOAD_YEAR
         }

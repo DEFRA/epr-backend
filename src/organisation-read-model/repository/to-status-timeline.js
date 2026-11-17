@@ -82,41 +82,53 @@ const servedOnly = (changes, statuses) =>
   )
 
 /**
- * The latest of the times the changes were recorded.
+ * The timeline of the changes, and when the last of them was recorded, or
+ * null when there are none.
  *
- * @param {{ updatedAt: string }[]} changes - each `updatedAt` an ISO 8601 datetime
- * @returns {string | undefined}
+ * @template {string} S
+ * @param {{ status: S, at: string, updatedAt: string }[]} changes - oldest first, each time an ISO 8601 datetime
+ * @returns {Omit<Status<S>, 'current'> | null}
  */
-export const lastRecordedAt = (changes) =>
-  changes
+export const timelineStatusOf = (changes) => {
+  const lastUpdatedAt = changes
     .map(({ updatedAt }) => updatedAt)
     .toSorted((one, other) => one.localeCompare(other))
     .at(-1)
+  return lastUpdatedAt === undefined
+    ? null
+    : {
+        lastUpdatedAt,
+        timeline: changes.map(({ status, at }) => ({ status, at }))
+      }
+}
 
 /**
- * The timeline of the changes, and when the last of them was recorded.
- *
  * @template {string} S
  * @param {Change<S>[]} changes - oldest first
- * @returns {Omit<Status<S>, 'current'>}
+ * @returns {Omit<Status<S>, 'current'> | null}
  */
-const toTimelineStatus = (changes) => ({
-  lastUpdatedAt: lastRecordedAt(changes),
-  timeline: changes.map(({ status, at }) => ({
-    status,
-    at: at.toISOString()
-  }))
-})
+const toTimelineStatus = (changes) =>
+  timelineStatusOf(
+    changes.map(({ status, at, updatedAt }) => ({
+      status,
+      at: at.toISOString(),
+      updatedAt
+    }))
+  )
 
 /**
  * Every change to an organisation, each when it was recorded, oldest first.
+ * Never empty: every stored organisation status is served, and the stored
+ * repository reads the last history entry, so cannot load an empty history.
  *
  * @param {StatusHistoryEntryOf<StoredOrganisationStatus>[]} statusHistory
  * @returns {Omit<Status<OrganisationStatus>, 'current'>}
  */
 export const toOrganisationStatusTimeline = (statusHistory) =>
-  toTimelineStatus(
-    servedOnly(inRecordedOrder(statusHistory), ORGANISATION_STATUSES)
+  /** @type {Omit<Status<OrganisationStatus>, 'current'>} */ (
+    toTimelineStatus(
+      servedOnly(inRecordedOrder(statusHistory), ORGANISATION_STATUSES)
+    )
   )
 
 /**
@@ -125,7 +137,7 @@ export const toOrganisationStatusTimeline = (statusHistory) =>
  *
  * @param {StatusHistoryEntryOf<StoredRegistrationStatus>[]} statusHistory
  * @param {string} validFrom
- * @returns {Omit<Status<RegistrationStatus>, 'current'>}
+ * @returns {Omit<Status<RegistrationStatus>, 'current'> | null}
  */
 export const toRegistrationStatusTimeline = (statusHistory, validFrom) =>
   toTimelineStatus(
@@ -141,7 +153,7 @@ export const toRegistrationStatusTimeline = (statusHistory, validFrom) =>
  *
  * @param {StatusHistoryEntryOf<StoredAccreditationStatus>[]} statusHistory
  * @param {string} validFrom
- * @returns {Omit<Status<AccreditationStatus>, 'current'>}
+ * @returns {Omit<Status<AccreditationStatus>, 'current'> | null}
  */
 export const toAccreditationStatusTimeline = (statusHistory, validFrom) =>
   toTimelineStatus(

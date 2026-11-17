@@ -6,10 +6,12 @@ import {
   REPROCESSOR_NUMBER,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import Joi from 'joi'
 import {
   findOrganisationAndRegistrationReadModels,
   findOrganisationByNumber,
-  findRegistrationByNumber
+  findRegistrationByNumber,
+  registrationParams
 } from './natural-keys.js'
 import {
   toOrganisationNumber,
@@ -17,6 +19,29 @@ import {
 } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
+
+describe('registrationParams', () => {
+  const schema = Joi.object(registrationParams)
+
+  it('accepts a registration number', () => {
+    expect(
+      schema.validate({
+        organisationNumber: '500001',
+        registrationNumber: REPROCESSOR_NUMBER
+      }).error
+    ).toBeUndefined()
+  })
+
+  it.each(['constructor', '__proto__', 'toString', 'r26er5001180098pl'])(
+    'rejects a registration number of %s',
+    (registrationNumber) => {
+      expect(
+        schema.validate({ organisationNumber: '500001', registrationNumber })
+          .error
+      ).toBeDefined()
+    }
+  )
+})
 
 /**
  * @param {ReturnType<typeof buildOrganisation>} organisation
@@ -152,18 +177,21 @@ describe('findOrganisationAndRegistrationReadModels', () => {
     ).resolves.toEqual({ organisation, registration })
   })
 
-  it('is not found when the organisation does not hold the registration', async () => {
-    await expect(
-      findOrganisationAndRegistrationReadModels(
-        requestFor(organisation, 'R26ER5001180098PL')
-      )
-    ).rejects.toMatchObject({
-      output: {
-        statusCode: 404,
-        payload: { message: 'Registration not found' }
-      }
-    })
-  })
+  it.each(['R26ER5001180098PL', 'constructor', '__proto__', 'toString'])(
+    'is not found when the organisation does not hold registration %s',
+    async (registrationNumber) => {
+      await expect(
+        findOrganisationAndRegistrationReadModels(
+          requestFor(organisation, registrationNumber)
+        )
+      ).rejects.toMatchObject({
+        output: {
+          statusCode: 404,
+          payload: { message: 'Registration not found' }
+        }
+      })
+    }
+  )
 
   it('is not found when there is no organisation', async () => {
     await expect(

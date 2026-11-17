@@ -73,13 +73,16 @@ export const createUploadsRepository = ({
     },
 
     async initiateSummaryLogUpload({
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       summaryLogId,
       redirectUrl,
       callbackUrl
     }) {
-      const s3Path = summaryLogUploadPath({ organisationId, registrationId })
+      const s3Path = summaryLogUploadPath({
+        organisationNumber,
+        registrationNumber
+      })
 
       return fetchJson(`${cdpUploaderUrl}/initiate`, {
         method: 'POST',

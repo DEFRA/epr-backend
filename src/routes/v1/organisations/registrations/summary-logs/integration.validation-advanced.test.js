@@ -889,8 +889,8 @@ describe('Advanced validation scenarios', () => {
       await summaryLogsRepository.insert(
         summaryLogId,
         summaryLogFactory.validated({
-          organisationId,
-          registrationId,
+          organisationNumber: TEST_ORGANISATION_NUMBER,
+          registrationNumber: TEST_REGISTRATION_NUMBER,
           validation: {},
           meta: { PROCESSING_TYPE: 'EXPORTER' }
         })

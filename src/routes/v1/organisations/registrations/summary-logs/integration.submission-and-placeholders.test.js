@@ -46,10 +46,7 @@ import {
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
 
@@ -67,7 +64,7 @@ describe('Submission and placeholder tests', () => {
 
     getServer().use(
       http.post(
-        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
+        'http://localhost:3001/v1/organisations/:organisationNumber/registrations/:registrationNumber/accreditations/:year/summary-log/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
@@ -490,7 +487,7 @@ describe('Submission and placeholder tests', () => {
     it('should commit the submission rows as row states', async () => {
       const rowStates = await summaryLogRowStatesForLedger({
         organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+        registrationNumber: TEST_REGISTRATION_NUMBER,
         accreditationNumber: toAccreditationNumber('ACC-2026-001'),
         year: UPLOAD_YEAR,
         ledgerRepository,
@@ -587,7 +584,7 @@ describe('Submission and placeholder tests', () => {
       const worksheet = workbook.addWorksheet('Data')
 
       worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
-      worksheet.getCell('B1').value = 'REG-123'
+      worksheet.getCell('B1').value = 'REG123'
 
       worksheet.getCell('A2').value = '__EPR_META_PROCESSING_TYPE'
       worksheet.getCell('B2').value = 'REPROCESSOR_INPUT'
@@ -793,11 +790,11 @@ describe('Submission and placeholder tests', () => {
       )
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId,
-        registrationId,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: TEST_REGISTRATION_NUMBER,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+        callbackUrl: `http://localhost:3001/v1/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,

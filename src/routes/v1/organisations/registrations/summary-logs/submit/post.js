@@ -68,7 +68,7 @@ export const summaryLogsSubmit = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: RegistrationParams & { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
+   *   params: RegistrationParams & { summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogsWorker: SummaryLogsCommandExecutor,
    *   systemLogsRepository: SystemLogsRepository
@@ -78,13 +78,7 @@ export const summaryLogsSubmit = {
   handler: async (request, h) => {
     const { summaryLogsRepository, summaryLogsWorker, params, logger } = request
 
-    const {
-      summaryLogId,
-      organisationId,
-      registrationId,
-      organisationNumber,
-      registrationNumber
-    } = params
+    const { summaryLogId, organisationNumber, registrationNumber } = params
 
     try {
       const summaryLog = await startSubmitting(
@@ -109,7 +103,7 @@ export const summaryLogsSubmit = {
       })
 
       logger.info({
-        message: `Summary log submission initiated: summaryLogId=${summaryLogId}, organisationId=${organisationId}, registrationId=${registrationId}`,
+        message: `Summary log submission initiated: summaryLogId=${summaryLogId}, organisationNumber=${organisationNumber}, registrationNumber=${registrationNumber}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,

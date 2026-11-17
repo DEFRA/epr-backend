@@ -29,7 +29,7 @@ export const summaryLogDocument = {
   },
   /**
    * @param {HapiRequest & {
-   *   params: { organisationId: string, registrationId: string, summaryLogId: SummaryLogId },
+   *   params: { summaryLogId: SummaryLogId },
    *   summaryLogsRepository: SummaryLogsRepository
    * }} request
    * @param {Object} h - Hapi response toolkit
