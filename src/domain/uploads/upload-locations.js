@@ -39,21 +39,6 @@ export const summaryLogUploadPath = ({
   )
 
 /**
- * Where summary log uploads were placed before numbers. Remove a week after
- * uploads start under numbers, the CDP Uploader session lifetime.
- *
- * @param {{ organisationId: string, registrationId: string }} ids
- * @returns {UploadPath}
- */
-export const idBasedSummaryLogUploadPath = ({
-  organisationId,
-  registrationId
-}) =>
-  toUploadPath(
-    `/organisations/${organisationId}/registrations/${registrationId}`
-  )
-
-/**
  * @param {string} importId
  * @returns {UploadPath}
  */

@@ -59,7 +59,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     vi.restoreAllMocks()
   })
 
-  describe('an active registration', () => {
+  describe('an active registration only the read model holds', () => {
     /** @type {Organisation} */
     const organisation = partialMock(
       buildOrganisation({ registrations: [reprocessor()] })
@@ -72,8 +72,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         repositories: {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
-          organisationAdministrationRepository:
-            createInMemoryOrganisationsRepository([organisation]),
           organisationReadRepository: createInMemoryOrganisationReadRepository([
             buildReadOrganisationWithNumbersOf(organisation)
           ]),
@@ -97,6 +95,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('returns 404 for a registration the read model does not hold', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/organisations/${organisation.organisationNumber}/registrations/R26ER5001189999PL/summary-logs/2026`,
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
     it('re-throws Boom errors from the uploads repository', async () => {
