@@ -6,7 +6,7 @@ import { findOrganisationByNumber } from './natural-keys.js'
  * @import { ResponseObject, ResponseToolkit, RouteOptionsValidate } from '@hapi/hapi'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Organisation } from '#domain/organisations/model.js'
+ * @import { ManagedOrganisation } from '#repositories/organisations/linking-port.js'
  * @import { OrganisationParams, RegistrationParams } from '#shared/organisations/natural-keys.js'
  *
  * @typedef {{
@@ -19,7 +19,7 @@ import { findOrganisationByNumber } from './natural-keys.js'
  *
  * @typedef {HapiRequest & { params: ResolvedParams }} ResolvedRequest
  *
- * @typedef {{ storedOrganisation: Organisation }} ResolvedRecords
+ * @typedef {{ storedOrganisation: ManagedOrganisation }} ResolvedRecords
  *
  * @typedef {KeyedResponse<ResolvedRequest>} NaturalKeyResponse
  */
@@ -107,7 +107,7 @@ export const atNaturalKeys = (route, path, params, options) =>
     params,
     async (request) => {
       const organisation = await findOrganisationByNumber(
-        request.organisationAdministrationRepository,
+        request.organisationLinkingRepository,
         request.params.organisationNumber
       )
 

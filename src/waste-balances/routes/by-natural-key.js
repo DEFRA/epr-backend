@@ -3,7 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
@@ -141,7 +141,9 @@ const registeredOnlyLedgerGet = {
     const { registration } = request.app
 
     if (
-      !approvedYears(registration.status.timeline, lastOpenDay()).includes(year)
+      !approvedYears(registration.status.timeline, latestOpenYear()).includes(
+        year
+      )
     ) {
       throw Boom.notFound('Year not found')
     }

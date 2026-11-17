@@ -19,6 +19,8 @@ const ADMINISTRATION_PORT_MODULES = [
   // Registration and accreditation administration
   'src/overseas-sites/application/process-import-file.js',
   'src/overseas-sites/application/process-import.js',
+  'src/overseas-sites/routes/accreditation-list.js',
+  'src/overseas-sites/routes/registration-list.js',
   'src/routes/v1/organisations/accreditation-status-history.js',
   'src/routes/v1/organisations/get-by-id.js',
   'src/routes/v1/organisations/put-by-id.js',
@@ -38,14 +40,7 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/server/seed/create-seed-data.js',
   'src/server/seed/seed-scenarios.js',
   'src/summary-log-scope-backfill/application/backfill.js',
-  'src/summary-log-scope-backfill/run.js',
-
-  // Domain code that still reads the legacy organisation shape. Each leaves
-  // this list once it reads through the organisation read repository.
-  'src/overseas-sites/routes/accreditation-list.js',
-  'src/overseas-sites/routes/registration-list.js',
-  'src/routes/organisations/at-natural-keys.js',
-  'src/routes/organisations/natural-keys.js'
+  'src/summary-log-scope-backfill/run.js'
 ]
 
 const productionModules = () =>

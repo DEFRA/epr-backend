@@ -5,27 +5,26 @@ import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
- * @import { Organisation } from '#domain/organisations/model.js'
  * @import { OrganisationNumber } from '#shared/organisations/numbers.js'
  * @import { OrganisationParams, RegistrationParams } from '#shared/organisations/natural-keys.js'
  * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
- * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
+ * @import { ManagedOrganisation, OrganisationLinkingRepository } from '#repositories/organisations/linking-port.js'
  */
 
 /**
  * Finds the stored organisation a route names by its number. Only an
  * organisation the organisation read model serves can be found.
  *
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
+ * @param {OrganisationLinkingRepository} organisationLinkingRepository
  * @param {OrganisationNumber} organisationNumber
- * @returns {Promise<Organisation>}
+ * @returns {Promise<ManagedOrganisation>}
  */
 export async function findOrganisationByNumber(
-  organisationAdministrationRepository,
+  organisationLinkingRepository,
   organisationNumber
 ) {
   const organisation =
-    await organisationAdministrationRepository.findByOrganisationNumber(
+    await organisationLinkingRepository.findByOrganisationNumber(
       organisationNumber
     )
   if (
