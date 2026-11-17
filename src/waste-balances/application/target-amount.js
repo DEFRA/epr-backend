@@ -4,11 +4,8 @@ import {
 } from '#waste-balances/domain/waste-balance-classification.js'
 
 /**
- * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
- * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
- * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
  * @import {WasteRecord, WasteRecordType} from '#domain/waste-records/model.js'
- * @import {WasteBalanceClassification} from '#waste-balances/domain/waste-balance-classification.js'
+ * @import {RowClassificationContext, WasteBalanceClassification} from '#waste-balances/domain/waste-balance-classification.js'
  */
 
 /**
@@ -28,26 +25,14 @@ import {
  * row identity and data alongside.
  *
  * @param {WasteRecord} record
- * @param {Record<string, TableSchema>} tableSchemas - The table schemas of the record's template
- * @param {AccreditationValidity | null} accreditation
- * @param {OverseasSitesContext} overseasSites
+ * @param {RowClassificationContext} context
  * @returns {ClassifiedRow}
  */
-export const classifyWasteRecord = (
-  record,
-  tableSchemas,
-  accreditation,
-  overseasSites
-) => ({
+export const classifyWasteRecord = (record, context) => ({
   rowId: record.rowId,
   wasteRecordType: record.type,
   data: record.data,
-  classification: classifyRecordForWasteBalance(
-    record,
-    tableSchemas,
-    accreditation,
-    overseasSites
-  )
+  classification: classifyRecordForWasteBalance(record, context)
 })
 
 /**

@@ -1,6 +1,6 @@
 /**
  * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
- * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
+ * @import {AccreditedRowClassificationContext} from './update-via-ledger.js'
  */
 import Boom from '@hapi/boom'
 
@@ -220,23 +220,14 @@ export const createWasteBalanceService = (
      * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {import('#domain/organisations/accreditation.js').AccreditationValidity} options.accreditation
-     * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
+     * @param {AccreditedRowClassificationContext} options.context
      * @param {SummaryLogFileId} options.summaryLogId
      * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
-     * @param {Record<string, TableSchema>} options.tableSchemas - The table schemas of the summary log's template
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (
       wasteRecords,
-      {
-        user,
-        accreditation,
-        overseasSites,
-        summaryLogId,
-        ledgerId,
-        tableSchemas
-      }
+      { user, context, summaryLogId, ledgerId }
     ) => {
       if (wasteRecords.length === 0) {
         return
@@ -244,14 +235,12 @@ export const createWasteBalanceService = (
 
       await performUpdateViaLedger({
         wasteRecords,
-        accreditation,
+        context,
         commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
         summaryLogId,
-        ledgerId,
-        tableSchemas
+        ledgerId
       })
     },
 

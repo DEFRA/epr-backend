@@ -41,9 +41,11 @@ export const reclassifyWasteRecordState = (
   ...rowState,
   classification: classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    tableSchemasOf(year, rowState.processingType),
-    accreditation,
-    overseasSites
+    {
+      tableSchemas: tableSchemasOf(year, rowState.processingType),
+      accreditation,
+      overseasSites
+    }
   )
 })
 

@@ -36,7 +36,11 @@ const buildWasteRecord = (
  */
 const submittedStateOf = (record) => {
   const { rowId, wasteRecordType, processingType, data, classification } =
-    projectSummaryLogRowState(record, tableSchemas, null, overseasSites)
+    projectSummaryLogRowState(record, {
+      tableSchemas,
+      accreditation: null,
+      overseasSites
+    })
   return { rowId, wasteRecordType, processingType, data, classification }
 }
 
@@ -49,9 +53,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey: new Map(),
-      tableSchemas,
-      accreditation: null,
-      overseasSites
+      context: { tableSchemas, accreditation: null, overseasSites }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.ADDED)
@@ -69,9 +71,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
-      tableSchemas,
-      accreditation: null,
-      overseasSites
+      context: { tableSchemas, accreditation: null, overseasSites }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)
@@ -93,9 +93,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
-      tableSchemas,
-      accreditation: null,
-      overseasSites
+      context: { tableSchemas, accreditation: null, overseasSites }
     })
 
     expect(changes.get(key(currentRecord.record))).toBe(RECORD_CHANGE.ADJUSTED)
@@ -124,9 +122,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
-      tableSchemas,
-      accreditation: null,
-      overseasSites
+      context: { tableSchemas, accreditation: null, overseasSites }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.ADJUSTED)
@@ -142,9 +138,7 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
-      tableSchemas,
-      accreditation: null,
-      overseasSites
+      context: { tableSchemas, accreditation: null, overseasSites }
     })
 
     expect(changes.get(key(currentRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)
