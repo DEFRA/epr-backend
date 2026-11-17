@@ -17,7 +17,7 @@ import {
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { PackagingRecyclingNote } from '../domain/model.js' */
-/** @import { AccreditationTonnage, FindByStatusParams, PaginatedResult, SumTonnageByAccreditationParams, PersistProjectionParams, UpdateStatusParams, UpdateWatermarkParams } from './port.js' */
+/** @import { AccreditationTonnage, FindByStatusParams, PaginatedResult, SumTonnageByAccreditationParams, PersistProjectionParams, UpdateStatusParams } from './port.js' */
 
 /** @typedef {Map<string, PackagingRecyclingNote>} Storage */
 
@@ -324,38 +324,6 @@ const performUpdateStatus =
 /**
  * @param {Storage} storage
  * @param {TypedLogger} logger
- * @returns {(params: UpdateWatermarkParams) => Promise<PackagingRecyclingNote | null>}
- */
-const performUpdateWatermark =
-  (storage, logger) =>
-  async ({ id, version, lastAppliedEventNumber }) => {
-    const prn = storage.get(id)
-    if (!prn) {
-      return null
-    }
-
-    assertVersion(logger, id, version, prn.version)
-
-    enforceMonotonicWatermark(
-      id,
-      prn.lastAppliedEventNumber,
-      lastAppliedEventNumber,
-      logger
-    )
-
-    const updated = {
-      ...prn,
-      version: prn.version + 1,
-      lastAppliedEventNumber
-    }
-
-    storage.set(id, structuredClone(updated))
-    return structuredClone(updated)
-  }
-
-/**
- * @param {Storage} storage
- * @param {TypedLogger} logger
  * @returns {(params: PersistProjectionParams) => Promise<PackagingRecyclingNote | null>}
  */
 const performPersistProjection =
@@ -417,7 +385,6 @@ export function createInMemoryPackagingRecyclingNotesRepository(
     ),
     sumTonnageByAccreditation: performSumTonnageByAccreditation(storage),
     updateStatus: performUpdateStatus(storage, logger),
-    updateWatermark: performUpdateWatermark(storage, logger),
     persistProjection: performPersistProjection(storage, logger)
   })
 }

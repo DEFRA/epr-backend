@@ -28,7 +28,6 @@ describe('isCounted', () => {
     'src/repositories/organisations/mongodb-find.js',
     'src/reports/repository/mongodb.js',
     'src/waste-balances/repository/ledger-mongodb.js',
-    'src/packaging-recycling-notes/repository/drift-query.mongodb.js',
     'src/repositories/organisations/inmemory.js',
     'src/repositories/summary-logs/inmemory.js',
     'src/waste-balances/repository/ledger-inmemory.js',
