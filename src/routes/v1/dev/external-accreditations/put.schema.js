@@ -4,8 +4,10 @@ import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { accreditedOverseasSitesSchema } from '#common/validation/overseas-site-schema.js'
 import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { organisationParams } from '#routes/organisations/natural-keys.js'
 
 export const externalAccreditationPayloadSchema = Joi.object({
+  organisationNumber: organisationParams.organisationNumber,
   accreditationNumber: Joi.string().required(),
   prnIssuance: Joi.object({
     tonnageBand: tonnageBandSchema.required()
