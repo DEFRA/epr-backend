@@ -7,10 +7,11 @@ import { approvedBy, approvedYears } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Standing, StandingByYear, Registration, StatusTimeline } from './model.js' */
+/** @import { Standing, StandingByYear, StatusTimeline } from './model.js' */
 
 /**
- * @typedef {Pick<Registration, 'status' | 'accreditations'>} StandingSource
+ * @typedef {{ status: { timeline: StatusTimeline } }} HasTimeline
+ * @typedef {HasTimeline & { accreditations: Record<string, HasTimeline> }} StandingSource
  */
 
 /**
@@ -112,12 +113,14 @@ export const standingByDate = (registration, year) => {
  * @returns {StandingByYear}
  */
 export const standingByYear = (registration, upToYear) => {
-  const years = [
+  const years = new Set([
     ...approvedYears(registration.status.timeline, upToYear),
     ...Object.keys(registration.accreditations).map(utcYearOf)
-  ].filter((year) => year <= upToYear)
+  ])
 
   return Object.fromEntries(
-    years.map((year) => [year, standingByDate(registration, year)])
+    [...years]
+      .filter((year) => year <= upToYear)
+      .map((year) => [year, standingByDate(registration, year)])
   )
 }

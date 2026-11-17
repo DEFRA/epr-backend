@@ -98,7 +98,9 @@ export const buildReadExporterAccreditation = (overrides = {}) => ({
  */
 const withStanding = (registration) => {
   if (registration.standingByDate) {
-    return /** @type {any} */ (registration)
+    return /** @type {R & Pick<RegistrationCommon, 'standingByDate'>} */ (
+      registration
+    )
   }
   const [firstYear, ...years] = [
     ...registration.status.timeline.map(({ at }) => at),
@@ -110,7 +112,7 @@ const withStanding = (registration) => {
   )
   return {
     ...registration,
-    standingByDate: standingByYear(/** @type {any} */ (registration), lastYear)
+    standingByDate: standingByYear(registration, lastYear)
   }
 }
 
