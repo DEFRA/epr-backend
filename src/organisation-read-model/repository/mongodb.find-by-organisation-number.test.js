@@ -3,7 +3,7 @@ import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'
 import { config } from '#root/config.js'
 import {
   buildLinkedDefraOrg,
@@ -240,7 +240,7 @@ describe('findByOrganisationNumber', () => {
       const repository = await organisationReadRepositoryWith({
         organisations: [stored],
         externalAccreditations: [
-          buildExternalAccreditation({
+          buildExternalAccreditationFor(stored, {
             registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
           })
         ]
@@ -622,11 +622,6 @@ describe('findByOrganisationNumber for years', () => {
     return /** @type {Organisation} */ (organisation)
   }
 
-  const external2027 = () =>
-    buildExternalAccreditation({
-      registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
-    })
-
   it('keeps a registration approved in the year with only that year’s accreditation', async ({
     organisationReadRepositoryWith
   }) => {
@@ -644,7 +639,11 @@ describe('findByOrganisationNumber for years', () => {
       organisationReadRepositoryWith,
       stored,
       2026,
-      [external2027()]
+      [
+        buildExternalAccreditationFor(stored, {
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+        })
+      ]
     )
 
     expect(
@@ -681,7 +680,11 @@ describe('findByOrganisationNumber for years', () => {
       organisationReadRepositoryWith,
       stored,
       2026,
-      [external2027()]
+      [
+        buildExternalAccreditationFor(stored, {
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+        })
+      ]
     )
 
     expect(registrations[REPROCESSOR_NUMBER].accreditations).toStrictEqual({})

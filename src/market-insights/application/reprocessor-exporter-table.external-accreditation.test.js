@@ -8,7 +8,7 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'
 import {
   REPROCESSOR_NUMBER,
   reprocessor
@@ -43,7 +43,7 @@ describe('buildReprocessorExporterTable with an accreditation held outside epr-b
     const organisationReadRepository = await organisationReadRepositoryWith({
       organisations: [organisation],
       externalAccreditations: [
-        buildExternalAccreditation({
+        buildExternalAccreditationFor(organisation, {
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
           accreditationNumber: ACCREDITATION_NUMBER_2027
         })

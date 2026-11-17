@@ -647,6 +647,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     })
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
+        organisationNumber: ledgerId.organisationNumber,
         registrationNumber: ledgerId.registrationNumber,
         year: ledgerId.year,
         accreditationNumber: ledgerId.accreditationNumber,
@@ -697,6 +698,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       .insertOne(organisationWithRegistration())
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
+        organisationNumber: ledgerId.organisationNumber,
         registrationNumber: ledgerId.registrationNumber,
         year: laterLedgerId.year,
         accreditationNumber: laterLedgerId.accreditationNumber,

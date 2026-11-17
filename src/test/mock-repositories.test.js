@@ -99,7 +99,7 @@ describe('mock-repositories', () => {
     },
     createMockExternalAccreditationsRepository: {
       build: createMockExternalAccreditationsRepository,
-      methods: ['upsert', 'remove']
+      methods: ['upsert']
     }
   }
 
