@@ -1,16 +1,18 @@
 import Joi from 'joi'
 
-import { openYearSchema } from '#common/validation/year-schema.js'
-import { hasTemplatesForYear } from '#domain/summary-logs/table-schemas/index.js'
+import { yearSchema } from '#common/validation/year-schema.js'
+import { availableWasteRecordYears } from '#waste-records-export/domain/available-years.js'
 
 /**
- * The export's `?year=`: an open year with a summary log template, so a year
- * with no template is refused rather than exported header-only.
+ * The export's `?year=`: a year `/waste-records/years` lists, so a year with
+ * no template is refused rather than exported header-only.
  */
 export const exportYearQuery = Joi.object({
-  year: openYearSchema()
+  year: yearSchema()
     .custom((year, helpers) =>
-      hasTemplatesForYear(year) ? year : helpers.error('any.invalid')
+      availableWasteRecordYears().includes(year)
+        ? year
+        : helpers.error('any.invalid')
     )
     .required()
 })
