@@ -12,6 +12,8 @@
 
 export const ORGANISATION_NUMBER_PATTERN = /^[1-9]\d*$/
 
+export const REGISTRATION_NUMBER_PATTERN = /^[A-Z0-9]+$/
+
 /**
  * @param {string} value
  * @returns {OrganisationNumber}
