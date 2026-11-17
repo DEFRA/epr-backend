@@ -29,7 +29,7 @@ const FIRST_DATA_ROW = TABLE_HEADER_ROW + 1
 
 const registeredOnlyMeta = {
   REGISTRATION_NUMBER: {
-    value: 'REG-123',
+    value: 'REG123',
     location: { sheet: 'Cover', row: 1, column: 'B' }
   },
   PROCESSING_TYPE: {
@@ -95,7 +95,7 @@ describe('an operator accredited in July uploading their registered-only summary
     const { server, organisationId, registrationId } = env
     const { organisationNumber } =
       await env.organisationAdministrationRepository.findById(organisationId)
-    const registration = `/organisations/${organisationNumber}/registrations/REG-123`
+    const registration = `/organisations/${organisationNumber}/registrations/REG123`
 
     // Close Q1, so the quarterly split shows: January to March closed,
     // April to June open.
