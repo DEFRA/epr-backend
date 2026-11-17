@@ -53,7 +53,7 @@ const prnAwareClassifier = (data) =>
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @typedef {import('#shared/waste-records/model.js').WasteRecord} WasteRecord */
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 
 const accreditationId = 'acc-1'
 

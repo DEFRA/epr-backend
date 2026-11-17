@@ -2,10 +2,10 @@ import Boom from '@hapi/boom'
 import { assertOrgStatusTransitionValid } from '#domain/organisations/status.js'
 import {
   ACCREDITATION_STATUS,
-  ACTIVE_ACCREDITATION_STATUSES,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
 } from '#shared/organisations/model.js'
+import { ACTIVE_ACCREDITATION_STATUSES } from '#domain/organisations/model.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import {StatusTransitionAsserter} from '#domain/organisations/status.js' */

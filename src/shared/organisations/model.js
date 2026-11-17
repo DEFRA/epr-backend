@@ -33,12 +33,6 @@ export const LEDGER_ACCREDITATION_KIND = Object.freeze({
   REGISTERED_ONLY: 'registeredOnly'
 })
 
-/** @type {ReadonlySet<StoredAccreditationStatus>} */
-export const ACTIVE_ACCREDITATION_STATUSES = new Set([
-  ACCREDITATION_STATUS.APPROVED,
-  ACCREDITATION_STATUS.SUSPENDED
-])
-
 /**
  * Status values for organisations
  * @typedef {typeof ORGANISATION_STATUS[keyof typeof ORGANISATION_STATUS]} StoredOrganisationStatus
@@ -49,17 +43,6 @@ export const ORGANISATION_STATUS = Object.freeze({
   ACTIVE: 'active',
   REJECTED: 'rejected'
 })
-
-/**
- * Organisation statuses from which an organisation can be linked to a Defra ID
- * organisation: freshly `approved`, or `active` but unlinked (e.g. after being
- * unlinked via the admin journey, allowing the user to re-link).
- * @type {readonly string[]}
- */
-export const LINKABLE_ORGANISATION_STATUSES = Object.freeze([
-  ORGANISATION_STATUS.APPROVED,
-  ORGANISATION_STATUS.ACTIVE
-])
 
 export const REGULATOR = Object.freeze({
   EA: 'ea',

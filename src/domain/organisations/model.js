@@ -1,7 +1,29 @@
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
-/** @import { BusinessTypeValue, NationValue, PartnershipType, RegulatorValue, StoredOrganisationStatus, UserRoles, WasteProcessingTypeValue } from '#shared/organisations/model.js' */
+/** @import { BusinessTypeValue, NationValue, PartnershipType, RegulatorValue, StoredAccreditationStatus, StoredOrganisationStatus, UserRoles, WasteProcessingTypeValue } from '#shared/organisations/model.js' */
+
+import {
+  ACCREDITATION_STATUS,
+  ORGANISATION_STATUS
+} from '#shared/organisations/model.js'
+
+/** @type {ReadonlySet<StoredAccreditationStatus>} */
+export const ACTIVE_ACCREDITATION_STATUSES = new Set([
+  ACCREDITATION_STATUS.APPROVED,
+  ACCREDITATION_STATUS.SUSPENDED
+])
+
+/**
+ * Organisation statuses from which an organisation can be linked to a Defra ID
+ * organisation: freshly `approved`, or `active` but unlinked (e.g. after being
+ * unlinked via the admin journey, allowing the user to re-link).
+ * @type {readonly string[]}
+ */
+export const LINKABLE_ORGANISATION_STATUSES = Object.freeze([
+  ORGANISATION_STATUS.APPROVED,
+  ORGANISATION_STATUS.ACTIVE
+])
 
 /**
  * @typedef {Registration | Accreditation} RegistrationOrAccreditation

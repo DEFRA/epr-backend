@@ -6,7 +6,7 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
  * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
  * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
  * @import {WasteBalanceClassificationReason} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
- * @import { WasteRecord } from '#shared/waste-records/model.js'
+ * @import { WasteRecord } from '#domain/waste-records/model.js'
  */
 
 /**

@@ -217,7 +217,7 @@ export const createWasteBalanceService = (
      * balance inclusion, then fold, decide, and append the aggregate
      * submission. The sole write entry the summary-log worker calls.
      *
-     * @param {import('#shared/waste-records/model.js').WasteRecord[]} wasteRecords
+     * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
      * @param {import('#domain/organisations/accreditation.js').AccreditationValidity} options.accreditation

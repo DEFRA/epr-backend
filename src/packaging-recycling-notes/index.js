@@ -9,6 +9,10 @@
 
 // Domain exports
 export { PRN_STATUS, PRN_STATUS_TRANSITIONS } from './domain/model.js'
+export { isRelevantYearOpen } from './domain/closed-year.js'
+
+// Application exports
+export { getIssuedTonnage } from './application/get-issued-tonnage.js'
 
 // Repository exports
 export { createPackagingRecyclingNotesRepository } from './repository/mongodb.js'

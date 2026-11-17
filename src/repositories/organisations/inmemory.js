@@ -5,10 +5,8 @@
 /** @import { NumberHolder, StoredOrganisation, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
-import {
-  LINKABLE_ORGANISATION_STATUSES,
-  USER_ROLES
-} from '#shared/organisations/model.js'
+import { USER_ROLES } from '#shared/organisations/model.js'
+import { LINKABLE_ORGANISATION_STATUSES } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,

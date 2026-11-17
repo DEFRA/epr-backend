@@ -1,6 +1,6 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {KeyedSubmittedSummaryLog, SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
-import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
+import { getIssuedTonnage } from '#packaging-recycling-notes/index.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { reportOperatorCategory } from '#reports/domain/operator-category.js'

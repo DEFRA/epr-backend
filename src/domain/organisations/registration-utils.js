@@ -1,8 +1,5 @@
-import {
-  ACTIVE_ACCREDITATION_STATUSES,
-  MATERIAL,
-  REGISTRATION_STATUS
-} from '#shared/organisations/model.js'
+import { MATERIAL, REGISTRATION_STATUS } from '#shared/organisations/model.js'
+import { ACTIVE_ACCREDITATION_STATUSES } from '#domain/organisations/model.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
 import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'

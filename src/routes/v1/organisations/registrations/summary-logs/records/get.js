@@ -12,7 +12,7 @@ import {
   registrationPath
 } from '#shared/organisations/natural-keys.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
-import { streamSubmissionCsvToReadable } from '#waste-records-export/application/stream-submission-csv.js'
+import { streamSubmissionCsvToReadable } from '#waste-records-export/index.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { KeyedSummaryLog, KeyedSummaryLogWithId, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */

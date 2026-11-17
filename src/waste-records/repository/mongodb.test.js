@@ -377,7 +377,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
   // not preserve `-0` (it reads back `+0`), so without normalisation the fresh
   // projection never deep-equals its stored copy and the identical resubmission
   // is reported as an endless phantom adjustment.
-  /** @type {import('#shared/waste-records/model.js').WasteRecord} */
+  /** @type {import('#domain/waste-records/model.js').WasteRecord} */
   const zeroTonnageSentOn = {
     rowId: '5000',
     type: WASTE_RECORD_TYPE.SENT_ON,

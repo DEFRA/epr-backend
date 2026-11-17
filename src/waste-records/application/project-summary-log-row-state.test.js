@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 
-/** @typedef {import('#shared/waste-records/model.js').WasteRecord} WasteRecord */
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */

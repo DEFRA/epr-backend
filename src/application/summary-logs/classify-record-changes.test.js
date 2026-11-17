@@ -31,7 +31,7 @@ const buildWasteRecord = (
 /**
  * A submitted row state as the read model projects it — the write-path
  * projection minus the storage-only id fields.
- * @param {import('#shared/waste-records/model.js').WasteRecord} record
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record
  * @returns {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState}
  */
 const submittedStateOf = (record) => {

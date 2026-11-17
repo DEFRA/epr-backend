@@ -43,7 +43,7 @@ import {
 import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
 import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
-import { isOrsApprovedAtDate } from '#overseas-sites/domain/approval.js'
+import { isOrsApprovedAtDate } from '#overseas-sites/index.js'
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '../validation-pipeline.js' */
