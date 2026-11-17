@@ -7,8 +7,10 @@ import { describe, expect, vi } from 'vitest'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
+import {
+  buildExternalAccreditation,
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
+} from '#organisation-read-model/test-support.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
@@ -22,10 +24,10 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import { storedOrgId } from '#repositories/organisations/helpers.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+  createOrganisationBuilders,
+  storedOrgId,
+  createOrganisationsRepository
+} from '#organisations/test-support.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'

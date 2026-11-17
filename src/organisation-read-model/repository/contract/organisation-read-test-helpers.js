@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb'
 import {
   buildAccreditation,
   buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+} from '#organisations/test-support.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber

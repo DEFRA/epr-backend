@@ -1,14 +1,18 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadApprovedOrganisation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -25,8 +29,10 @@ import {
   generateValidTokenWith
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  createOrganisationBuilders,
+  createInMemoryOrganisationsRepository
+} from '#organisations/test-support.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import {
@@ -36,12 +42,6 @@ import {
 import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
-import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_ACCREDITATION_NUMBER,
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 

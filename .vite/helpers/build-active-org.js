@@ -1,5 +1,5 @@
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
-import { prepareOrgUpdate } from '#repositories/organisations/contract/test-data.js'
+import { prepareOrgUpdate } from '#organisations/test-support.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createApprovedOrgBuilder } from './build-approved-org.js'
 import {

@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  createOrganisationBuilders,
+  createInMemoryOrganisationsRepository
+} from '#organisations/test-support.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
   REPROCESSOR_NUMBER,

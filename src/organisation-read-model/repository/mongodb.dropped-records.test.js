@@ -2,7 +2,7 @@ import {
   buildAccreditation,
   buildRegistration,
   createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
+} from '#organisations/test-support.js'
 import {
   APPROVED_SITE_ID,
   EXPORTER_NUMBER,

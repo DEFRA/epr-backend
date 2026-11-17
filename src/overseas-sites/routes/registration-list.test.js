@@ -7,9 +7,9 @@ import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repositor
 import {
   buildAccreditation,
   buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+  createOrganisationBuilders,
+  createInMemoryOrganisationsRepository
+} from '#organisations/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'

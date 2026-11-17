@@ -34,8 +34,10 @@ import {
 } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminPackagingRecyclingNotesCancelPath } from './admin-cancel.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createInMemoryOrganisationsRepository,
+  createOrganisationBuilders
+} from '#organisations/test-support.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js' */

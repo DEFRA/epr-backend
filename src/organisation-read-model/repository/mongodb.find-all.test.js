@@ -1,4 +1,4 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#organisations/test-support.js'
 import { reprocessor } from './contract/organisation-read-test-helpers.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 

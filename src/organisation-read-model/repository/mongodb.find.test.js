@@ -1,4 +1,4 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#organisations/test-support.js'
 import {
   ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,

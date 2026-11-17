@@ -8,16 +8,16 @@ import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmissi
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration,
   registrationOf,
-  servedOrganisations
-} from '#organisation-read-model/repository/read-model-test-data.js'
-import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+  servedOrganisations,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { config } from '#root/config.js'
 
 // ---------------------------------------------------------------------------

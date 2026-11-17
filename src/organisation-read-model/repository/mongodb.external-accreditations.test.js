@@ -3,7 +3,7 @@ import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#organisations/test-support.js'
 import {
   ACCREDITATION_NUMBER,
   APPROVED_SITE_ID,

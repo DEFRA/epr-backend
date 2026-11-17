@@ -2,8 +2,10 @@ import { describe, beforeEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { createFormSubmissionsRepository } from './mongodb.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createInMemoryOrganisationsRepository,
+  createOrganisationBuilders
+} from '#organisations/test-support.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { testFormSubmissionsRepositoryContract } from './port.contract.js'
 import {

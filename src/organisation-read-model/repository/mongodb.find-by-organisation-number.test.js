@@ -8,7 +8,7 @@ import { config } from '#root/config.js'
 import {
   buildLinkedDefraOrg,
   createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
+} from '#organisations/test-support.js'
 import {
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,

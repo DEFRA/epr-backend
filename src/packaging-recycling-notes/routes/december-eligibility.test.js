@@ -5,22 +5,20 @@ import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
-import {
+  buildReadReprocessorRegistration,
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 

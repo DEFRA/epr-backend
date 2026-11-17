@@ -1,10 +1,12 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createOrganisationBuilders,
+  createOrganisationsRepository
+} from '#organisations/test-support.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { describe, expect, vi } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { COLLECTION_NAME } from '#repositories/summary-logs/mongodb.js'
 import { config } from '../config.js'

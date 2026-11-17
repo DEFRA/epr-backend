@@ -8,7 +8,7 @@ import {
   nextReadOrganisationNumber as nextOrganisationNumber,
   registrationOf,
   servedOrganisations
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'

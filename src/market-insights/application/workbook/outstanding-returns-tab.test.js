@@ -1,5 +1,8 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createOrganisationBuilders,
+  createInMemoryOrganisationsRepository
+} from '#organisations/test-support.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import {
@@ -7,9 +10,8 @@ import {
   REGULATOR,
   TONNAGE_BAND
 } from '#domain/organisations/model.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
+import { servedOrganisations } from '#organisation-read-model/test-support.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'

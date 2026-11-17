@@ -7,7 +7,7 @@ import {
 import {
   prepareOrgUpdate,
   getValidDateRange
-} from '#repositories/organisations/contract/test-data.js'
+} from '#organisations/test-support.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */

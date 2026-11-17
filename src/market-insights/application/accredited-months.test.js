@@ -5,7 +5,7 @@ import {
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { accreditedMonths } from './accredited-months.js'

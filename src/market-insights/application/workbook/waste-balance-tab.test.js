@@ -1,4 +1,7 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createOrganisationBuilders,
+  createInMemoryOrganisationsRepository
+} from '#organisations/test-support.js'
 import { assert } from 'vitest'
 import {
   WASTE_BALANCE_ACCREDITATION_TYPES,
@@ -25,7 +28,6 @@ import {
   renderTab
 } from './published-workbook-test-helpers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const insertAccreditedOperator =

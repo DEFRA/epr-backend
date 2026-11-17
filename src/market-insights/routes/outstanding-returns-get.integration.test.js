@@ -1,5 +1,10 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createOrganisationBuilders,
+  createOrganisationsRepository,
+  buildAccreditation,
+  buildRegistration
+} from '#organisations/test-support.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -7,8 +12,7 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
@@ -22,10 +26,6 @@ import {
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import {
-  buildAccreditation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
 import { marketInsightsOutstandingReturnsPath } from './outstanding-returns-get.js'
 
 const organisationBuilders = createOrganisationBuilders()

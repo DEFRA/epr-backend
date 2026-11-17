@@ -2,7 +2,7 @@ import { onTestFinished } from 'vitest'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
 import { config } from '#root/config.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#organisations/test-support.js'
 import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER,

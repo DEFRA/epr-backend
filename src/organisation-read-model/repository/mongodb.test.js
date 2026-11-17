@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb'
 
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createOrganisationBuilders } from '#organisations/test-support.js'
 import { it as organisationReadIt } from '#vite/fixtures/organisation-read-mongo.js'
 import {
   REPROCESSOR_NUMBER,

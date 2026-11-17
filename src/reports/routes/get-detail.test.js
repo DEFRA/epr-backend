@@ -1,30 +1,12 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
-import { ObjectId } from 'mongodb'
-import { calendarDate } from '#common/helpers/date-formatter.js'
-import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
-import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import {
-  buildCreateReportParams,
-  createAndSubmitReport,
-  reportKeyOf
-} from '#reports/repository/contract/test-data.js'
-import {
+  buildReadReprocessorRegistration,
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,
   accreditation,
@@ -33,7 +15,23 @@ import {
   exporterAccreditation,
   pendingOverseasSite,
   reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
+import { ObjectId } from 'mongodb'
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { StatusCodes } from 'http-status-codes'
+import { createTestServer } from '#test/create-test-server.js'
+import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { createOrganisationBuilders } from '#organisations/test-support.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  buildCreateReportParams,
+  createAndSubmitReport,
+  reportKeyOf
+} from '#reports/repository/contract/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {
   emptySummaryLogStores,

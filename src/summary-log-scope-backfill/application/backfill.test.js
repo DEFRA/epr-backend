@@ -7,12 +7,12 @@ import {
   summaryLogFactory,
   withoutAccreditationId
 } from '#repositories/summary-logs/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
+  createInMemoryOrganisationsRepository,
   buildAccreditation,
   buildRegistration,
   createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
+} from '#organisations/test-support.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'

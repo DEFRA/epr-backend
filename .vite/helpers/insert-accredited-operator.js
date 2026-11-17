@@ -9,11 +9,11 @@ import {
 import {
   buildAccreditation,
   buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+} from '#organisations/test-support.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
-import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'
+import { buildReadApprovedOrganisation } from '#organisation-read-model/test-support.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */

@@ -16,7 +16,7 @@ import nonRegisteredOutsideUk from '#data/fixtures/ea/organisation/non-registere
 import unincorporatedSeparateControl from '#data/fixtures/ea/organisation/unincorporated-separate-control.json' with { type: 'json' }
 import soleTraderSeparateControl from '#data/fixtures/ea/organisation/sole-trader-separate-contro.json' with { type: 'json' }
 import nonUkSeparateControl from '#data/fixtures/ea/organisation/non-uk-separate-control.json' with { type: 'json' }
-import { validateOrganisationInsert } from '#repositories/organisations/schema/index.js'
+import { validateOrganisationInsert } from '#organisations/test-support.js'
 
 describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
   it('should parse registered limited partnership organisation from fixture', async () => {

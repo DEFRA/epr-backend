@@ -1,7 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createInMemoryOrganisationsRepository,
+  createOrganisationBuilders
+} from '#organisations/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'

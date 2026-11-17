@@ -7,7 +7,10 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  createInMemoryOrganisationsRepository,
+  createOrganisationBuilders
+} from '#organisations/test-support.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   approvedStatusFrom,
@@ -15,11 +18,10 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation,
   servedOrganisations
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { uniqueRegistrationNumber } from '#reports/repository/contract/test-data.js'
 import { frameOf } from './cells.js'

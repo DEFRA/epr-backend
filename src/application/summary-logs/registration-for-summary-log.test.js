@@ -4,7 +4,7 @@ import {
   buildReadAccreditation,
   buildReadExporterRegistration,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import {
   OPERATOR_CATEGORY,

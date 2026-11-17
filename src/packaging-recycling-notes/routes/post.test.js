@@ -1,14 +1,17 @@
 import Boom from '@hapi/boom'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -32,12 +35,7 @@ import { PRN_YEAR } from '#packaging-recycling-notes/repository/contract/test-da
 import { toYear } from '#common/helpers/dates/year.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { createOrganisationBuilders } from '#organisations/test-support.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
