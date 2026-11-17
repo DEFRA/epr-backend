@@ -119,6 +119,8 @@ export default [
       'src/common/helpers/dates/year-month.js',
       'src/domain/summary-logs/template-year.js',
       'src/domain/summary-logs/table-schemas/index.js',
+      'src/organisation-read-model/domain/registration-standing.js',
+      'src/organisation-read-model/repository/to-read-model.js',
       'src/reports/domain/period-for-date.js',
       'src/routes/organisations/get.organisation.js',
       'src/waste-balances/application/read-model-accreditations.js'

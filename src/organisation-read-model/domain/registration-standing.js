@@ -11,7 +11,7 @@ import { approvedBy, approvedYears } from './status-timeline.js'
 
 /**
  * @typedef {{
- *   accreditations: Record<string, { status: { timeline: StatusTimeline<AccreditationStatus> }, year: Year }>
+ *   accreditations: Record<Year, { status: { timeline: StatusTimeline<AccreditationStatus> }, year: Year }>
  *   status: { timeline: StatusTimeline<RegistrationStatus> }
  * }} StandingSource
  */

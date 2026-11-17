@@ -93,14 +93,13 @@ export const buildReadExporterAccreditation = (overrides = {}) => ({
  *
  * @template {{ year: Year }} A
  * @param {...A} accreditations
- * @returns {Record<string, A>}
+ * @returns {Record<Year, A>}
  */
 export const accreditationsByYear = (...accreditations) =>
-  Object.fromEntries(
-    accreditations.map((accreditation) => [
-      String(accreditation.year),
-      accreditation
-    ])
+  /** @type {Record<Year, A>} */ (
+    Object.fromEntries(
+      accreditations.map((accreditation) => [accreditation.year, accreditation])
+    )
   )
 
 /**

@@ -149,7 +149,7 @@ describe('transform', () => {
     const served = organisation({
       registrations: {
         [REGISTRATION_NUMBER]: reprocessor({
-          accreditations: { 2026: accreditation() }
+          accreditations: { [toYear(2026)]: accreditation() }
         })
       }
     })
@@ -211,7 +211,7 @@ describe('transform', () => {
       const row = await rowFor(
         reprocessor({
           accreditations: {
-            2026: accreditation({
+            [toYear(2026)]: accreditation({
               prnIssuance: {
                 tonnageBand: /** @type {TonnageBand} */ (tonnageBand)
               },
@@ -233,14 +233,14 @@ describe('transform', () => {
     const row = await rowFor(
       reprocessor({
         accreditations: {
-          2025: accreditation({
+          [toYear(2025)]: accreditation({
             accreditationNumber: /** @type {any} */ ('A25'),
             year: toYear(2025)
           }),
-          2026: accreditation({
+          [toYear(2026)]: accreditation({
             accreditationNumber: /** @type {any} */ ('A26')
           }),
-          2027: accreditation({
+          [toYear(2027)]: accreditation({
             accreditationNumber: /** @type {any} */ ('A27'),
             year: toYear(2027)
           })
@@ -255,7 +255,7 @@ describe('transform', () => {
     const row = await rowFor(
       reprocessor({
         accreditations: {
-          2026: accreditation({
+          [toYear(2026)]: accreditation({
             status: {
               current: 'approved',
               lastUpdatedAt: '2026-03-30T09:00:00.000Z',
@@ -277,7 +277,7 @@ describe('transform', () => {
     const row = await rowFor(
       reprocessor({
         accreditations: {
-          2026: accreditation({
+          [toYear(2026)]: accreditation({
             status: {
               current: 'suspended',
               lastUpdatedAt: '2026-02-01T00:00:00.000Z',
@@ -295,7 +295,7 @@ describe('transform', () => {
     const row = await rowFor(
       reprocessor({
         accreditations: {
-          2026: accreditation({
+          [toYear(2026)]: accreditation({
             status: {
               current: 'suspended',
               lastUpdatedAt: '2026-03-20T09:00:00.000Z',

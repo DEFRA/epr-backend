@@ -219,7 +219,9 @@ describe('syncFromSummaryLog', () => {
     organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
       organisationWith({
         registration: {
-          accreditations: { 2026: accreditationNumbered(ACCREDITATION_NUMBER) }
+          accreditations: {
+            [toYear(2026)]: accreditationNumbered(ACCREDITATION_NUMBER)
+          }
         }
       })
     )
@@ -465,7 +467,10 @@ describe('syncFromSummaryLog', () => {
       organisationWith({
         registration: {
           accreditations: {
-            2027: accreditationNumbered(ACCREDITATION_NUMBER, toYear(2027))
+            [toYear(2027)]: accreditationNumbered(
+              ACCREDITATION_NUMBER,
+              toYear(2027)
+            )
           }
         }
       })

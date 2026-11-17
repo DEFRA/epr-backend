@@ -56,7 +56,7 @@ import {
  */
 
 /**
- * @typedef {Map<RegistrationNumber, Record<string, ReprocessorAccreditation | ExporterAccreditation>>} ExternalAccreditationsByRegistration
+ * @typedef {Map<RegistrationNumber, Record<Year, ReprocessorAccreditation | ExporterAccreditation>>} ExternalAccreditationsByRegistration
  */
 
 /**
@@ -64,7 +64,7 @@ import {
  *
  * @param {ExternalAccreditation} externalAccreditation
  * @param {OnDrop} onDrop
- * @returns {[string, ReprocessorAccreditation | ExporterAccreditation] | null}
+ * @returns {[Year, ReprocessorAccreditation | ExporterAccreditation] | null}
  */
 const toAccreditationEntryOfYear = (
   {
@@ -81,7 +81,7 @@ const toAccreditationEntryOfYear = (
     )
     return null
   }
-  return [String(year), { ...accreditation, year }]
+  return [year, { ...accreditation, year }]
 }
 
 /**
@@ -251,9 +251,9 @@ export function toLinkedDefraOrganisation(linked) {
  *   registration: StoredRegistration
  *   organisation: StoredOrganisation
  *   context: Context
- *   externalAccreditations: Record<string, ReprocessorAccreditation | ExporterAccreditation>
+ *   externalAccreditations: Record<Year, ReprocessorAccreditation | ExporterAccreditation>
  * }} options
- * @returns {Record<string, ReprocessorAccreditation | ExporterAccreditation>}
+ * @returns {Record<Year, ReprocessorAccreditation | ExporterAccreditation>}
  */
 function accreditationsUpTo({
   openYear,
@@ -269,7 +269,8 @@ function accreditationsUpTo({
     `Registration ${registrationNumber} accreditation year`,
     context.onDrop
   )
-  Object.keys(externalAccreditations)
+  Object.values(externalAccreditations)
+    .map(({ year }) => year)
     .filter((year) => Object.hasOwn(storedAccreditations, year))
     .forEach((year) =>
       context.onDrop(
@@ -280,7 +281,7 @@ function accreditationsUpTo({
     Object.entries({
       ...storedAccreditations,
       ...externalAccreditations
-    }).filter(([year]) => Number(year) <= openYear)
+    }).filter(([, { year }]) => year <= openYear)
   )
 }
 
@@ -362,7 +363,7 @@ export function toRegistrationEntry(
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<Year, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {Context} context
  * @returns {ExporterRegistration}
  */
@@ -384,7 +385,7 @@ function toExporterRegistration(registration, common, accreditations, context) {
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<Year, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {OnDrop} onDrop
  * @returns {ReprocessorRegistration | null}
  */
@@ -419,10 +420,10 @@ function toReprocessorRegistration(
 }
 
 /**
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<Year, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {StoredRegistration['registrationNumber']} registrationNumber
  * @param {OnDrop} onDrop
- * @returns {Record<string, ReprocessorAccreditation>}
+ * @returns {Record<Year, ReprocessorAccreditation>}
  */
 function withoutOverseasSites(accreditations, registrationNumber, onDrop) {
   return Object.fromEntries(
@@ -445,11 +446,11 @@ function withoutOverseasSites(accreditations, registrationNumber, onDrop) {
  * accreditation without its own sites lists every registration site with the
  * site's stored approval.
  *
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<Year, ReprocessorAccreditation | ExporterAccreditation>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {StoredRegistration} registration
  * @param {OnDrop} onDrop
- * @returns {Record<string, ExporterAccreditation>}
+ * @returns {Record<Year, ExporterAccreditation>}
  */
 function withAccreditedSites(
   accreditations,
@@ -497,7 +498,7 @@ function ownSites(accreditation, registration, overseasSites, onDrop) {
 /**
  * @param {StoredAccreditation} accreditation
  * @param {Context} context
- * @returns {[string, AccreditationCommon] | null}
+ * @returns {[Year, AccreditationCommon] | null}
  */
 function toAccreditationEntry(accreditation, { onDrop }) {
   const { accreditationNumber, prnIssuance, status } = accreditation
@@ -524,7 +525,7 @@ function toAccreditationEntry(accreditation, { onDrop }) {
 
   const year = deriveAccreditationYear(accreditation)
   return [
-    String(year),
+    year,
     {
       accreditationNumber,
       prnIssuance: { tonnageBand: prnIssuance.tonnageBand },

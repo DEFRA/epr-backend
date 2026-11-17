@@ -92,7 +92,7 @@ const readModelRegistration = (overrides = {}) =>
         postcode: 'GR1 1AA'
       }
     },
-    accreditations: { 2024: readModelAccreditation() },
+    accreditations: { [toYear(2024)]: readModelAccreditation() },
     ...overrides
   })
 
@@ -1018,8 +1018,8 @@ describe('report-service', () => {
           reportRegistration: {
             registration: readModelRegistration({
               accreditations: {
-                2024: reportAccreditation,
-                2025: readModelAccreditation(
+                [toYear(2024)]: reportAccreditation,
+                [toYear(2025)]: readModelAccreditation(
                   currentAccreditationNumber,
                   toYear(2025)
                 )

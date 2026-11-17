@@ -2,6 +2,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 
 /**
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteProcessingTypeValue } from '#domain/organisations/model.js'
  * @import { AccreditationLink } from '#domain/organisations/registration-utils.js'
  * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
@@ -13,7 +14,7 @@ import { isRegistrationAccredited } from '#domain/organisations/registration-uti
  *
  * @typedef {{
  *   registration: ReadModelRegistration,
- *   accreditation: ReadModelRegistration['accreditations'][string] | null
+ *   accreditation: ReadModelRegistration['accreditations'][Year] | null
  * }} ReportRegistration
  */
 

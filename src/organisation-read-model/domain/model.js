@@ -3,7 +3,6 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { TonnageBand } from '#domain/organisations/model.js' */
-/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * The organisation read model (ADR-0052).
@@ -47,14 +46,14 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * }} RegistrationCommon
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ReprocessorAccreditation>
+ *   accreditations: Record<Year, ReprocessorAccreditation>
  *   reprocessingType: 'input' | 'output'
  *   site: { address: UkAddress }
  *   wasteProcessingType: 'reprocessor'
  * }} ReprocessorRegistration
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ExporterAccreditation>
+ *   accreditations: Record<Year, ExporterAccreditation>
  *   overseasSites: Record<string, OverseasSite>
  *   wasteProcessingType: 'exporter'
  * }} ExporterRegistration
