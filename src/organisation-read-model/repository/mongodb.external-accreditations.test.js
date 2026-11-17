@@ -114,7 +114,7 @@ describe('stored and external accreditations together', () => {
     })
   })
 
-  it("serves when an external accreditation's last change was recorded, even when an earlier-dated change was recorded last", async ({
+  it("serves when an external accreditation's last change was recorded, as it holds it", async ({
     organisationReadRepositoryWith
   }) => {
     const stored = accreditedIn2026()
@@ -125,17 +125,10 @@ describe('stored and external accreditations together', () => {
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
           status: {
             current: 'approved',
+            lastUpdatedAt: '2027-02-01T09:00:00.000Z',
             timeline: [
-              {
-                status: 'suspended',
-                at: '2027-01-01T00:00:00.000Z',
-                updatedAt: '2027-02-01T09:00:00.000Z'
-              },
-              {
-                status: 'approved',
-                at: '2027-01-15T00:00:00.000Z',
-                updatedAt: '2026-12-14T10:31:00.000Z'
-              }
+              { status: 'suspended', at: '2027-01-01T00:00:00.000Z' },
+              { status: 'approved', at: '2027-01-15T00:00:00.000Z' }
             ]
           }
         })
@@ -222,7 +215,11 @@ describe('stored and external accreditations together', () => {
       externalAccreditations: [
         buildExternalAccreditationFor(stored, {
           registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          status: { current: 'approved', timeline: [] }
+          status: {
+            current: 'approved',
+            lastUpdatedAt: '2026-12-14T10:31:00.000Z',
+            timeline: []
+          }
         })
       ],
       logger
