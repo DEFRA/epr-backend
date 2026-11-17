@@ -12,6 +12,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import {
   formatS3Info,
+  idBasedSummaryLogUploadPath,
   isInUploadLocation,
   summaryLogUploadPath
 } from '#domain/uploads/upload-locations.js'
@@ -68,15 +69,20 @@ const numbersFromPath = ({
 }) => ({ organisationNumber, registrationNumber, accreditationNumber })
 
 /**
+ * Under the registration's numbers, or its ids for an upload started before
+ * uploads moved to numbers.
+ *
  * @param {SummaryLogUpload} upload
- * @param {{ organisationId: string, registrationId: string }} ids
+ * @param {UploadCompletedRequest['params']} params
  * @returns {boolean}
  */
-const isUploadedForRegistration = (upload, ids) =>
-  isInUploadLocation(upload, {
-    bucket: config.get('cdpUploader.summaryLogsBucket'),
-    path: summaryLogUploadPath(ids)
-  })
+const isUploadedForRegistration = (upload, params) => {
+  const bucket = config.get('cdpUploader.summaryLogsBucket')
+  return [
+    summaryLogUploadPath(params),
+    idBasedSummaryLogUploadPath(params)
+  ].some((path) => isInUploadLocation(upload, { bucket, path }))
+}
 
 /**
  * @param {TypedLogger} logger
@@ -120,10 +126,7 @@ export const summaryLogsUploadCompletedYear = {
 
     const { summaryLogId, organisationId, registrationId, year } = params
     const { summaryLogUpload } = payload.form
-    const isInLocation = isUploadedForRegistration(summaryLogUpload, {
-      organisationId,
-      registrationId
-    })
+    const isInLocation = isUploadedForRegistration(summaryLogUpload, params)
 
     try {
       if (!isInLocation) {
