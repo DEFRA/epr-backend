@@ -33,7 +33,7 @@ export const summaryLogsYearCreate = {
   },
   /**
    * @param {HapiRequest<SummaryLogsYearCreatePayload> & {
-   *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year },
+   *   params: RegistrationParams & { year: Year },
    *   app: { summaryLogCallbackUrl: (summaryLogId: string) => string },
    *   uploadsRepository: UploadsRepository
    * }} request
@@ -41,7 +41,7 @@ export const summaryLogsYearCreate = {
    */
   handler: async (request, h) => {
     const { uploadsRepository, params, payload, logger } = request
-    const { organisationId, registrationId, year } = params
+    const { organisationNumber, registrationNumber, year } = params
     const { redirectUrl } = payload
 
     const { registration } =
@@ -60,8 +60,8 @@ export const summaryLogsYearCreate = {
     const result = await createSummaryLogUpload({
       uploadsRepository,
       logger,
-      organisationId,
-      registrationId,
+      organisationNumber,
+      registrationNumber,
       redirectUrl,
       callbackUrlFor: request.app.summaryLogCallbackUrl
     })
