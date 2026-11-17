@@ -4,10 +4,7 @@ import {
   findOne,
   findPage
 } from '#repositories/organisations/mongodb-find.js'
-import {
-  registrationNumbersOf,
-  toReadModelOrganisations
-} from './to-read-model.js'
+import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { Collection, Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -28,7 +25,11 @@ const findExternalAccreditations = (db, stored) =>
     db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
   )
     .find(
-      { registrationNumber: { $in: registrationNumbersOf(stored) } },
+      {
+        organisationNumber: {
+          $in: stored.map(({ organisationNumber }) => organisationNumber)
+        }
+      },
       { projection: { _id: 0 } }
     )
     .toArray()
