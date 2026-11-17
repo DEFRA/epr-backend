@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generatePublicRegister } from './generate-public-register.js'
-import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
+import { createInMemoryPublicRegisterRepository } from '#public-register/repository/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'

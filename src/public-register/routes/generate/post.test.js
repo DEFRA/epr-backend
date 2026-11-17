@@ -7,14 +7,14 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
-import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
-import { publicRegisterGeneratePath } from '#routes/v1/public-register/generate/post.js'
+import { createInMemoryPublicRegisterRepository } from '#public-register/repository/inmemory.js'
+import { publicRegisterGeneratePath } from '#public-register/routes/generate/post.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
 
 const mockAuditPublicRegisterGenerate = vi.fn()
 
-vi.mock('#root/auditing/public-register.js', () => ({
+vi.mock('#public-register/auditing.js', () => ({
   auditPublicRegisterGenerate: (...args) =>
     mockAuditPublicRegisterGenerate(...args)
 }))
@@ -25,7 +25,7 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
   setupAuthContext()
   let server
 
-  /** @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepository - Public register repository*/
+  /** @param {import('#public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepository - Public register repository*/
   let inMemoryPublicRegisterRepository
 
   beforeEach(async () => {

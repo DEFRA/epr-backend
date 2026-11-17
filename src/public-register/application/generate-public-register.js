@@ -1,5 +1,5 @@
-import { transform } from '#application/public-register/public-register-transformer.js'
-import { generateCsv } from '#application/public-register/csv-generator.js'
+import { transform } from '#public-register/application/public-register-transformer.js'
+import { generateCsv } from '#public-register/application/csv-generator.js'
 import { generateReportCompliance } from '#reports/application/report-compliance.js'
 import { randomUUID } from 'node:crypto'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -22,9 +22,9 @@ function formatDateYYYYMMDD(date) {
  * Generates the public register by processing organisation data and storing it
  *
  * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
- * @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepo - Public register repository
+ * @param {import('#public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepo - Public register repository
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository - Reports repository
- * @returns {Promise<import('#domain/public-register/repository/port.js').PresignedUrlResult>} Pre-signed URL with expiry info for the generated public register file
+ * @returns {Promise<import('#public-register/repository/port.js').PresignedUrlResult>} Pre-signed URL with expiry info for the generated public register file
  */
 export async function generatePublicRegister(
   organisationReadRepository,
