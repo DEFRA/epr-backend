@@ -4,7 +4,7 @@ import { parseUploadUri } from './s3-uri.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import {
   orsImportUploadPath,
-  summaryLogUploadPath
+  idBasedSummaryLogUploadPath
 } from '#domain/uploads/upload-locations.js'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
@@ -79,7 +79,10 @@ export const createUploadsRepository = ({
       redirectUrl,
       callbackUrl
     }) {
-      const s3Path = summaryLogUploadPath({ organisationId, registrationId })
+      const s3Path = idBasedSummaryLogUploadPath({
+        organisationId,
+        registrationId
+      })
 
       return fetchJson(`${cdpUploaderUrl}/initiate`, {
         method: 'POST',
