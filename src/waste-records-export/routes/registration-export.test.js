@@ -22,6 +22,7 @@ import {
 } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
@@ -141,10 +142,21 @@ const createServer = async ({
 }
 
 const registrations = `/organisations/${ORGANISATION_NUMBER}/registrations`
-const url = `${registrations}/${REGISTRATION_NUMBER}/waste-records/export.csv`
+const path = `${registrations}/${REGISTRATION_NUMBER}/waste-records/export.csv`
+const url = `${path}?year=2026`
 
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/waste-records/export.csv', () => {
   setupAuthContext()
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-16') })
+    config.set('openNextYear', true)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    config.reset('openNextYear')
+  })
 
   it('streams the latest records of the registration as CSV', async () => {
     const server = await createServer()
@@ -171,7 +183,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const response = await server.inject({
       method: 'GET',
-      url: `${url}?year=2027`,
+      url: `${path}?year=2027`,
       ...asServiceMaintainer()
     })
 
@@ -180,18 +192,16 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     )
   })
 
-  it('exports 2026 when no year is given', async () => {
+  it('returns 422 when no year is given', async () => {
     const server = await createServer()
 
     const response = await server.inject({
       method: 'GET',
-      url,
+      url: path,
       ...asServiceMaintainer()
     })
 
-    expect(response.headers['content-disposition']).toContain(
-      'R26ER5000000002PA-2026-'
-    )
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
   it("serves only the given year's records", async () => {
@@ -199,7 +209,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const response = await server.inject({
       method: 'GET',
-      url: `${url}?year=2027`,
+      url: `${path}?year=2027`,
       ...asServiceMaintainer()
     })
 
@@ -210,34 +220,33 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     expect(response.payload).not.toContain('1001')
   })
 
-  it('serves a header-only CSV for a year with no waste records', async () => {
-    const server = await createServer()
-
-    const response = await server.inject({
-      method: 'GET',
-      url: `${url}?year=2024`,
-      ...asServiceMaintainer()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    const lines = response.payload.split('\n').filter((line) => line !== '')
-    expect(lines).toHaveLength(1)
-  })
-
-  it.each(['2023', '2101', 'next'])(
+  it.each(['2023', '2024', '2025', '2028', '2101', 'next'])(
     'returns 422 for year %s, which the service does not serve',
     async (year) => {
       const server = await createServer()
 
       const response = await server.inject({
         method: 'GET',
-        url: `${url}?year=${year}`,
+        url: `${path}?year=${year}`,
         ...asServiceMaintainer()
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     }
   )
+
+  it('returns 422 for next year while it is not open', async () => {
+    config.set('openNextYear', false)
+    const server = await createServer()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${path}?year=2027`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
 
   it('serves a header-only CSV for a registration that has never submitted', async () => {
     const server = await createServer({ ledgerEvents: [] })
@@ -257,11 +266,11 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   it.each([
     [
       'an unknown organisation number',
-      `/organisations/999999/registrations/${REGISTRATION_NUMBER}/waste-records/export.csv`
+      `/organisations/999999/registrations/${REGISTRATION_NUMBER}/waste-records/export.csv?year=2026`
     ],
     [
       'a registration number the organisation does not serve',
-      `${registrations}/R26XX0000000000PL/waste-records/export.csv`
+      `${registrations}/R26XX0000000000PL/waste-records/export.csv?year=2026`
     ]
   ])('returns 404 for %s', async (_, exportUrl) => {
     const server = await createServer()

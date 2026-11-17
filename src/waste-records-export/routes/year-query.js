@@ -1,17 +1,18 @@
 import Joi from 'joi'
 
 import { yearSchema } from '#common/validation/year-schema.js'
+import { availableWasteRecordYears } from '#waste-records-export/domain/available-years.js'
 
 /**
- * The year an export covers when the caller names none, until every caller
- * passes one.
- */
-const DEFAULT_EXPORT_YEAR = 2026
-
-/**
- * The export's `?year=`. A year with no waste records exports the header row
- * alone.
+ * The export's `?year=`: a year `/waste-records/years` lists, so a year with
+ * no template is refused rather than exported header-only.
  */
 export const exportYearQuery = Joi.object({
-  year: yearSchema().default(DEFAULT_EXPORT_YEAR)
+  year: yearSchema()
+    .custom((year, helpers) =>
+      availableWasteRecordYears().includes(year)
+        ? year
+        : helpers.error('any.invalid')
+    )
+    .required()
 })
