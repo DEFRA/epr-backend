@@ -19,11 +19,6 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import {
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
-import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
@@ -224,7 +219,9 @@ const summaryLogDocument = (fileId, submittedAt) => ({
  * Build export deps backed by the real in-memory ledger and row-state
  * adapters. `seeds` lists each partition's submitted summary log and its
  * committed rows; the ledger records one submitted event per seed so the
- * export resolves that summary log as the partition's latest.
+ * export resolves that summary log as the partition's latest. A seed with
+ * `submitted: false` writes its rows with no event, as a failed submission
+ * leaves them.
  *
  * @param {{
  *   orgs?: any[],
@@ -250,18 +247,20 @@ const buildDeps = async ({
     year: seed.year ?? DEFAULT_YEAR
   })
 
-  const ledgerEvents = seeds.map((seed) =>
-    buildLedgerEvent({
-      ...ledgerIdOf(seed),
-      // A partition seeded twice needs ascending numbers so the later
-      // submission is the one the latest-per-ledger query resolves.
-      number: seed.number ?? 1,
-      payload: {
-        summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID,
-        creditTotal: 0
-      }
-    })
-  )
+  const ledgerEvents = seeds
+    .filter((seed) => seed.submitted !== false)
+    .map((seed) =>
+      buildLedgerEvent({
+        ...ledgerIdOf(seed),
+        // A partition seeded twice needs ascending numbers so the later
+        // submission is the one the latest-per-ledger query resolves.
+        number: seed.number ?? 1,
+        payload: {
+          summaryLogId: seed.summaryLogId ?? DEFAULT_SUMMARY_LOG_FILE_ID,
+          creditTotal: 0
+        }
+      })
+    )
   const ledgerRepository = createInMemoryLedgerRepository(
     /** @type {LedgerEvent[]} */ (ledgerEvents)
   )()
@@ -1117,6 +1116,61 @@ describe('streamCsvExport', () => {
     expect(cellsOf(out[1])[METADATA_COL_INDEX['Row ID']]).toBe('2001')
   })
 
+  it('leaves out data keys only another registration holds when scoped by registrationNumber', async () => {
+    const org = readModelOrg({
+      registrations: {
+        'R26-1': reprocessorRegistration(),
+        'R26-2': reprocessorRegistration()
+      }
+    })
+    const deps = await buildDeps({
+      seeds: [
+        {
+          registrationNumber: 'R26-1',
+          summaryLogId: 'sl-1',
+          rows: [receivedRowState({ data: { ONLY_R26_1: 'x' } })]
+        },
+        {
+          registrationNumber: 'R26-2',
+          summaryLogId: 'sl-2',
+          rows: [receivedRowState({ data: { ONLY_R26_2: 'y' } })]
+        }
+      ],
+      organisation: org,
+      registrationNumber: /** @type {RegistrationNumber} */ ('R26-2')
+    })
+
+    const [header] = await collect(streamCsvExport(deps))
+
+    expect(header).not.toContain('ONLY_R26_1')
+    expect(header).toContain('ONLY_R26_2')
+  })
+
+  it('leaves out data keys only a test organisation holds', async () => {
+    const deps = await buildDeps({
+      orgs: [
+        readModelOrg({ organisationNumber: '999999', name: 'Test Org' }),
+        readModelOrg({ organisationNumber: '123456', name: 'Real Org' })
+      ],
+      seeds: [
+        {
+          organisationNumber: '999999',
+          summaryLogId: 'sl-test',
+          rows: [receivedRowState({ data: { ONLY_TEST_ORG: 'x' } })]
+        },
+        {
+          organisationNumber: '123456',
+          summaryLogId: 'sl-real',
+          rows: [receivedRowState()]
+        }
+      ]
+    })
+
+    const [header] = await collect(streamCsvExport(deps))
+
+    expect(header).not.toContain('ONLY_TEST_ORG')
+  })
+
   it('includes a test organisation when the export is scoped to it', async () => {
     const testOrg = readModelOrg({
       organisationNumber: '999999',
@@ -1268,27 +1322,21 @@ describe('streamCsvExportToReadable', () => {
     const out = await collect(streamCsvExport(deps))
 
     expect(findDistinctDataKeys).toHaveBeenCalledTimes(1)
-    expect(findDistinctDataKeys).toHaveBeenCalledWith([
-      DEFAULT_SUMMARY_LOG_FILE_ID
-    ])
     expect(out[0]).toContain('WASTE_TRANSFER_NOTE')
   })
 
   it('leaves out data keys only a summary log with no submitted event holds', async () => {
     const deps = await buildDeps({
       orgs: [readModelOrg()],
-      seeds: [{ rows: [receivedRowState()] }]
+      seeds: [
+        { rows: [receivedRowState()] },
+        {
+          submitted: false,
+          summaryLogId: 'file-never-submitted',
+          rows: [receivedRowState({ data: { ONLY_UNSUBMITTED: 'x' } })]
+        }
+      ]
     })
-    await deps.summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      {
-        organisationNumber: toOrganisationNumber(ORGANISATION_NUMBER),
-        registrationNumber: toRegistrationNumber(REGISTRATION_NUMBER),
-        accreditationNumber: null,
-        year: DEFAULT_YEAR
-      },
-      [receivedRowState({ data: { ONLY_UNSUBMITTED: 'x' } })],
-      toSummaryLogFileId('file-never-submitted')
-    )
 
     const [header] = await collect(streamCsvExport(deps))
 

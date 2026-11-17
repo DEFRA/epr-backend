@@ -327,22 +327,37 @@ const registrationsInOrder = (org, only) =>
     .sort(([a], [b]) => a.localeCompare(b))
 
 /**
+ * Every registration the export covers, in output order, each with its
+ * per-partition latest submissions of the year.
+ *
+ * @param {Organisation[]} orgsSorted
+ * @param {RegistrationNumber | undefined} onlyRegistration
+ * @param {LatestSubmittedSummaryLogPerLedger[]} entriesOfYear
+ * @returns {{ org: Organisation, registrationNumber: RegistrationNumber, registration: Registration, entries: LatestSubmittedSummaryLogPerLedger[] }[]}
+ */
+const exportedRegistrations = (orgsSorted, onlyRegistration, entriesOfYear) => {
+  const entriesByRegistration = groupByRegistration(entriesOfYear)
+  return orgsSorted.flatMap((org) =>
+    registrationsInOrder(org, onlyRegistration).map(
+      ([registrationNumber, registration]) => ({
+        org,
+        registrationNumber,
+        registration,
+        entries:
+          entriesByRegistration.get(
+            registrationKey(org.organisationNumber, registrationNumber)
+          ) ?? []
+      })
+    )
+  )
+}
+
+/**
  * Yields CSV-encoded lines (header first, then one per row state).
  * Hard-fails on any iterator error — caller must close the response stream.
  *
- * Only the year's ledger partitions are exported. The header row is
- * dynamically composed from the union of schema-declared field constants and
- * any keys observed on the `data` of the row states the export covers: the
- * year's latest submissions. Observed keys are discovered up-front via a
- * server-side aggregation
- * (`findDistinctDataKeys`) so the export does not need to materialise any row
- * state to compose the header. Each registration's ledger partitions are
- * resolved up-front from a single cross-ledger query
- * (`findLatestSubmittedSummaryLogPerLedger`) narrowed to the year — a ledger
- * belongs to one year, so its latest submission is that year's — then rows
- * are streamed one
- * partition at a time — memory is bounded by the largest single partition's
- * row count, not the total across the system.
+ * Rows are streamed one partition at a time, so memory is bounded by the
+ * largest single partition's row count, not the total across the system.
  *
  * @param {StreamCsvExportDeps} deps
  * @returns {AsyncGenerator<string>}
@@ -358,45 +373,38 @@ export async function* streamCsvExport(deps) {
     registrationNumber: onlyRegistration
   } = deps
 
-  const entriesOfYear = (
-    await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
-  ).filter(({ ledgerId }) => ledgerId.year === year)
+  const orgsSorted = organisation
+    ? [organisation]
+    : await findExportableOrgs(organisationReadRepository)
+  const registrations = exportedRegistrations(
+    orgsSorted,
+    onlyRegistration,
+    (await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()).filter(
+      ({ ledgerId }) => ledgerId.year === year
+    )
+  )
 
   const dataFieldColumns = buildDataFieldColumns(
     await summaryLogRowStatesRepository.findDistinctDataKeys(
-      entriesOfYear.map(({ summaryLogId }) => summaryLogId)
+      registrations.flatMap(({ entries }) =>
+        entries.map(({ summaryLogId }) => summaryLogId)
+      )
     )
   )
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
-  const entriesByRegistration = groupByRegistration(entriesOfYear)
-
-  const orgsSorted = organisation
-    ? [organisation]
-    : await findExportableOrgs(organisationReadRepository)
   // Test organisations are already left out of a full export.
   const ledgerIndex = indexByLedger(orgsSorted, {
     includeTestOrganisations: true
   })
-  for (const org of orgsSorted) {
-    for (const [registrationNumber, registration] of registrationsInOrder(
-      org,
-      onlyRegistration
-    )) {
-      yield* streamRegistrationRows({
-        org,
-        registrationNumber,
-        registration,
-        ledgerIndex,
-        entries:
-          entriesByRegistration.get(
-            registrationKey(org.organisationNumber, registrationNumber)
-          ) ?? [],
-        dataFieldColumns,
-        summaryLogRowStatesRepository,
-        summaryLogsRepository
-      })
-    }
+  for (const registration of registrations) {
+    yield* streamRegistrationRows({
+      ...registration,
+      ledgerIndex,
+      dataFieldColumns,
+      summaryLogRowStatesRepository,
+      summaryLogsRepository
+    })
   }
 }
 
