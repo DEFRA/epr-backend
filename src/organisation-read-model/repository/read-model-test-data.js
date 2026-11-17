@@ -3,7 +3,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber
 } from '#domain/organisations/numbers.js'
-import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
 /** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
@@ -100,18 +100,15 @@ const withStanding = (registration) => {
   if (registration.standingByDate) {
     return /** @type {any} */ (registration)
   }
-  const lastYear = Math.max(
-    ...[
-      ...Object.keys(registration.accreditations),
-      ...registration.status.timeline.map(({ at }) => at)
-    ].map(utcYearOf)
-  )
+  const lastYear = [
+    ...Object.keys(registration.accreditations),
+    ...registration.status.timeline.map(({ at }) => at)
+  ]
+    .map(utcYearOf)
+    .reduce((latest, year) => (year > latest ? year : latest))
   return {
     ...registration,
-    standingByDate: standingByYear(
-      /** @type {any} */ (registration),
-      lastDayOfYear(utcYearOf(`${lastYear}-12-31`))
-    )
+    standingByDate: standingByYear(/** @type {any} */ (registration), lastYear)
   }
 }
 

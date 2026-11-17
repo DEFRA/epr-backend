@@ -5,7 +5,6 @@ import {
 import { isOneOf } from '#common/helpers/is-one-of.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
-import { lastDayOfYear } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
@@ -345,7 +344,7 @@ export function toRegistrationEntry(
     material: resolveMaterial(registration),
     standingByDate: standingByYear(
       { status: registrationStatus, accreditations },
-      lastDayOfYear(openYear)
+      openYear
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },

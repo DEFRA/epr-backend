@@ -1,4 +1,3 @@
-import { lastDayOfYear } from '#common/helpers/dates/year.js'
 import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -25,9 +24,7 @@ const onlyYear = (byYear, year) =>
 export const organisationInYear = (organisation, year) => {
   const registrations = Object.entries(organisation.registrations)
     .filter(([, registration]) =>
-      approvedYears(registration.status.timeline, lastDayOfYear(year)).includes(
-        year
-      )
+      approvedYears(registration.status.timeline, year).includes(year)
     )
     .map(([number, registration]) => [
       number,

@@ -3,7 +3,7 @@ import { utcYearOf, yearBounds } from '#common/helpers/dates/year.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { accreditationForYear } from './accreditation-for-year.js'
 import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
-import { approvedYears, statusRanges } from './status-timeline.js'
+import { approvedYears, firstApprovedAt } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -18,7 +18,11 @@ import { approvedYears, statusRanges } from './status-timeline.js'
  * @param {CalendarDate} date
  */
 const hasBeenApprovedBy = (registrationTimeline, date) => {
-  return statusRanges(registrationTimeline, date).approved !== undefined
+  const approvedAt = firstApprovedAt(registrationTimeline)
+  return (
+    approvedAt !== undefined &&
+    calendarDate(approvedAt).localeCompare(date) <= 0
+  )
 }
 
 /**
@@ -112,19 +116,18 @@ export const standingByDate = (registration, year) => {
 }
 
 /**
- * `standingByDate` for each year up to the year of `endDate` that the
- * registration was approved in or holds an accreditation for.
+ * `standingByDate` for each year up to `upToYear` that the registration was
+ * approved in or holds an accreditation for.
  *
  * @param {StandingSource} registration
- * @param {CalendarDate} endDate
+ * @param {Year} upToYear
  * @returns {StandingByYear}
  */
-export const standingByYear = (registration, endDate) => {
-  const lastYear = utcYearOf(endDate)
+export const standingByYear = (registration, upToYear) => {
   const years = [
-    ...approvedYears(registration.status.timeline, endDate),
+    ...approvedYears(registration.status.timeline, upToYear),
     ...Object.keys(registration.accreditations).map(utcYearOf)
-  ].filter((year) => year <= lastYear)
+  ].filter((year) => year <= upToYear)
 
   return Object.fromEntries(
     years.map((year) => [year, standingByDate(registration, year)])
