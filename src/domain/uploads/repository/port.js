@@ -1,7 +1,9 @@
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+
 /**
  * @typedef {Object} InitiateSummaryLogUploadOptions
- * @property {string} organisationId - Organisation ID
- * @property {string} registrationId - Registration ID
+ * @property {OrganisationNumber} organisationNumber
+ * @property {RegistrationNumber} registrationNumber
  * @property {string} summaryLogId - Summary log ID (for metadata)
  * @property {string} redirectUrl - URL to redirect user after upload completes
  * @property {string} callbackUrl - URL for CDP Uploader to call when upload completes
