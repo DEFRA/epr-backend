@@ -82,42 +82,44 @@ const servedOnly = (changes, statuses) =>
   )
 
 /**
- * The latest of the times the changes were recorded.
- *
- * @param {{ updatedAt: string }[]} changes - each `updatedAt` an ISO 8601 datetime
- * @returns {string | undefined}
- */
-export const lastRecordedAt = (changes) =>
-  changes
-    .map(({ updatedAt }) => updatedAt)
-    .toSorted((one, other) => one.localeCompare(other))
-    .at(-1)
-
-/**
  * The timeline of the changes, and when the last of them was recorded, or
  * null when there are none.
  *
  * @template {string} S
- * @param {Change<S>[]} changes - oldest first
+ * @param {{ status: S, at: string, updatedAt: string }[]} changes - oldest first, each time an ISO 8601 datetime
  * @returns {Omit<Status<S>, 'current'> | null}
  */
-const toTimelineStatus = (changes) => {
-  const lastUpdatedAt = lastRecordedAt(changes)
+export const timelineStatusOf = (changes) => {
+  const lastUpdatedAt = changes
+    .map(({ updatedAt }) => updatedAt)
+    .toSorted((one, other) => one.localeCompare(other))
+    .at(-1)
   return lastUpdatedAt === undefined
     ? null
     : {
         lastUpdatedAt,
-        timeline: changes.map(({ status, at }) => ({
-          status,
-          at: at.toISOString()
-        }))
+        timeline: changes.map(({ status, at }) => ({ status, at }))
       }
 }
 
 /**
+ * @template {string} S
+ * @param {Change<S>[]} changes - oldest first
+ * @returns {Omit<Status<S>, 'current'> | null}
+ */
+const toTimelineStatus = (changes) =>
+  timelineStatusOf(
+    changes.map(({ status, at, updatedAt }) => ({
+      status,
+      at: at.toISOString(),
+      updatedAt
+    }))
+  )
+
+/**
  * Every change to an organisation, each when it was recorded, oldest first.
- * Never empty: the read model serves every stored organisation status, and a
- * stored history always has an entry.
+ * Never empty: every stored organisation status is served, and the stored
+ * repository reads the last history entry, so cannot load an empty history.
  *
  * @param {StatusHistoryEntryOf<StoredOrganisationStatus>[]} statusHistory
  * @returns {Omit<Status<OrganisationStatus>, 'current'>}

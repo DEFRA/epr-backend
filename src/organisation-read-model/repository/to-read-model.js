@@ -17,7 +17,7 @@ import {
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { organisationInYear } from './organisation-in-year.js'
 import {
-  lastRecordedAt,
+  timelineStatusOf,
   toAccreditationStatusTimeline,
   toOrganisationStatusTimeline,
   toRegistrationStatusTimeline
@@ -81,8 +81,8 @@ const toAccreditationEntryOfYear = (
   },
   onDrop
 ) => {
-  const lastUpdatedAt = lastRecordedAt(timeline)
-  if (lastUpdatedAt === undefined) {
+  const statusTimeline = timelineStatusOf(timeline)
+  if (!statusTimeline) {
     onDrop(
       `Registration ${registrationNumber} external accreditation year ${year} has no status changes`
     )
@@ -90,14 +90,7 @@ const toAccreditationEntryOfYear = (
   }
   return [
     String(year),
-    {
-      ...accreditation,
-      status: {
-        current,
-        lastUpdatedAt,
-        timeline: timeline.map(({ status, at }) => ({ status, at }))
-      }
-    }
+    { ...accreditation, status: { current, ...statusTimeline } }
   ]
 }
 
@@ -265,20 +258,22 @@ export function toLinkedDefraOrganisation(linked) {
  * A registration's stored and external accreditations by year, up to the open
  * year. An external accreditation replaces a stored one for the same year.
  *
- * @param {Year} openYear
- * @param {StoredRegistration} registration
- * @param {StoredOrganisation} organisation
- * @param {Context} context
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} externalAccreditations
+ * @param {{
+ *   openYear: Year
+ *   registration: StoredRegistration
+ *   organisation: StoredOrganisation
+ *   context: Context
+ *   externalAccreditations: Record<string, ReprocessorAccreditation | ExporterAccreditation>
+ * }} options
  * @returns {Record<string, ReprocessorAccreditation | ExporterAccreditation>}
  */
-function accreditationsUpTo(
+function accreditationsUpTo({
   openYear,
   registration,
   organisation,
   context,
   externalAccreditations
-) {
+}) {
   const { registrationNumber } = registration
   const storedAccreditations = keyedRecords(
     accreditationsForRegistration(registration, organisation),
@@ -334,9 +329,7 @@ export function toRegistrationEntry(
     validFrom
   )
   if (!statusTimeline) {
-    onDrop(
-      `Registration ${registrationNumber} has no status change since it was last created`
-    )
+    onDrop(`Registration ${registrationNumber} has no served status changes`)
     return null
   }
   if (!applicationContactDetails) {
@@ -347,13 +340,13 @@ export function toRegistrationEntry(
   }
 
   const openYear = latestOpenYear(new Date(context.today))
-  const accreditations = accreditationsUpTo(
+  const accreditations = accreditationsUpTo({
     openYear,
     registration,
     organisation,
     context,
-    externalByRegistration.get(registrationNumber) ?? {}
-  )
+    externalAccreditations: externalByRegistration.get(registrationNumber) ?? {}
+  })
   const registrationStatus = { current: status, ...statusTimeline }
 
   /** @type {RegistrationCommon} */
@@ -538,9 +531,7 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
     accreditation.validFrom
   )
   if (!statusTimeline) {
-    onDrop(
-      `Accreditation ${accreditationNumber} has no status change since it was last created`
-    )
+    onDrop(`Accreditation ${accreditationNumber} has no served status changes`)
     return null
   }
 

@@ -70,7 +70,7 @@ const readModelAccreditation = (
   status: {
     current: 'approved',
     lastUpdatedAt: '2025-01-01T00:00:00.000Z',
-    timeline: []
+    timeline: [{ status: 'approved', at: '2025-01-01T00:00:00.000Z' }]
   }
 })
 

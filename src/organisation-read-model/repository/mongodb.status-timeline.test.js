@@ -467,7 +467,7 @@ describe('status timeline', () => {
 
     expect(organisation.registrations).toStrictEqual({})
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `Registration ${REPROCESSOR_NUMBER} has no status change since it was last created`
+      message: `Registration ${REPROCESSOR_NUMBER} has no served status changes`
     })
   })
 
@@ -495,7 +495,7 @@ describe('status timeline', () => {
       organisation.registrations[REPROCESSOR_NUMBER].accreditations
     ).toStrictEqual({})
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `Accreditation ${ACCREDITATION_NUMBER} has no status change since it was last created`
+      message: `Accreditation ${ACCREDITATION_NUMBER} has no served status changes`
     })
   })
 

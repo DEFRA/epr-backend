@@ -17,7 +17,7 @@ const accreditation = {
   status: {
     current: 'suspended',
     lastUpdatedAt: '2025-01-01T00:00:00.000Z',
-    timeline: []
+    timeline: [{ status: 'suspended', at: '2025-01-01T00:00:00.000Z' }]
   }
 }
 

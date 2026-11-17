@@ -26,7 +26,12 @@ describe('csv-columns', () => {
   const readModelStatus = {
     current: /** @type {const} */ ('approved'),
     lastUpdatedAt: '2025-01-01T00:00:00.000Z',
-    timeline: []
+    timeline: [
+      {
+        status: /** @type {const} */ ('approved'),
+        at: '2025-01-01T00:00:00.000Z'
+      }
+    ]
   }
 
   /** @type {ReadModelRegistration} */
