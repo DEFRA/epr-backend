@@ -28,7 +28,6 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
  *   organisationId: string,
  *   registrationId: string,
  *   year: Year,
- *   accreditationId: string | null,
  *   numbers: RequiredNumbers
  * }} UploadLocation
  */
@@ -115,13 +114,12 @@ const insertNewSummaryLog = async (
   summaryLogsRepository,
   summaryLogId,
   upload,
-  { organisationId, registrationId, year, accreditationId, numbers }
+  { organisationId, registrationId, year, numbers }
 ) => {
   /** @type {NewSummaryLog} */
   const summaryLog = {
     ...buildSummaryLogData(upload, undefined, organisationId, registrationId),
     year,
-    accreditationId,
     ...numbers
   }
 
