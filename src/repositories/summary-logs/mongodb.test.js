@@ -559,7 +559,7 @@ describe('MongoDB summary logs repository', () => {
   })
 
   // Not a contract assertion: only stored documents show what was written.
-  describe('organisation and registration database ids', () => {
+  describe('organisation, registration and accreditation database ids', () => {
     /** @param {MongoClient} mongoClient */
     const collection = (mongoClient) =>
       mongoClient.db(DATABASE_NAME).collection('summary-logs')
@@ -571,12 +571,38 @@ describe('MongoDB summary logs repository', () => {
     const storedDocument = (mongoClient, id) =>
       collection(mongoClient).findOne(/** @type {any} */ ({ _id: id }))
 
+    const DATABASE_ID_FIELDS = [
+      'organisationId',
+      'registrationId',
+      'accreditationId'
+    ]
+
+    /** @param {object | null | undefined} document */
+    const databaseIdsIn = (document) =>
+      DATABASE_ID_FIELDS.filter((field) => document && field in document)
+
+    // The two accreditation shapes a summary log was stored in before summary
+    // logs dropped their database ids.
+    const OLDER_SHAPES = [
+      {
+        name: 'uploaded for an accreditation',
+        stored: { accreditationId: 'acc-1', accreditationNumber: 'ACC-1' },
+        accreditationNumber: 'ACC-1'
+      },
+      {
+        name: 'uploaded registered only',
+        stored: { accreditationId: null, accreditationNumber: null },
+        accreditationNumber: null
+      }
+    ]
+
     /**
      * A summary log stored before summary logs dropped their database ids.
      *
      * @param {MongoClient} mongoClient
+     * @param {object} accreditation
      */
-    const insertWithIds = async (mongoClient) => {
+    const insertWithIds = async (mongoClient, accreditation) => {
       const id = toSummaryLogId(`with-ids-${randomUUID()}`)
       await collection(mongoClient).insertOne(
         /** @type {any} */ ({
@@ -584,7 +610,8 @@ describe('MongoDB summary logs repository', () => {
           version: 1,
           ...summaryLogFactory.validating(),
           organisationId: 'org-1',
-          registrationId: 'reg-1'
+          registrationId: 'reg-1',
+          ...accreditation
         })
       )
       return id
@@ -597,34 +624,39 @@ describe('MongoDB summary logs repository', () => {
       const id = toSummaryLogId(`new-${randomUUID()}`)
 
       await summaryLogsRepository.insert(id, {
-        ...summaryLogFactory.validating(),
+        ...summaryLogFactory.validating({ accreditationNumber: 'ACC-1' }),
         organisationId: 'org-1',
-        registrationId: 'reg-1'
+        registrationId: 'reg-1',
+        accreditationId: 'acc-1'
       })
 
       const stored = await storedDocument(mongoClient, id)
-      expect(stored).not.toHaveProperty('organisationId')
-      expect(stored).not.toHaveProperty('registrationId')
+      expect(stored?.accreditationNumber).toBe('ACC-1')
+      expect(databaseIdsIn(stored)).toEqual([])
     })
 
-    it('are not read back from a summary log stored with them', async ({
+    for (const shape of OLDER_SHAPES) {
+      it(`are not read back from a summary log ${shape.name}, and its accreditation number is`, async ({
+        mongoClient,
+        summaryLogsRepository
+      }) => {
+        const id = await insertWithIds(mongoClient, shape.stored)
+
+        const found = await summaryLogsRepository.findById(id)
+
+        expect(found?.summaryLog.status).toBe('validating')
+        expect(found?.summaryLog.accreditationNumber).toBe(
+          shape.accreditationNumber
+        )
+        expect(databaseIdsIn(found?.summaryLog)).toEqual([])
+      })
+    }
+
+    it('are removed from a summary log stored with organisation and registration ids when it is updated', async ({
       mongoClient,
       summaryLogsRepository
     }) => {
-      const id = await insertWithIds(mongoClient)
-
-      const found = await summaryLogsRepository.findById(id)
-
-      expect(found?.summaryLog.status).toBe('validating')
-      expect(found?.summaryLog).not.toHaveProperty('organisationId')
-      expect(found?.summaryLog).not.toHaveProperty('registrationId')
-    })
-
-    it('are removed from a summary log stored with them when it is updated', async ({
-      mongoClient,
-      summaryLogsRepository
-    }) => {
-      const id = await insertWithIds(mongoClient)
+      const id = await insertWithIds(mongoClient, {})
 
       await summaryLogsRepository.update(id, 1, {
         status: 'invalid',
