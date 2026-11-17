@@ -171,10 +171,10 @@ const clearLedger = async (records, ledger, isDryRun) => {
  */
 const removeLedger = async (dependencies, ledger, isDryRun, result) => {
   const { records, logger } = dependencies
-  /** @param {Error} error */
-  const fail = (error) => {
+  /** @param {Error} cause */
+  const fail = (cause) => {
     logger.error({
-      err: error,
+      err: cause,
       message: `Failed to remove test organisation ledger ${describeLedger(ledger)}`
     })
     result.failed++
@@ -182,8 +182,8 @@ const removeLedger = async (dependencies, ledger, isDryRun, result) => {
   let sources
   try {
     sources = await records.findSourceIds(ledger)
-  } catch (error) {
-    fail(error)
+  } catch (sourcesError) {
+    fail(sourcesError)
     return
   }
   const { counts, error } = await clearLedger(records, ledger, isDryRun)
@@ -339,17 +339,14 @@ const uncited = async (dependencies, holdings, result) => {
     const removedOrganisationNumbers = removable.map(
       ({ organisationNumber }) => organisationNumber
     )
+    /** @param {Holdings} organisation */
+    const check = (organisation) =>
+      isCited(dependencies, organisation, removedOrganisationNumbers, result)
     /** @type {Holdings[]} */
     const next = []
     for (const organisation of removable) {
-      if (
-        !(await isCited(
-          dependencies,
-          organisation,
-          removedOrganisationNumbers,
-          result
-        )) // NOSONAR(javascript:S9382) one organisation at a time, to spare the database
-      ) {
+      const cited = await check(organisation) // NOSONAR(javascript:S9382) one organisation at a time, to spare the database
+      if (!cited) {
         next.push(organisation)
       }
     }
@@ -357,6 +354,32 @@ const uncited = async (dependencies, holdings, result) => {
     removable = next
   } while (keptBack)
   return removable
+}
+
+/**
+ * @param {Dependencies} dependencies
+ * @param {Holdings} holdings
+ * @param {boolean} isDryRun
+ * @param {RemovalResult} result
+ */
+const removeHoldings = async (
+  dependencies,
+  { organisationNumber, ledgers, unnumbered },
+  isDryRun,
+  result
+) => {
+  for (const ledger of ledgers) {
+    await removeLedger(dependencies, ledger, isDryRun, result) // NOSONAR(javascript:S9382) one ledger at a time, to spare the database
+  }
+  if (unnumbered) {
+    await removeUnnumberedSummaryLogs(
+      dependencies,
+      organisationNumber,
+      unnumbered,
+      isDryRun,
+      result
+    )
+  }
 }
 
 /**
@@ -384,19 +407,8 @@ export const removeTestOrganisationData = async (
 
   const holdings = await findHoldings(dependencies, result)
   const removable = await uncited(dependencies, holdings, result)
-  for (const { organisationNumber, ledgers, unnumbered } of removable) {
-    for (const ledger of ledgers) {
-      await removeLedger(dependencies, ledger, isDryRun, result) // NOSONAR(javascript:S9382) one ledger at a time, to spare the database
-    }
-    if (unnumbered) {
-      await removeUnnumberedSummaryLogs(
-        dependencies,
-        organisationNumber,
-        unnumbered,
-        isDryRun,
-        result
-      )
-    }
+  for (const organisation of removable) {
+    await removeHoldings(dependencies, organisation, isDryRun, result) // NOSONAR(javascript:S9382) one organisation at a time, to spare the database
   }
 
   return result
