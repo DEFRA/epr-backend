@@ -172,7 +172,7 @@ const defaultParams = () => {
     /** @type {ReportRegistration} */
     reportRegistration: {
       registration,
-      accreditation: registration.accreditations[2024]
+      accreditation: registration.accreditations[toYear(2024)]
     },
     year: toYear(2024),
     cadenceAccreditation: {

@@ -21,7 +21,10 @@ import {
 
 import { devSummaryLogsSubmitPath } from './post.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 const ACCREDITED_YEAR = toYear(2026)
 
@@ -371,7 +374,8 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     ).mockImplementation(async (...args) => {
       const organisation = await findByOrganisationNumber(...args)
       assert(organisation)
-      const registration = organisation.registrations['REG123']
+      const registration =
+        organisation.registrations[toRegistrationNumber('REG123')]
       registration.accreditations = accreditationsOf(registration)
       return organisation
     })

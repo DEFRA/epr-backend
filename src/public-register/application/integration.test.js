@@ -9,6 +9,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 
@@ -52,7 +53,10 @@ const servedOrganisation = () => {
         ...registration,
         status: approved,
         accreditations: {
-          2026: { ...registration.accreditations[2026], status: approved }
+          2026: {
+            ...registration.accreditations[toYear(2026)],
+            status: approved
+          }
         }
       }
     }

@@ -15,7 +15,10 @@ import {
   withStandingThrough
 } from './read-model-test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 describe('read-model-test-data', () => {
   describe('approvedTimelineFrom', () => {
@@ -148,12 +151,14 @@ describe('read-model-test-data', () => {
       })
 
       expect(organisation.organisationNumber).toBe('500001')
-      expect(organisation.registrations['R-EXP'].wasteProcessingType).toBe(
-        'exporter'
-      )
-      expect(organisation.registrations['R-REP'].wasteProcessingType).toBe(
-        'reprocessor'
-      )
+      expect(
+        organisation.registrations[toRegistrationNumber('R-EXP')]
+          .wasteProcessingType
+      ).toBe('exporter')
+      expect(
+        organisation.registrations[toRegistrationNumber('R-REP')]
+          .wasteProcessingType
+      ).toBe('reprocessor')
     })
 
     it('leaves out registrations that have no number', () => {

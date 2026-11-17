@@ -10,6 +10,7 @@ import {
   findOrganisation,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -121,7 +122,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ].status
     ).toMatchObject({
       lastUpdatedAt: '2026-09-01T09:00:00.000Z',
       timeline: [
@@ -153,7 +156,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ].status
     ).toMatchObject({
       lastUpdatedAt: '2025-12-20T09:00:00.000Z',
       timeline: [
@@ -185,7 +190,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ].status
     ).toMatchObject({
       lastUpdatedAt: '2026-04-01T09:00:00.000Z',
       timeline: [{ status: 'approved', at: '2026-07-01T00:00:00.000Z' }]
@@ -213,7 +220,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ].status
     ).toMatchObject({
       lastUpdatedAt: '2026-03-01T09:00:00.000Z',
       timeline: [{ status: 'approved', at: '2026-07-01T00:00:00.000Z' }]
@@ -240,7 +249,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ].status
     ).toMatchObject({
       lastUpdatedAt: '2026-10-14T14:30:47.204Z',
       timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
@@ -268,7 +279,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ].status
     ).toMatchObject({
       lastUpdatedAt: '2026-03-30T09:00:00.000Z',
       timeline: [
@@ -301,7 +314,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026].status
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ].status
     ).toMatchObject({
       lastUpdatedAt: '2026-05-01T10:00:00.000Z',
       timeline: [
@@ -318,7 +333,7 @@ describe('status timeline', () => {
     config.set('openNextYear', true)
     onTestFinished(() => config.reset('openNextYear'))
     const now = new Date()
-    const nextYear = now.getUTCFullYear() + 1
+    const nextYear = toYear(now.getUTCFullYear() + 1)
     const stored = organisationAccredited({
       validFrom: `${nextYear}-01-01`,
       validTo: `${nextYear}-12-31`,
@@ -369,7 +384,9 @@ describe('status timeline', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2026]
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2026)
+      ]
     ).toMatchObject({
       status: {
         current: 'suspended',

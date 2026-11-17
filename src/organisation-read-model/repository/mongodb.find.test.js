@@ -11,6 +11,7 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const { buildOrganisation, nextOrganisationNumber } =
   createOrganisationBuilders()
@@ -57,7 +58,7 @@ describe('find', () => {
     })
     expect(Object.keys(items[0].registrations)).toEqual([REPROCESSOR_NUMBER])
     expect(
-      items[0].registrations[REPROCESSOR_NUMBER].accreditations[2026]
+      items[0].registrations[REPROCESSOR_NUMBER].accreditations[toYear(2026)]
     ).toHaveProperty('accreditationNumber', ACCREDITATION_NUMBER)
   })
 

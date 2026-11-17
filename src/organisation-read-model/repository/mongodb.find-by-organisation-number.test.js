@@ -184,7 +184,7 @@ describe('findByOrganisationNumber', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2026]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2026)]
     ).toMatchObject({
       accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
       overseasSites: {
