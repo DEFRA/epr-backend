@@ -160,7 +160,7 @@ export async function toReadModelOrganisations(
 }
 
 /**
- * @param {StoredOrganisation} stored
+ * @param {Pick<StoredOrganisation, 'statusHistory'>} stored
  * @param {CalendarDate} date
  * @returns {boolean}
  */
