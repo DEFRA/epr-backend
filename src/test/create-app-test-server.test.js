@@ -3,6 +3,11 @@ import { StatusCodes } from 'http-status-codes'
 import { createAppTestServer } from './create-app-test-server.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import {
+  buildLedgerEvent,
+  buildLedgerNumbers
+} from '#waste-balances/repository/ledger-test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
@@ -100,6 +105,22 @@ describe('createAppTestServer', () => {
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         mockOrg.id
       )
+    })
+
+    it('builds the waste balance service over an overriding ledger', async () => {
+      const ledgerRepository = createInMemoryLedgerRepository([
+        buildLedgerEvent()
+      ])()
+
+      const server = await createAppTestServer({
+        repositories: { ledgerRepository }
+      })
+
+      expect(
+        await server.app.wasteBalanceService.currentBalance(
+          buildLedgerNumbers()
+        )
+      ).toMatchObject({ amount: 100, availableAmount: 100 })
     })
   })
 

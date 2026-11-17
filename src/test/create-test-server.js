@@ -21,7 +21,8 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { registerDependency } from '#plugins/register-dependency.js'
 import { getConfig } from '#root/config.js'
 
-/** @import { Lifecycle, Plugin, ServerRoute } from '@hapi/hapi' */
+/** @import { Lifecycle, Plugin, Server, ServerRoute } from '@hapi/hapi' */
+/** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { Db } from 'mongodb' */
 /** @import { ServerApp } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
@@ -51,9 +52,9 @@ import { getConfig } from '#root/config.js'
 
 /**
  * A plugin that registers a dependency of the routes, such as a repository.
- * Plugins annotate `server` with differing types, so this accepts any of them.
+ * Some plugins need the server as its plugins have decorated it.
  *
- * @typedef {Plugin<void> | { name: string, register: (server: any) => void }} DependencyPlugin
+ * @typedef {Plugin<void> | { name: string, register: (server: Server & HapiServer) => void }} DependencyPlugin
  */
 
 /**
@@ -81,7 +82,7 @@ const resolveOverride = (repositoryOrFactory) => (request) =>
  *
  * @param {keyof ServerApp} name - Repository name
  * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
- * @returns {DependencyPlugin}
+ * @returns {Plugin<void>}
  */
 export function createRepositoryPlugin(name, repositoryOrFactory) {
   return {
@@ -97,7 +98,7 @@ export function createRepositoryPlugin(name, repositoryOrFactory) {
  * seeds organisations through one port reads them through the other.
  *
  * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
- * @returns {DependencyPlugin}
+ * @returns {Plugin<void>}
  */
 function createOrganisationsRepositoryPlugin(repositoryOrFactory) {
   return {
@@ -133,9 +134,11 @@ const createDbPlugin = (db) => ({
 })
 
 /**
- * Registers each repository override the test gives, in place of the plugin
- * of the same name. `organisationAdministrationRepository` overrides the
- * organisations plugin, which serves it through both of its ports.
+ * Registers each repository override the test gives in the place of the plugin
+ * of the same name, because some plugins read another's dependency as they
+ * register. An override with no plugin of its name registers last.
+ * `organisationAdministrationRepository` overrides the organisations plugin,
+ * which serves it through both of its ports.
  *
  * @param {DependencyPlugin[]} plugins
  * @param {Partial<Record<keyof ServerApp, Function|Object>>} repoOverrides - Repository overrides keyed by name
@@ -152,10 +155,15 @@ function applyRepositoryOverrides(plugins, repoOverrides) {
             repositoryOrFactory
           )
     )
-  const overridden = new Set(overrides.map(pluginName))
+  const overrideByName = new Map(
+    overrides.map((override) => [pluginName(override), override])
+  )
+  const given = new Set(plugins.map(pluginName))
   return [
-    ...plugins.filter((plugin) => !overridden.has(pluginName(plugin))),
-    ...overrides
+    ...plugins.map(
+      (plugin) => overrideByName.get(pluginName(plugin)) ?? plugin
+    ),
+    ...overrides.filter((override) => !given.has(pluginName(override)))
   ]
 }
 
