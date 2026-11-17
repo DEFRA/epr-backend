@@ -55,19 +55,10 @@ const validationSchema = Joi.object({
   }).optional()
 })
 
-// A summary log uploaded for an accreditation the organisation read model
-// holds outside this service has no accreditation id, only its number. One
-// stored with an accreditation id holds the number that id names.
 const numbersSchema = {
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.when('accreditationId', {
-    switch: [
-      { is: Joi.valid(null).required(), then: Joi.valid(null).required() },
-      { is: Joi.string().required(), then: Joi.string().required() }
-    ],
-    otherwise: Joi.string().allow(null).required()
-  })
+  accreditationNumber: Joi.string().allow(null).required()
 }
 
 export const summaryLogInsertSchema = Joi.object({
@@ -79,7 +70,6 @@ export const summaryLogInsertSchema = Joi.object({
     otherwise: fileSchema.required()
   }),
   year: yearSchema().required(),
-  accreditationId: Joi.string().allow(null).optional(),
   ...numbersSchema,
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).required(),

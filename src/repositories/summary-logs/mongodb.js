@@ -117,7 +117,11 @@ const insert = (db) => async (id, summaryLog) => {
 }
 
 // Older summary logs hold these; an update drops them.
-const DATABASE_IDS = { organisationId: '', registrationId: '' }
+const DATABASE_IDS = {
+  organisationId: '',
+  registrationId: '',
+  accreditationId: ''
+}
 
 const update = (db, logger) => async (id, version, updates) => {
   const validatedId = validateId(id)
