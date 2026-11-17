@@ -9,7 +9,7 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExternalAccreditationsRepository } from '#external-accreditations/repository/port.js' */
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
@@ -35,22 +35,23 @@ export const externalAccreditationParams = Joi.object({
 })
 
 /**
+ * The organisation's registration with the number, or null when the
+ * organisation does not hold it.
+ *
  * @param {OrganisationReadRepository} organisationReadRepository
+ * @param {OrganisationNumber} organisationNumber
  * @param {RegistrationNumber} registrationNumber
  */
-const isExporterRegistration = async (
+const registrationOf = async (
   organisationReadRepository,
+  organisationNumber,
   registrationNumber
 ) => {
-  const { items } = await organisationReadRepository.find({
-    registrationNumber,
-    page: 1,
-    pageSize: 1
-  })
-  return (
-    items[0]?.registrations[registrationNumber]?.wasteProcessingType ===
-    WASTE_PROCESSING_TYPE.EXPORTER
-  )
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  return organisation?.registrations[registrationNumber] ?? null
 }
 
 export const devExternalAccreditationPut = {
@@ -76,12 +77,19 @@ export const devExternalAccreditationPut = {
     const { registrationNumber, year } = request.params
     /** @type {ExternalAccreditationPayload} */
     const { status, ...fields } = request.payload
+    const registration = await registrationOf(
+      request.organisationReadRepository,
+      fields.organisationNumber,
+      registrationNumber
+    )
+    if (!registration) {
+      throw Boom.badData(
+        `Organisation ${fields.organisationNumber} holds no registration ${registrationNumber}`
+      )
+    }
     if (
       'overseasSites' in fields &&
-      !(await isExporterRegistration(
-        request.organisationReadRepository,
-        registrationNumber
-      ))
+      registration.wasteProcessingType !== WASTE_PROCESSING_TYPE.EXPORTER
     ) {
       throw Boom.badData(
         `Registration ${registrationNumber} is not an exporter, so its accreditation has no overseas sites`
