@@ -156,7 +156,7 @@ const run = ({
   classifyByPeriodStatus({
     ...baseParams,
     ...overrides,
-    context: { tableSchemas, ...classificationContext },
+    classificationContext: { tableSchemas, ...classificationContext },
     wasteRecords,
     recordChanges: new Map(
       wasteRecords.map(({ record, change }) => [

@@ -126,7 +126,7 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {SummaryLogRegistration} [registration] - Registration fetched during validation
- * @property {RowClassificationContext} [context] - The template's table schemas and the read model's accreditation for classifying rows, once meta syntax has chosen the template and the registration is read
+ * @property {RowClassificationContext} [classificationContext] - The template's table schemas and the read model's accreditation for classifying rows, once meta syntax has chosen the template and the registration is read
  */
 
 /**
@@ -298,8 +298,11 @@ const runValidationChecks = async (
     logger
   })
   result.registration = registration
-  const context = { tableSchemas, ...classificationContextOf(registration) }
-  result.context = context
+  const classificationContext = {
+    tableSchemas,
+    ...classificationContextOf(registration)
+  }
+  result.classificationContext = classificationContext
   issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
   if (issues.isFatal()) {
@@ -325,7 +328,7 @@ const runValidationChecks = async (
 
   result.wasteRecords = dataResult.wasteRecords
 
-  markIgnoredByDateRange(dataResult.wasteRecords, context)
+  markIgnoredByDateRange(dataResult.wasteRecords, classificationContext)
 
   issues.merge(dataResult.issues)
 }
@@ -445,7 +448,7 @@ const classifyAndPersistResult = async ({
   wasteBalanceRecords,
   wasteRecords,
   registration,
-  context,
+  classificationContext,
   meta,
   summaryLog,
   summaryLogsRepository,
@@ -473,7 +476,7 @@ const classifyAndPersistResult = async ({
     wasteBalanceRecords,
     wasteRecords,
     periodicReports,
-    context,
+    classificationContext,
     registration,
     submittedRowStatesByKey
   })
@@ -486,7 +489,7 @@ const classifyAndPersistResult = async ({
       periodicReports,
       wasteRecords,
       registration,
-      context,
+      classificationContext,
       summaryLog,
       summaryLogId,
       reportsService,
@@ -540,7 +543,7 @@ export const createSummaryLogsValidator = ({
     )
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta, registration, context } =
+    const { issues, wasteRecords, meta, registration, classificationContext } =
       await performValidationChecks({
         summaryLog,
         loggingContext,
@@ -559,7 +562,7 @@ export const createSummaryLogsValidator = ({
       : SUMMARY_LOG_STATUS.VALIDATED
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
-      context?.tableSchemas
+      classificationContext?.tableSchemas
     )
 
     await recordValidationMetrics({
@@ -577,7 +580,7 @@ export const createSummaryLogsValidator = ({
       wasteBalanceRecords,
       wasteRecords,
       registration,
-      context,
+      classificationContext,
       meta,
       summaryLog,
       summaryLogsRepository,

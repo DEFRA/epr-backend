@@ -43,15 +43,16 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
  * share one shape.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
- * @param {RowClassificationContext} context
+ * @param {RowClassificationContext} classificationContext
  * @returns {ReportableWasteRecordState[]}
  */
-const toNewHeadRowStates = (wasteRecords, context) =>
+const toNewHeadRowStates = (wasteRecords, classificationContext) =>
   wasteRecords.map((wasteRecord) => ({
     wasteRecordType: /** @type {WasteRecordType} */ (
       wasteRecord.wasteRecordType
     ),
-    data: projectSummaryLogRowState(wasteRecord.record, context).data
+    data: projectSummaryLogRowState(wasteRecord.record, classificationContext)
+      .data
   }))
 
 /**
@@ -231,7 +232,7 @@ const logPeriodOutcome = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {SummaryLogRegistration | undefined} params.registration
- * @param {RowClassificationContext | undefined} params.context
+ * @param {RowClassificationContext | undefined} params.classificationContext
  * @param {ReportsService} params.reportsService
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteBalanceLedgerId} params.ledgerId
@@ -246,7 +247,7 @@ const computePeriodsRequiringResubmission = async ({
   periodicReports,
   wasteRecords,
   registration,
-  context: rowClassificationContext,
+  classificationContext,
   reportsService,
   summaryLogRowStatesRepository,
   ledgerId
@@ -255,16 +256,13 @@ const computePeriodsRequiringResubmission = async ({
     return []
   }
   /* v8 ignore next 3 -- closed periods only arise for a classified registration */
-  if (!registration || !rowClassificationContext) {
+  if (!registration || !classificationContext) {
     throw new Error('Closed periods without a registration')
   }
 
   const context = buildFiguresContext({
     registration,
-    newHeadRowStates: toNewHeadRowStates(
-      wasteRecords,
-      rowClassificationContext
-    ),
+    newHeadRowStates: toNewHeadRowStates(wasteRecords, classificationContext),
     summaryLogRowStatesRepository,
     ledgerId
   })

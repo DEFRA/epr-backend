@@ -25,14 +25,14 @@ import {
  * row identity and data alongside.
  *
  * @param {WasteRecord} record
- * @param {RowClassificationContext} context
+ * @param {RowClassificationContext} classificationContext
  * @returns {ClassifiedRow}
  */
-export const classifyWasteRecord = (record, context) => ({
+export const classifyWasteRecord = (record, classificationContext) => ({
   rowId: record.rowId,
   wasteRecordType: record.type,
   data: record.data,
-  classification: classifyRecordForWasteBalance(record, context)
+  classification: classifyRecordForWasteBalance(record, classificationContext)
 })
 
 /**

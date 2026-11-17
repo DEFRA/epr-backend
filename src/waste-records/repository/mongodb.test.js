@@ -431,7 +431,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentUpload],
       submittedRowStatesByKey,
-      context: { tableSchemas, accreditation, overseasSites }
+      classificationContext: { tableSchemas, accreditation, overseasSites }
     })
 
     expect(changes.get('sentOn:5000')).toBe(RECORD_CHANGE.UNCHANGED)

@@ -54,7 +54,7 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  * contributes tonnage.
  *
  * @param {Pick<WasteRecord, 'type' | 'data'>} record
- * @param {RowClassificationContext} context
+ * @param {RowClassificationContext} classificationContext
  * @returns {WasteBalanceClassification}
  */
 export const classifyRecordForWasteBalance = (

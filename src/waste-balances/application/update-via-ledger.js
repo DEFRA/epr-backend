@@ -27,7 +27,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  *
  * @param {Object} params
  * @param {Array<WasteRecord>} params.wasteRecords
- * @param {AccreditedRowClassificationContext} params.context
+ * @param {AccreditedRowClassificationContext} params.classificationContext
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
@@ -37,7 +37,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,
-  context,
+  classificationContext,
   commitSummaryLogSubmittedEvent,
   dependencies = {},
   user,
@@ -49,7 +49,7 @@ export const performUpdateViaLedger = async ({
   }
 
   const classifiedRows = wasteRecords.map((record) =>
-    classifyWasteRecord(record, context)
+    classifyWasteRecord(record, classificationContext)
   )
 
   let creditTotal = 0
@@ -59,7 +59,7 @@ export const performUpdateViaLedger = async ({
 
   const decemberCreditTotal = decemberCreditTotalFor(
     classifiedRows,
-    context.accreditation
+    classificationContext.accreditation
   )
 
   const [event] = await commitSummaryLogSubmittedEvent(

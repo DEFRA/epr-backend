@@ -53,7 +53,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey: new Map(),
-      context: { tableSchemas, accreditation: null, overseasSites }
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.ADDED)
@@ -71,7 +75,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
-      context: { tableSchemas, accreditation: null, overseasSites }
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)
@@ -93,7 +101,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
-      context: { tableSchemas, accreditation: null, overseasSites }
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(currentRecord.record))).toBe(RECORD_CHANGE.ADJUSTED)
@@ -122,7 +134,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
-      context: { tableSchemas, accreditation: null, overseasSites }
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.ADJUSTED)
@@ -138,7 +154,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
-      context: { tableSchemas, accreditation: null, overseasSites }
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(currentRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)

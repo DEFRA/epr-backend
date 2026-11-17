@@ -40,7 +40,7 @@ export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
- * @param {RowClassificationContext} [params.context] - absent when validation stopped before reading the registration
+ * @param {RowClassificationContext} [params.classificationContext] - absent when validation stopped before reading the registration
  * @param {SummaryLogRegistration} [params.registration]
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
  * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
@@ -50,7 +50,7 @@ export const classifyLoads = ({
   wasteBalanceRecords,
   wasteRecords,
   periodicReports,
-  context,
+  classificationContext,
   registration,
   submittedRowStatesByKey
 }) => {
@@ -58,7 +58,7 @@ export const classifyLoads = ({
     status !== SUMMARY_LOG_STATUS.VALIDATED ||
     !wasteRecords ||
     !submittedRowStatesByKey ||
-    !context
+    !classificationContext
   ) {
     return {
       loads: null,
@@ -69,7 +69,7 @@ export const classifyLoads = ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
-    context
+    classificationContext
   })
 
   const loads = mergeLoads(
@@ -89,7 +89,7 @@ export const classifyLoads = ({
         periodicReports,
         cadence: reportingCadenceOf(registration),
         operatorCategory: reportOperatorCategory(registration),
-        context
+        classificationContext
       })
     : null
   /* v8 ignore stop */

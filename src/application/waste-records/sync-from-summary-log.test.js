@@ -431,7 +431,7 @@ describe('syncFromSummaryLog', () => {
       ]),
       {
         user: TEST_USER,
-        context: {
+        classificationContext: {
           tableSchemas: tableSchemasOf(YEAR, PROCESSING_TYPES.EXPORTER),
           accreditation: ACCREDITATION_VALIDITY,
           overseasSites: {}
@@ -505,7 +505,7 @@ describe('syncFromSummaryLog', () => {
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        context: expect.objectContaining({
+        classificationContext: expect.objectContaining({
           overseasSites: {
             '001': { validFrom: new Date('2024-01-01') },
             '002': { validFrom: null }

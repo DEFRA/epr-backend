@@ -220,14 +220,14 @@ export const createWasteBalanceService = (
      * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {AccreditedRowClassificationContext} options.context
+     * @param {AccreditedRowClassificationContext} options.classificationContext
      * @param {SummaryLogFileId} options.summaryLogId
      * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (
       wasteRecords,
-      { user, context, summaryLogId, ledgerId }
+      { user, classificationContext, summaryLogId, ledgerId }
     ) => {
       if (wasteRecords.length === 0) {
         return
@@ -235,7 +235,7 @@ export const createWasteBalanceService = (
 
       await performUpdateViaLedger({
         wasteRecords,
-        context,
+        classificationContext,
         commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,

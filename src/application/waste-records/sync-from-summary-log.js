@@ -134,7 +134,7 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
 /**
  * @param {object} params
  * @param {ParsedSummaryLog} params.parsedData
- * @param {AccreditedRowClassificationContext} params.context
+ * @param {AccreditedRowClassificationContext} params.classificationContext
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
@@ -144,7 +144,7 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
 const updateWasteBalances = async ({
   ledgerId,
   parsedData,
-  context,
+  classificationContext,
   wasteBalanceService,
   wasteRecords,
   user,
@@ -160,7 +160,7 @@ const updateWasteBalances = async ({
   if (shouldCalculateWasteBalance) {
     await wasteBalanceService.submitSummaryLog(
       wasteRecords.map((r) => r.record),
-      { user, context, summaryLogId, ledgerId }
+      { user, classificationContext, summaryLogId, ledgerId }
     )
   }
 }
@@ -171,19 +171,22 @@ const updateWasteBalances = async ({
  * `0` for registered-only submissions (`accreditation` is `null`).
  *
  * @param {ValidatedWasteRecord[]} changedRecords
- * @param {RowClassificationContext} context
+ * @param {RowClassificationContext} classificationContext
  * @returns {number}
  */
-const decemberWasteRowCountFor = (changedRecords, context) => {
-  if (context.accreditation === null) {
+const decemberWasteRowCountFor = (changedRecords, classificationContext) => {
+  if (classificationContext.accreditation === null) {
     return 0
   }
 
   const classifiedRows = changedRecords.map(({ record }) =>
-    classifyWasteRecord(record, context)
+    classifyWasteRecord(record, classificationContext)
   )
 
-  return decemberRowCountFor(classifiedRows, context.accreditation)
+  return decemberRowCountFor(
+    classifiedRows,
+    classificationContext.accreditation
+  )
 }
 
 /**
@@ -199,7 +202,7 @@ const decemberWasteRowCountFor = (changedRecords, context) => {
  *
  * @param {object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {RowClassificationContext} params.context
+ * @param {RowClassificationContext} params.classificationContext
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
@@ -207,7 +210,7 @@ const decemberWasteRowCountFor = (changedRecords, context) => {
  */
 const countRecordChanges = async ({
   wasteRecords,
-  context,
+  classificationContext,
   ledgerId,
   ledgerRepository,
   summaryLogRowStatesRepository
@@ -228,7 +231,7 @@ const countRecordChanges = async ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
-    context
+    classificationContext
   })
 
   let created = 0
@@ -251,7 +254,10 @@ const countRecordChanges = async ({
   return {
     created,
     updated,
-    decemberWasteRowCount: decemberWasteRowCountFor(changedRecords, context)
+    decemberWasteRowCount: decemberWasteRowCountFor(
+      changedRecords,
+      classificationContext
+    )
   }
 }
 
@@ -269,7 +275,7 @@ const countRecordChanges = async ({
  * @param {object} params
  * @param {SummaryLogFileId} params.summaryLogId
  * @param {WasteBalanceLedgerId} params.ledgerId
- * @param {RowClassificationContext} params.context
+ * @param {RowClassificationContext} params.classificationContext
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
@@ -279,7 +285,7 @@ const countRecordChanges = async ({
 const commitStateAndBalance = async ({
   summaryLogId,
   ledgerId,
-  context,
+  classificationContext,
   wasteRecords,
   parsedData,
   user,
@@ -289,17 +295,17 @@ const commitStateAndBalance = async ({
   await writeSummaryLogRowStates({
     summaryLogRowStatesRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
-    context,
+    classificationContext,
     ledgerId,
     summaryLogId
   })
 
-  const { accreditation } = context
+  const { accreditation } = classificationContext
   if (accreditation) {
     await updateWasteBalances({
       ledgerId,
       parsedData,
-      context: { ...context, accreditation },
+      classificationContext: { ...classificationContext, accreditation },
       wasteBalanceService,
       wasteRecords,
       user,
@@ -377,7 +383,7 @@ export const syncFromSummaryLog = (dependencies) => {
       year
     }
     /** @type {RowClassificationContext} */
-    const context = {
+    const classificationContext = {
       tableSchemas,
       ...classificationContextOf(
         await registrationForSummaryLog(organisationReadRepository, summaryLog)
@@ -390,7 +396,7 @@ export const syncFromSummaryLog = (dependencies) => {
     // 4. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
-      context,
+      classificationContext,
       ledgerId,
       ledgerRepository,
       summaryLogRowStatesRepository
@@ -401,7 +407,7 @@ export const syncFromSummaryLog = (dependencies) => {
     await commitStateAndBalance({
       summaryLogId: summaryLog.file.id,
       ledgerId,
-      context,
+      classificationContext,
       wasteRecords,
       parsedData,
       user,

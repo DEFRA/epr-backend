@@ -34,11 +34,11 @@ const normaliseNegativeZero = (value) => (value === 0 ? 0 : value)
  * cross-field reconciliation arithmetic requires.
  *
  * @param {WasteRecord} record
- * @param {RowClassificationContext} context
+ * @param {RowClassificationContext} classificationContext
  * @returns {SummaryLogRowStateEntry}
  */
-export const projectSummaryLogRowState = (record, context) => {
-  const classified = classifyWasteRecord(record, context)
+export const projectSummaryLogRowState = (record, classificationContext) => {
+  const classified = classifyWasteRecord(record, classificationContext)
   const { ROW_ID: _ROW_ID, processingType, ...data } = classified.data
   return {
     ...classified,

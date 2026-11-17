@@ -24,14 +24,14 @@ import { RECORD_CHANGE } from './record-change.js'
  * @param {{
  *   wasteRecords: ValidatedWasteRecord[],
  *   submittedRowStatesByKey: Map<string, WasteRecordState>,
- *   context: RowClassificationContext
+ *   classificationContext: RowClassificationContext
  * }} params
  * @returns {Map<string, RecordChange>} record change keyed by `${type}:${rowId}`
  */
 export const classifyRecordChanges = ({
   wasteRecords,
   submittedRowStatesByKey,
-  context
+  classificationContext
 }) => {
   const changes = new Map()
 
@@ -44,7 +44,7 @@ export const classifyRecordChanges = ({
       continue
     }
 
-    const projected = projectSummaryLogRowState(record, context)
+    const projected = projectSummaryLogRowState(record, classificationContext)
 
     const unchanged =
       isDeepStrictEqual(projected.data, submitted.data) &&

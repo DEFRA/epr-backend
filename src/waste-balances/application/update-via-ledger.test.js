@@ -122,7 +122,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -152,7 +152,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       await performUpdateViaLedger({
@@ -166,7 +166,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-B'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -196,7 +196,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -221,7 +221,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -242,7 +242,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       expect(appendSpy).not.toHaveBeenCalled()
@@ -263,7 +263,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -294,7 +294,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const { systemLogs } = await systemLogsRepository.find({
@@ -319,7 +319,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: {},
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -345,7 +345,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -362,7 +362,7 @@ describe('performUpdateViaLedger', () => {
         dependencies: { systemLogsRepository },
         user,
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -386,7 +386,7 @@ describe('performUpdateViaLedger', () => {
           role: null
         },
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: { tableSchemas, accreditation, overseasSites }
+        classificationContext: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -407,7 +407,7 @@ describe('performUpdateViaLedger', () => {
           dependencies: { systemLogsRepository },
           user,
           summaryLogId,
-          context: { tableSchemas, accreditation, overseasSites }
+          classificationContext: { tableSchemas, accreditation, overseasSites }
         })
 
       const results = await Promise.allSettled([

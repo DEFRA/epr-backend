@@ -494,7 +494,7 @@ const contributesLoadLegs = (
  * @param {PeriodicReport[]} params.periodicReports
  * @param {Cadence} params.cadence
  * @param {OperatorCategory} params.operatorCategory - the registration's category, as the report uses, so rows land in the periods the report places them in
- * @param {RowClassificationContext} params.context
+ * @param {RowClassificationContext} params.classificationContext
  * @returns {LoadsByReportingPeriod}
  */
 export const classifyByPeriodStatus = ({
@@ -504,8 +504,9 @@ export const classifyByPeriodStatus = ({
   periodicReports,
   cadence,
   operatorCategory,
-  context: { tableSchemas, ...classificationContext }
+  classificationContext
 }) => {
+  const { tableSchemas, ...classifierContext } = classificationContext
   const submittedPeriods = buildSubmittedPeriods(periodicReports, cadence)
   const reportingDateFields = reportingDateFieldsFor(operatorCategory)
   const periodContext = {
@@ -536,7 +537,7 @@ export const classifyByPeriodStatus = ({
       )
       if (period) {
         const { transactionAmount, exclusionReasons } =
-          classifyRowForWasteBalance(schema, record.data, classificationContext)
+          classifyRowForWasteBalance(schema, record.data, classifierContext)
         entries.push(
           ...classifyAddedRecord({
             period,
@@ -558,7 +559,7 @@ export const classifyByPeriodStatus = ({
           reportingDateFields,
           submittedPeriods,
           cadence,
-          context: classificationContext
+          context: classifierContext
         })
       )
     }

@@ -104,7 +104,7 @@ describe('writeSummaryLogRowStates', () => {
       ],
       ledgerId: withNumbers(registeredOnlyLedgerId),
       summaryLogId: toSummaryLogFileId('log-A'),
-      context: {
+      classificationContext: {
         tableSchemas: tableSchemasOf(
           toYear(2026),
           PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
@@ -136,7 +136,7 @@ describe('writeSummaryLogRowStates', () => {
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
       ledgerId: withNumbers(registeredOnlyLedgerId),
       summaryLogId: toSummaryLogFileId('log-A'),
-      context: {
+      classificationContext: {
         tableSchemas: tableSchemasOf(
           toYear(2026),
           PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
@@ -160,7 +160,7 @@ describe('writeSummaryLogRowStates', () => {
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
       ledgerId: withNumbers(registeredOnlyLedgerId),
       summaryLogId: toSummaryLogFileId('log-A'),
-      context: {
+      classificationContext: {
         tableSchemas: tableSchemasOf(
           toYear(2026),
           PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
@@ -188,7 +188,7 @@ describe('writeSummaryLogRowStates', () => {
       ],
       ledgerId: withNumbers(registeredOnlyLedgerId),
       summaryLogId: toSummaryLogFileId('log-A'),
-      context: {
+      classificationContext: {
         tableSchemas: tableSchemasOf(
           toYear(2026),
           PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
@@ -219,7 +219,7 @@ describe('writeSummaryLogRowStates', () => {
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
       ledgerId: withNumbers(accreditedLedgerId),
       summaryLogId: toSummaryLogFileId('log-A'),
-      context: {
+      classificationContext: {
         tableSchemas: tableSchemasOf(
           toYear(2026),
           PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
@@ -249,7 +249,7 @@ describe('writeSummaryLogRowStates', () => {
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
       ledgerId: withNumbers(accreditedLedgerId),
       summaryLogId: toSummaryLogFileId('log-A'),
-      context: {
+      classificationContext: {
         tableSchemas: tableSchemasOf(
           toYear(2026),
           PROCESSING_TYPES.REPROCESSOR_INPUT
@@ -281,7 +281,7 @@ describe('writeSummaryLogRowStates', () => {
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
         ledgerId: withNumbers(registeredOnlyLedgerId),
         summaryLogId: toSummaryLogFileId('log-A'),
-        context: {
+        classificationContext: {
           tableSchemas: tableSchemasOf(
             toYear(2026),
             PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY

@@ -20,7 +20,7 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteRecord[]} params.wasteRecords
- * @param {RowClassificationContext} params.context
+ * @param {RowClassificationContext} params.classificationContext
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {SummaryLogFileId} params.summaryLogId
  * @returns {Promise<void>}
@@ -28,12 +28,12 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 export const writeSummaryLogRowStates = async ({
   summaryLogRowStatesRepository,
   wasteRecords,
-  context,
+  classificationContext,
   ledgerId,
   summaryLogId
 }) => {
   const classifiedRows = wasteRecords.map((record) =>
-    projectSummaryLogRowState(record, context)
+    projectSummaryLogRowState(record, classificationContext)
   )
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
