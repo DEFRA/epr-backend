@@ -659,11 +659,12 @@ function toContact({ email, fullName, phone }) {
  * right.
  *
  * @template T, V
+ * @template {string | number} K
  * @param {T[]} items
- * @param {(item: T) => [string, V] | null} toEntry
+ * @param {(item: T) => [K, V] | null} toEntry
  * @param {string} keyName
  * @param {OnDrop} onDrop
- * @returns {Record<string, V>}
+ * @returns {Record<K, V>}
  */
 function keyedRecords(items, toEntry, keyName, onDrop) {
   const entries = items.map(toEntry).filter((entry) => entry !== null)
@@ -672,18 +673,23 @@ function keyedRecords(items, toEntry, keyName, onDrop) {
   for (const key of clashes) {
     onDrop(`${keyName} ${key} is shared by more than one record`)
   }
-  return Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
+  return /** @type {Record<K, V>} */ (
+    Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
+  )
 }
 
 /**
  * @template T, V
- * @param {Record<string, T>} record
+ * @template {string} K
+ * @param {Record<K, T>} record
  * @param {(value: T) => V} map
- * @returns {Record<string, V>}
+ * @returns {Record<K, V>}
  */
 function mapValues(record, map) {
-  return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => [key, map(value)])
+  return /** @type {Record<K, V>} */ (
+    Object.fromEntries(
+      Object.entries(record).map(([key, value]) => [key, map(value)])
+    )
   )
 }
 
