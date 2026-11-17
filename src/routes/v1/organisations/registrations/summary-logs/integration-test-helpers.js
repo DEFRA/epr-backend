@@ -36,7 +36,8 @@ import {
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation as buildServedOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  withStandingThrough
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -1068,16 +1069,7 @@ const buildComplexTestReadOrg = ({
     ]
   })
   const accreditationYear = utcYearOf(accreditationValidFrom)
-  const startOfAccreditationYear = `${accreditationYear}-01-01`
   const followingYear = nextYear(accreditationYear)
-  const standingInAccreditationYear = !accredited
-    ? { [startOfAccreditationYear]: { standing: 'registeredOnly' } }
-    : accreditationValidFrom === startOfAccreditationYear
-      ? { [startOfAccreditationYear]: { standing: 'accredited' } }
-      : {
-          [startOfAccreditationYear]: { standing: 'registeredOnly' },
-          [accreditationValidFrom]: { standing: 'accredited' }
-        }
   const accreditation = buildReadAccreditation({
     accreditationNumber,
     status: approvedFrom(accreditationValidFrom),
@@ -1085,62 +1077,58 @@ const buildComplexTestReadOrg = ({
   })
   const common = {
     material: /** @type {any} */ (material),
-    status: approvedFrom(VALID_FROM),
-    standingByDate: /** @type {any} */ ({
-      [accreditationYear]: standingInAccreditationYear,
-      [followingYear]: {
-        [`${followingYear}-01-01`]: { standing: 'registeredOnly' }
-      }
-    })
+    status: approvedFrom(VALID_FROM)
   }
+  const registration = isExporter
+    ? buildReadExporterRegistration({
+        ...common,
+        overseasSites: withOverseasSites
+          ? {
+              100: {
+                name: 'Test Overseas Site',
+                address: {
+                  line1: '1 Test Road',
+                  townOrCity: 'Berlin',
+                  country: 'Germany'
+                }
+              },
+              200: {
+                name: 'Test Unapproved Overseas Site',
+                address: {
+                  line1: '2 Test Road',
+                  townOrCity: 'Hamburg',
+                  country: 'Germany'
+                }
+              }
+            }
+          : {},
+        accreditations: accredited
+          ? accreditationsByYear(
+              buildReadExporterAccreditation({
+                ...accreditation,
+                overseasSites: {
+                  100: { status: 'approved', approvedOn: VALID_FROM },
+                  200: {
+                    status: 'approved',
+                    approvedOn: UNAPPROVED_VALID_FROM
+                  }
+                }
+              })
+            )
+          : {}
+      })
+    : buildReadReprocessorRegistration({
+        ...common,
+        reprocessingType: /** @type {any} */ (reprocessingType),
+        accreditations: accredited ? accreditationsByYear(accreditation) : {}
+      })
   return buildServedOrganisation({
     organisationNumber: TEST_ORGANISATION_NUMBER,
     registrations: {
-      [TEST_REGISTRATION_NUMBER]: isExporter
-        ? buildReadExporterRegistration({
-            ...common,
-            overseasSites: withOverseasSites
-              ? {
-                  100: {
-                    name: 'Test Overseas Site',
-                    address: {
-                      line1: '1 Test Road',
-                      townOrCity: 'Berlin',
-                      country: 'Germany'
-                    }
-                  },
-                  200: {
-                    name: 'Test Unapproved Overseas Site',
-                    address: {
-                      line1: '2 Test Road',
-                      townOrCity: 'Hamburg',
-                      country: 'Germany'
-                    }
-                  }
-                }
-              : {},
-            accreditations: accredited
-              ? accreditationsByYear(
-                  buildReadExporterAccreditation({
-                    ...accreditation,
-                    overseasSites: {
-                      100: { status: 'approved', approvedOn: VALID_FROM },
-                      200: {
-                        status: 'approved',
-                        approvedOn: UNAPPROVED_VALID_FROM
-                      }
-                    }
-                  })
-                )
-              : {}
-          })
-        : buildReadReprocessorRegistration({
-            ...common,
-            reprocessingType: /** @type {any} */ (reprocessingType),
-            accreditations: accredited
-              ? accreditationsByYear(accreditation)
-              : {}
-          })
+      [TEST_REGISTRATION_NUMBER]: withStandingThrough(
+        registration,
+        followingYear
+      )
     }
   })
 }

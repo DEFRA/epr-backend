@@ -72,12 +72,6 @@ const servedOrganisation = buildReadOrganisation({
   registrations: {
     [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      standingByDate: {
-        [YEAR]: {
-          '2026-02-01': { standing: 'registeredOnly' },
-          '2026-07-01': { standing: 'accredited' }
-        }
-      },
       accreditations: accreditationsByYear(
         buildReadAccreditation({
           year: YEAR,
