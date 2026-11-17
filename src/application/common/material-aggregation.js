@@ -8,7 +8,7 @@ import { capitalize } from '#common/helpers/formatters.js'
 
 export const formatMaterialResults = (results, valueField) => {
   const materialMap = new Map(
-    results.map((result) => [result._id, toNumber(result[valueField])])
+    results.map((result) => [result.material, toNumber(result[valueField])])
   )
 
   const materials = TONNAGE_MONITORING_MATERIALS.map((material) => ({
