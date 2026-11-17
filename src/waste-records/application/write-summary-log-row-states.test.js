@@ -97,19 +97,21 @@ describe('writeSummaryLogRowStates', () => {
 
   it('writes a row state per record under the registered-only ledger', async () => {
     await writeSummaryLogRowStates({
-      tableSchemas: tableSchemasOf(
-        toYear(2026),
-        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-      ),
       summaryLogRowStatesRepository,
       wasteRecords: [
         buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 }),
         buildRegisteredOnlyRecord({ rowId: '2', tonnage: 20 })
       ],
-      accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      summaryLogId: toSummaryLogFileId('log-A'),
+      context: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const committed =
@@ -130,16 +132,18 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
-      tableSchemas: tableSchemasOf(
-        toYear(2026),
-        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
-      accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      summaryLogId: toSummaryLogFileId('log-A'),
+      context: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const [committed] =
@@ -152,16 +156,18 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores weight quantities coerced to two decimal places', async () => {
     await writeSummaryLogRowStates({
-      tableSchemas: tableSchemasOf(
-        toYear(2026),
-        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
-      accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      summaryLogId: toSummaryLogFileId('log-A'),
+      context: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const [committed] =
@@ -174,20 +180,22 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stores tonnages so round-each-then-sum no longer drifts from sum-then-round', async () => {
     await writeSummaryLogRowStates({
-      tableSchemas: tableSchemasOf(
-        toYear(2026),
-        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-      ),
       summaryLogRowStatesRepository,
       wasteRecords: [
         buildReceivedRecord({ rowId: '1', tonnage: 1.005 }),
         buildReceivedRecord({ rowId: '2', tonnage: 1.005 }),
         buildReceivedRecord({ rowId: '3', tonnage: 1.005 })
       ],
-      accreditation: null,
       ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      summaryLogId: toSummaryLogFileId('log-A'),
+      context: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const committed =
@@ -207,16 +215,18 @@ describe('writeSummaryLogRowStates', () => {
 
   it('writes the row states under the supplied accreditation ledger', async () => {
     await writeSummaryLogRowStates({
-      tableSchemas: tableSchemasOf(
-        toYear(2026),
-        PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-      accreditation,
       ledgerId: withNumbers(accreditedLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      summaryLogId: toSummaryLogFileId('log-A'),
+      context: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation,
+        overseasSites
+      }
     })
 
     expect(
@@ -235,16 +245,18 @@ describe('writeSummaryLogRowStates', () => {
 
   it('stamps the missing field on a row excluded for incomplete data', async () => {
     await writeSummaryLogRowStates({
-      tableSchemas: tableSchemasOf(
-        toYear(2026),
-        PROCESSING_TYPES.REPROCESSOR_INPUT
-      ),
       summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
-      accreditation,
       ledgerId: withNumbers(accreditedLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      summaryLogId: toSummaryLogFileId('log-A'),
+      context: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        ),
+        accreditation,
+        overseasSites
+      }
     })
 
     const [committed] =
@@ -265,16 +277,18 @@ describe('writeSummaryLogRowStates', () => {
   it('is idempotent — re-running the same submission adds no duplicate', async () => {
     const submit = () =>
       writeSummaryLogRowStates({
-        tableSchemas: tableSchemasOf(
-          toYear(2026),
-          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
-        ),
         summaryLogRowStatesRepository,
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-        accreditation: null,
         ledgerId: withNumbers(registeredOnlyLedgerId),
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: {
+          tableSchemas: tableSchemasOf(
+            toYear(2026),
+            PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+          ),
+          accreditation: null,
+          overseasSites
+        }
       })
 
     await submit()

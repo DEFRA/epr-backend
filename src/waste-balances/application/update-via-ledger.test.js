@@ -116,15 +116,13 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: records,
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -145,34 +143,30 @@ describe('performUpdateViaLedger', () => {
   describe('subsequent submission', () => {
     it('computes delta from previous creditTotal', async () => {
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 80 }),
           buildExporterRecord({ rowId: '3', tonnage: 20 })
         ],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-B')
+        summaryLogId: toSummaryLogFileId('log-B'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -196,15 +190,13 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: records,
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -223,15 +215,13 @@ describe('performUpdateViaLedger', () => {
       ]
 
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: records,
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -246,15 +236,13 @@ describe('performUpdateViaLedger', () => {
       const appendSpy = vi.spyOn(ledgerRepository, 'appendEvents')
 
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       expect(appendSpy).not.toHaveBeenCalled()
@@ -266,18 +254,16 @@ describe('performUpdateViaLedger', () => {
   describe('audit emission', () => {
     it('inserts one system-log entry covering the submission', async () => {
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [
           buildExporterRecord({ rowId: '1', tonnage: 100 }),
           buildExporterRecord({ rowId: '2', tonnage: 50 })
         ],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -302,15 +288,13 @@ describe('performUpdateViaLedger', () => {
 
     it("lists the entry in its organisation's system log", async () => {
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const { systemLogs } = await systemLogsRepository.find({
@@ -329,15 +313,13 @@ describe('performUpdateViaLedger', () => {
         ).commitSummaryLogSubmittedEvent
 
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
-        accreditation,
         commitSummaryLogSubmittedEvent: auditlessSubmit,
         ledgerId,
         dependencies: {},
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -357,15 +339,13 @@ describe('performUpdateViaLedger', () => {
       }))
 
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -376,15 +356,13 @@ describe('performUpdateViaLedger', () => {
   describe('actor attribution', () => {
     it('stamps createdBy with the submitter id, name and email', async () => {
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -397,9 +375,7 @@ describe('performUpdateViaLedger', () => {
 
     it('omits name when the submitter has none, keeping the email distinct', async () => {
       await performUpdateViaLedger({
-        tableSchemas,
         wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
-        accreditation,
         commitSummaryLogSubmittedEvent,
         ledgerId,
         dependencies: { systemLogsRepository },
@@ -409,8 +385,8 @@ describe('performUpdateViaLedger', () => {
           scope: [],
           role: null
         },
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        summaryLogId: toSummaryLogFileId('log-A'),
+        context: { tableSchemas, accreditation, overseasSites }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -425,15 +401,13 @@ describe('performUpdateViaLedger', () => {
     it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
       const submit = (summaryLogId, tonnage) =>
         performUpdateViaLedger({
-          tableSchemas,
           wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
-          accreditation,
           commitSummaryLogSubmittedEvent,
           ledgerId,
           dependencies: { systemLogsRepository },
           user,
-          overseasSites,
-          summaryLogId
+          summaryLogId,
+          context: { tableSchemas, accreditation, overseasSites }
         })
 
       const results = await Promise.allSettled([

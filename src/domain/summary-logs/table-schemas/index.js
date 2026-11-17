@@ -27,11 +27,13 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
  * @property {((data: Record<string, any>, context: {accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext}) => WasteBalanceClassificationResult) | null} [classifyForWasteBalance] - Classifies a row for waste balance. Absent or null declares the table as by-design non-contributing: its rows are reported under nonBalanceAffecting with the TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE exclusion reason, not as a data problem
  */
 
+/** @typedef {Record<string, TableSchema>} TableSchemas - A template's table schemas by table name */
+
 /**
  * @typedef {Object} Template
  * @property {number} minVersion - The lowest template version accepted
  * @property {number} [maxVersion] - The highest template version accepted, when the year accepts only versions known so far
- * @property {Record<string, TableSchema>} tableSchemas - Table schemas by table name
+ * @property {TableSchemas} tableSchemas
  */
 
 /**
@@ -71,7 +73,7 @@ export const getTemplate = (year, processingType) => {
  *
  * @param {Year} year
  * @param {ProcessingType} processingType
- * @returns {Record<string, TableSchema>}
+ * @returns {TableSchemas}
  */
 export const tableSchemasOf = (year, processingType) =>
   getTemplate(year, processingType).tableSchemas
