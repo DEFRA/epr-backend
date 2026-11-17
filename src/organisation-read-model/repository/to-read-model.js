@@ -343,9 +343,11 @@ export function toRegistrationEntry(
 
   const isExporter =
     registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-  const overseasSites = isExporter
-    ? toStoredOverseasSites(registration, context)
-    : {}
+  const { overseasSites, registrationSites } = sitesOf(
+    registration,
+    isExporter,
+    context
+  )
   const openYear = latestOpenYear(new Date(context.today))
   const accreditations = accreditationsUpTo({
     openYear,
@@ -354,9 +356,7 @@ export function toRegistrationEntry(
     context,
     externalAccreditations:
       externalByRegistration.get(registrationNumber) ?? {},
-    registrationSites: isExporter
-      ? mapValues(overseasSites, toAccreditedOverseasSite)
-      : undefined
+    registrationSites
   })
   const registrationStatus = { current: status, ...statusTimeline }
 
@@ -379,6 +379,29 @@ export function toRegistrationEntry(
     : toReprocessorRegistration(registration, common, accreditations, onDrop)
 
   return converted && [registrationNumber, converted]
+}
+
+/**
+ * An exporter's overseas sites as its registration holds them, and as its
+ * stored accreditations list them. A reprocessor has neither.
+ *
+ * @param {StoredRegistration} registration
+ * @param {boolean} isExporter
+ * @param {Context} context
+ * @returns {{
+ *   overseasSites: Record<string, StoredOverseasSite>,
+ *   registrationSites?: Record<string, AccreditedOverseasSite>
+ * }}
+ */
+function sitesOf(registration, isExporter, context) {
+  if (!isExporter) {
+    return { overseasSites: {} }
+  }
+  const overseasSites = toStoredOverseasSites(registration, context)
+  return {
+    overseasSites,
+    registrationSites: mapValues(overseasSites, toAccreditedOverseasSite)
+  }
 }
 
 /**
