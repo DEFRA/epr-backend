@@ -20,7 +20,7 @@ import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 
 vi.mock('#reports/application/audit.js', () => ({

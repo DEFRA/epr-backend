@@ -13,7 +13,7 @@ import {
   buildRegistration,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createMockSystemLogsRepository } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'

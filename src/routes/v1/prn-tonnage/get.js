@@ -9,11 +9,11 @@ import {
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { prnTonnageResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { Material } from '#domain/organisations/model.js' */
+/** @import { Material } from '#shared/organisations/model.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
 export const prnTonnagePath = '/v1/prn-tonnage'

@@ -4,7 +4,7 @@ import { MongoClient } from 'mongodb'
 import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { buildAwaitingAcceptancePrn } from './contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -15,7 +15,7 @@ import {
 } from '#vite/helpers/setup-auth-mocking.js'
 import { generateExternalApiToken } from '#packaging-recycling-notes/routes/test-helpers.js'
 
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 const DATABASE_NAME = 'epr-backend'
 const PRNS_COLLECTION = 'packaging-recycling-notes'

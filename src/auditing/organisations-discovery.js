@@ -1,6 +1,6 @@
 /** @import {LinkedOrganisationSummary, OrganisationSummary} from '#repositories/organisations/linking-port.js' */
 /** @import {DefraIdRelationship} from '#common/helpers/auth/types.js' */
-/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'

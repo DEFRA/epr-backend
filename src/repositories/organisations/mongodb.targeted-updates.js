@@ -9,7 +9,7 @@ import { validateUsers } from './schema/index.js'
 
 /** @import { Collection } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 /**
  * Updates read the organisation they change from the primary. The configured

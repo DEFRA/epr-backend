@@ -26,7 +26,7 @@ import {
   VALUE_TYPE,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 describe('mapWasteProcessingType', () => {
   it('should return both types for "Reprocessor and exporter"', () => {

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { waitForCallback } from './test-helpers/callback-receiver.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))

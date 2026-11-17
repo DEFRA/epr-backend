@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
+import { TONNAGE_MONITORING_MATERIALS } from '#shared/organisations/model.js'
 
 /**
  * What the record is for, once resolved. Glass is the only material that

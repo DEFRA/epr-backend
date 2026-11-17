@@ -1,6 +1,6 @@
 import { calendarDate, toCalendarDate } from '#common/helpers/date-formatter.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#shared/organisations/model.js'
 import { statusOn } from '#organisation-read-model/domain/model.js'
 
 /** @import {Brand} from '#common/helpers/brand.js' */

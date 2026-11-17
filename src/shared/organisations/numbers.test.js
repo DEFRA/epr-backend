@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { toOrganisationNumber } from './numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 
 describe('toOrganisationNumber', () => {
   it('accepts a positive whole number', () => {

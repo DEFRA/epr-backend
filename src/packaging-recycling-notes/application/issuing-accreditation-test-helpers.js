@@ -1,8 +1,8 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import { Organisation, Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 

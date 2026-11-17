@@ -9,12 +9,12 @@ import {
   buildSubmissionHeaderRow
 } from '../domain/csv-columns.js'
 import { encodeRow } from './stream-csv-export.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'

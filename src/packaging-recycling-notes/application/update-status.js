@@ -33,7 +33,7 @@ import { accreditationForYear } from '#organisation-read-model/domain/accreditat
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PrnStatus} PrnStatus
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
- * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
+ * @typedef {import('#shared/organisations/numbers.js').AccreditationNumber} AccreditationNumber
  * @typedef {import('#reports/application/prn-cancellation-events.js').OnPrnCancelled} OnPrnCancelled
  */
 

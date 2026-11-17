@@ -2,8 +2,8 @@ import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisati
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear, yearBounds } from '#common/helpers/dates/year.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { toRegistrationNumber } from '#shared/organisations/numbers.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 
@@ -11,7 +11,7 @@ import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**

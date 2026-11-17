@@ -2,7 +2,7 @@ import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 

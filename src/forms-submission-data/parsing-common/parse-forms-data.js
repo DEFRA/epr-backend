@@ -1,6 +1,6 @@
 import { mapRegulator } from './form-data-mapper.js'
 import { isNil } from '#common/helpers/is-nil.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 
 /**
  * Extract repeater field data from raw form submission
@@ -268,7 +268,7 @@ export function findFirstValue(answers, fieldNames) {
 /**
  * Extract waste processing type from form definition name
  * @param {Object} rawSubmissionData - The raw submission data object
- * @returns {import('#domain/organisations/model.js').WasteProcessingTypeValue} The waste processing type enum value
+ * @returns {import('#shared/organisations/model.js').WasteProcessingTypeValue} The waste processing type enum value
  * @throws {Error} If waste processing type cannot be determined from definition name
  */
 export function extractWasteProcessingType(rawSubmissionData) {

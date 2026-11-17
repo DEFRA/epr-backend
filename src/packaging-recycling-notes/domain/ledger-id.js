@@ -1,6 +1,6 @@
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 
-/** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {PackagingRecyclingNote} from './model.js' */
 

@@ -1,8 +1,8 @@
-import { USER_ROLES } from '#domain/organisations/model.js'
+import { USER_ROLES } from '#shared/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 import { partialMock } from '#test/type-helpers.js'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import {
@@ -16,7 +16,7 @@ const { buildOrganisation } = createOrganisationBuilders()
  * @import {Mock} from 'vitest'
  * @import {DefraIdTokenPayload} from '#auth/types.js'
  * @import {HapiRequest} from '#common/hapi-types.js'
- * @import {Organisation} from '#domain/organisations/model.js'
+ * @import { Organisation } from '#domain/organisations/model.js'
  * @import {OrganisationUsers} from './add-or-update-organisation-user.js'
  */
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 
 import { summariseIncompleteData } from './assert-report-data-complete.js'
 

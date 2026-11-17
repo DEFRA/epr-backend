@@ -1,5 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
+import { REGISTRATION_STATUS } from '#shared/organisations/model.js'
 import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
 import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'

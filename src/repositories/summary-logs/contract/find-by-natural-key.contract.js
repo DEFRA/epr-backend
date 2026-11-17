@@ -8,7 +8,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
@@ -90,7 +90,7 @@ export const testFindByNaturalKey = (it) => {
       return id
     }
 
-    /** @param {{ accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber }} accreditation */
+    /** @param {{ accreditationNumber: import('#shared/organisations/numbers.js').AccreditationNumber }} accreditation */
     const accredited = ({ accreditationNumber }) => ({ accreditationNumber })
 
     const registeredOnly = { accreditationNumber: null }

@@ -3,7 +3,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { randomInt, randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
@@ -103,7 +103,7 @@ export const buildAccreditationKeys = (overrides = {}) => {
  * agree with the accreditation a reader names it by, and for its year when
  * one is named.
  *
- * @param {Partial<import('#domain/organisations/numbers.js').Numbers & { year: import('#common/helpers/dates/year.js').Year }>} numbers
+ * @param {Partial<import('#shared/organisations/numbers.js').Numbers & { year: import('#common/helpers/dates/year.js').Year }>} numbers
  * @param {PrnOverrides} [overrides]
  */
 export const underAccreditation = (numbers, overrides = {}) => ({

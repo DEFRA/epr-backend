@@ -1,5 +1,5 @@
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { LEDGER_ACCREDITATION_KIND } from '#domain/organisations/model.js'
+import { LEDGER_ACCREDITATION_KIND } from '#shared/organisations/model.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 
 import {

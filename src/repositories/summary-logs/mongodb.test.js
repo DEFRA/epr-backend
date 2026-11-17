@@ -15,7 +15,7 @@ import { partialMock } from '#test/type-helpers.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { toYear } from '#common/helpers/dates/year.js'
 

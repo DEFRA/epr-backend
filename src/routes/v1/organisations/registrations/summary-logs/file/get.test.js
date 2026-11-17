@@ -19,7 +19,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

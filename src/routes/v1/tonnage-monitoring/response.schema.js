@@ -2,7 +2,7 @@ import Joi from 'joi'
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { capitalize } from '#common/helpers/formatters.js'
 
 const WASTE_PROCESSING_TYPES = Object.values(WASTE_PROCESSING_TYPE).map(

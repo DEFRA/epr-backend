@@ -3,7 +3,7 @@ import Joi from 'joi'
 import {
   MATERIAL,
   GLASS_RECYCLING_PROCESS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const materialValues = Object.values(MATERIAL)

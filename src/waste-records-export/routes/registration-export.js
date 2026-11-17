@@ -1,18 +1,18 @@
 import Joi from 'joi'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
-  findOrganisationAndRegistrationReadModels,
   registrationParams,
   registrationPath
-} from '#routes/organisations/natural-keys.js'
+} from '#shared/organisations/natural-keys.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
 import { streamCsvExportToReadable } from '../application/stream-csv-export.js'
 import { exportYearQuery } from './year-query.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */

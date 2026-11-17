@@ -4,7 +4,7 @@ import { splitGlassSubmissions } from './split-glass-submissions.js'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {

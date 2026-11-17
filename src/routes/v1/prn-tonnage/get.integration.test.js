@@ -14,7 +14,7 @@ import {
   MATERIAL,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   buildAwaitingAcceptancePrn,
   buildAccreditationSnapshot,
@@ -27,7 +27,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { prnTonnagePath } from './get.js'
 
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */

@@ -37,7 +37,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 const mockRecordStatusTransition = vi.fn()
 const mockOnCancelled = vi.fn()

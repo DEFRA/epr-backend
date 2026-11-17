@@ -7,7 +7,7 @@ import {
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
-import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
+import { ACCREDITATION_STATUS } from '#shared/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
 import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'

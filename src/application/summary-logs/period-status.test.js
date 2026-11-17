@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { classifyByPeriodStatus } from './period-status.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { MAX_ROWS_PER_BUCKET } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'
 import { RECORD_CHANGE } from './record-change.js'

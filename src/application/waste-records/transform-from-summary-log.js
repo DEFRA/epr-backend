@@ -1,8 +1,8 @@
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
- * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('#domain/waste-records/model.js').WasteRecordType} WasteRecordType
+ * @typedef {import('#shared/waste-records/model.js').WasteRecord} WasteRecord
+ * @typedef {import('#shared/waste-records/model.js').WasteRecordType} WasteRecordType
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
  * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
  * @typedef {import('#domain/summary-logs/extractor/port.js').MetadataEntry} MetadataEntry

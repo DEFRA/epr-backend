@@ -11,7 +11,7 @@ import {
   buildDataFieldColumns,
   buildHeaderRow
 } from '../domain/csv-columns.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -20,7 +20,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
 const collect = async (gen) => {

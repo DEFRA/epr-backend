@@ -5,15 +5,15 @@ import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
-/** @typedef {import('#domain/organisations/model.js').StoredAccreditationStatus} StoredAccreditationStatus */
-/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @typedef {import('#shared/organisations/model.js').StoredAccreditationStatus} StoredAccreditationStatus */
+/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
 
 export const accreditationStatusHistoryPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history'

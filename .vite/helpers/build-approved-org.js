@@ -3,7 +3,7 @@ import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
   REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   prepareOrgUpdate,
   getValidDateRange

@@ -13,7 +13,7 @@ import { findSubmissionByNumber } from './submission-lookup.js'
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js'
  * @import { PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
  */
 

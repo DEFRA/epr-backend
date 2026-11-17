@@ -7,7 +7,7 @@ import {
 import {
   BUSINESS_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 describe('Override Functions', () => {
   describe('applyRegistrationOverrides', () => {

@@ -1,7 +1,7 @@
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { ORGANISATION_NUMBER_PATTERN } from '#domain/organisations/numbers.js'
+import { ORGANISATION_NUMBER_PATTERN } from '#shared/organisations/numbers.js'
 import { organisationFor } from './get.organisation.js'
 import { organisationListResponseSchema } from './response.schema.js'
 

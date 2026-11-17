@@ -1,7 +1,7 @@
 import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { toNumber } from '#common/helpers/decimal-utils.js'
 import { getMonthRange } from '#common/helpers/date-formatter.js'
 import { capitalize } from '#common/helpers/formatters.js'

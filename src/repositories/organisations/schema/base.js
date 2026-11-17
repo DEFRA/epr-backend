@@ -7,7 +7,7 @@ import {
   REPROCESSING_TYPE,
   USER_ROLES,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
 

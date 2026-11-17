@@ -9,7 +9,7 @@ import {
   groupAndSum,
   isTonnageGreaterThanZero
 } from './helpers.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 
 const WASTE_RECEIVED_TYPES = new Set([
   WASTE_RECORD_TYPE.EXPORTED,

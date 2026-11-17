@@ -11,7 +11,7 @@ import {
   VALUE_TYPE,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { ObjectId } from 'mongodb'
 
 const WASTE_PROCESSING_TYPES_MAPPING = {

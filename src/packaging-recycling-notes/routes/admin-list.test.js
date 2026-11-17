@@ -10,7 +10,7 @@ import {
   vi
 } from 'vitest'
 
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'

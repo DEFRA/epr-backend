@@ -9,7 +9,7 @@ import {
   ORGANISATION_NUMBER_PATTERN,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 /**
  * @template {{ orgId: unknown }} T

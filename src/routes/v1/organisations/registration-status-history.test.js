@@ -14,7 +14,7 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import { createStatusHistoryBuilders } from './status-history-test-helpers.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 
 const organisationBuilders = createOrganisationBuilders()
 const { buildOrganisation } = organisationBuilders

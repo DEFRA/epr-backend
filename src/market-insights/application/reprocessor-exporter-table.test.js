@@ -7,7 +7,7 @@ import {
   REGULATOR,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   approvedStatusFrom,
   buildReadAccreditation,
@@ -28,7 +28,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 /** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
@@ -61,8 +61,8 @@ const approvedFrom = (approvedAt = '2026-01-01') => [
  * @param {{
  *   orgId: number,
  *   material?: string,
- *   wasteProcessingType?: import('#domain/organisations/model.js').WasteProcessingTypeValue,
- *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
+ *   wasteProcessingType?: import('#shared/organisations/model.js').WasteProcessingTypeValue,
+ *   regulator?: import('#shared/organisations/model.js').RegulatorValue,
  *   accreditationTimeline?: StatusTimeline<AccreditationStatus> | null,
  *   year?: number,
  *   served?: boolean
@@ -176,7 +176,7 @@ const monthlyReport = (operator, period, figures = {}) => ({
  *   reports?: Partial<import('#reports/repository/port.js').CreateReportParams>[],
  *   inFlightResubmissions?: ReturnType<typeof monthlyReport>[],
  *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
- *   regulator?: import('#domain/organisations/model.js').RegulatorValue
+ *   regulator?: import('#shared/organisations/model.js').RegulatorValue
  * }} options
  */
 const run = async ({
@@ -1085,7 +1085,7 @@ describe('buildReprocessorExporterTable', () => {
   describe('the operators contributing to each figure', () => {
     /**
      * @param {number} orgId
-     * @param {import('#domain/organisations/model.js').AppliedForMaterial} [material]
+     * @param {import('#shared/organisations/model.js').AppliedForMaterial} [material]
      */
     const receivingOperator = (orgId, material) => {
       const operator = makeOperator({ orgId, material })

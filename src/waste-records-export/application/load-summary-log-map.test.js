@@ -1,7 +1,7 @@
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 const organisation = { organisationNumber: toOrganisationNumber('500001') }

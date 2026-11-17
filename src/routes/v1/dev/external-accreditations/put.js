@@ -3,13 +3,13 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { registrationParams } from '#routes/organisations/natural-keys.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { registrationParams } from '#shared/organisations/natural-keys.js'
 import { externalAccreditationPayloadSchema } from './put.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import { ExternalAccreditationsRepository } from '#external-accreditations/repository/port.js' */
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */

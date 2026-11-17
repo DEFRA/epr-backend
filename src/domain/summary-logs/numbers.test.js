@@ -1,6 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { summaryLogKeyOf } from './numbers.js'
 
 /** @import {SummaryLog} from './model.js' */

@@ -22,10 +22,10 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, RequiredNumbers } from '#shared/organisations/numbers.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 /**

@@ -3,7 +3,7 @@
  * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
  * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
  * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
- * @import {WasteRecord} from '#domain/waste-records/model.js'
+ * @import { WasteRecord } from '#shared/waste-records/model.js'
  */
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'

@@ -1,13 +1,13 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import { partialMock } from '#test/type-helpers.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { transform } from './public-register-transformer.js'
 
 /** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
-/** @import { TonnageBand } from '#domain/organisations/model.js' */
+/** @import { TonnageBand } from '#shared/organisations/model.js' */
 
 const REGISTRATION_NUMBER = 'R26ER5000010001PL'
 

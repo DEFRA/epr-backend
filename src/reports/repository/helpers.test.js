@@ -4,7 +4,7 @@ import { assertPresent } from '#test/type-helpers.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { groupAsPeriodicReports, mapReport } from './helpers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/event.js'

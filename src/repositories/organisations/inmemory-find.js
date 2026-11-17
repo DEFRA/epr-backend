@@ -7,7 +7,7 @@ import {
 } from './helpers.js'
 
 /** @import { FindParams, SearchCriteria } from './administration-port.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 /**
  * How organisations are searched in memory. The in-memory organisations

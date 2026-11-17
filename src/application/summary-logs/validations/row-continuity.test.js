@@ -3,7 +3,7 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -12,7 +12,7 @@ import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
-/** @import {WasteRecordType} from '#domain/waste-records/model.js' */
+/** @import { WasteRecordType } from '#shared/waste-records/model.js' */
 /** @import {PreviousSubmission, WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 
 const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log-id'

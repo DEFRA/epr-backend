@@ -6,7 +6,7 @@ import {
   REGULATOR,
   TIME_SCALE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   addressSchema,
   formFileUploadSchema,

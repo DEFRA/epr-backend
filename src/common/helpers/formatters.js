@@ -2,14 +2,15 @@
  * Pure utility functions for formatting public register data
  */
 
-/** @import {Address, AppliedForMaterial, GlassRecyclingProcess, Material, TonnageBand} from '#domain/organisations/model.js' */
+/** @import { Address } from '#domain/organisations/model.js' */
+/** @import { AppliedForMaterial, GlassRecyclingProcess, Material, TonnageBand } from '#shared/organisations/model.js' */
 /** @import {RegistrationAddress} from '#domain/organisations/registration.js' */
 
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
   TONNAGE_BAND
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 const MATERIAL_DISPLAY_NAMES = {
   [MATERIAL.FIBRE]: 'Fibre based composite',

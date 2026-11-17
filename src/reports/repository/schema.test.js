@@ -1,6 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { aggregateWasteExported } from '#reports/domain/aggregation/aggregate-waste-exported.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { OPERATOR_CATEGORY } from '#reports/domain/operator-category.js'

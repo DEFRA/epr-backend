@@ -1,12 +1,12 @@
 import { buildCreditedTonnageReport } from './credited-tonnage-report.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {
   MATERIAL,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 

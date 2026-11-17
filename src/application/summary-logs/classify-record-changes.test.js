@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { classifyRecordChanges } from './classify-record-changes.js'
 import { RECORD_CHANGE } from './record-change.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
@@ -31,7 +31,7 @@ const buildWasteRecord = (
 /**
  * A submitted row state as the read model projects it — the write-path
  * projection minus the storage-only id fields.
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @param {import('#shared/waste-records/model.js').WasteRecord} record
  * @returns {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState}
  */
 const submittedStateOf = (record) => {

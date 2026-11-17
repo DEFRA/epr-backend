@@ -25,7 +25,7 @@ import { join } from 'path'
 import {
   REGULATOR,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 describe('extractRepeaters', () => {
   const ltdPartnershipPage = ORGANISATION.LTD_PARTNERSHIP_DETAILS

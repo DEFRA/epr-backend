@@ -1,5 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 
 import {
   toIssuingAccreditation,

@@ -10,7 +10,7 @@ import {
   yearsWithTemplates
 } from './index.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { DEFAULT_TEMPLATE_YEAR } from '../template-year.js'
 import { EXPORTER_TEMPLATES } from './exporter/index.js'
 import { EXPORTER_REGISTERED_ONLY_TEMPLATES } from './exporter-registered-only/index.js'

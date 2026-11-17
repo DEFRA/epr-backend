@@ -23,7 +23,7 @@ import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract
 import * as reportAudit from '#reports/application/audit.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
-/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#shared/organisations/model.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)

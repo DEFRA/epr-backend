@@ -18,7 +18,7 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { RequiredNumbers } from '#shared/organisations/numbers.js' */
 /** @import { SummaryLog, SummaryLogFile } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */

@@ -7,7 +7,7 @@ import { toOrganisationWire } from '#common/helpers/organisation-wire.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
- * @import {OrganisationNumber} from '#domain/organisations/numbers.js'
+ * @import { OrganisationNumber } from '#shared/organisations/numbers.js'
  */
 
 /**

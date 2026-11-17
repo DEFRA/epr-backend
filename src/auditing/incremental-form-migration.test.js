@@ -1,4 +1,4 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 import { auditIncrementalFormMigration } from './incremental-form-migration.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'

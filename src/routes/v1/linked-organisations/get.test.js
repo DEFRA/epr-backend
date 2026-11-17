@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { describe, it, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 import {
   buildLinkedDefraOrg,
   createOrganisationBuilders

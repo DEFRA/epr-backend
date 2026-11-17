@@ -4,11 +4,14 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
 import { organisationYears } from '#organisation-read-model/domain/organisation-years.js'
-import { organisationParams, organisationPath } from './natural-keys.js'
+import {
+  organisationParams,
+  organisationPath
+} from '#shared/organisations/natural-keys.js'
 import { organisationYearsResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 export const organisationYearsGet = {
   method: 'GET',

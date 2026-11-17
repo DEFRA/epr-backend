@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import {
   buildAccreditation,
   buildRegistration,

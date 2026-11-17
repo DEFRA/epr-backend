@@ -5,12 +5,12 @@ import { randomInt } from 'node:crypto'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { summaryLogFactory } from './test-data.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 /**
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js'
  * @import { SummaryLogStats } from '../port.js'
  */
 

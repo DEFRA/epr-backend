@@ -2,38 +2,12 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { vi } from 'vitest'
-import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import Joi from 'joi'
 import {
   findOrganisationAndRegistrationReadModels,
-  findOrganisationByNumber,
-  registrationParams
+  findOrganisationByNumber
 } from './natural-keys.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
-
-describe('registrationParams', () => {
-  const schema = Joi.object(registrationParams)
-
-  it('accepts a registration number', () => {
-    expect(
-      schema.validate({
-        organisationNumber: '500001',
-        registrationNumber: REPROCESSOR_NUMBER
-      }).error
-    ).toBeUndefined()
-  })
-
-  it.each(['constructor', '__proto__', 'toString', 'r26er5001180098pl'])(
-    'rejects a registration number of %s',
-    (registrationNumber) => {
-      expect(
-        schema.validate({ organisationNumber: '500001', registrationNumber })
-          .error
-      ).toBeDefined()
-    }
-  )
-})
 
 describe('findOrganisationByNumber', () => {
   it('finds an organisation by its number', async () => {

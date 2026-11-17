@@ -7,12 +7,13 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */
-/** @import {Organisation, StoredOrganisationStatus} from '#domain/organisations/model.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { StoredOrganisationStatus } from '#shared/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 const FIRST_ORGANISATION_NUMBER = 500000
 

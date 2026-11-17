@@ -4,7 +4,7 @@ import Joi from 'joi'
 import { yearSchema } from '#common/validation/year-schema.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { RequiredNumbers } from '#shared/organisations/numbers.js' */
 
 export const LEDGER_EVENT_KIND = Object.freeze({
   SUMMARY_LOG_SUBMITTED: 'summary-log-submitted',

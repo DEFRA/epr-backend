@@ -1,7 +1,7 @@
 import {
   toAccreditationNumber,
   toOrganisationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { randomUUID } from 'node:crypto'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {

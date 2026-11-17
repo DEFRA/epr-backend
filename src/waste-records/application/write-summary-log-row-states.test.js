@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest'
 
 import { writeSummaryLogRowStates } from './write-summary-log-row-states.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 
-/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
+/** @typedef {import('#shared/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'

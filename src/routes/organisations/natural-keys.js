@@ -1,44 +1,16 @@
 import Boom from '@hapi/boom'
-import Joi from 'joi'
 
-import {
-  ORGANISATION_NUMBER_PATTERN,
-  REGISTRATION_NUMBER_PATTERN,
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
 import { servesOrganisationOn } from '#organisation-read-model/repository/to-read-model.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Organisation } from '#domain/organisations/model.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { OrganisationNumber } from '#shared/organisations/numbers.js'
+ * @import { OrganisationParams, RegistrationParams } from '#shared/organisations/natural-keys.js'
  * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
- *
- * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams
- *
- * @typedef {OrganisationParams & { registrationNumber: RegistrationNumber }} RegistrationParams
  */
-
-export const organisationPath = '/organisations/{organisationNumber}'
-export const registrationPath = `${organisationPath}/registrations/{registrationNumber}`
-export const accreditationPath = `${registrationPath}/accreditations/{year}`
-
-export const organisationParams = {
-  organisationNumber: Joi.string()
-    .pattern(ORGANISATION_NUMBER_PATTERN)
-    .custom(toOrganisationNumber)
-    .required()
-}
-export const registrationParams = {
-  ...organisationParams,
-  registrationNumber: Joi.string()
-    .pattern(REGISTRATION_NUMBER_PATTERN)
-    .custom(toRegistrationNumber)
-    .required()
-}
 
 /**
  * Finds the stored organisation a route names by its number. Only an

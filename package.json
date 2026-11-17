@@ -29,6 +29,7 @@
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",
     "#server/*": "./src/server/*",
+    "#shared/*": "./src/shared/*",
     "#summary-log-scope-backfill/*": "./src/summary-log-scope-backfill/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",

@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { createInMemoryReportsRepository } from './inmemory.js'
 
 /** @import { CreateReportParams, ReportsRepository } from './port.js' */

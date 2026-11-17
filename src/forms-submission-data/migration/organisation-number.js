@@ -1,6 +1,6 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 
-/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 /**
  * The migration carries an organisation's number as the forms submission does,

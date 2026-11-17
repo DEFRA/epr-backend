@@ -27,7 +27,7 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 
 /**
  * @param {SummaryLogRowState} doc

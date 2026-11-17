@@ -4,7 +4,7 @@ import {
   MATERIAL,
   TIME_SCALE,
   WASTE_PERMIT_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   requiredForPermitAndReprocessor,
   requiredForWasteExemptionAndReprocessor

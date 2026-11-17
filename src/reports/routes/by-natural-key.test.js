@@ -1,5 +1,5 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   buildReadAccreditation,
@@ -34,7 +34,7 @@ import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 /**

@@ -4,14 +4,14 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { Material, WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Material, WasteProcessingTypeValue, ReprocessingType } from '#shared/organisations/model.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */

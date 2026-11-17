@@ -1,5 +1,5 @@
 import { ADMIN_ROLES } from '#common/helpers/auth/constants.js'
-import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { ORGANISATION_STATUS } from '#shared/organisations/model.js'
 import {
   buildLinkedDefraOrg,
   createOrganisationBuilders

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, vi } from 'vitest'
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,

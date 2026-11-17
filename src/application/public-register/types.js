@@ -1,4 +1,4 @@
-/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 /**
  * @typedef {Object} PublicRegisterRowBase

@@ -4,7 +4,7 @@ import {
   monthKeyForDate
 } from '#common/helpers/dates/year-month.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { contributionFor } from '#waste-balances/domain/credited-tonnage.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
@@ -16,7 +16,7 @@ import { getTargetAmount } from './target-amount.js'
  * record type accrues December only when added here (PAE-1920). Sent-on rows
  * are absent, so a sent-on load deducts from the general balance alone.
  *
- * @type {Set<import('#domain/waste-records/model.js').WasteRecordType>}
+ * @type {Set<import('#shared/waste-records/model.js').WasteRecordType>}
  */
 const DECEMBER_ACCRUING_RECORD_TYPES = new Set([
   WASTE_RECORD_TYPE.RECEIVED,

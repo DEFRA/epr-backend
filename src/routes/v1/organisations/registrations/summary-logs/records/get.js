@@ -6,17 +6,17 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { metaText } from '#domain/summary-logs/stored-meta.js'
 import { buildDownloadDisposition } from '#repositories/summary-logs/download-disposition.js'
+import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import {
-  findOrganisationAndRegistrationReadModels,
   registrationParams,
   registrationPath
-} from '#routes/organisations/natural-keys.js'
+} from '#shared/organisations/natural-keys.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { streamSubmissionCsvToReadable } from '#waste-records-export/application/stream-submission-csv.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { KeyedSummaryLog, KeyedSummaryLogWithId, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 

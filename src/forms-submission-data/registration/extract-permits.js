@@ -10,7 +10,7 @@ import {
   MATERIAL,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 const ENV_PERMIT_BY_MATERIALS = [
   {

@@ -5,10 +5,11 @@ import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
   USER_ROLES
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 /**
- * @import {StoredAccreditationStatus, CollatedUser, Organisation, StoredOrganisationStatus, StoredRegistrationStatus} from '#domain/organisations/model.js'
+ * @import { StoredAccreditationStatus, StoredOrganisationStatus, StoredRegistrationStatus } from '#shared/organisations/model.js'
+ * @import { CollatedUser, Organisation } from '#domain/organisations/model.js'
  * @import {Registration} from '#domain/organisations/registration.js'
  * @import {Accreditation} from '#domain/organisations/accreditation.js'
  *

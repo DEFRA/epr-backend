@@ -1,5 +1,5 @@
 import { uppercaseString } from '#common/helpers/formatters.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import {
   materialFromSpreadsheet,
   metaText
@@ -13,10 +13,10 @@ import * as reprocessorOutput from '#domain/summary-logs/table-schemas/reprocess
 import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/reprocessor-registered-only/fields.js'
 import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
-/** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
-/** @import {WasteRecordType} from '#domain/waste-records/model.js' */
+/** @import { WasteRecordType } from '#shared/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */
 
 const FORMULA_INJECTION_PREFIX = /^[=+\-@]/

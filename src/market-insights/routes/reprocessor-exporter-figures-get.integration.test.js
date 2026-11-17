@@ -16,7 +16,7 @@ import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { NATION, REGULATOR } from '#domain/organisations/model.js'
+import { NATION, REGULATOR } from '#shared/organisations/model.js'
 import {
   marketInsightsNationReprocessorExporterFiguresPath,
   marketInsightsReprocessorExporterFiguresPath

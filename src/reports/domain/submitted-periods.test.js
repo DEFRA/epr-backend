@@ -4,7 +4,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { CADENCE } from './cadence.js'
 import { REPORT_STATUS } from './report-status.js'
 import {

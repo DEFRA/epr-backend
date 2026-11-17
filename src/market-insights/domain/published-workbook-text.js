@@ -13,10 +13,10 @@ import {
   MATERIAL,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { CONFIDENTIAL } from './confidential-figures.js'
 
-/** @import { Material, TonnageBand, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
+/** @import { Material, TonnageBand, WasteProcessingTypeValue } from '#shared/organisations/model.js' */
 /** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from './reprocessor-exporter-figures.js' */
 
 export const WORKSHEET_NAME = Object.freeze({

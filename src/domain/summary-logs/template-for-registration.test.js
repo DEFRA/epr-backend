@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { PROCESSING_TYPES } from './meta-fields.js'
 import { templateForRegistration } from './template-for-registration.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 /** @import { TemplateRegistration } from './template-for-registration.js' */

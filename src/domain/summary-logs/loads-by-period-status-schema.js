@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { periodRefSchema } from '#reports/domain/period-ref.schema.js'
 
 /**

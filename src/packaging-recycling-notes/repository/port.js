@@ -21,7 +21,7 @@ export const PRN_VERSION_CONFLICT = 'prn-version-conflict'
 /**
  * The numbers of an accreditation and the registration and organisation above it.
  *
- * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers & { accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber }} AccreditationNumbers
+ * @typedef {import('#shared/organisations/numbers.js').RequiredNumbers & { accreditationNumber: import('#shared/organisations/numbers.js').AccreditationNumber }} AccreditationNumbers
  */
 
 /**

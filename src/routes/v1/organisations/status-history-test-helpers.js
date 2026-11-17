@@ -3,7 +3,7 @@ import {
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import { ObjectId } from 'mongodb'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 

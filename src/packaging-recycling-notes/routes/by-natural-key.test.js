@@ -1,7 +1,7 @@
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
 import { toYear } from '#common/helpers/dates/year.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'

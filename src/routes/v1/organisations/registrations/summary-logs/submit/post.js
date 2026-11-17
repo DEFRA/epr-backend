@@ -19,7 +19,7 @@ import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.j
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
-/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
 
 const FAILURE_MESSAGE = 'Failure submitting summary log'
 

@@ -1,4 +1,4 @@
-import { NATION, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { NATION, WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import {
   CONFIDENTIAL,
   fromFewOperators
@@ -40,7 +40,7 @@ import {
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { WasteProcessingTypeValue } from '#domain/organisations/model.js' */
+/** @import { WasteProcessingTypeValue } from '#shared/organisations/model.js' */
 /** @import { ReprocessorExporterTable } from '#market-insights/application/reprocessor-exporter-table.js' */
 /** @import { ExporterFigure, FiguresTable, ReprocessorFigure } from '#market-insights/domain/published-workbook-text.js' */
 /** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */

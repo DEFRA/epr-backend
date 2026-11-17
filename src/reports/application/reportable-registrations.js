@@ -1,9 +1,9 @@
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#shared/organisations/numbers.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 
 /**
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js'
  * @import { Organisation, Registration } from '#organisation-read-model/domain/model.js'
  *
  * @typedef {{

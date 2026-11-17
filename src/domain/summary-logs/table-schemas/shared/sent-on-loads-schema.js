@@ -6,7 +6,7 @@ import {
 } from './field-schemas.js'
 import { DROPDOWN_PLACEHOLDER } from './joi-messages.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 
 /**
  * Fields required for waste balance calculation.

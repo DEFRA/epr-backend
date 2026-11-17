@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import {
   WASTE_PROCESSING_TYPE,
   REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { decemberWasteControlModeFor } from './december-waste-control-mode.js'
 
 const outputReprocessor = {

@@ -14,7 +14,7 @@ import {
   REPROCESSING_TYPE,
   TIME_SCALE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 

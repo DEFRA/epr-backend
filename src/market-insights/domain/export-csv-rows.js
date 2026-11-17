@@ -2,7 +2,7 @@ import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { sanitiseFormulaInjection } from '#waste-records-export/domain/csv-columns.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */

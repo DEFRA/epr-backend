@@ -12,7 +12,7 @@ export const submissionNumberSchema = Joi.number().integer().min(1).required()
  * @import { Organisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
+ * @import { RegistrationParams } from '#shared/organisations/natural-keys.js'
  *
  * @typedef {RegistrationParams & {
  *   year: Year,

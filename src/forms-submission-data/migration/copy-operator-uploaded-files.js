@@ -1,7 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
 
 /**
- * @import { RegulatorValue } from '#domain/organisations/model.js'
+ * @import { RegulatorValue } from '#shared/organisations/model.js'
  */
 
 function extractFilesFromSubmission(submission) {

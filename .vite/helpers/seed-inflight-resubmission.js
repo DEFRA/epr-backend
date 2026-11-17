@@ -13,8 +13,8 @@ import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
  *
  * @param {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @param {{
- *   organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber,
- *   registrationNumber: import('#domain/organisations/numbers.js').RegistrationNumber,
+ *   organisationNumber: import('#shared/organisations/numbers.js').OrganisationNumber,
+ *   registrationNumber: import('#shared/organisations/numbers.js').RegistrationNumber,
  *   year: number,
  *   cadence: import('#reports/domain/cadence.js').Cadence,
  *   period: number

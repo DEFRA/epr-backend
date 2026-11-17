@@ -18,12 +18,12 @@ import {
   ACCREDITATION_STATUS,
   REGISTRATION_STATUS,
   USER_ROLES
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   getValidDateRange,
@@ -34,8 +34,8 @@ import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 

@@ -5,7 +5,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { atNaturalKeys } from './at-natural-keys.js'
-import { organisationParams } from './natural-keys.js'
+import { organisationParams } from '#shared/organisations/natural-keys.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

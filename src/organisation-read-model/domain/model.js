@@ -1,7 +1,7 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber } from '#shared/organisations/numbers.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
-/** @import { TonnageBand } from '#domain/organisations/model.js' */
+/** @import { TonnageBand } from '#shared/organisations/model.js' */
 
 /**
  * The organisation read model (ADR-0052).

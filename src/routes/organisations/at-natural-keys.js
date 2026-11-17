@@ -7,7 +7,7 @@ import { findOrganisationByNumber } from './natural-keys.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Organisation } from '#domain/organisations/model.js'
- * @import { OrganisationParams, RegistrationParams } from './natural-keys.js'
+ * @import { OrganisationParams, RegistrationParams } from '#shared/organisations/natural-keys.js'
  *
  * @typedef {{
  *   method: string,

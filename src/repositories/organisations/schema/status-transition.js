@@ -5,9 +5,9 @@ import {
   ACTIVE_ACCREDITATION_STATUSES,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import {StatusTransitionAsserter} from '#domain/organisations/status.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
 /** @import {Accreditation} from '#domain/organisations/accreditation.js' */

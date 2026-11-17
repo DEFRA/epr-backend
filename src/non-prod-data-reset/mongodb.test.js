@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
 
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#shared/organisations/numbers.js'
 import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
@@ -18,7 +18,7 @@ import {
   buildCreateReportParams,
   uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,

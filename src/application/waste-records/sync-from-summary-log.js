@@ -125,7 +125,7 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
 
 /**
  * @import { AccreditationValidity } from '#domain/organisations/accreditation.js'
- * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js'
  * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  */
@@ -135,7 +135,7 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
  * @param {ParsedSummaryLog} params.parsedData
  * @param {AccreditationValidity} params.accreditation
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
- * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
+ * @param {{ record: import('#shared/waste-records/model.js').WasteRecord }[]} params.wasteRecords
  * @param {Record<string, TableSchema>} params.tableSchemas
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites

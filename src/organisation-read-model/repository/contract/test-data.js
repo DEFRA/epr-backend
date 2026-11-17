@@ -3,10 +3,10 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 /** @import { ExternalAccreditation } from '../to-read-model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500056')
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')

@@ -19,8 +19,8 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+} from '#shared/organisations/numbers.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { creditedTonnageGetPath } from './credited-tonnage-get.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'

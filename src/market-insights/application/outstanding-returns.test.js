@@ -5,7 +5,7 @@ import {
   MATERIAL,
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   approvedStatusFrom,
@@ -21,10 +21,10 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { countOutstandingReturns } from './outstanding-returns.js'
 
-/** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { Material, TonnageBand } from '#shared/organisations/model.js' */
 /** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)

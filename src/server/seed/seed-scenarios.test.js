@@ -5,7 +5,7 @@ import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   createEprOrganisationScenarios,
   SCENARIO_ORGANISATION_NUMBERS

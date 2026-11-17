@@ -5,7 +5,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'

@@ -11,7 +11,7 @@ import {
   REPROCESSING_TYPE,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildPrn,
@@ -34,7 +34,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 /** @import { PrnStatus } from '#packaging-recycling-notes/domain/model.js' */
 
@@ -103,8 +103,8 @@ const contact = { email: 'contact@example.com', fullName: 'A Contact' }
  * @property {string} [accreditationId]
  * @property {string} wasteProcessingType
  * @property {string | null} [reprocessingType]
- * @property {import('#domain/organisations/model.js').AppliedForMaterial} [material]
- * @property {import('#domain/organisations/model.js').GlassRecyclingProcess[]} [glassRecyclingProcess]
+ * @property {import('#shared/organisations/model.js').AppliedForMaterial} [material]
+ * @property {import('#shared/organisations/model.js').GlassRecyclingProcess[]} [glassRecyclingProcess]
  * @property {{ address: { line1: string, town: string, postcode: string } }} [site]
  */
 

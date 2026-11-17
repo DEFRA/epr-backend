@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest'
 import {
   WASTE_PROCESSING_TYPE,
   REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   assertDecemberWasteDeclarable,
   DECEMBER_WASTE_NOT_DECLARABLE_CODE,

@@ -12,7 +12,7 @@ import { summaryLogsYearCreatePayloadSchema } from './year-post.schema.js'
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
-/** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { RegistrationParams } from '#shared/organisations/natural-keys.js' */
 
 /**
  * @typedef {{redirectUrl: string}} SummaryLogsYearCreatePayload

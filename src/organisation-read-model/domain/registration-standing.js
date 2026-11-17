@@ -1,6 +1,6 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { utcYearOf, yearBounds } from '#common/helpers/dates/year.js'
-import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
+import { REGISTRATION_STATUS } from '#shared/organisations/model.js'
 import { accreditationForYear } from './accreditation-for-year.js'
 import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
 import { approvedYears, statusRanges } from './status-timeline.js'

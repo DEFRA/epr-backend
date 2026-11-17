@@ -19,7 +19,7 @@ import {
   RECEIVED_LOADS_FIELDS_2027,
   ROW_ID_MINIMUMS
 } from './fields.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import {

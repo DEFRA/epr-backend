@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { buildAccreditation, prepareOrgUpdate } from './test-data.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 
 /** @import { OrganisationBuilders } from './test-data.js' */
 

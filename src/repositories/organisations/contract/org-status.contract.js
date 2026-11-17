@@ -2,7 +2,7 @@ import {
   ORGANISATION_STATUS,
   REGISTRATION_STATUS,
   REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { prepareOrgUpdate, getValidDateRange } from './test-data.js'
 

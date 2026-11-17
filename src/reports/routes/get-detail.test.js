@@ -1,5 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   approvedStatusFrom,
@@ -17,7 +17,7 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
@@ -51,7 +51,7 @@ const YEAR = toYear(2026)
  * (each `{ type, data }`). No records leaves the year without a submission,
  * so the report has no source.
  *
- * @param {{ id: string, organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} org
+ * @param {{ id: string, organisationNumber: import('#shared/organisations/numbers.js').OrganisationNumber }} org
  * @param {Record<string, any>} registration
  * @param {Record<string, any> | undefined} accredited
  * @param {{ type: string, data: object }[]} wasteRecords

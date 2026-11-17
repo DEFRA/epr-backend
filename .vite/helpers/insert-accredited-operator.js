@@ -5,7 +5,7 @@ import {
   REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   buildAccreditation,
   buildRegistration
@@ -15,9 +15,9 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'
 
-/** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { GlassRecyclingProcess, Material, TonnageBand } from '#shared/organisations/model.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
-/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
 /** @import { RegistrationOrAccreditationId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
@@ -62,7 +62,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * back is one the write schema accepts.
    *
    * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
-   * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
+   * @param {import('#shared/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
    * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/domain/model.js').Organisation }>}
    */

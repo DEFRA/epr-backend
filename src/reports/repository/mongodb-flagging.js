@@ -17,7 +17,7 @@ import { reportsCollection } from './mongodb-collection.js'
  *   MarkSubmittedReportsRequiringResubmissionParams
  * } from './port.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationNumber } from '#shared/organisations/numbers.js'
  * @import { Db } from 'mongodb'
  */
 

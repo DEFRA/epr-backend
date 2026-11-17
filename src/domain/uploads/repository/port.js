@@ -1,4 +1,4 @@
-/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 
 /**
  * @typedef {Object} InitiateSummaryLogUploadOptions

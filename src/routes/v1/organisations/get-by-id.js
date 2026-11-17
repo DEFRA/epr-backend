@@ -5,7 +5,7 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import {
   ORGANISATION_NUMBER_PATTERN,
   toOrganisationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */

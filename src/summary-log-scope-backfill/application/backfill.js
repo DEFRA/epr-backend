@@ -7,7 +7,7 @@ import { metaText } from '#domain/summary-logs/stored-meta.js'
 import { auditSummaryLogScopeBackfill } from './audit.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber } from '#shared/organisations/numbers.js' */
 /** @import { StoredSummaryLog } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */

@@ -6,9 +6,9 @@ import {
   WORKSHEET_NAME
 } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
+import { MATERIAL, REGULATOR } from '#shared/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
@@ -33,7 +33,7 @@ const insertAccreditedOperator =
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
+/** @import { Material, RegulatorValue } from '#shared/organisations/model.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 

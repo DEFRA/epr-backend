@@ -3,7 +3,7 @@ import {
   REGULATOR,
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { materialSchema } from '#common/validation/material-schema.js'
 import { openYearSchema } from '#common/validation/year-schema.js'
 import { isoDateString } from '#common/validation/iso-date-schema.js'

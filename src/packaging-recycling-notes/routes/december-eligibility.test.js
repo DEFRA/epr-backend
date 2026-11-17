@@ -3,8 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { REPROCESSING_TYPE } from '#shared/organisations/model.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   approvedStatusFrom,
@@ -22,7 +22,7 @@ import {
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 const approved = approvedTimelineFrom('2026-07-01')
 

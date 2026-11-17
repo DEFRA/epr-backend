@@ -6,7 +6,7 @@ import { indexByLedger } from '#waste-balances/application/read-model-accreditat
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
-/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import { RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import {Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */

@@ -14,7 +14,7 @@ import {
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
 import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
@@ -34,7 +34,7 @@ import {
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
-/** @import { OrganisationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RequiredNumbers } from '#shared/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */

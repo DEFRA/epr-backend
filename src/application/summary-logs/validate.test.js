@@ -23,7 +23,7 @@ import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {RegistrationOrAccreditationId, WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */

@@ -7,10 +7,10 @@ import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
 } from './contract/test-data.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toAccreditationNumber } from '#shared/organisations/numbers.js'
 
 /** @typedef {import('#packaging-recycling-notes/domain/model.js').AccreditationSnapshot} AccreditationSnapshot */
-/** @typedef {import('#domain/organisations/model.js').AppliedForMaterial} AppliedForMaterial */
+/** @typedef {import('#shared/organisations/model.js').AppliedForMaterial} AppliedForMaterial */
 
 const buildReadDocument = (overrides = {}) => ({
   id: '507f1f77bcf86cd799439011',

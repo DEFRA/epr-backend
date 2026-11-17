@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto'
 
-import { REGULATOR } from '#domain/organisations/model.js'
+import { REGULATOR } from '#shared/organisations/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 

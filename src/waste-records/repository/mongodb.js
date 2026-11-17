@@ -20,7 +20,7 @@ import { createHash } from 'node:crypto'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import {

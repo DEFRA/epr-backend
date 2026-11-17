@@ -21,7 +21,7 @@ import {
   MATERIAL,
   WASTE_PROCESSING_TYPE,
   REPROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   buildLedgerEvent,
@@ -41,7 +41,7 @@ import {
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

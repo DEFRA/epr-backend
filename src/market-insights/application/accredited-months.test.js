@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL } from '#shared/organisations/model.js'
 import {
   approvedStatusFrom,
   buildReadAccreditation,
@@ -7,7 +7,7 @@ import {
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#shared/organisations/numbers.js'
 import { accreditedMonths } from './accredited-months.js'
 
 /** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */

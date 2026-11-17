@@ -1,7 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect } from 'vitest'
 
-import { REGULATOR } from '#domain/organisations/model.js'
+import { REGULATOR } from '#shared/organisations/model.js'
 import {
   generatePrnNumber,
   AGENCY_CODE,

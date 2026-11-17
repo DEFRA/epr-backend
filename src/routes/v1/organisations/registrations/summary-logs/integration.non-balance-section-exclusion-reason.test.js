@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 
 import { UPLOAD_STATUS } from '#domain/summary-logs/status.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {

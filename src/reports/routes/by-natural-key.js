@@ -11,7 +11,7 @@ import {
   accreditationPath,
   registrationParams,
   registrationPath
-} from '#routes/organisations/natural-keys.js'
+} from '#shared/organisations/natural-keys.js'
 import { atReportKeys } from './at-report-keys.js'
 import { reportsDelete } from './delete.js'
 import { reportsYearCalendar } from './get-year-calendar.js'

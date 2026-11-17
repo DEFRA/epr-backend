@@ -1,5 +1,5 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 /**
  * Storage-level port for the waste balance event ledger.
  *

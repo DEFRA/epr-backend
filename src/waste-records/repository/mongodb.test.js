@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
@@ -377,7 +377,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
   // not preserve `-0` (it reads back `+0`), so without normalisation the fresh
   // projection never deep-equals its stored copy and the identical resubmission
   // is reported as an endless phantom adjustment.
-  /** @type {import('#domain/waste-records/model.js').WasteRecord} */
+  /** @type {import('#shared/waste-records/model.js').WasteRecord} */
   const zeroTonnageSentOn = {
     rowId: '5000',
     type: WASTE_RECORD_TYPE.SENT_ON,

@@ -22,7 +22,7 @@ import { it } from '#vite/fixtures/organisation-read-mongo.js'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 describe('records the model cannot represent', () => {
   /**

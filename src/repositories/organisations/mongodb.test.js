@@ -2,7 +2,7 @@ import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import crypto from 'node:crypto'

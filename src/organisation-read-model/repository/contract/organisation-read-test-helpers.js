@@ -7,7 +7,7 @@ import {
 import {
   toAccreditationNumber,
   toOrganisationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 
 export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
 export const EXPORTER_NUMBER = 'R26EX5001180042PL'
@@ -41,7 +41,7 @@ export const pendingSite = {
 export const overseasSites = [approvedSite, pendingSite]
 
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#shared/organisations/model.js' */
 /** @import { Organisation, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '../port.js' */
 

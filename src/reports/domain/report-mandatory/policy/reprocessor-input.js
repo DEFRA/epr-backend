@@ -2,7 +2,7 @@ import {
   RECEIVED_LOADS_FIELDS,
   SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { REQUIRED_BY } from '../reason-codes.js'
 import { tonnageOverZero } from '../triggers.js'
 

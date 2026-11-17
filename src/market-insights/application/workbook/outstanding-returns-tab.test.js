@@ -6,7 +6,7 @@ import {
   MATERIAL,
   REGULATOR,
   TONNAGE_BAND
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
@@ -31,7 +31,7 @@ const insertAccreditedOperator =
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { Material, RegulatorValue, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { Material, RegulatorValue, TonnageBand } from '#shared/organisations/model.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */

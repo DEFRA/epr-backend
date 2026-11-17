@@ -12,7 +12,7 @@ import {
   buildReadReprocessorRegistration,
   servedOrganisations
 } from './read-model-test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 
 describe('read-model-test-data', () => {
   describe('approvedTimelineFrom', () => {

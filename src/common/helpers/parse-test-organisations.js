@@ -1,7 +1,7 @@
 import { config } from '#root/config.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#shared/organisations/numbers.js'
 
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
 /** @returns {OrganisationNumber[]} */

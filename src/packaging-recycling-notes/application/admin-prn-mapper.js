@@ -1,4 +1,4 @@
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/closed-year.js'
 

@@ -16,7 +16,7 @@ import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
@@ -43,7 +43,7 @@ import {
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber } from '#shared/organisations/numbers.js' */
 
 const organisationBuilders = createOrganisationBuilders()
 const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)

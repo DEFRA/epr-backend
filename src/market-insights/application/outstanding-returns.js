@@ -1,13 +1,13 @@
 import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import { recordOf } from '#common/helpers/record-of.js'
 import { owedMonthlyReports } from '#market-insights/application/monthly-reports.js'
 
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { Material, TonnageBand } from '#shared/organisations/model.js' */
 
 /**
  * @typedef {Record<TonnageBand, number>} OutstandingByBand

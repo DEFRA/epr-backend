@@ -1,5 +1,5 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 
 /**

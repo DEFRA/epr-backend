@@ -2,7 +2,7 @@ import Joi from 'joi'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
+import { REGULATOR_DISPLAY } from '#shared/organisations/model.js'
 import { generateReportSubmissions } from '#reports/application/report-submissions.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 

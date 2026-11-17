@@ -11,7 +11,7 @@ import {
   ACCREDITATION_STATUS,
   ORGANISATION_STATUS,
   REGISTRATION_STATUS
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   buildAccreditation,
   buildRegistration,
@@ -51,7 +51,7 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildReadOrganisation } = createOrganisationBuilders()
@@ -157,7 +157,7 @@ const buildTestOrg = (organisationId, registrationId) => {
  * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['data']} [options.data] - summary log sheet data, defaults to RECEIVED_DATA
  * @param {import('#domain/summary-logs/loads-by-period-status-schema.js').LoadsByReportingPeriod} [options.loadsByReportingPeriod] - persisted period-status artefact
  * @param {string | null} [options.accreditationId] - the accreditation the log submits to, `null` for registered-only
- * @param {import('#domain/organisations/numbers.js').AccreditationNumber | null} [options.accreditationNumber] - that accreditation's number
+ * @param {import('#shared/organisations/numbers.js').AccreditationNumber | null} [options.accreditationNumber] - that accreditation's number
  * @param {boolean} [options.accreditationHeldExternally] - hold the accreditation outside epr-backend, with no database id, as one from 2027 is
  */
 const setupSubmit = async ({

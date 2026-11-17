@@ -5,9 +5,9 @@ import {
   isRegistrationActiveInYear,
   resolveMaterial
 } from './registration-utils.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#shared/organisations/numbers.js'
 
-/** @import { StoredAccreditationStatus, GlassRecyclingProcess } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus, GlassRecyclingProcess } from '#shared/organisations/model.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
 
 const userFixture = {

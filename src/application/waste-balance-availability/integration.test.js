@@ -7,12 +7,12 @@ import {
   GLASS_RECYCLING_PROCESS,
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+} from '#shared/organisations/model.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+} from '#shared/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import {
   createMongoLedgerRepository,

@@ -8,10 +8,10 @@ import { findOrganisationAndRegistrationReadModels } from '#routes/organisations
  * @import Joi from 'joi'
  * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationNumber } from '#shared/organisations/numbers.js'
  * @import { Registration } from '#organisation-read-model/domain/model.js'
  * @import { KeyedOptions, NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
- * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
+ * @import { RegistrationParams } from '#shared/organisations/natural-keys.js'
  *
  * @typedef {HapiRequest & {
  *   params: RegistrationParams & { accreditationNumber: AccreditationNumber | null }

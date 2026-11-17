@@ -1,7 +1,7 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
 /** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
-/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#shared/organisations/numbers.js' */
 
 import {
   capitalize,
@@ -9,8 +9,8 @@ import {
   formatResolvedMaterial,
   uppercaseString
 } from '#common/helpers/formatters.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
+import { toRegistrationNumber } from '#shared/organisations/numbers.js'
 import { toISOString } from '#common/helpers/date-formatter.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import chunk from 'lodash.chunk'

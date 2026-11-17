@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+} from '#shared/organisations/model.js'
+import { WASTE_RECORD_TYPE } from '#shared/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   addFigures,

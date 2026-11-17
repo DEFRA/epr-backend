@@ -1,8 +1,8 @@
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#shared/organisations/model.js'
 import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
 
 /**
- * @import { WasteProcessingTypeValue } from '#domain/organisations/model.js'
+ * @import { WasteProcessingTypeValue } from '#shared/organisations/model.js'
  * @import { AccreditationLink } from '#domain/organisations/registration-utils.js'
  * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
  */
