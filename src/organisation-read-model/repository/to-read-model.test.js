@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -12,8 +11,6 @@ import {
 } from './contract/organisation-read-test-helpers.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
-/** @import { Year } from '#common/helpers/dates/year.js' */
-
 const { buildOrganisation } = createOrganisationBuilders()
 
 /**
@@ -22,21 +19,15 @@ const { buildOrganisation } = createOrganisationBuilders()
  * are in production.
  *
  * @param {object} organisation
- * @param {Year} [year]
  */
-const reprocessorOf = async (organisation, year) => {
+const reprocessorOf = async (organisation) => {
   const stored = await createInMemoryOrganisationsRepository([
     partialMock(organisation)
   ])().findAll()
-  const [served] = await toReadModelOrganisations(
-    stored,
-    [],
-    {
-      overseasSitesRepository: { findByIds: async () => [] },
-      logger: { warn: () => {} }
-    },
-    year
-  )
+  const [served] = await toReadModelOrganisations(stored, [], {
+    overseasSitesRepository: { findByIds: async () => [] },
+    logger: { warn: () => {} }
+  })
   return served.registrations[REPROCESSOR_NUMBER]
 }
 
@@ -160,19 +151,6 @@ describe('toReadModelOrganisations', () => {
       expect(Object.keys(registration.accreditations)).toEqual([])
       expect(Object.keys(registration.standingByDate)).toEqual(['2027'])
     })
-
-    it('gives only the year asked for, even when next year is open', async () => {
-      config.set('openNextYear', true)
-
-      const registration = await reprocessorOf(
-        accreditedEarlyForNextYear(),
-        toYear(2027)
-      )
-
-      expect(registration.standingByDate).toEqual({
-        2027: { '2027-01-10': { standing: 'registeredOnly' } }
-      })
-    })
   })
 
   it('gives a registration recorded after its validFrom as approved in that year', async () => {
@@ -194,8 +172,7 @@ describe('toReadModelOrganisations', () => {
           })
         ],
         accreditations: [accredited]
-      }),
-      toYear(2026)
+      })
     )
 
     expect(registration.status.current).toBe('approved')

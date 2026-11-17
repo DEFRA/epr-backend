@@ -15,7 +15,6 @@ import {
 } from '#organisation-read-model/domain/model.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { accreditationsForRegistration } from './accreditations-for-registration.js'
-import { organisationInYear } from './organisation-in-year.js'
 import {
   toAccreditationStatusTimeline,
   toOrganisationStatusTimeline,
@@ -108,9 +107,7 @@ const byRegistrationAndYear = (externalAccreditations, onDrop) =>
 /**
  * The stored organisations as the read model shows them, with the external
  * accreditations held for their registrations. An organisation the model
- * cannot represent is left out and reported through `logger.warn`. Without
- * `year`, each organisation is given in every year; with it, in that
- * year.
+ * cannot represent is left out and reported through `logger.warn`.
  *
  * @param {StoredOrganisation[]} stored
  * @param {ExternalAccreditation[]} externalAccreditations
@@ -118,14 +115,12 @@ const byRegistrationAndYear = (externalAccreditations, onDrop) =>
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }} dependencies
- * @param {Year} [year]
  * @returns {Promise<Organisation[]>}
  */
 export async function toReadModelOrganisations(
   stored,
   externalAccreditations,
-  { overseasSitesRepository, logger },
-  year
+  { overseasSitesRepository, logger }
 ) {
   const siteIds = stored.flatMap(({ registrations }) =>
     registrations.flatMap((registration) =>
@@ -151,9 +146,6 @@ export async function toReadModelOrganisations(
       toOrganisation(organisation, context, externalByRegistration)
     )
     .filter((organisation) => organisation !== null)
-    .map((organisation) =>
-      year === undefined ? organisation : organisationInYear(organisation, year)
-    )
 }
 
 /**

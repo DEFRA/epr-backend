@@ -4,6 +4,7 @@ import {
   findOne,
   findPage
 } from '#repositories/organisations/mongodb-find.js'
+import { organisationInYear } from './organisation-in-year.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { Collection, Db } from 'mongodb' */
@@ -66,10 +67,14 @@ export const createOrganisationReadRepository = (db) => {
       const [organisation] = await toReadModelOrganisations(
         [stored],
         await findExternalAccreditations(db, [stored]),
-        dependencies,
-        year
+        dependencies
       )
-      return organisation ?? null
+      if (!organisation) {
+        return null
+      }
+      return year === undefined
+        ? organisation
+        : organisationInYear(organisation, year)
     },
 
     find: async (params) => {
