@@ -24,10 +24,7 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 /**
- * @typedef {{
- *   year: Year,
- *   numbers: RequiredNumbers
- * }} UploadLocation
+ * @typedef {{ year: Year, numbers: RequiredNumbers }} UploadLocation
  */
 
 /**

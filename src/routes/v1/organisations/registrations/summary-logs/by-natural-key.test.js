@@ -17,7 +17,6 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -146,14 +145,9 @@ describe('summary-log routes by natural key', () => {
   /** @type {SummaryLogsRepository} */
   let summaryLogsRepository
 
-  /** @param {object[]} legacyOrganisations */
-  const startServer = (legacyOrganisations) =>
+  const startServer = () =>
     createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository(
-            legacyOrganisations.map((legacy) => partialMock(legacy))
-          ),
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           servedOrganisation
         ]),
@@ -173,7 +167,7 @@ describe('summary-log routes by natural key', () => {
     summaryLogsRepository =
       createInMemorySummaryLogsRepository()(createMockLogger())
 
-    server = await startServer([organisation])
+    server = await startServer()
   })
 
   afterEach(async () => {
@@ -265,6 +259,8 @@ describe('summary-log routes by natural key', () => {
           year: YEAR,
           accreditationNumber
         })
+        expect(stored.summaryLog).not.toHaveProperty('organisationId')
+        expect(stored.summaryLog).not.toHaveProperty('registrationId')
       })
     }
   )
@@ -327,7 +323,7 @@ describe('summary-log routes by natural key', () => {
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
-      registrationNumber: accreditedRegistration.registrationNumber,
+      registrationNumber: REPROCESSOR_NUMBER,
       accreditationNumber: null
     })
   })
@@ -482,57 +478,20 @@ describe('summary-log routes by natural key', () => {
       }
     )
 
-    describe('without consulting the legacy organisations repository', () => {
-      beforeEach(async () => {
-        await server.stop()
-        server = await startServer([])
-      })
-
-      it.each([
-        { method: 'GET', suffix: '', auth: asOperator(), status: 200 },
-        { method: 'POST', suffix: '/submit', auth: asOperator(), status: 200 },
-        {
-          method: 'GET',
-          suffix: '/file',
-          auth: asServiceMaintainer(),
-          status: 302
-        },
-        {
-          method: 'GET',
-          suffix: '/document',
-          auth: asServiceMaintainer(),
-          status: 200
-        }
-      ])(
-        'is served by $method $suffix',
-        async ({ method, suffix, auth, status }) => {
-          const summaryLogId = toSummaryLogId(await seedOwn())
-
-          const response = await server.inject({
-            method,
-            url: `${summaryLogs}/${summaryLogId}${suffix}`,
-            ...auth
-          })
-
-          expect(response.statusCode).toBe(status)
-        }
+    it('has a file downloaded by its file id', async () => {
+      const fileId = `file-${randomUUID()}`
+      await seed(
+        { ...accreditedLog, file: { id: fileId } },
+        summaryLogFactory.submitted
       )
 
-      it('has a file downloaded by its file id', async () => {
-        const fileId = 'file-read-model-only'
-        await seed(
-          { ...accreditedLog, file: { id: fileId } },
-          summaryLogFactory.submitted
-        )
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `${summaryLogs}/files/${fileId}`,
-          ...asServiceMaintainer()
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/files/${fileId}`,
+        ...asServiceMaintainer()
       })
+
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
     })
   })
 
@@ -554,6 +513,14 @@ describe('summary-log routes by natural key', () => {
       'POST',
       `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}`,
       redirect
+    ],
+    [
+      'completing an upload under an unknown registration',
+      'POST',
+      signedCallback(
+        `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}/${randomUUID()}/upload-completed`
+      ),
+      uploadCompletedFor('R26XX0000000000PL')
     ],
     [
       'completing an upload under a registration with no accreditation',
