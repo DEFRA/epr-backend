@@ -45,7 +45,6 @@ import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
-import { runOrganisationValidationSweep } from '#repositories/organisations/validation/run-sweep.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 import { runSummaryLogScopeBackfill } from '#summary-log-scope-backfill/run.js'
@@ -227,7 +226,6 @@ async function createServer(options = {}) {
       /** @type {unknown} */ (server)
     )
     void runFormsDataMigration(startedServer)
-    void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
     void runSummaryLogScopeBackfill(startedServer)
     void runLedgerYearBackfill(startedServer)
