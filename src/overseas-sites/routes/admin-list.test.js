@@ -9,7 +9,7 @@ import {
   buildReadReprocessorRegistration,
   nextReadAccreditationNumber
 } from '#organisation-read-model/repository/read-model-test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
@@ -122,7 +122,7 @@ const registeredOnlyRow = {
  * @param {object} organisationReadRepository
  */
 const serverOver = (organisationReadRepository) =>
-  createTestServer({ repositories: { organisationReadRepository } })
+  createAppTestServer({ repositories: { organisationReadRepository } })
 
 const serverWith = (organisations) =>
   serverOver(createInMemoryOrganisationReadRepository(organisations))
@@ -339,7 +339,7 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     '?pageSize=1.5',
     '?all=maybe'
   ])('returns 422 for invalid query %s', async (query) => {
-    const server = await createTestServer({})
+    const server = await createAppTestServer({})
 
     const response = await list(server, query)
 

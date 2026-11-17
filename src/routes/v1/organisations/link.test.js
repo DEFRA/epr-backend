@@ -11,7 +11,7 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { generateValidTokenWith } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -101,7 +101,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
       createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
@@ -567,7 +567,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
                 : null
           }
 
-          unreadableServer = await createTestServer({
+          unreadableServer = await createAppTestServer({
             repositories: {
               organisationAdministrationRepository: () =>
                 organisationsRepository,

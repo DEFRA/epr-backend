@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -30,7 +30,7 @@ describe('POST upload-completed validation', () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository(),
         organisationReadRepository: createInMemoryOrganisationReadRepository([

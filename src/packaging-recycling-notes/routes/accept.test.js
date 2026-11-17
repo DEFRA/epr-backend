@@ -17,7 +17,7 @@ import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { config } from '#root/config.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
   setupAuthContext,
@@ -103,7 +103,7 @@ const startServer = async (prn) => {
     prn ? [prn] : []
   )
   packagingRecyclingNotesRepository = prnRepositoryFactory(createMockLogger())
-  server = await createTestServer({
+  server = await createPrnTestServer({
     config: {
       packagingRecyclingNotesExternalApi: {
         clientId: externalApiClientId,
@@ -326,7 +326,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/accept`, () => {
     ledgerRepository = createInMemoryLedgerRepository([
       partialMock(openingBalanceEvent())
     ])()
-    server = await createTestServer({
+    server = await createPrnTestServer({
       config: {
         packagingRecyclingNotesExternalApi: {
           clientId: externalApiClientId,

@@ -14,7 +14,7 @@ import {
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -95,7 +95,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const summaryLogsRepository =
       summaryLogsRepositoryFactory(createMockLogger())
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           buildReadOrganisationWithNumbersOf(organisation)

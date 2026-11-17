@@ -1,6 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator, asServiceMaintainerRead } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -127,7 +127,7 @@ const serverWithFebruarySubmission = async ({
     )
   ])()
 
-  return createTestServer({
+  return createAppTestServer({
     repositories: {
       organisationReadRepository,
       ledgerRepository,
@@ -143,7 +143,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
     let server
 
     beforeAll(async () => {
-      server = await createTestServer({})
+      server = await createAppTestServer({})
     })
 
     afterAll(async () => {
@@ -173,7 +173,7 @@ describe(`GET ${creditedTonnageGetPath}`, () => {
   })
 
   it('returns a valid empty report when no accreditation has a submission', async () => {
-    const server = await createTestServer({})
+    const server = await createAppTestServer({})
 
     const response = await injectReport(server, asServiceMaintainerRead())
 

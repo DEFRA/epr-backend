@@ -11,7 +11,7 @@ import {
   buildSubmissionHeaderRow
 } from '#waste-records-export/domain/csv-columns.js'
 import { encodeRow } from '#waste-records-export/application/stream-csv-export.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
@@ -121,7 +121,7 @@ const createServer = async ({
     })
   }
 
-  const server = await createTestServer({
+  const server = await createAppTestServer({
     repositories: {
       organisationReadRepository: () =>
         createInMemoryOrganisationReadRepository(

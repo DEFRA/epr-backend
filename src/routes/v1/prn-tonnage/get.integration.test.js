@@ -2,7 +2,9 @@ import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
-import { it } from '#vite/fixtures/server-with-real-db.js'
+import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { serverOnRealDb } from '#vite/fixtures/real-db-server.js'
+import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import {
@@ -29,8 +31,23 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { prnTonnagePath } from './get.js'
+import * as prnTonnageRoutes from './index.js'
 
-/** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
+/**
+ * @import { TestAPI } from 'vitest'
+ * @import { TestServerWithRealDb } from '#vite/fixtures/real-db-server.js'
+ */
+
+const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
+  mongoIt.extend({
+    server: serverOnRealDb((options) =>
+      createTestServer({
+        ...options,
+        routes: () => Object.values(prnTonnageRoutes)
+      })
+    )
+  })
+)
 
 const PRNS_COLLECTION = 'packaging-recycling-notes'
 const ORGANISATIONS_COLLECTION = 'epr-organisations'

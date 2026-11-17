@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
@@ -47,7 +47,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   beforeEach(async () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           organisation

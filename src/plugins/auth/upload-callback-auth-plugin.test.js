@@ -7,7 +7,7 @@ import {
   toUploadCallbackPath
 } from '#common/helpers/auth/upload-callback-signature.js'
 import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 /** @import { TestServer } from '#test/create-test-server.js' */
@@ -23,7 +23,7 @@ describe('upload-callback strategy', () => {
   let server
 
   beforeEach(async () => {
-    server = await createTestServer()
+    server = await createAppTestServer()
 
     server.route({
       method: 'POST',

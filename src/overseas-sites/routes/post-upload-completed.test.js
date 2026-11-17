@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -69,7 +69,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
       importOverseasSites: vi.fn()
     }
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         orsImportsRepository: () => orsImportsRepository
       },
@@ -442,7 +442,7 @@ describe(`${orsUploadCompletedPath} route`, () => {
         recordFileResult: vi.fn()
       }
 
-      const failServer = await createTestServer({
+      const failServer = await createAppTestServer({
         repositories: {
           orsImportsRepository: () => failingRepository
         },

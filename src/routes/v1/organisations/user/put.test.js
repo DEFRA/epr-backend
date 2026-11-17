@@ -1,7 +1,7 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   defraIdMockAuthTokens,
@@ -39,7 +39,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
       createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()

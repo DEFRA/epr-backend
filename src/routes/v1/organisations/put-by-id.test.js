@@ -7,7 +7,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -39,7 +39,7 @@ describe('PUT /v1/organisations/{id}', () => {
       createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
@@ -514,7 +514,7 @@ describe('PUT /v1/organisations/{id}', () => {
       const fixture = buildOrganisation()
       await instance.insert(fixture)
 
-      const testServer = await createTestServer({
+      const testServer = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: instance,
           systemLogsRepository: createSystemLogsRepository()
@@ -589,7 +589,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
     ])
     overseasSitesRepository = overseasSitesRepoFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository(),
@@ -829,7 +829,7 @@ describe('PUT /v1/organisations/{id} status change guard', () => {
       createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()
@@ -1082,7 +1082,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
       )
     )
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([fixture]),

@@ -6,7 +6,7 @@ import { StatusCodes } from 'http-status-codes'
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
@@ -40,7 +40,7 @@ describe('organisation actions by organisation number', () => {
       createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()

@@ -14,7 +14,7 @@ import {
   REPROCESSOR_NUMBER,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -49,7 +49,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const summaryLogsRepository =
       createInMemorySummaryLogsRepository()(createMockLogger())
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           buildReadOrganisationWithNumbersOf(organisation)

@@ -11,7 +11,7 @@ import {
 } from 'vitest'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import {
   cognitoJwksUrl,
   setupAuthContext
@@ -46,7 +46,7 @@ describe('GET /v1/packaging-recycling-notes', () => {
         findByStatus: vi.fn()
       }
 
-      server = await createTestServer({
+      server = await createPrnTestServer({
         config: {
           packagingRecyclingNotesExternalApi: {
             clientId: externalApiClientId,

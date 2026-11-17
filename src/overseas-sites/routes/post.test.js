@@ -10,7 +10,7 @@ import {
 } from 'vitest'
 
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSitesCreatePath } from './post.js'
@@ -54,7 +54,7 @@ describe(`${overseasSitesCreatePath} route`, () => {
       overseasSitesRepository = createInMemoryOverseasSitesRepository()()
       vi.spyOn(overseasSitesRepository, 'create')
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           overseasSitesRepository: () => overseasSitesRepository
         }

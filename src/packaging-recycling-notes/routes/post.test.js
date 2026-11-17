@@ -11,7 +11,7 @@ import {
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { StatusCodes } from 'http-status-codes'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -115,7 +115,7 @@ const validPayload = {
 describe('POST /organisations/{organisationNumber}/registrations/{registrationNumber}/accreditations/{year}/packaging-recycling-notes', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createPrnTestServer>>} */
   let server
   /** @type {PackagingRecyclingNotesRepository} */
   let packagingRecyclingNotesRepository
@@ -183,7 +183,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       }
     })
     await server?.stop()
-    server = await createTestServer({
+    server = await createPrnTestServer({
       repositories: {
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -31,7 +31,7 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
   beforeEach(async () => {
     mockAggregateTonnageByMaterial.mockClear()
     mockAggregateTonnageByMaterial.mockResolvedValue(defaultTonnageData)
-    server = await createTestServer({ repositories: {} })
+    server = await createAppTestServer({ repositories: {} })
   })
 
   describe('error handling', () => {

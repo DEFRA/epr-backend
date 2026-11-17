@@ -11,7 +11,7 @@ import {
 } from '#organisation-read-model/repository/read-model-test-data.js'
 
 import { config } from '#root/config.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import {
   toAccreditationNumber,
@@ -147,11 +147,11 @@ const registeredOnlyEvent = (overrides) =>
 describe('ledger and waste balance routes by natural key', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createAppTestServer>>} */
   let server
 
   beforeEach(async () => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           organisation,
@@ -554,11 +554,11 @@ describe('an accreditation held outside re-ex, with no database id', () => {
     year: toYear(2027)
   }
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createAppTestServer>>} */
   let server
 
   beforeEach(async () => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           buildReadOrganisation({
@@ -658,7 +658,7 @@ const buildAccessServer = async () => {
   })
   const own = accreditationOf(ownOrganisation)
   const other = accreditationOf(otherOrganisation)
-  const server = await createTestServer({
+  const server = await createAppTestServer({
     repositories: {
       organisationAdministrationRepository: organisationsRepositoryFactory,
       organisationReadRepository: createInMemoryOrganisationReadRepository(
@@ -683,7 +683,7 @@ const buildAccessServer = async () => {
 describe('GET R/accreditations/{year}/ledger access control', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createAppTestServer>>} */
   let server
   /** @type {string} */
   let ownLedger
@@ -762,7 +762,7 @@ describe('GET R/accreditations/{year}/ledger access control', () => {
 describe('GET R/accreditations/{year}/waste-balance access control', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createAppTestServer>>} */
   let server
   /** @type {string} */
   let ownBalance
@@ -838,7 +838,7 @@ describe('GET R/accreditations/{year}/ledger response validation', () => {
         }
       ]
     }
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           organisation

@@ -1,6 +1,6 @@
 import unzipper from 'unzipper'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator, asRegulator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { marketInsightsExportZipPath } from './export-zip-get.js'
@@ -19,7 +19,7 @@ describe(`GET ${marketInsightsExportZipPath}`, () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({})
+    server = await createAppTestServer({})
   })
 
   afterAll(async () => {

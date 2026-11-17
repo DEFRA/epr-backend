@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -13,7 +13,7 @@ describe('GET /v1/admin/queues/dlq/messages', () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       dlqService: {
         getMessages: vi.fn().mockResolvedValue({
           approximateMessageCount: 1,
@@ -85,7 +85,7 @@ describe('GET /v1/admin/queues/dlq/messages — empty queue', () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       dlqService: {
         getMessages: vi.fn().mockResolvedValue({
           approximateMessageCount: 0,
@@ -121,7 +121,7 @@ describe('GET /v1/admin/queues/dlq/messages — service failure', () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       dlqService: {
         getMessages: vi.fn().mockRejectedValue(new Error('SQS unavailable')),
         purge: vi.fn()

@@ -1,4 +1,4 @@
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -8,7 +8,7 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
 
   describe('feature flag disabled', () => {
     it('returns 404 when devEndpoints feature flag is disabled', async () => {
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         config: { featureFlags: { devEndpoints: false } }
       })
 
@@ -35,7 +35,7 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
       const nonProdDataReset = {
         deleteByOrganisationNumber: async () => stubCounts
       }
-      server = await createTestServer({
+      server = await createAppTestServer({
         config: { featureFlags: { devEndpoints: true } },
         repositories: { nonProdDataReset }
       })
@@ -87,7 +87,7 @@ describe('DELETE /v1/dev/organisations/{id}', () => {
           return {}
         }
       }
-      const testServer = await createTestServer({
+      const testServer = await createAppTestServer({
         config: { featureFlags: { devEndpoints: true } },
         repositories: { nonProdDataReset }
       })

@@ -12,7 +12,7 @@ import {
 
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -45,7 +45,7 @@ describe('GET /v1/admin/packaging-recycling-notes', () => {
       findByStatus: vi.fn()
     }
 
-    server = await createTestServer({
+    server = await createPrnTestServer({
       repositories: {
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository,

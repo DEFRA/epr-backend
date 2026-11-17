@@ -23,7 +23,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
   setupAuthContext,
@@ -141,7 +141,7 @@ let ledgerRepository
  */
 const startServer = async ({ currentStatus, events }) => {
   ledgerRepository = createInMemoryLedgerRepository(events)()
-  server = await createTestServer({
+  server = await createPrnTestServer({
     config: {
       packagingRecyclingNotesExternalApi: {
         clientId: externalApiClientId,

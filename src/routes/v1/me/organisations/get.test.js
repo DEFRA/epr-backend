@@ -1,7 +1,7 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asUnscopedAdminUser } from '#test/inject-auth.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
@@ -33,7 +33,7 @@ describe('GET /v1/me/organisations', () => {
   })
 
   it('returns 403 when credentials lack organisationLinkedRead scope', async () => {
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([])
@@ -55,7 +55,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationAdministrationRepository =
       organisationsRepositoryFactory()
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -157,7 +157,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationAdministrationRepository =
       organisationsRepositoryFactory()
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -209,7 +209,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationAdministrationRepository =
       organisationsRepositoryFactory()
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -256,7 +256,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -289,7 +289,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationAdministrationRepository =
       organisationsRepositoryFactory()
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -342,7 +342,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationAdministrationRepository =
       organisationsRepositoryFactory()
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -406,7 +406,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationAdministrationRepository =
       organisationsRepositoryFactory()
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -453,7 +453,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -492,7 +492,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -537,7 +537,7 @@ describe('GET /v1/me/organisations', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -586,7 +586,7 @@ describe('GET /v1/me/organisations', () => {
       const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: systemLogsRepositoryFactory
@@ -613,7 +613,7 @@ describe('GET /v1/me/organisations', () => {
       const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: systemLogsRepositoryFactory
@@ -675,7 +675,7 @@ describe('GET /v1/me/organisations', () => {
       }
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: throwingSystemLogsRepository
@@ -711,7 +711,7 @@ describe('GET /v1/me/organisations', () => {
       }
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory,
           systemLogsRepository: throwingSystemLogsRepository

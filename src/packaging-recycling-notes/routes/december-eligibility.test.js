@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -83,12 +83,12 @@ const eligibilityUrl = (
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/accreditations/{year}/packaging-recycling-notes/december-prn-eligibility', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createPrnTestServer>>} */
   let server
 
   /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
   const startServer = async (organisation) => {
-    server = await createTestServer({
+    server = await createPrnTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           organisation

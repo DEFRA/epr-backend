@@ -9,7 +9,7 @@ import {
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -122,7 +122,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         )
       : undefined
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           org

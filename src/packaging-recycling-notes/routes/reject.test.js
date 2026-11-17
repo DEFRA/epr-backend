@@ -24,7 +24,7 @@ import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { config } from '#root/config.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
   cognitoJwksUrl,
@@ -128,7 +128,7 @@ const startServer = async (
   packagingRecyclingNotesRepository = prnRepositoryFactory(createMockLogger())
   const reportsRepositoryFactory = createInMemoryReportsRepository(reports)
   reportsRepository = reportsRepositoryFactory()
-  server = await createTestServer({
+  server = await createPrnTestServer({
     config: {
       packagingRecyclingNotesExternalApi: {
         clientId: externalApiClientId,
@@ -393,7 +393,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
         openingBalanceEvent({ registrationId, accreditationId, organisationId })
       )
     ])()
-    server = await createTestServer({
+    server = await createPrnTestServer({
       config: {
         packagingRecyclingNotesExternalApi: {
           clientId: externalApiClientId,

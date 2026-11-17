@@ -8,7 +8,7 @@ import {
   vi
 } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import {
   asOperator,
   asRegulator,
@@ -33,7 +33,7 @@ describe(`GET ${marketInsightsWasteBalancePath}`, () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({})
+    server = await createAppTestServer({})
   })
 
   afterAll(async () => {

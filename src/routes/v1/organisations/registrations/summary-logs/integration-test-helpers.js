@@ -28,7 +28,7 @@ import { createReportsService } from '#reports/application/report-service.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   buildReadAccreditation,
@@ -721,7 +721,7 @@ export const createTestInfrastructure = async (
     logger: mockLogger
   })
 
-  const server = await createTestServer({
+  const server = await createAppTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
       organisationReadRepository: () => organisationReadRepository,
@@ -746,7 +746,7 @@ export const createTestInfrastructure = async (
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   year?: Year,
- *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
+ *   config?: NonNullable<Parameters<typeof createAppTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
  */
 
@@ -846,7 +846,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     logger: mockLogger
   })
 
-  const server = await createTestServer({
+  const server = await createAppTestServer({
     config,
     repositories: {
       summaryLogsRepository: () => summaryLogsRepository,

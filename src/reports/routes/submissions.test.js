@@ -1,6 +1,6 @@
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -22,7 +22,7 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
       registrations: { R26ER5001180041PL: buildReadReprocessorRegistration() }
     })
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           org
@@ -82,7 +82,7 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
       }
     })
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           org

@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import {
   asServiceMaintainerRead,
   asServiceMaintainerWrite,
@@ -20,7 +20,7 @@ describe('GET /v1/admin/me', () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({})
+    server = await createAppTestServer({})
   })
 
   afterAll(async () => {

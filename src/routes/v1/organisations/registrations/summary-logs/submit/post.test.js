@@ -24,7 +24,7 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -101,7 +101,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       submit: vi.fn().mockResolvedValue(undefined)
     }
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
         organisationReadRepository: () => organisationReadRepository

@@ -8,7 +8,7 @@ import {
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -67,7 +67,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
   setupAuthContext()
 
   it('returns 404 when the devEndpoints feature flag is disabled', async () => {
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       config: { featureFlags: { devEndpoints: false } }
     })
 
@@ -86,7 +86,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
 
     beforeEach(async () => {
       fixture = buildFixture()
-      server = await createTestServer({
+      server = await createAppTestServer({
         config: { featureFlags: { devEndpoints: true } },
         repositories: {
           organisationAdministrationRepository:
@@ -192,7 +192,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         accreditation({ id: accreditationId, reprocessingType: 'input' })
       ]
     })
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       config: { featureFlags: { devEndpoints: true } },
       repositories: {
         organisationAdministrationRepository:

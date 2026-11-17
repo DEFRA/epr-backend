@@ -7,7 +7,7 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import {
   asServiceMaintainerRead,
   asServiceMaintainerWrite,
@@ -65,7 +65,7 @@ describe('DELETE /organisations/{organisationNumber}/link', () => {
       createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         systemLogsRepository: createSystemLogsRepository()

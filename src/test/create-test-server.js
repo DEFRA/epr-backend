@@ -19,28 +19,9 @@ import { uploadCallbackAuthPlugin } from '#plugins/auth/upload-callback-auth-plu
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { registerDependency } from '#plugins/register-dependency.js'
-import { router } from '#plugins/router.js'
 import { getConfig } from '#root/config.js'
-import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 
-import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
-import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
-import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
-import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
-import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
-import { createInMemoryOrganisationReadRepositoryPlugin } from '#organisation-read-model/repository/inmemory.plugin.js'
-import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
-import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
-import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
-import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
-import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
-import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
-import { createInMemoryWasteBalanceServicePlugin } from '#waste-balances/repository/inmemory.plugin.js'
-import { createInMemoryLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-inmemory.plugin.js'
-import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'
-
-/** @import { Lifecycle, Plugin } from '@hapi/hapi' */
+/** @import { Lifecycle, Plugin, ServerRoute } from '@hapi/hapi' */
 /** @import { Db } from 'mongodb' */
 /** @import { ServerApp } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
@@ -60,11 +41,27 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
  * @typedef {{
  *   config?: Record<string, any>
  *   db?: Db
+ *   routes?: (config: import('convict').Config<Record<string, any>>) => object[]
+ *   plugins?: DependencyPlugin[]
  *   repositories?: object
  *   workers?: object
  *   dlqService?: import('#plugins/dlq-admin.js').DlqService
  * }} CreateTestServerOptions
  */
+
+/**
+ * A plugin that registers a dependency of the routes, such as a repository.
+ * Plugins annotate `server` with differing types, so this accepts any of them.
+ *
+ * @typedef {Plugin<void> | { name: string, register: (server: any) => void }} DependencyPlugin
+ */
+
+/**
+ * @param {DependencyPlugin} plugin
+ * @returns {string}
+ */
+const pluginName = (plugin) =>
+  'name' in plugin ? plugin.name : plugin.pkg.name
 
 /**
  * Resolves a repository override for a request: a factory is called with the
@@ -84,9 +81,9 @@ const resolveOverride = (repositoryOrFactory) => (request) =>
  *
  * @param {keyof ServerApp} name - Repository name
  * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
- * @returns {import('@hapi/hapi').Plugin<void>}
+ * @returns {DependencyPlugin}
  */
-function createRepositoryPlugin(name, repositoryOrFactory) {
+export function createRepositoryPlugin(name, repositoryOrFactory) {
   return {
     name,
     register: (server) => {
@@ -100,7 +97,7 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
  * seeds organisations through one port reads them through the other.
  *
  * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
- * @returns {import('@hapi/hapi').Plugin<void>}
+ * @returns {DependencyPlugin}
  */
 function createOrganisationsRepositoryPlugin(repositoryOrFactory) {
   return {
@@ -136,105 +133,30 @@ const createDbPlugin = (db) => ({
 })
 
 /**
- * @typedef {{
- *   name: keyof ServerApp,
- *   createDefault: Function,
- *   createOverride?: (repositoryOrFactory: Function|Object) => import('@hapi/hapi').Plugin<void>
- * }} RepositoryConfig
- */
-
-/** @type {RepositoryConfig[]} */
-const repositoryConfigs = [
-  {
-    name: 'organisationAdministrationRepository',
-    createDefault: createInMemoryOrganisationsRepositoryPlugin,
-    createOverride: createOrganisationsRepositoryPlugin
-  },
-  {
-    name: 'summaryLogsRepository',
-    createDefault: createInMemorySummaryLogsRepositoryPlugin
-  },
-  {
-    name: 'formSubmissionsRepository',
-    createDefault: createInMemoryFormSubmissionsRepositoryPlugin
-  },
-  {
-    name: 'summaryLogRowStatesRepository',
-    createDefault: createInMemorySummaryLogRowStatesRepositoryPlugin
-  },
-  {
-    name: 'ledgerRepository',
-    createDefault: createInMemoryLedgerRepositoryPlugin
-  },
-  {
-    name: 'wasteBalanceService',
-    createDefault: createInMemoryWasteBalanceServicePlugin
-  },
-  {
-    name: 'systemLogsRepository',
-    createDefault: createInMemorySystemLogsRepositoryPlugin
-  },
-  {
-    name: 'uploadsRepository',
-    createDefault: createInMemoryUploadsRepositoryPlugin
-  },
-  {
-    name: 'publicRegisterRepository',
-    createDefault: createInMemoryPublicRegisterRepositoryPlugin
-  },
-  {
-    name: 'packagingRecyclingNotesRepository',
-    createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
-  },
-  {
-    name: 'reportsRepository',
-    createDefault: createInMemoryReportsRepositoryPlugin
-  },
-  {
-    name: 'overseasSitesRepository',
-    createDefault: createInMemoryOverseasSitesRepositoryPlugin
-  },
-  {
-    name: 'orsImportsRepository',
-    createDefault: createInMemoryOrsImportsRepositoryPlugin
-  },
-  {
-    name: 'organisationReadRepository',
-    createDefault: createInMemoryOrganisationReadRepositoryPlugin
-  }
-]
-
-/** @type {RepositoryConfig[]} */
-const devEndpointsRepositoryConfigs = [
-  {
-    name: 'nonProdDataReset',
-    createDefault: createInMemoryNonProdDataResetPlugin
-  },
-  {
-    name: 'externalAccreditationsRepository',
-    createDefault: () =>
-      createRepositoryPlugin(
-        'externalAccreditationsRepository',
-        createMockExternalAccreditationsRepository()
-      )
-  }
-]
-
-/**
- * Builds repository plugins from config, applying any overrides.
- * @param {RepositoryConfig[]} configs - Repository configurations
+ * Registers each repository override the test gives, in place of the plugin
+ * of the same name. `organisationAdministrationRepository` overrides the
+ * organisations plugin, which serves it through both of its ports.
+ *
+ * @param {DependencyPlugin[]} plugins
  * @param {Partial<Record<keyof ServerApp, Function|Object>>} repoOverrides - Repository overrides keyed by name
- * @returns {import('@hapi/hapi').Plugin<void>[]}
+ * @returns {DependencyPlugin[]}
  */
-function buildRepositoryPlugins(configs, repoOverrides) {
-  return configs.map(({ name, createDefault, createOverride }) => {
-    if (!repoOverrides[name]) {
-      return createDefault()
-    }
-    return createOverride
-      ? createOverride(repoOverrides[name])
-      : createRepositoryPlugin(name, repoOverrides[name])
-  })
+function applyRepositoryOverrides(plugins, repoOverrides) {
+  const overrides = Object.entries(repoOverrides)
+    .filter(([, repositoryOrFactory]) => repositoryOrFactory)
+    .map(([name, repositoryOrFactory]) =>
+      name === 'organisationAdministrationRepository'
+        ? createOrganisationsRepositoryPlugin(repositoryOrFactory)
+        : createRepositoryPlugin(
+            /** @type {keyof ServerApp} */ (name),
+            repositoryOrFactory
+          )
+    )
+  const overridden = new Set(overrides.map(pluginName))
+  return [
+    ...plugins.filter((plugin) => !overridden.has(pluginName(plugin))),
+    ...overrides
+  ]
 }
 
 /**
@@ -304,7 +226,8 @@ function attachLoggerMocks(testServer) {
 }
 
 /**
- * Creates a test server with in-memory repositories.
+ * Creates a test server serving only the routes the test gives it, with the
+ * plugins those routes depend on, such as in-memory repositories.
  * Accepts optional overrides for repositories and workers.
  *
  * @param {CreateTestServerOptions} [options]
@@ -336,24 +259,21 @@ export async function createTestServer(options = {}) {
     authFailureLogger,
     boomErrorLogger,
     externalApiErrorFormatter,
-    ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
-    ...buildRepositoryPlugins(
-      config.get('featureFlags.devEndpoints')
-        ? devEndpointsRepositoryConfigs
-        : [],
+    ...applyRepositoryOverrides(
+      options.plugins ?? [],
       options.repositories ?? {}
     ),
-    prnEventsPlugin,
     { plugin: mockSqsCommandExecutorPlugin, options: options.workers },
     {
       plugin: mockDlqAdminPlugin,
       options: { dlqService: options.dlqService }
     },
-    ...(options.db ? [createDbPlugin(options.db)] : []),
-    { plugin: router, options: { config } }
+    ...(options.db ? [createDbPlugin(options.db)] : [])
   ]
 
   await server.register(plugins)
+  // Route modules declare plain objects, which hapi checks when they register.
+  server.route(/** @type {ServerRoute[]} */ (options.routes?.(config) ?? []))
   await server.initialize()
 
   /** @type {TestServer} */

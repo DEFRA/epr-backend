@@ -16,7 +16,7 @@ import {
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -46,7 +46,7 @@ const serverWith = async (featureFlags) => {
     createMockExternalAccreditationsRepository({
       upsert: vi.fn(async (accreditation) => accreditation)
     })
-  const server = await createTestServer({
+  const server = await createAppTestServer({
     config: { featureFlags },
     repositories: {
       externalAccreditationsRepository,

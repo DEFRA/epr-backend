@@ -7,7 +7,7 @@ import { StatusCodes } from 'http-status-codes'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createPackagingRecyclingNotesRepository } from './mongodb.js'
 import { buildAwaitingAcceptancePrn } from './contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import {
   cognitoJwksUrl,
@@ -78,7 +78,7 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
       })
     )
 
-    return createTestServer({
+    return createPrnTestServer({
       config: {
         packagingRecyclingNotesExternalApi: {
           clientId: externalApiClientId,

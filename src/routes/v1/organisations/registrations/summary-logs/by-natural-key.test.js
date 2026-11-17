@@ -33,7 +33,7 @@ import {
   accreditation,
   reprocessor
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -138,7 +138,7 @@ const uploadCompletedFor = (uploadRegistrationNumber) => ({
 describe('summary-log routes by natural key', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createAppTestServer>>} */
   let server
   /** @type {ReturnType<typeof createInMemoryUploadsRepository>} */
   let uploadsRepository
@@ -146,7 +146,7 @@ describe('summary-log routes by natural key', () => {
   let summaryLogsRepository
 
   const startServer = () =>
-    createTestServer({
+    createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           servedOrganisation

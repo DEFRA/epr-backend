@@ -1,12 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect } from 'vitest'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 describe('GET /health', () => {
   setupAuthContext()
   it('returns 200 with success message', async () => {
-    const server = await createTestServer()
+    const server = await createAppTestServer()
 
     const response = await server.inject({
       method: 'GET',

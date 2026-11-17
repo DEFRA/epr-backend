@@ -10,7 +10,7 @@ import {
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 
 /** @import { Organisation, StandingByYear } from '#organisation-read-model/domain/model.js' */
@@ -149,7 +149,7 @@ export const useViewServer = () => {
   const serve = async (...organisations) => {
     const repository = createInMemoryOrganisationReadRepository(organisations)()
     vi.spyOn(repository, 'findByOrganisationNumber')
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: { organisationReadRepository: () => repository }
     })
     return repository

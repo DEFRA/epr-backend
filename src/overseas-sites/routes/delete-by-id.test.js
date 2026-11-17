@@ -11,7 +11,7 @@ import {
 
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { overseasSiteDeletePath } from './delete-by-id.js'
@@ -33,7 +33,7 @@ describe(`${overseasSiteDeletePath} route`, () => {
       overseasSitesRepository = createInMemoryOverseasSitesRepository()()
       vi.spyOn(overseasSitesRepository, 'remove')
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           overseasSitesRepository: () => overseasSitesRepository
         }

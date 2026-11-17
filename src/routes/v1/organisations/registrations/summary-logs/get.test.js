@@ -14,7 +14,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
@@ -36,7 +36,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     const summaryLogsRepository =
       summaryLogsRepositoryFactory(createMockLogger())
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           buildReadOrganisationWithNumbersOf(organisation)

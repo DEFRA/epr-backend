@@ -3,7 +3,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import ExcelJS from 'exceljs'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator, asRegulator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
@@ -74,7 +74,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
   let server
 
   beforeAll(async () => {
-    server = await createTestServer({})
+    server = await createAppTestServer({})
   })
 
   afterAll(async () => {
@@ -196,7 +196,7 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
         cadence: 'monthly',
         period: 1
       })
-      seededServer = await createTestServer({
+      seededServer = await createAppTestServer({
         repositories: {
           ledgerRepository: register.ledgerRepository,
           summaryLogRowStatesRepository: register.summaryLogRowStatesRepository,

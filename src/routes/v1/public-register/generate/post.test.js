@@ -1,6 +1,6 @@
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { StatusCodes } from 'http-status-codes'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -31,7 +31,7 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
   beforeEach(async () => {
     mockAuditPublicRegisterGenerate.mockClear()
     inMemoryPublicRegisterRepository = createInMemoryPublicRegisterRepository()
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           buildReadApprovedOrganisation({ year: currentUtcYear() })
@@ -99,7 +99,7 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
         }
       })
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           organisationReadRepository: failingOrganisationReadRepository,
           publicRegisterRepository: inMemoryPublicRegisterRepository

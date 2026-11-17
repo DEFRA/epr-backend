@@ -10,7 +10,7 @@ import {
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { config } from '#root/config.js'
 import {
   asOperator,
@@ -147,7 +147,7 @@ const NEVER_SERVED = [
 describe('report routes by natural key', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createAppTestServer>>} */
   let server
   /** @type {ReportsRepository} */
   let reportsRepository
@@ -179,7 +179,7 @@ describe('report routes by natural key', () => {
       seeded.submitted = submitted
     }
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           organisation,

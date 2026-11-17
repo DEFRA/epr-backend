@@ -5,7 +5,7 @@ import {
   SCOPES
 } from '#common/helpers/auth/constants.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
@@ -36,7 +36,7 @@ describe('GET /v1/me', () => {
     let server
 
     beforeAll(async () => {
-      server = await createTestServer({})
+      server = await createAppTestServer({})
     })
 
     it('returns 401 when not authenticated', async () => {
@@ -106,7 +106,7 @@ describe('GET /v1/me', () => {
         }
       })
 
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory
         }
@@ -148,7 +148,7 @@ describe('GET /v1/me', () => {
         }
       })
 
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory
         }
@@ -169,7 +169,7 @@ describe('GET /v1/me', () => {
 
   describe('a regulator', () => {
     it('receives the regulator role and the scopes that hold for every organisation', async () => {
-      const server = await createTestServer({})
+      const server = await createAppTestServer({})
 
       const response = await server.inject({
         method: 'GET',
@@ -187,7 +187,7 @@ describe('GET /v1/me', () => {
 
   describe('the response', () => {
     it('is whatever the resolver put on the credential, unfiltered', async () => {
-      const server = await createTestServer({})
+      const server = await createAppTestServer({})
 
       const response = await server.inject({
         method: 'GET',

@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -28,7 +28,7 @@ describe('GET /v1/form-submissions/{documentId}', () => {
       [ORG_A, ORG_B]
     )
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         formSubmissionsRepository: formSubmissionsRepositoryFactory
       }

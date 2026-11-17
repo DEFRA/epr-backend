@@ -20,7 +20,7 @@ import {
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -91,7 +91,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       validate: vi.fn()
     }
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         summaryLogsRepository: summaryLogsRepositoryFactory,
         organisationReadRepository: testReadOrganisationRepository()
@@ -155,7 +155,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditedSummaryLogsRepository =
         accreditedSummaryLogsRepositoryFactory(createMockLogger())
 
-      accreditedServer = await createTestServer({
+      accreditedServer = await createAppTestServer({
         repositories: {
           summaryLogsRepository: accreditedSummaryLogsRepositoryFactory,
           organisationReadRepository: createInMemoryOrganisationReadRepository([
@@ -480,7 +480,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const insertError = new Error('Database connection failed')
 
     beforeAll(async () => {
-      failingServer = await createTestServer({
+      failingServer = await createAppTestServer({
         repositories: {
           summaryLogsRepository: () => ({
             findById: async () => null,

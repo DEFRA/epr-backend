@@ -12,7 +12,7 @@ import {
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { StatusCodes } from 'http-status-codes'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import {
   asOperator,
   asServiceMaintainer,
@@ -44,12 +44,14 @@ import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  */
+
+/** @param {{ payload: string }} response */
+const body = (response) => JSON.parse(response.payload)
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
@@ -165,7 +167,7 @@ const prns = `/organisations/${organisation.organisationNumber}/registrations/${
 describe('PRN routes by natural key', () => {
   setupAuthContext()
 
-  /** @type {Awaited<ReturnType<typeof createTestServer>>} */
+  /** @type {Awaited<ReturnType<typeof createPrnTestServer>>} */
   let server
   /** @type {PackagingRecyclingNotesRepository} */
   let packagingRecyclingNotesRepository
@@ -196,7 +198,7 @@ describe('PRN routes by natural key', () => {
       )
     ])()
 
-    server = await createTestServer({
+    server = await createPrnTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           organisation

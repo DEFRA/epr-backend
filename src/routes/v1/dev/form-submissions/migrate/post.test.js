@@ -1,6 +1,6 @@
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { readdirSync, readFileSync } from 'fs'
@@ -65,7 +65,7 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
   async function setupServer(formsRepoFactory) {
     formSubmissionsRepositoryFactory = formsRepoFactory
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
         formSubmissionsRepository: formSubmissionsRepositoryFactory
@@ -77,7 +77,7 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
   describe('feature flag disabled', () => {
     it('should return 404 when devEndpoints feature flag is disabled', async () => {
       const formsRepoFactory = createFormsRepo()
-      const testServer = await createTestServer({
+      const testServer = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory,
           formSubmissionsRepository: formsRepoFactory

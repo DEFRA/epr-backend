@@ -24,7 +24,7 @@ import {
 } from '#waste-balances/repository/ledger-test-data.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
   asServiceMaintainerWrite,
@@ -165,7 +165,7 @@ const startServer = async (
   const reportsRepositoryFactory = createInMemoryReportsRepository(reports)
   reportsRepository = reportsRepositoryFactory()
 
-  server = await createTestServer({
+  server = await createPrnTestServer({
     repositories: {
       packagingRecyclingNotesRepository: prnRepositoryFactory,
       ledgerRepository: () => ledgerRepository,
@@ -397,7 +397,7 @@ describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
       findById: vi.fn().mockRejectedValue(new Error('connection reset'))
     }
 
-    server = await createTestServer({
+    server = await createPrnTestServer({
       repositories: {
         packagingRecyclingNotesRepository: () => brokenRepository,
         ledgerRepository: () => createInMemoryLedgerRepository([])(),

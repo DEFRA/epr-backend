@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { StatusCodes } from 'http-status-codes'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -29,7 +29,7 @@ describe('basic-auth strategy', () => {
     let server
 
     beforeEach(async () => {
-      server = await createTestServer({
+      server = await createAppTestServer({
         config: {
           basicAuth: {
             username: 'basic-auth-user',
@@ -105,7 +105,7 @@ describe('basic-auth strategy', () => {
 
   describe('when basic-auth credentials are not configured', () => {
     it('returns 401 with valid Basic Auth credentials', async () => {
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         config: {
           basicAuth: {
             username: '', // matches default value in config.js

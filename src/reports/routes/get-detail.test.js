@@ -11,7 +11,7 @@ import {
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -186,7 +186,7 @@ const createServer = async ({
 
   const reportsRepositoryFactory = createInMemoryReportsRepository()
 
-  const server = await createTestServer({
+  const server = await createAppTestServer({
     repositories: {
       organisationReadRepository: createInMemoryOrganisationReadRepository([
         buildReadOrganisation({

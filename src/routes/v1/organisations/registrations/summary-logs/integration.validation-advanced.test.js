@@ -5,7 +5,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -461,7 +461,7 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -629,7 +629,7 @@ describe('Advanced validation scenarios', () => {
           findPeriodicReports: async () => []
         })
       })
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
@@ -834,7 +834,7 @@ describe('Advanced validation scenarios', () => {
         })
       )
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           organisationReadRepository: () =>

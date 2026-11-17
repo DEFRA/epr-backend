@@ -3,7 +3,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -28,7 +28,7 @@ describe('GET /v1/system-logs/search', () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         systemLogsRepository: systemLogsRepositoryFactory,
         organisationAdministrationRepository: organisationsRepositoryFactory
@@ -367,7 +367,7 @@ describe('GET /v1/system-logs/search', () => {
         }
       })
 
-      const failingServer = await createTestServer({
+      const failingServer = await createAppTestServer({
         repositories: { systemLogsRepository: failingFactory }
       })
 
@@ -389,7 +389,7 @@ describe('GET /v1/system-logs/search', () => {
         }
       })
 
-      const boomServer = await createTestServer({
+      const boomServer = await createAppTestServer({
         repositories: { systemLogsRepository: boomFactory }
       })
 

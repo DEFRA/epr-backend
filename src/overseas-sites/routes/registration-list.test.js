@@ -10,7 +10,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -140,7 +140,7 @@ describe('GET registration overseas-sites', () => {
     { organisation, otherOrganisations = NO_OTHER_ORGANISATIONS, sites },
     config = {}
   ) => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       config,
       repositories: {
         organisationAdministrationRepository:
@@ -415,7 +415,7 @@ describe('GET registration overseas-sites', () => {
     const organisationId = new ObjectId().toString()
     const registrationId = new ObjectId().toString()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: () => ({
           findRegistrationById: () =>

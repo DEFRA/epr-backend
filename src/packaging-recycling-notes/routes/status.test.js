@@ -10,7 +10,7 @@ import {
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createPrnTestServer } from '#packaging-recycling-notes/routes/create-prn-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -190,7 +190,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const mockPrn = createMockPrn()
 
     beforeAll(async () => {
-      server = await createTestServer({
+      server = await createPrnTestServer({
         repositories: {
           packagingRecyclingNotesRepository: () =>
             packagingRecyclingNotesRepository,

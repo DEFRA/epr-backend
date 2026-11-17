@@ -11,7 +11,7 @@ import {
 
 import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repository/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { orsImportStatusPath } from './get-import-status.js'
@@ -28,7 +28,7 @@ describe(`${orsImportStatusPath} route`, () => {
       orsImportsRepository = factory()
       vi.spyOn(orsImportsRepository, 'findById')
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           orsImportsRepository: () => orsImportsRepository
         }

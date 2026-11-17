@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from './create-test-server.js'
+import { createAppTestServer } from './create-app-test-server.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -10,19 +10,19 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 const { validToken } = entraIdMockAuthTokens
 
-describe('createTestServer', () => {
+describe('createAppTestServer', () => {
   setupAuthContext()
 
   describe('return value', () => {
     it('returns a Hapi server instance', async () => {
-      const server = await createTestServer()
+      const server = await createAppTestServer()
 
       expect(server.inject).toBeTypeOf('function')
       expect(server.initialize).toBeTypeOf('function')
     })
 
     it('attaches loggerMocks to the server', async () => {
-      const server = await createTestServer()
+      const server = await createAppTestServer()
 
       expect(server.loggerMocks).toBeDefined()
       expect(server.loggerMocks.info).toBeTypeOf('function')
@@ -33,7 +33,7 @@ describe('createTestServer', () => {
 
   describe('default repositories', () => {
     it('provides default in-memory repositories when none specified', async () => {
-      const server = await createTestServer()
+      const server = await createAppTestServer()
 
       // Server should work - routes can access default repos
       const response = await server.inject({
@@ -54,7 +54,7 @@ describe('createTestServer', () => {
       const org = buildOrganisation()
       await organisationAdministrationRepository.insert(org)
 
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: { organisationAdministrationRepository }
       })
 
@@ -79,7 +79,7 @@ describe('createTestServer', () => {
         findById: vi.fn().mockResolvedValue(mockOrg)
       }
 
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: mockOrganisationsRepository
         }
@@ -105,7 +105,7 @@ describe('createTestServer', () => {
 
   describe('feature flags via config option', () => {
     it('registers dev endpoints when devEndpoints is enabled through config', async () => {
-      const server = await createTestServer({
+      const server = await createAppTestServer({
         config: { featureFlags: { devEndpoints: true } }
       })
 
@@ -118,7 +118,7 @@ describe('createTestServer', () => {
     })
 
     it('omits dev endpoints by default', async () => {
-      const server = await createTestServer()
+      const server = await createAppTestServer()
 
       const response = await server.inject({
         method: 'DELETE',
@@ -131,7 +131,7 @@ describe('createTestServer', () => {
 
   describe('logger mocks', () => {
     it('spies on request.logger methods during requests', async () => {
-      const server = await createTestServer()
+      const server = await createAppTestServer()
 
       await server.inject({
         method: 'GET',

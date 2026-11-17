@@ -15,15 +15,7 @@ import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
 import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availability/index.js'
 import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import * as marketInsightsRoutes from '#market-insights/routes/index.js'
-import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
-import { adminPackagingRecyclingNotesCancel } from '#packaging-recycling-notes/routes/admin-cancel.js'
-import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
-import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
-import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
-import {
-  prnCancelByNaturalKey,
-  prnRoutesByNaturalKey
-} from '#packaging-recycling-notes/routes/by-natural-key.js'
+import { packagingRecyclingNotesRoutes } from '#packaging-recycling-notes/routes/index.js'
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
 import { summaryLogRoutesByNaturalKey } from '#routes/v1/organisations/registrations/summary-logs/by-natural-key.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
@@ -33,57 +25,53 @@ import { adminMeGet } from '#routes/v1/admin/me/get.js'
 import { dlqMessagesGet } from '#routes/v1/admin/queues/dlq/messages.get.js'
 import { dlqPurgePost } from '#routes/v1/admin/queues/dlq/purge.post.js'
 
+/**
+ * Every route the app serves.
+ *
+ * @param {import('convict').Config<Record<string, any>>} config
+ */
+const appRoutes = (config) => {
+  const devRoutesBehindFeatureFlag = config.get('featureFlags.devEndpoints')
+    ? Object.values(devRoutes)
+    : []
+
+  return [
+    health,
+    ...apply,
+    ...Object.values(meRoutes),
+    ...summaryLogRoutesByNaturalKey,
+    ...devRoutesBehindFeatureFlag,
+    ...Object.values(organisationRoutes),
+    ...Object.values(organisationViewRoutes),
+    ...formSubmissionsRoutes,
+    ...Object.values(systemLogsRoutes),
+    ...Object.values(wasteBalanceRoutes),
+    ...wasteBalanceRoutesByNaturalKey,
+    ...Object.values(wasteRecordsExportRoutes),
+    ...Object.values(publicRegisterRoutes),
+    ...Object.values(tonnageMonitoringRoutes),
+    ...Object.values(prnTonnageRoutes),
+    ...Object.values(wasteBalanceAvailabilityRoutes),
+    ...Object.values(linkedOrganisationsRoutes),
+    ...packagingRecyclingNotesRoutes(config),
+    ...summaryLogUploadsReportRoutes,
+    ...Object.values(overseasSitesRoutes),
+    ...Object.values(marketInsightsRoutes),
+    ...Object.values(reportsRoutes),
+    ...reportRoutesByNaturalKey,
+    adminMeGet,
+    dlqMessagesGet,
+    dlqPurgePost
+  ]
+}
+
 const router = {
   plugin: {
     name: 'router',
     register: (server, options) => {
-      const devRoutesBehindFeatureFlag = options.config.get(
-        'featureFlags.devEndpoints'
-      )
-        ? Object.values(devRoutes)
-        : []
-
-      const prnAdminCancellationRoutesBehindFeatureFlag = options.config.get(
-        'featureFlags.prnAdminCancellation'
-      )
-        ? [adminPackagingRecyclingNotesCancel, prnCancelByNaturalKey]
-        : []
-
-      server.route([
-        health,
-        ...apply,
-        ...Object.values(meRoutes),
-        ...summaryLogRoutesByNaturalKey,
-        ...devRoutesBehindFeatureFlag,
-        ...Object.values(organisationRoutes),
-        ...Object.values(organisationViewRoutes),
-        ...formSubmissionsRoutes,
-        ...Object.values(systemLogsRoutes),
-        ...Object.values(wasteBalanceRoutes),
-        ...wasteBalanceRoutesByNaturalKey,
-        ...Object.values(wasteRecordsExportRoutes),
-        ...Object.values(publicRegisterRoutes),
-        ...Object.values(tonnageMonitoringRoutes),
-        ...Object.values(prnTonnageRoutes),
-        ...Object.values(wasteBalanceAvailabilityRoutes),
-        ...Object.values(linkedOrganisationsRoutes),
-        packagingRecyclingNotesAccept,
-        packagingRecyclingNotesList,
-        packagingRecyclingNotesReject,
-        ...prnRoutesByNaturalKey,
-        ...summaryLogUploadsReportRoutes,
-        adminPackagingRecyclingNotesList,
-        ...prnAdminCancellationRoutesBehindFeatureFlag,
-        ...Object.values(overseasSitesRoutes),
-        ...Object.values(marketInsightsRoutes),
-        ...Object.values(reportsRoutes),
-        ...reportRoutesByNaturalKey,
-        adminMeGet,
-        dlqMessagesGet,
-        dlqPurgePost
-      ])
+      server.route(appRoutes(options.config))
     }
   }
 }
 
-export { router }
+export { appRoutes, router }

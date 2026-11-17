@@ -8,7 +8,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
@@ -121,7 +121,7 @@ const createServer = async ({
     toSummaryLogFileId(FILE_ID_2027)
   )
 
-  return createTestServer({
+  return createAppTestServer({
     repositories: {
       organisationAdministrationRepository: () => legacyOrganisationsRepository,
       organisationReadRepository: createInMemoryOrganisationReadRepository([

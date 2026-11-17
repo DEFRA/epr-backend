@@ -14,7 +14,7 @@ import { createInMemoryOrsImportsRepository } from '#overseas-sites/imports/repo
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { config } from '#root/config.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -42,7 +42,7 @@ describe(`${orsImportCreatePath} route`, () => {
       uploadsRepository = createInMemoryUploadsRepository()
       originalInitiateOrsImport = uploadsRepository.initiateOrsImport
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           orsImportsRepository: () => orsImportsRepository,
           uploadsRepository

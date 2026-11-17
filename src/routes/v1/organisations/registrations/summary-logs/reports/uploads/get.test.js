@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { summaryLogUploadsReportPath } from './get.js'
@@ -26,7 +26,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   beforeAll(async () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationReadRepository: () =>
           createInMemoryOrganisationReadRepository(servedOrganisations)(),

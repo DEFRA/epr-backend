@@ -6,7 +6,7 @@ import { MongoClient, ObjectId } from 'mongodb'
 
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
@@ -75,7 +75,10 @@ const it =
               }),
               reportsRepository: (await createReportsRepository(mongoDb))()
             }
-            const server = await createTestServer({ db: mongoDb, repositories })
+            const server = await createAppTestServer({
+              db: mongoDb,
+              repositories
+            })
 
             await use(
               /** @type {TestServerWithRealDb} */ (

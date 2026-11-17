@@ -4,7 +4,7 @@ import {
   buildRegistration,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import {
@@ -32,7 +32,7 @@ describe('GET /v1/organisations/{id}', () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }
@@ -113,7 +113,7 @@ describe('GET /v1/organisations/{id}', () => {
       const legacyRepositoryFactory = createInMemoryOrganisationsRepository([
         org
       ])
-      const legacyServer = await createTestServer({
+      const legacyServer = await createAppTestServer({
         repositories: {
           organisationAdministrationRepository: legacyRepositoryFactory
         }
@@ -234,7 +234,7 @@ describe('GET /v1/organisations/{id}', () => {
         const factory = createInMemoryOrganisationsRepository([])
         basicAuthRepository = factory()
 
-        basicAuthServer = await createTestServer({
+        basicAuthServer = await createAppTestServer({
           config: {
             basicAuth: {
               username: 'basic-auth-user',

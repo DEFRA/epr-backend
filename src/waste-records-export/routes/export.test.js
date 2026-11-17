@@ -23,7 +23,7 @@ import {
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -142,7 +142,7 @@ const createServerWithRepos = async ({
   const readsLegacy = () =>
     Promise.reject(new Error('read the legacy repository'))
 
-  return createTestServer({
+  return createAppTestServer({
     repositories: {
       organisationAdministrationRepository: () => ({ findAll: readsLegacy }),
       organisationReadRepository:

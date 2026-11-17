@@ -5,7 +5,7 @@ import {
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -61,7 +61,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       period: 1
     })
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           org

@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator, asRegulator, asSupport } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
@@ -18,7 +18,7 @@ describe('GET /organisations', () => {
   let server
 
   beforeEach(async () => {
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           acme,

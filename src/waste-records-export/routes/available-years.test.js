@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import { config } from '#root/config.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import {
   asRegulator,
   asServiceMaintainer,
@@ -25,7 +25,7 @@ describe('GET /waste-records/years', () => {
 
   it('lists the years waste records can be held for, newest first', async () => {
     config.set('openNextYear', true)
-    const server = await createTestServer()
+    const server = await createAppTestServer()
 
     const response = await server.inject({
       method: 'GET',
@@ -40,7 +40,7 @@ describe('GET /waste-records/years', () => {
   })
 
   it('serves a regulator', async () => {
-    const server = await createTestServer()
+    const server = await createAppTestServer()
 
     const response = await server.inject({
       method: 'GET',
@@ -53,7 +53,7 @@ describe('GET /waste-records/years', () => {
   })
 
   it('returns 401 when not authenticated', async () => {
-    const server = await createTestServer()
+    const server = await createAppTestServer()
 
     const response = await server.inject({ method: 'GET', url })
 
@@ -61,7 +61,7 @@ describe('GET /waste-records/years', () => {
   })
 
   it('returns 403 for a caller holding neither read scope', async () => {
-    const server = await createTestServer()
+    const server = await createAppTestServer()
 
     const response = await server.inject({
       method: 'GET',

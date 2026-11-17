@@ -7,7 +7,7 @@ import {
   buildLinkedDefraOrg,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -28,7 +28,7 @@ describe(`GET ${linkedOrganisationsGetAllPath}`, () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationAdministrationRepository = organisationsRepositoryFactory()
 
-    server = await createTestServer({
+    server = await createAppTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory
       }

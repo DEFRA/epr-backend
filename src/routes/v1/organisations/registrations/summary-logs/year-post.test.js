@@ -21,7 +21,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -68,7 +68,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     beforeAll(async () => {
       uploadsRepository = createInMemoryUploadsRepository()
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
@@ -209,7 +209,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         }
       })
 
-      server = await createTestServer({
+      server = await createAppTestServer({
         repositories: {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),

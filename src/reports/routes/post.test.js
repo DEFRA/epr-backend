@@ -12,7 +12,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import { createAppTestServer } from '#test/create-app-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
@@ -207,7 +207,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       await seedRepositories(org, registration, accreditationRecord, rows)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
 
-    const server = await createTestServer({
+    const server = await createAppTestServer({
       repositories: {
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           readOrganisationOf(org, registration, accreditationRecord)
