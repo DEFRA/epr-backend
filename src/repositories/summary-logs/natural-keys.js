@@ -11,11 +11,7 @@
  */
 export const keyedBy =
   ({ organisationNumber, registrationNumber }) =>
-  ({
-    id,
-    version,
-    summaryLog: { organisationId: _o, registrationId: _r, ...summaryLog }
-  }) => ({
+  ({ id, version, summaryLog }) => ({
     id,
     version,
     summaryLog: { ...summaryLog, organisationNumber, registrationNumber }

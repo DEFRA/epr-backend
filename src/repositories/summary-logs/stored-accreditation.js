@@ -19,16 +19,18 @@ const accreditationOf = (id, { accreditationNumber }) => {
 }
 
 /**
- * Reads a stored summary log as the domain declares it, naming its
- * accreditation by number alone.
+ * Reads a stored summary log as the domain declares it, by its numbers alone,
+ * dropping any database ids an older one holds.
  *
  * @template {StoredSummaryLog} T
  * @param {string} id
  * @param {T} stored
- * @returns {Omit<T, 'accreditationId' | 'accreditationNumber'> & SummaryLogAccreditation}
+ * @returns {Omit<T, 'organisationId' | 'registrationId' | 'accreditationId' | 'accreditationNumber'> & SummaryLogAccreditation}
  */
 export const readStoredSummaryLog = (id, stored) => {
   const {
+    organisationId: _organisationId,
+    registrationId: _registrationId,
     accreditationId: _id,
     accreditationNumber: _number,
     ...summaryLog

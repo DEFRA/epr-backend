@@ -44,7 +44,6 @@ const ADMINISTRATION_PORT_MODULES = [
   // this list once it reads through the organisation read repository.
   'src/overseas-sites/routes/accreditation-list.js',
   'src/overseas-sites/routes/registration-list.js',
-  'src/packaging-recycling-notes/routes/list.js',
   'src/routes/organisations/at-natural-keys.js',
   'src/routes/organisations/natural-keys.js'
 ]

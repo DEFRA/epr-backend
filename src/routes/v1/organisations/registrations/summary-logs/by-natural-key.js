@@ -99,29 +99,6 @@ const submitLocatedAtNaturalKeys = {
   }
 }
 
-/**
- * Answers without the database ids the stored summary log carries: these
- * routes address the organisation, registration and accreditation by their
- * domain keys.
- *
- * @param {NaturalKeyRoute} route
- * @param {string[]} ids
- * @returns {NaturalKeyRoute}
- */
-const withoutDatabaseIds = (route, ids) => ({
-  ...route,
-  handler: async (request, h) => {
-    const response = /** @type {ResponseObject} */ (
-      await route.handler(request, h)
-    )
-    const body = /** @type {Record<string, unknown>} */ (response.source)
-    for (const id of ids) {
-      delete body[id]
-    }
-    return response
-  }
-})
-
 const ownSummaryLog = { before: assertSummaryLogMatchesPath }
 
 /**
@@ -157,10 +134,7 @@ export const summaryLogRoutesByNaturalKey = [
     ownSummaryLog
   ),
   atSummaryLogKeys(
-    withoutDatabaseIds(summaryLogDocument, [
-      'organisationId',
-      'registrationId'
-    ]),
+    summaryLogDocument,
     `${summaryLog}/document`,
     summaryLogParams,
     ownSummaryLog
