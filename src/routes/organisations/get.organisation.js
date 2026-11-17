@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { openYearSchema } from '#common/validation/year-schema.js'
-import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
+import { isRelevantYearOpen } from '#packaging-recycling-notes/index.js'
 import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
 
