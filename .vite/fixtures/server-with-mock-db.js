@@ -28,7 +28,7 @@ import { onUnhandledFrame } from '#vite/setup-msw.js'
  *
  * This is a temporary fixture for legacy apply routes that directly use MongoDB
  * instead of repositories. Once these routes are refactored to use repositories,
- * delete this file and use createTestServer() with in-memory repositories instead.
+ * delete this file and use createAppTestServer() or the module's own test server instead.
  *
  * ~10x faster than testServerFixture because it skips MongoDB startup.
  *

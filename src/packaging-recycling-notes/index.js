@@ -20,3 +20,4 @@ export { createPackagingRecyclingNotesRepository } from './repository/mongodb.js
 // Route exports
 export { packagingRecyclingNotesCreate } from './routes/post.js'
 export { packagingRecyclingNotesUpdateStatus } from './routes/status.js'
+export { packagingRecyclingNotesRoutes } from './routes/index.js'

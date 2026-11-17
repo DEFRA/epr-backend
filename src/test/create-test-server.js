@@ -52,7 +52,9 @@ import { getConfig } from '#root/config.js'
 
 /**
  * A plugin that registers a dependency of the routes, such as a repository.
- * Some plugins need the server as its plugins have decorated it.
+ * Some plugins need the server as its plugins have decorated it. A repository
+ * override replaces the plugin whose name is the override's key, so a plugin
+ * takes the name of the dependency it registers.
  *
  * @typedef {Plugin<void> | { name: string, register: (server: Server & HapiServer) => void }} DependencyPlugin
  */
