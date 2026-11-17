@@ -29,12 +29,7 @@ const downloadAuth = {
  */
 const serveFile = (idOf, sign) => async (request, h) => {
   const { summaryLogsRepository, logger } = request
-  const {
-    organisationId,
-    registrationId,
-    organisationNumber,
-    registrationNumber
-  } = request.params
+  const { organisationNumber, registrationNumber } = request.params
   const id = idOf(request.params)
 
   const { url, accreditationNumber } = await sign(
@@ -51,7 +46,7 @@ const serveFile = (idOf, sign) => async (request, h) => {
   })
 
   logger.info({
-    message: `Summary log file downloaded for summaryLogId: ${id}, organisationId: ${organisationId}, registrationId: ${registrationId}`,
+    message: `Summary log file downloaded for summaryLogId: ${id}, organisationNumber: ${organisationNumber}, registrationNumber: ${registrationNumber}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,

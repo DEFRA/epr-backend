@@ -20,6 +20,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -145,15 +146,14 @@ describe('summary-log routes by natural key', () => {
   /** @type {SummaryLogsRepository} */
   let summaryLogsRepository
 
-  beforeEach(async () => {
-    uploadsRepository = createInMemoryUploadsRepository()
-    summaryLogsRepository =
-      createInMemorySummaryLogsRepository()(createMockLogger())
-
-    server = await createTestServer({
+  /** @param {object[]} legacyOrganisations */
+  const startServer = (legacyOrganisations) =>
+    createTestServer({
       repositories: {
         organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
+          createInMemoryOrganisationsRepository(
+            legacyOrganisations.map((legacy) => partialMock(legacy))
+          ),
         organisationReadRepository: createInMemoryOrganisationReadRepository([
           servedOrganisation
         ]),
@@ -167,6 +167,13 @@ describe('summary-log routes by natural key', () => {
         }
       }
     })
+
+  beforeEach(async () => {
+    uploadsRepository = createInMemoryUploadsRepository()
+    summaryLogsRepository =
+      createInMemorySummaryLogsRepository()(createMockLogger())
+
+    server = await startServer([organisation])
   })
 
   afterEach(async () => {
@@ -422,13 +429,10 @@ describe('summary-log routes by natural key', () => {
     })
 
     it.each([
-      ['another organisation', { organisationId: 'another-organisation' }],
+      ['another organisation', { organisationNumber: '999999' }],
       [
         'another registration',
-        {
-          registrationId: registeredOnlyLog.registrationId,
-          registrationNumber: registeredOnlyLog.registrationNumber
-        }
+        { registrationNumber: registeredOnlyLog.registrationNumber }
       ]
     ])('is not found when it belongs to %s', async (_, overrides) => {
       const summaryLogId = toSummaryLogId(await seedOwn(overrides))
@@ -451,6 +455,104 @@ describe('summary-log routes by natural key', () => {
       expect(responses.map(({ statusCode }) => statusCode)).toEqual(
         Array(4).fill(StatusCodes.NOT_FOUND)
       )
+    })
+
+    it.each([
+      [
+        'another organisation',
+        { organisationNumber: toOrganisationNumber('999999') }
+      ],
+      [
+        'another registration',
+        { registrationNumber: registeredOnlyLog.registrationNumber }
+      ]
+    ])(
+      'has no file downloaded by its file id when it belongs to %s',
+      async (_, overrides) => {
+        const fileId = `file-${randomUUID()}`
+        await seed(
+          { ...accreditedLog, ...overrides, file: { id: fileId } },
+          summaryLogFactory.submitted
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${summaryLogs}/files/${fileId}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      }
+    )
+
+    it('is found under its numbers whatever database ids it holds', async () => {
+      const summaryLogId = toSummaryLogId(
+        await seedOwn({
+          organisationId: 'another-organisation',
+          registrationId: 'another-registration'
+        })
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/${summaryLogId}`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    describe('without consulting the legacy organisations repository', () => {
+      beforeEach(async () => {
+        await server.stop()
+        server = await startServer([])
+      })
+
+      it.each([
+        { method: 'GET', suffix: '', auth: asOperator(), status: 200 },
+        { method: 'POST', suffix: '/submit', auth: asOperator(), status: 200 },
+        {
+          method: 'GET',
+          suffix: '/file',
+          auth: asServiceMaintainer(),
+          status: 302
+        },
+        {
+          method: 'GET',
+          suffix: '/document',
+          auth: asServiceMaintainer(),
+          status: 200
+        }
+      ])(
+        'is served by $method $suffix',
+        async ({ method, suffix, auth, status }) => {
+          const summaryLogId = toSummaryLogId(await seedOwn())
+
+          const response = await server.inject({
+            method,
+            url: `${summaryLogs}/${summaryLogId}${suffix}`,
+            ...auth
+          })
+
+          expect(response.statusCode).toBe(status)
+        }
+      )
+
+      it('has a file downloaded by its file id', async () => {
+        const fileId = 'file-read-model-only'
+        await seed(
+          { ...accreditedLog, file: { id: fileId } },
+          summaryLogFactory.submitted
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${summaryLogs}/files/${fileId}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+      })
     })
   })
 
