@@ -3,7 +3,7 @@ import {
   SEVERITY,
   accreditationTarget,
   createIssue
-} from '#domain/organisations/validation/issue.js'
+} from '#repositories/organisations/validation/issue.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Accreditation } from '#domain/organisations/accreditation.js' */
@@ -25,7 +25,7 @@ const isNumbered = (accreditation) =>
  * status without a number was written before that rule, or around it.
  *
  * @param {Organisation} org
- * @returns {import('#domain/organisations/validation/issue.js').ValidationIssue[]}
+ * @returns {import('#repositories/organisations/validation/issue.js').ValidationIssue[]}
  */
 const evaluate = (org) =>
   org.accreditations

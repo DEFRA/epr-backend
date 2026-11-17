@@ -9,29 +9,7 @@ import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material } from '#domain/organisations/model.js' */
-/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
-/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
-
-/**
- * Returns the accreditationNumber for the registration's linked accreditation,
- * or '' when no active (approved/suspended) accreditation is found.
- *
- * @param {{ accreditationId?: string | null }} registration
- * @param {{ accreditations: Array<{ id: string, status: StoredAccreditationStatus, accreditationNumber?: string | null }> }} org
- * @returns {string}
- */
-export function resolveAccreditationNumber(registration, org) {
-  if (!registration.accreditationId) {
-    return ''
-  }
-  const accreditation = org.accreditations.find(
-    (a) =>
-      a.id === registration.accreditationId &&
-      ACTIVE_ACCREDITATION_STATUSES.has(a.status)
-  )
-  return accreditation?.accreditationNumber ?? ''
-}
 
 /**
  * @typedef {{ accreditation: { status: StoredAccreditationStatus } | null }} AccreditationLink
@@ -39,7 +17,7 @@ export function resolveAccreditationNumber(registration, org) {
 
 /**
  * Returns true when the registration is linked to an accreditation that is
- * live (approved or suspended). Presence of accreditationId alone is not
+ * live (approved or suspended). A linked accreditation alone is not
  * sufficient — an accreditation in 'created', 'rejected', or 'cancelled'
  * state has never been active and must be treated as registered-only.
  *
@@ -93,47 +71,4 @@ export function resolveMaterial(record) {
     )
   }
   return process
-}
-
-/**
- * The organisation's approved or suspended accreditation with the number, or
- * null when there is none or the number is null.
- *
- * @param {AccreditationNumber | null} accreditationNumber
- * @param {{ accreditations: Array<{ status: StoredAccreditationStatus } & Accreditation> }} org
- * @returns {Accreditation | null}
- */
-export function resolveAccreditationByNumber(accreditationNumber, org) {
-  if (accreditationNumber === null) {
-    return null
-  }
-  return (
-    org.accreditations.find(
-      (a) =>
-        a.accreditationNumber === accreditationNumber &&
-        ACTIVE_ACCREDITATION_STATUSES.has(a.status)
-    ) ?? null
-  )
-}
-
-/**
- * Returns the accreditations the registration holds.
- *
- * `registration.accreditationId` names at most one, so the result holds no
- * more than one entry. The result is a collection because a registration will
- * hold several once the model carries them.
- *
- * @param {{ accreditationId?: string | null }} registration
- * @param {{ accreditations: Accreditation[] }} org
- * @returns {Accreditation[]}
- */
-export function accreditationsForRegistration(registration, org) {
-  const { accreditationId } = registration
-  if (!accreditationId) {
-    return []
-  }
-
-  return org.accreditations.filter(
-    (accreditation) => accreditation.id === accreditationId
-  )
 }

@@ -2,7 +2,7 @@ import {
   SEVERITY,
   createIssue,
   registrationTarget
-} from '#domain/organisations/validation/issue.js'
+} from '#repositories/organisations/validation/issue.js'
 import {
   getRegAccKey,
   isAccreditationForRegistration
@@ -16,7 +16,7 @@ const SEVERITY_LEVEL = SEVERITY.ERROR
 
 /**
  * @param {Organisation} org
- * @returns {import('#domain/organisations/validation/issue.js').ValidationIssue[]}
+ * @returns {import('#repositories/organisations/validation/issue.js').ValidationIssue[]}
  */
 const evaluate = (org) => {
   const accreditationsById = new Map(

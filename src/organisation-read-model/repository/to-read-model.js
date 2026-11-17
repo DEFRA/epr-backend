@@ -4,10 +4,7 @@ import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { lastDayOfYear } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import {
-  accreditationsForRegistration,
-  resolveMaterial
-} from '#domain/organisations/registration-utils.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
@@ -15,6 +12,7 @@ import {
   statusOn
 } from '#organisation-read-model/domain/model.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
+import { accreditationsForRegistration } from './accreditations-for-registration.js'
 import { organisationInYear } from './organisation-in-year.js'
 import {
   timelineStatusOf,

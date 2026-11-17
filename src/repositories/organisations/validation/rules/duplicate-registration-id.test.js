@@ -3,7 +3,7 @@ import { duplicateRegistrationIdRule } from './duplicate-registration-id.js'
 import {
   SEVERITY,
   TARGET_TYPE
-} from '#domain/organisations/validation/issue.js'
+} from '#repositories/organisations/validation/issue.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 

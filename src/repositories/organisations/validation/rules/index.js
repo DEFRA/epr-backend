@@ -10,9 +10,9 @@ import { unnumberedAccreditationRule } from './unnumbered-accreditation.js'
 /**
  * @typedef {{
  *   code: string,
- *   severity: import('#domain/organisations/validation/issue.js').IssueSeverity,
+ *   severity: import('#repositories/organisations/validation/issue.js').IssueSeverity,
  *   evaluate: (org: import('#domain/organisations/model.js').Organisation) =>
- *     import('#domain/organisations/validation/issue.js').ValidationIssue[]
+ *     import('#repositories/organisations/validation/issue.js').ValidationIssue[]
  * }} ValidationRule
  */
 

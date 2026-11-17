@@ -2,8 +2,8 @@ import {
   SEVERITY,
   createIssue,
   accreditationTarget
-} from '#domain/organisations/validation/issue.js'
-import { findDuplicates } from '#domain/organisations/validation/find-duplicates.js'
+} from '#repositories/organisations/validation/issue.js'
+import { findDuplicates } from '#repositories/organisations/validation/find-duplicates.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
@@ -12,7 +12,7 @@ const SEVERITY_LEVEL = SEVERITY.ERROR
 
 /**
  * @param {Organisation} org
- * @returns {import('#domain/organisations/validation/issue.js').ValidationIssue[]}
+ * @returns {import('#repositories/organisations/validation/issue.js').ValidationIssue[]}
  */
 const evaluate = (org) =>
   findDuplicates(org.accreditations.map((acc) => acc.id)).map((id) =>

@@ -1,10 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { validateOrganisation } from '#domain/organisations/validation/validate-organisation.js'
+import { validateOrganisation } from '#repositories/organisations/validation/validate-organisation.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { ValidationIssue } from '#domain/organisations/validation/issue.js' */
+/** @import { ValidationIssue } from '#repositories/organisations/validation/issue.js' */
 
 const LOCK_NAME = 'organisation-validation-sweep'
 

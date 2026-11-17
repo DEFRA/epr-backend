@@ -1,4 +1,4 @@
-import { rules } from '#domain/organisations/validation/rules/index.js'
+import { rules } from '#repositories/organisations/validation/rules/index.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
@@ -10,7 +10,7 @@ import { rules } from '#domain/organisations/validation/rules/index.js'
  * raises.
  *
  * @param {Organisation} org
- * @returns {import('#domain/organisations/validation/issue.js').ValidationIssue[]}
+ * @returns {import('#repositories/organisations/validation/issue.js').ValidationIssue[]}
  */
 export const validateOrganisation = (org) =>
   rules.flatMap((rule) => rule.evaluate(org))

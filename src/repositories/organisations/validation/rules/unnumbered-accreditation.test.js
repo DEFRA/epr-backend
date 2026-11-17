@@ -4,7 +4,7 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import {
   SEVERITY,
   TARGET_TYPE
-} from '#domain/organisations/validation/issue.js'
+} from '#repositories/organisations/validation/issue.js'
 
 /** @import { StoredAccreditationStatus, Organisation } from '#domain/organisations/model.js' */
 

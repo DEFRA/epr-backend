@@ -8,7 +8,7 @@ import {
   buildAccreditation,
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
-import { runOrganisationValidationSweep } from './run-organisation-validation-sweep.js'
+import { runOrganisationValidationSweep } from './run-sweep.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
