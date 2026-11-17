@@ -82,6 +82,7 @@ describe('mock-repositories', () => {
         'findByStatus',
         'sumTonnageByAccreditation',
         'updateStatus',
+        'updateWatermark',
         'persistProjection'
       ]
     },

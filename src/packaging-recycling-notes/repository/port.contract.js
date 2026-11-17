@@ -5,6 +5,7 @@ import { testFindByStatusBehaviour } from './contract/find-by-status.contract.js
 import { testOptimisticConcurrency } from './contract/optimistic-concurrency.contract.js'
 import { testPersistProjectionBehaviour } from './contract/persistProjection.contract.js'
 import { testUpdateStatusBehaviour } from './contract/update-status.contract.js'
+import { testUpdateWatermarkBehaviour } from './contract/update-watermark.contract.js'
 import { testPrnNumberUniqueness } from './contract/prn-number-uniqueness.contract.js'
 import { testSumTonnageByAccreditationBehaviour } from './contract/sum-tonnage-by-accreditation.contract.js'
 
@@ -19,6 +20,7 @@ export const testPackagingRecyclingNotesRepositoryContract = (
     testOptimisticConcurrency(repositoryFactory)
     testPersistProjectionBehaviour(repositoryFactory)
     testUpdateStatusBehaviour(repositoryFactory)
+    testUpdateWatermarkBehaviour(repositoryFactory)
     testPrnNumberUniqueness(repositoryFactory)
     testSumTonnageByAccreditationBehaviour(repositoryFactory)
   })
