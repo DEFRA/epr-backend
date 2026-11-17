@@ -842,7 +842,7 @@ describe('report routes by natural key', () => {
         calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER)
       )
       const registrationDoesNotExist = await server.inject(
-        calendar('made-up-reg-number')
+        calendar('R26ER9999999999PL')
       )
 
       expect(underItsOwner.statusCode).toBe(StatusCodes.OK)

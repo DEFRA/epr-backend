@@ -130,7 +130,7 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
   // Registered-only exporter meta (no accreditation number, quarterly cadence).
   const registeredOnlyExporterMeta = {
     REGISTRATION_NUMBER: {
-      value: 'REG-123',
+      value: 'REG123',
       location: { sheet: 'Cover', row: 1, column: 'B' }
     },
     PROCESSING_TYPE: {

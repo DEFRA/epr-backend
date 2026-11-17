@@ -509,7 +509,7 @@ export const createUploadPayload = (
 
 /** The natural keys every organisation these helpers build is served under. */
 export const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500999')
-export const TEST_REGISTRATION_NUMBER = 'REG-123'
+export const TEST_REGISTRATION_NUMBER = 'REG123'
 export const UPLOAD_YEAR = toYear(2026)
 
 export const registrationUrl = `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}`
@@ -589,7 +589,7 @@ export const pollForValidation = (server, summaryLogId) =>
 
 export const createStandardMeta = (processingType) => ({
   REGISTRATION_NUMBER: {
-    value: 'REG-123',
+    value: 'REG123',
     location: { sheet: 'Cover', row: 1, column: 'B' }
   },
   PROCESSING_TYPE: {
@@ -612,7 +612,7 @@ export const createStandardMeta = (processingType) => ({
 
 export const createWasteBalanceMeta = (processingType) => ({
   REGISTRATION_NUMBER: {
-    value: 'REG-123',
+    value: 'REG123',
     location: { sheet: 'Data', row: 1, column: 'B' }
   },
   PROCESSING_TYPE: {

@@ -3,6 +3,7 @@ import Joi from 'joi'
 
 import {
   ORGANISATION_NUMBER_PATTERN,
+  REGISTRATION_NUMBER_PATTERN,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -41,7 +42,10 @@ export const organisationParams = {
 }
 export const registrationParams = {
   ...organisationParams,
-  registrationNumber: Joi.string().custom(toRegistrationNumber).required()
+  registrationNumber: Joi.string()
+    .pattern(REGISTRATION_NUMBER_PATTERN)
+    .custom(toRegistrationNumber)
+    .required()
 }
 
 /**

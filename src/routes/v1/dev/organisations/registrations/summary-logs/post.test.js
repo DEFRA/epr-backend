@@ -26,7 +26,7 @@ const ACCREDITED_YEAR = 2026
 const DEV_ENDPOINTS_ON = { featureFlags: { devEndpoints: true } }
 
 const META = {
-  REGISTRATION_NUMBER: 'REG-123',
+  REGISTRATION_NUMBER: 'REG123',
   MATERIAL: 'Paper_and_board',
   ACCREDITATION_NUMBER: 'ACC-123'
 }
@@ -248,7 +248,7 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
       )
     expect(stored?.summaryLog).toMatchObject({
       organisationNumber,
-      registrationNumber: 'REG-123',
+      registrationNumber: 'REG123',
       accreditationNumber: 'ACC-123'
     })
   })
