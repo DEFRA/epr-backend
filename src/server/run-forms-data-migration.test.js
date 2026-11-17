@@ -4,12 +4,12 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
+import { createSystemLogsRepository } from '#system-logs/index.js'
 import { partialMock } from '#test/type-helpers.js'
 
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
+/** @import {SystemLogsRepository} from '#system-logs/repository/port.js' */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -27,7 +27,7 @@ vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
 }))
 
-vi.mock('#repositories/system-logs/mongodb.js', () => ({
+vi.mock('#system-logs/repository/mongodb.js', () => ({
   createSystemLogsRepository: vi.fn()
 }))
 

@@ -119,6 +119,6 @@ export const reportsUnsubmit = {
 /**
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '#system-logs/repository/port.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */

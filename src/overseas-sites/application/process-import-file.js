@@ -7,7 +7,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { OrganisationNumber } from '#domain/organisations/numbers.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
- * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository, SystemLogHumanActor } from '#system-logs/repository/port.js'
  */
 
 /**

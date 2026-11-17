@@ -25,8 +25,8 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/routes/v1/organisations/get-by-id.js',
   'src/routes/v1/organisations/put-by-id.js',
   'src/routes/v1/organisations/registration-status-history.js',
-  'src/routes/v1/system-logs/get-search.js',
   'src/server/queue-consumer/ors-import-commands.js',
+  'src/system-logs/routes/get-search.js',
 
   // Data loading, seeding, resets and diagnostics
   'src/forms-submission-data/migration/migration-delta-calculator.js',

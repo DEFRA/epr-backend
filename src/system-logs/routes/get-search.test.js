@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createSystemLogsRepository } from '#system-logs/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -17,7 +17,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 describe('GET /v1/system-logs/search', () => {
   setupAuthContext()
   let server
-  /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */
+  /** @type {import('#system-logs/repository/port.js').SystemLogsRepository} */
   let systemLogsRepository
   /** @type {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} */
   let organisationAdministrationRepository

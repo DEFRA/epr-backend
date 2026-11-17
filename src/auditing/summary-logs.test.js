@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   toAccreditationNumber,
@@ -31,7 +31,7 @@ describe('auditSummaryLogSubmit', () => {
   let systemLogsRepository
 
   const createMockRequest = () =>
-    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#system-logs/repository/port.js').SystemLogsRepository }} */ ({
       auth: {
         credentials: {
           id: userId,
@@ -45,7 +45,7 @@ describe('auditSummaryLogSubmit', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-12-22T10:00:00.000Z'))
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
   })
 
   afterEach(() => {
@@ -119,9 +119,9 @@ describe('auditing a summary log under an accreditation with no database id', ()
   })
 
   it('records the accreditation by its number', async () => {
-    const systemLogsRepository = createSystemLogsRepository()(logger)
+    const systemLogsRepository = createInMemorySystemLogsRepository()(logger)
     const request =
-      /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+      /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#system-logs/repository/port.js').SystemLogsRepository }} */ ({
         auth: {
           credentials: {
             id: 'user',
@@ -157,7 +157,7 @@ describe('auditSummaryLogDownload', () => {
   let systemLogsRepository
 
   const createMockRequest = () =>
-    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#system-logs/repository/port.js').SystemLogsRepository }} */ ({
       auth: {
         credentials: {
           id: userId,
@@ -171,7 +171,7 @@ describe('auditSummaryLogDownload', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-12-22T10:00:00.000Z'))
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
   })
 
   afterEach(() => {

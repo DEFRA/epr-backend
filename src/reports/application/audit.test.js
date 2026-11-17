@@ -1,7 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { randomBytes } from 'crypto'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
@@ -15,7 +15,7 @@ import {
  * @import { Report } from '#reports/repository/port.js'
  */
 
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+/** @typedef {import('#system-logs/repository/port.js').SystemLogsRepository} SystemLogsRepository */
 
 /**
  * Casts a deliberately-partial report fixture to the full {@link Report} type.
@@ -75,7 +75,7 @@ const user = {
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2025-06-01T12:00:00.000Z'))
-  systemLogsRepository = createSystemLogsRepository()(logger)
+  systemLogsRepository = createInMemorySystemLogsRepository()(logger)
 })
 
 afterEach(() => {

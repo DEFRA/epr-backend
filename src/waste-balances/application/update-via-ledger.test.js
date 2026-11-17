@@ -5,7 +5,7 @@ import { LEDGER_EVENT_KIND } from '../repository/ledger-schema.js'
 import { LedgerSlotConflictError } from '../repository/ledger-port.js'
 import { performUpdateViaLedger } from './update-via-ledger.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { withNumbers } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
@@ -100,7 +100,7 @@ describe('performUpdateViaLedger', () => {
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
     commitSummaryLogSubmittedEvent = createWasteBalanceService(
       ledgerRepository,
       systemLogsRepository

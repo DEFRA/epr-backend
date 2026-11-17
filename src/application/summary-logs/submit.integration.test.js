@@ -25,7 +25,7 @@ import {
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import {
   REPROCESSOR_RECEIVED_HEADERS,
@@ -436,7 +436,7 @@ describe('submitSummaryLog resubmission flag source', () => {
       ...deps,
       onSummaryLogUploaded: createOnSummaryLogUploaded({
         reportsRepository,
-        systemLogsRepository: createSystemLogsRepository()(deps.logger)
+        systemLogsRepository: createInMemorySystemLogsRepository()(deps.logger)
       })
     })
 
@@ -500,7 +500,7 @@ describe('submitSummaryLog stale flagging', () => {
       ...deps,
       onSummaryLogUploaded: createOnSummaryLogUploaded({
         reportsRepository,
-        systemLogsRepository: createSystemLogsRepository()(deps.logger)
+        systemLogsRepository: createInMemorySystemLogsRepository()(deps.logger)
       })
     })
 

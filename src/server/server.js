@@ -37,7 +37,7 @@ import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submiss
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/repository/mongodb.plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
-import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
+import { mongoSystemLogsRepositoryPlugin } from '#system-logs/index.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'

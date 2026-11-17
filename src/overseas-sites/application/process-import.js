@@ -19,7 +19,7 @@ import { processImportFile } from './process-import-file.js'
  * @import { OrsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
- * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository, SystemLogHumanActor } from '#system-logs/repository/port.js'
  * @import { OrsFileResult } from './process-import-file.js'
  */
 

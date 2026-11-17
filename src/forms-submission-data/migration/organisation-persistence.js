@@ -9,7 +9,7 @@ import { toRepositoryOrganisation } from './organisation-number.js'
 
 /**
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/repository/port.js'
  * @import {OrganisationMigrationItem} from '#formsubmission/types.js'
  */
 

@@ -166,7 +166,7 @@ const createLedgerCommands = (ledgerRepository) => {
  * the rest, as `readBalanceForUpdate` describes.
  *
  * @param {import('../repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [systemLogsRepository]
+ * @param {import('#system-logs/repository/port.js').SystemLogsRepository} [systemLogsRepository]
  *   Sink for the balance-update audit trail. Omitted outside the summary-log
  *   write path, where the audit is not emitted.
  */

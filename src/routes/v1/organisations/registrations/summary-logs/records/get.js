@@ -17,7 +17,7 @@ import { streamSubmissionCsvToReadable } from '#waste-records-export/index.js'
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { KeyedSummaryLog, KeyedSummaryLogWithId, SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { SystemLogsRepository } from '#system-logs/repository/port.js' */
 /** @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js' */
 
 const CSV_EXTENSION = 'csv'

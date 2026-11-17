@@ -1,5 +1,5 @@
 import { auditOrganisationsDiscovery } from './organisations-discovery.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { randomBytes } from 'crypto'
@@ -19,7 +19,7 @@ describe('auditOrganisationsDiscovery', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
   })
 
   afterEach(() => {
@@ -28,7 +28,7 @@ describe('auditOrganisationsDiscovery', () => {
   })
 
   const createMockRequest = () =>
-    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#system-logs/repository/port.js').SystemLogsRepository }} */ ({
       systemLogsRepository,
       auth: {
         credentials: {

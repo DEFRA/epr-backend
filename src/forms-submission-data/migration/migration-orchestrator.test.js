@@ -17,7 +17,7 @@ import {
 /**
  * @import { FormSubmissionsRepository } from '#repositories/form-submissions/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '#system-logs/repository/port.js'
  * @import { Organisation, Registration, Accreditation } from '#formsubmission/types.js'
  */
 

@@ -1,5 +1,5 @@
 import { auditFormSubmissionLineageMigration } from './form-submission-lineage-migration.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -35,7 +35,7 @@ describe('auditFormSubmissionLineageMigration', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
   })
 
   afterEach(() => {

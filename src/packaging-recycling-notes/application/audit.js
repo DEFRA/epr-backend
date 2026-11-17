@@ -6,7 +6,7 @@ import {
 } from '#root/auditing/helpers.js'
 
 /**
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/repository/port.js'
  * @import {PackagingRecyclingNote} from '#packaging-recycling-notes/domain/model.js'
  */
 

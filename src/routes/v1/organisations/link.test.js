@@ -9,7 +9,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
@@ -104,7 +104,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
   })
@@ -571,7 +571,7 @@ describe('POST /organisations/{organisationNumber}/link', () => {
             repositories: {
               organisationAdministrationRepository: () =>
                 organisationsRepository,
-              systemLogsRepository: createSystemLogsRepository()
+              systemLogsRepository: createInMemorySystemLogsRepository()
             }
           })
         })

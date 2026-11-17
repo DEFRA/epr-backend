@@ -29,7 +29,7 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {AccreditationValidity} params.accreditation
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
+ * @param {import('#system-logs/repository/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
