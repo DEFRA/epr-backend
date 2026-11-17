@@ -187,8 +187,7 @@ describe('summary-log routes by natural key', () => {
    */
 
   /**
-   * Stores a summary log under its ids and the numbers an upload stores
-   * beside them.
+   * Stores a summary log under the numbers an upload stores.
    *
    * @param {SeedOverrides} overrides
    * @param {(overrides: object) => object} build
@@ -261,8 +260,8 @@ describe('summary-log routes by natural key', () => {
           1
         )
         expect(stored.summaryLog).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber: registration.registrationNumber,
           year: YEAR,
           accreditationNumber
         })
@@ -328,7 +327,7 @@ describe('summary-log routes by natural key', () => {
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
-      registrationId: accreditedRegistration.id,
+      registrationNumber: accreditedRegistration.registrationNumber,
       accreditationNumber: null
     })
   })
@@ -423,8 +422,6 @@ describe('summary-log routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
       expect(body).toMatchObject({ year: YEAR, status: 'validated' })
-      expect(body).not.toHaveProperty('organisationId')
-      expect(body).not.toHaveProperty('registrationId')
       expect(body).not.toHaveProperty('accreditationId')
     })
 
@@ -484,23 +481,6 @@ describe('summary-log routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       }
     )
-
-    it('is found under its numbers whatever database ids it holds', async () => {
-      const summaryLogId = toSummaryLogId(
-        await seedOwn({
-          organisationId: 'another-organisation',
-          registrationId: 'another-registration'
-        })
-      )
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `${summaryLogs}/${summaryLogId}`,
-        ...asOperator()
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-    })
 
     describe('without consulting the legacy organisations repository', () => {
       beforeEach(async () => {

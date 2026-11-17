@@ -91,7 +91,7 @@ export const testExpiresAtBehaviour = (it) => {
         const current = await repository.findById(id)
 
         await repository.update(id, current.version, {
-          organisationId: 'updated-org'
+          meta: { MATERIAL: 'Paper' }
         })
 
         const found = await waitForVersion(repository, id, current.version + 1)

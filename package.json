@@ -31,7 +31,6 @@
     "#server/*": "./src/server/*",
     "#summary-log-scope-backfill/*": "./src/summary-log-scope-backfill/*",
     "#test/*": "./src/test/*",
-    "#test-organisation-data-removal/*": "./src/test-organisation-data-removal/*",
     "#vite/*": "./.vite/*",
     "#waste-balances/*": "./src/waste-balances/*",
     "#waste-records/*": "./src/waste-records/*",
