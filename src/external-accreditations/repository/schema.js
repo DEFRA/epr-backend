@@ -25,11 +25,11 @@ export const externalAccreditationSchema = Joi.object({
   }).required(),
   status: Joi.object({
     current: accreditationStatusSchema.required(),
+    lastUpdatedAt: isoDateTimeString().required(),
     timeline: Joi.array()
       .items(
         Joi.object({
           at: isoDateTimeString().required(),
-          updatedAt: isoDateTimeString().required(),
           status: accreditationStatusSchema.required()
         })
       )
