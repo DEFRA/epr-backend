@@ -11,9 +11,11 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
-import { createReportsRepository } from '#reports/repository/mongodb.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
+import {
+  createReportsRepository,
+  buildSubmittedReport,
+  createAccreditedOperatorInserter
+} from '#reports/test-support.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { NATION, REGULATOR } from '#domain/organisations/model.js'

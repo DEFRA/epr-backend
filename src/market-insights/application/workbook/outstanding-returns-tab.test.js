@@ -8,10 +8,12 @@ import {
   TONNAGE_BAND
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  createInMemoryReportsRepository,
+  createAccreditedOperatorInserter,
+  buildSubmittedReport
+} from '#reports/test-support.js'
 import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
-import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildOutstandingReturnsTable } from '#market-insights/application/outstanding-returns.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { addOutstandingReturns } from './outstanding-returns-tab.js'
@@ -32,7 +34,7 @@ const insertAccreditedOperator =
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
+/** @import { AccreditedFor } from '#reports/test-support.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { ReportsRepository } from '#reports/repository/port.js' */
 

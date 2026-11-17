@@ -13,9 +13,9 @@ import {
 } from './contract/test-data.js'
 import {
   ensureLedgerCollection,
-  WASTE_BALANCE_EVENTS_COLLECTION_NAME
-} from '#waste-balances/repository/ledger-mongodb.js'
-import { buildPrnRejectedEvent } from '#waste-balances/repository/ledger-test-data.js'
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME,
+  buildPrnRejectedEvent
+} from '#waste-balances/test-support.js'
 
 import { createDriftQuery } from './drift-query.mongodb.js'
 

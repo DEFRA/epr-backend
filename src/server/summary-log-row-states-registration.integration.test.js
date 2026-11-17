@@ -3,7 +3,7 @@ import { setup as setupMongo, teardown as teardownMongo } from 'vitest-mongodb'
 import { randomUUID } from 'node:crypto'
 
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
+import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/test-support.js'
 
 vi.mock(
   '#adapters/sqs-command-executor/sqs-command-executor.plugin.js',

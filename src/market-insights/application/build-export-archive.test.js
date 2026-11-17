@@ -3,10 +3,10 @@ import unzipper from 'unzipper'
 import { assertPresent } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/test-support.js'
 import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/test-support.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/test-support.js'
 import { buildMarketInsightsExportArchive } from './build-export-archive.js'
 
 const NOW = new Date('2026-09-18T14:15:30.000Z')

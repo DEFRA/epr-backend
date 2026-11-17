@@ -7,14 +7,19 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import {
+  createMongoLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
-import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
-import { createReportsRepository } from '#reports/repository/mongodb.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { reportKeyOf } from '#reports/repository/contract/test-data.js'
+import { createMongoSummaryLogRowStatesRepository } from '#waste-records/test-support.js'
+import {
+  createReportsRepository,
+  buildSubmittedReport,
+  reportKeyOf
+} from '#reports/test-support.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -26,7 +31,6 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildAccreditation,
   buildRegistration

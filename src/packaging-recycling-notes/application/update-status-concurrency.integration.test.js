@@ -22,9 +22,9 @@ import {
 import {
   createMongoLedgerRepository,
   ensureLedgerCollection,
-  WASTE_BALANCE_EVENTS_COLLECTION_NAME
-} from '#waste-balances/repository/ledger-mongodb.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createMockLogger } from '#test/mock-logger.js'

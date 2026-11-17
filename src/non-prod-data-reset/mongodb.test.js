@@ -16,10 +16,10 @@ import { buildDraftPrn } from '#packaging-recycling-notes/repository/contract/te
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
   buildCreateReportParams,
-  uniqueRegistrationNumber
-} from '#reports/repository/contract/test-data.js'
+  uniqueRegistrationNumber,
+  createReportsRepository
+} from '#reports/test-support.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
   createOrganisationBuilders
@@ -30,12 +30,12 @@ import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { buildSystemLog } from '#repositories/system-logs/contract/test-data.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { buildLedgerEvent } from '#waste-balances/test-support.js'
 import {
   buildSummaryLogRowStateEntry,
-  withNumbers
-} from '#waste-records/repository/test-data.js'
-import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
+  withNumbers,
+  createMongoSummaryLogRowStatesRepository
+} from '#waste-records/test-support.js'
 
 import { config } from '#root/config.js'
 import { createNonProdDataReset } from './mongodb.js'

@@ -32,14 +32,14 @@ import {
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import {
+  createInMemoryLedgerRepository,
   buildLedgerEvent,
   buildPrnCreatedEvent,
   buildPrnIssuedEvent,
   buildPrnRejectedEvent
-} from '#waste-balances/repository/ledger-test-data.js'
+} from '#waste-balances/test-support.js'
+import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 

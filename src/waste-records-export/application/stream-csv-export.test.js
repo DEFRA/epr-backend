@@ -14,10 +14,14 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
+import {
+  createInMemorySummaryLogRowStatesRepository,
+  DEFAULT_YEAR
+} from '#waste-records/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */

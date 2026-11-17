@@ -21,14 +21,12 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import {
   createMongoLedgerRepository,
   ensureLedgerCollection,
-  WASTE_BALANCE_EVENTS_COLLECTION_NAME
-} from '#waste-balances/repository/ledger-mongodb.js'
-import {
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME,
   buildPrnCancelledAfterIssueEvent,
   buildPrnCreatedEvent,
   buildPrnIssuedEvent,
   buildPrnRejectedEvent
-} from '#waste-balances/repository/ledger-test-data.js'
+} from '#waste-balances/test-support.js'
 
 import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
 

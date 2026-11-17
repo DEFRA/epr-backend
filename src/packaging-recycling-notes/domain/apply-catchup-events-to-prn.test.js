@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { withNumbers } from '#waste-records/test-support.js'
 import { applyCatchupEventsToPrn } from './apply-catchup-events-to-prn.js'
 
 /**

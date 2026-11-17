@@ -8,7 +8,14 @@ import {
 } from '#packaging-recycling-notes/domain/model.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent,
+  buildPrnCreatedEvent,
+  buildPrnRejectedEvent,
+  buildPrnAcceptedEvent,
+  buildPrnCancelledAfterIssueEvent
+} from '#waste-balances/test-support.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
@@ -25,13 +32,6 @@ import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import {
-  buildLedgerEvent,
-  buildPrnCreatedEvent,
-  buildPrnRejectedEvent,
-  buildPrnAcceptedEvent,
-  buildPrnCancelledAfterIssueEvent
-} from '#waste-balances/repository/ledger-test-data.js'
 import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
 
 vi.mock('./metrics.js', () => ({

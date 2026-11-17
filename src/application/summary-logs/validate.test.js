@@ -12,11 +12,15 @@ import {
   MAX_ACTUAL_LENGTH
 } from './validate.js'
 import { createEmptyLoadValidity } from './load-counts.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  createInMemorySummaryLogRowStatesRepository,
+  buildSummaryLogRowStateEntry
+} from '#waste-records/test-support.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import {

@@ -10,7 +10,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
-import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/repository/ledger-mongodb.js'
+import { WASTE_BALANCE_EVENTS_COLLECTION_NAME } from '#waste-balances/test-support.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { tonnageMonitoringPath } from './get.js'
 

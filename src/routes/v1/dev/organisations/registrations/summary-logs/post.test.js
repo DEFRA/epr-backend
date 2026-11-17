@@ -6,7 +6,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
-import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
+import { createAndSubmitReport } from '#reports/test-support.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { asRegulator } from '#test/inject-auth.js'

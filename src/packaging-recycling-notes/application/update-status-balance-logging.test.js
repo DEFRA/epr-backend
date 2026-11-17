@@ -5,7 +5,10 @@ import {
   PRN_ACTOR
 } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -17,7 +20,6 @@ import {
   buildAwaitingAcceptancePrn,
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
 
 vi.mock('./metrics.js', () => ({

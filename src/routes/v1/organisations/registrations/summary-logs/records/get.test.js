@@ -5,7 +5,10 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import {
+  createInMemorySummaryLogRowStatesRepository,
+  withNumbers
+} from '#waste-records/test-support.js'
 import {
   buildDataFieldColumns,
   buildSubmissionHeaderRow
@@ -20,7 +23,6 @@ import {
   buildReadOrganisation
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 

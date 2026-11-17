@@ -1,5 +1,5 @@
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { withNumbers } from '#waste-records/test-support.js'
 
 import { LEDGER_EVENT_KIND } from './ledger-schema.js'
 

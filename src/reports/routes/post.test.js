@@ -15,7 +15,11 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  emptySummaryLogStores,
+  submitSummaryLog
+} from '#waste-records/test-support.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -47,10 +51,6 @@ import { reportsPostFailureMessage } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import {
-  emptySummaryLogStores,
-  submitSummaryLog
-} from '#vite/helpers/submit-summary-log.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 

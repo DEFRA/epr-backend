@@ -8,7 +8,11 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  emptySummaryLogStores,
+  submitSummaryLog
+} from '#waste-records/test-support.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAcceptancePrn,
@@ -29,10 +33,6 @@ import {
 } from '#domain/organisations/numbers.js'
 import { MAX_ISSUES_REPORTED } from './report-mandatory/assert-report-data-complete.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import {
-  emptySummaryLogStores,
-  submitSummaryLog
-} from '#vite/helpers/submit-summary-log.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 
 const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
@@ -44,7 +44,7 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { RegistrationKey } from '#reports/repository/port.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
- * @import { SummaryLogStores } from '#vite/helpers/submit-summary-log.js'
+ * @import { SummaryLogStores } from '#waste-records/test-support.js'
  * @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js'
  */
 

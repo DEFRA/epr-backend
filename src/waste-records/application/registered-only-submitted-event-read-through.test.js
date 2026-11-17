@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildSummaryLogRowStateEntry,
   withNumbers

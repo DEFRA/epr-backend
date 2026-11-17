@@ -4,13 +4,15 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
   withNumbers
 } from '#waste-records/repository/test-data.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import {
   latestSubmittedSummaryLogRowStates,

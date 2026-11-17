@@ -13,12 +13,12 @@ import {
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/test-support.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/test-support.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/test-support.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'

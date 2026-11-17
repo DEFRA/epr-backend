@@ -18,7 +18,7 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
+import { DEFAULT_YEAR } from '#waste-records/test-support.js'
 
 /** @import { SummaryLogRowState } from '#waste-records/repository/schema.js' */
 /** @import { SubmissionCsvInput } from './stream-submission-csv.js' */

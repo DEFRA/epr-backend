@@ -8,7 +8,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { QUARTERLY_PERIODS } from '#reports/domain/period-labels.js'
-import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
+import { createAndSubmitReport } from '#reports/test-support.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { signedCallback } from '#test/upload-callback.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'

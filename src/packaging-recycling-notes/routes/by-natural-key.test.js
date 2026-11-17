@@ -32,14 +32,14 @@ import {
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/test-support.js'
 import {
+  createInMemoryLedgerRepository,
   buildLedgerEvent,
   buildPrnCreatedEvent,
   buildPrnCreationCancelledEvent,
   buildPrnIssuedEvent
-} from '#waste-balances/repository/ledger-test-data.js'
+} from '#waste-balances/test-support.js'
 import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER

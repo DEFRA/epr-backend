@@ -12,9 +12,11 @@ import {
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import {
+  createInMemorySummaryLogRowStatesRepository,
+  buildSummaryLogRowStateEntry
+} from '#waste-records/test-support.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,

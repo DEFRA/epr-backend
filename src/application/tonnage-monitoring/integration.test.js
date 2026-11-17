@@ -16,7 +16,7 @@ import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mong
 import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME,
   createMongoLedgerRepository
-} from '#waste-balances/repository/ledger-mongodb.js'
+} from '#waste-balances/test-support.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 

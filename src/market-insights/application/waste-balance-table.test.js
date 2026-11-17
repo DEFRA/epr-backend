@@ -12,13 +12,17 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/test-support.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  createInMemoryReportsRepository,
+  buildSubmittedReport,
+  buildUnsubmittedReport
+} from '#reports/test-support.js'
 import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
 import { buildWasteBalanceTable } from './waste-balance-table.js'

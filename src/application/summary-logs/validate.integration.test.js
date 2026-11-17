@@ -17,8 +17,8 @@ import { createInMemoryOrganisationReadRepository } from '#organisation-read-mod
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/test-support.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/test-support.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()

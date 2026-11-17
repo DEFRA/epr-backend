@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { createMongoLedgerRepository } from '#waste-balances/test-support.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
 import { config } from '../config.js'

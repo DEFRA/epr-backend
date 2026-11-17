@@ -15,9 +15,9 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   ensureLedgerCollection,
-  WASTE_BALANCE_EVENTS_COLLECTION_NAME
-} from '#waste-balances/repository/ledger-mongodb.js'
-import { buildPrnRejectedEvent } from '#waste-balances/repository/ledger-test-data.js'
+  WASTE_BALANCE_EVENTS_COLLECTION_NAME,
+  buildPrnRejectedEvent
+} from '#waste-balances/test-support.js'
 import { config } from '../config.js'
 
 import { runReconcileStalePrnProjections } from './run-reconcile-stale-prn-projections.js'

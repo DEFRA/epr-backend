@@ -17,9 +17,11 @@ import {
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
+import {
+  createInMemoryReportsRepository,
+  buildSubmittedReport,
+  seedInFlightResubmission
+} from '#reports/test-support.js'
 import { partialMock } from '#test/type-helpers.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { noMeasures } from '#market-insights/domain/reprocessor-exporter-figures.js'

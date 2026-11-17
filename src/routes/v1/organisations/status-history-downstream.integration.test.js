@@ -24,9 +24,9 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME,
-  createMongoLedgerRepository
-} from '#waste-balances/repository/ledger-mongodb.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+  createMongoLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import { createStatusHistoryBuilders } from './status-history-test-helpers.js'
 
 /** @import { Db } from 'mongodb' */

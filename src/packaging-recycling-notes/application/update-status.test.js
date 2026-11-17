@@ -21,16 +21,16 @@ import {
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/test-support.js'
 import {
+  createInMemoryReportsRepository,
   DEFAULT_ORG_NUMBER,
   DEFAULT_REG_NUMBER,
-  DEFAULT_REPORT_START_DATE
-} from '#reports/repository/contract/test-data.js'
+  DEFAULT_REPORT_START_DATE,
+  createDraftReport
+} from '#reports/test-support.js'
 import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
 import { createOnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
-import { createDraftReport } from '#vite/helpers/create-draft-report.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {

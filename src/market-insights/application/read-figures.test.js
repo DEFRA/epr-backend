@@ -1,11 +1,11 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { REGULATOR_FOR_NATION_SEGMENT } from '#market-insights/domain/nation-segment.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import { createInMemoryReportsRepository } from '#reports/test-support.js'
 import { emptyOrganisationReadRepository } from '#vite/helpers/organisation-read-model.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/test-support.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/test-support.js'
 import { readMarketInsightsFigures } from './read-figures.js'
 
 /** @import { ReadMarketInsightsFiguresParams } from './read-figures.js' */

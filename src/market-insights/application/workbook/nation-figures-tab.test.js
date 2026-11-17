@@ -8,7 +8,12 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  createInMemoryReportsRepository,
+  buildSubmittedReport,
+  createAccreditedOperatorInserter,
+  uniqueRegistrationNumber
+} from '#reports/test-support.js'
 import {
   approvedStatusFrom,
   buildReadExporterAccreditation,
@@ -17,11 +22,8 @@ import {
   servedOrganisations
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { uniqueRegistrationNumber } from '#reports/repository/contract/test-data.js'
 import { frameOf } from './cells.js'
 import { addNationFigures } from './nation-figures-tab.js'
 import {
@@ -42,7 +44,7 @@ const insertAccreditedOperator =
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
-/** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
+/** @import { AccreditedFor } from '#reports/test-support.js' */
 /** @import { RedactableTabContents } from './cells.js' */
 /** @import { NationFiguresTabName } from './nation-figures-tab.js' */
 

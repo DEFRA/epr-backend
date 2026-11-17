@@ -6,8 +6,10 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asRegulator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
+import {
+  createAccreditedOperatorInserter,
+  buildSubmittedReport
+} from '#reports/test-support.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { buildMarketInsightsWorkbook } from '#market-insights/application/build-workbook.js'
 import {

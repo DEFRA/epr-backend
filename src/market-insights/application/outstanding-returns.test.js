@@ -6,16 +6,18 @@ import {
   TONNAGE_BAND,
   TONNAGE_MONITORING_MATERIALS
 } from '#domain/organisations/model.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
+import {
+  createInMemoryReportsRepository,
+  buildSubmittedReport,
+  buildUnsubmittedReport,
+  buildDraftReport
+} from '#reports/test-support.js'
 import {
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
-import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
-import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import {
   toAccreditationNumber,

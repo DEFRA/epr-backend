@@ -8,7 +8,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
+import { DEFAULT_YEAR } from '#waste-records/test-support.js'
 
 /**
  * @import {TypedLogger} from '#common/hapi-types.js'

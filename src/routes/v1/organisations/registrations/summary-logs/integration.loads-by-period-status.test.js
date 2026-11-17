@@ -13,7 +13,7 @@ import {
 } from '#reports/domain/period-labels.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
+import { createAndSubmitReport } from '#reports/test-support.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {

@@ -20,12 +20,14 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/test-support.js'
+import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/test-support.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
-import { reportKeyOf } from '#reports/repository/contract/test-data.js'
+import {
+  createInMemoryReportsRepository,
+  reportKeyOf
+} from '#reports/test-support.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'

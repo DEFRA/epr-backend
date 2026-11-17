@@ -18,7 +18,10 @@ import {
   buildAccreditationSnapshot,
   PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import {
+  createMongoLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import {
   createOrganisationReadRepository,
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
@@ -29,7 +32,6 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,

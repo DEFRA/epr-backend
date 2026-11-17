@@ -13,15 +13,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
+  createInMemoryReportsRepository,
   buildCreateReportParams,
   DEFAULT_ORG_NUMBER,
   DEFAULT_REG_NUMBER
-} from '#reports/repository/contract/test-data.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+} from '#reports/test-support.js'
+import {
+  createInMemoryLedgerRepository,
+  buildLedgerEvent
+} from '#waste-balances/test-support.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { config } from '#root/config.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createTestServer } from '#test/create-test-server.js'

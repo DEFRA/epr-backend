@@ -22,11 +22,11 @@ import {
   WASTE_PROCESSING_TYPE,
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
+  createInMemoryLedgerRepository,
   buildLedgerEvent,
   buildPrnCreatedEvent
-} from '#waste-balances/repository/ledger-test-data.js'
+} from '#waste-balances/test-support.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { PRN_YEAR } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'

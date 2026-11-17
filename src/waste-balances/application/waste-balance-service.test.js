@@ -17,7 +17,7 @@ import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { withNumbers } from '#waste-records/test-support.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 

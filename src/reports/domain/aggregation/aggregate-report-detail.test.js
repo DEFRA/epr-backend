@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { assertPresent } from '#test/type-helpers.js'
 
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
+import { buildSummaryLogRowStateEntry } from '#waste-records/test-support.js'
 import { CADENCE } from '../cadence.js'
 import { OPERATOR_CATEGORY } from '../operator-category.js'
 import { aggregateReportDetail } from './aggregate-report-detail.js'

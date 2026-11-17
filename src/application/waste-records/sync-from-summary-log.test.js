@@ -6,7 +6,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
+import { createInMemoryLedgerRepository } from '#waste-balances/test-support.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import {
   toAccreditationNumber,
