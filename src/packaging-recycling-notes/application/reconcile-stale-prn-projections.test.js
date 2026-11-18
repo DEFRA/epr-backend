@@ -26,6 +26,7 @@ import {
 import {
   buildPrnCancelledAfterIssueEvent,
   buildPrnCreatedEvent,
+  buildPrnCreationCancelledEvent,
   buildPrnIssuedEvent,
   buildPrnRejectedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
@@ -513,12 +514,12 @@ describe('reconcileStalePrnProjections', () => {
   }) => {
     const ids = buildAccreditationKeys()
     // Awaiting authorisation: created but never issued, so it carries no PRN
-    // number and no watermark. An issuance it never applied leaves it adrift.
+    // number and no watermark. A deletion it never applied leaves it adrift.
     const created = await prnRepository.create(
       buildAwaitingAuthorisationPrn(underAccreditation(ids))
     )
     await ledgerCollection.insertOne(
-      buildPrnIssuedEvent({
+      buildPrnCreationCancelledEvent({
         ...ids,
         number: 1,
         payload: { prnId: created.id, amount: 50 }
@@ -540,7 +541,7 @@ describe('reconcileStalePrnProjections', () => {
       stillDrifting: 0
     })
     const stored = await findStored(prnCollection, created.id)
-    expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(stored.status.currentStatus).toBe(PRN_STATUS.DELETED)
     expect(stored.lastAppliedEventNumber).toBe(1)
     expect(result.reports).toEqual([
       {
@@ -550,7 +551,7 @@ describe('reconcileStalePrnProjections', () => {
         lastAppliedEventNumber: undefined,
         unappliedCount: 1,
         minUnappliedNumber: 1,
-        wouldBecomeStatus: PRN_STATUS.AWAITING_ACCEPTANCE
+        wouldBecomeStatus: PRN_STATUS.DELETED
       }
     ])
   })

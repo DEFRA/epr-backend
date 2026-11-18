@@ -28,7 +28,7 @@ const formatReport = (report) =>
 
 /**
  * `findDrifting` detects the ids behind their ledger in one indexed query; each
- * is then re-read point-wise off the raw collection and, on repair, written back
+ * is then re-read point-wise off the raw collection and written back
  * through the repository's version CAS. Catch-up events come from the
  * waste-balance service over the shared ledger.
  *
@@ -87,8 +87,8 @@ const runReconcile = async (server) => {
  * drift a dropped write-back leaves, which the admin list and download read
  * paths never fold away (ADR-0047).
  *
- * Findings log at info, not warn: they are for a human to confirm and info
- * keeps them off the OpenSearch alerts. Runs under a cross-instance lock so one
+ * Findings log at info, not warn: repaired drift is not an incident, and info
+ * keeps it off the OpenSearch alerts. Runs under a cross-instance lock so one
  * pod per deploy sweeps.
  *
  * @param {StartedServer} server
