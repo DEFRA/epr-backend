@@ -1,5 +1,6 @@
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
 import { ObjectId } from 'mongodb'
 import { partialMock } from '#test/type-helpers.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -92,7 +93,7 @@ const readModelRegistration = (overrides = {}) =>
         postcode: 'GR1 1AA'
       }
     },
-    accreditations: { [toYear(2024)]: readModelAccreditation() },
+    accreditations: accreditationsByYear(readModelAccreditation()),
     ...overrides
   })
 
@@ -1017,13 +1018,10 @@ describe('report-service', () => {
           ...defaultParams(),
           reportRegistration: {
             registration: readModelRegistration({
-              accreditations: {
-                [toYear(2024)]: reportAccreditation,
-                [toYear(2025)]: readModelAccreditation(
-                  currentAccreditationNumber,
-                  toYear(2025)
-                )
-              }
+              accreditations: accreditationsByYear(
+                reportAccreditation,
+                readModelAccreditation(currentAccreditationNumber, toYear(2025))
+              )
             }),
             accreditation: reportAccreditation
           }

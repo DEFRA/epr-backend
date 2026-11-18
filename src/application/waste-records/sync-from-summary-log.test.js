@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { toYear } from '#common/helpers/dates/year.js'
+import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -219,9 +220,9 @@ describe('syncFromSummaryLog', () => {
     organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
       organisationWith({
         registration: {
-          accreditations: {
-            [toYear(2026)]: accreditationNumbered(ACCREDITATION_NUMBER)
-          }
+          accreditations: accreditationsByYear(
+            accreditationNumbered(ACCREDITATION_NUMBER)
+          )
         }
       })
     )
@@ -466,12 +467,9 @@ describe('syncFromSummaryLog', () => {
     organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
       organisationWith({
         registration: {
-          accreditations: {
-            [toYear(2027)]: accreditationNumbered(
-              ACCREDITATION_NUMBER,
-              toYear(2027)
-            )
-          }
+          accreditations: accreditationsByYear(
+            accreditationNumbered(ACCREDITATION_NUMBER, toYear(2027))
+          )
         }
       })
     )

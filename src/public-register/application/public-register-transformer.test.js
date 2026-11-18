@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   toOrganisationNumber,
@@ -152,7 +153,7 @@ describe('transform', () => {
     const served = organisation({
       registrations: {
         [REGISTRATION_NUMBER]: reprocessor({
-          accreditations: { [toYear(2026)]: accreditation() }
+          accreditations: accreditationsByYear(accreditation())
         })
       }
     })
@@ -213,8 +214,8 @@ describe('transform', () => {
     async ({ current, tonnageBand, expected }) => {
       const row = await rowFor(
         reprocessor({
-          accreditations: {
-            [toYear(2026)]: accreditation({
+          accreditations: accreditationsByYear(
+            accreditation({
               prnIssuance: {
                 tonnageBand: /** @type {TonnageBand} */ (tonnageBand)
               },
@@ -224,7 +225,7 @@ describe('transform', () => {
                 timeline: approvedTimeline
               }
             })
-          }
+          )
         })
       )
 
@@ -235,19 +236,19 @@ describe('transform', () => {
   it("shows the current year's accreditation, not next year's", async () => {
     const row = await rowFor(
       reprocessor({
-        accreditations: {
-          [toYear(2025)]: accreditation({
+        accreditations: accreditationsByYear(
+          accreditation({
             accreditationNumber: /** @type {any} */ ('A25'),
             year: toYear(2025)
           }),
-          [toYear(2026)]: accreditation({
+          accreditation({
             accreditationNumber: /** @type {any} */ ('A26')
           }),
-          [toYear(2027)]: accreditation({
+          accreditation({
             accreditationNumber: /** @type {any} */ ('A27'),
             year: toYear(2027)
           })
-        }
+        )
       })
     )
 
@@ -257,8 +258,8 @@ describe('transform', () => {
   it('dates the accreditation active from its first approval', async () => {
     const row = await rowFor(
       reprocessor({
-        accreditations: {
-          [toYear(2026)]: accreditation({
+        accreditations: accreditationsByYear(
+          accreditation({
             status: {
               current: 'approved',
               lastUpdatedAt: '2026-03-30T09:00:00.000Z',
@@ -269,7 +270,7 @@ describe('transform', () => {
               ]
             }
           })
-        }
+        )
       })
     )
 
@@ -279,15 +280,15 @@ describe('transform', () => {
   it('leaves the active date blank for an accreditation never approved', async () => {
     const row = await rowFor(
       reprocessor({
-        accreditations: {
-          [toYear(2026)]: accreditation({
+        accreditations: accreditationsByYear(
+          accreditation({
             status: {
               current: 'suspended',
               lastUpdatedAt: '2026-02-01T00:00:00.000Z',
               timeline: [change('suspended', '2026-02-01T00:00:00.000Z')]
             }
           })
-        }
+        )
       })
     )
 
@@ -297,8 +298,8 @@ describe('transform', () => {
   it('dates the last change when it was recorded, not when it takes effect', async () => {
     const row = await rowFor(
       reprocessor({
-        accreditations: {
-          [toYear(2026)]: accreditation({
+        accreditations: accreditationsByYear(
+          accreditation({
             status: {
               current: 'suspended',
               lastUpdatedAt: '2026-03-20T09:00:00.000Z',
@@ -308,7 +309,7 @@ describe('transform', () => {
               ]
             }
           })
-        }
+        )
       })
     )
 

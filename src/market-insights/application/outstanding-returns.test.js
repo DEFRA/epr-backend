@@ -8,6 +8,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
@@ -77,7 +78,7 @@ const makeOperator = ({
           status: approvedStatusFrom('2025-12-01'),
           accreditations: registeredOnly
             ? {}
-            : { [toYear(2026)]: accreditation }
+            : accreditationsByYear(accreditation)
         })
       }
     }),
