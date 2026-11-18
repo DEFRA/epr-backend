@@ -5,6 +5,7 @@ import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
 import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/relevant-year.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * The December Waste declaration window (PAE-1913): a reprocessor on output
@@ -59,7 +60,7 @@ export const DECEMBER_WASTE_NOT_DECLARABLE_CODE =
  * permitted - so the type predicate no longer gates here.
  *
  * @param {Object} params
- * @param {{ accreditationNumber: string, accreditationYear: Year }} params.accreditation
+ * @param {{ accreditationNumber: AccreditationNumber, accreditationYear: Year }} params.accreditation
  * @param {boolean} params.isDecemberWaste
  * @param {Date} params.now
  * @param {{ windowStart: string }} params.config
