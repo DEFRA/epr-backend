@@ -208,7 +208,7 @@ export const createNonProdDataReset = (
     const keys = extractCascadeKeys(organisation)
     const [counts, externalAccreditations] = await Promise.all([
       runCascade(db, buildCascadeSteps(organisation, keys)),
-      deleteStandInAccreditationsOf(db, organisationNumber)
+      deleteStandInAccreditationsOf(db, organisation.organisationNumber)
     ])
     const deletedOrganisations =
       await organisationAdministrationRepository.deleteByOrganisationNumber(

@@ -29,6 +29,7 @@ import { createOrganisationReadRepository } from './mongodb.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Db, MongoClient } from 'mongodb' */
 /** @import { RegistrationService } from '../registration-service/port.js' */
+/** @import { OrganisationReadRepositoryWith } from './mongo-fixture.js' */
 
 /**
  * @typedef {(database: Db) => RegistrationService} RegistrationServiceOf
@@ -136,7 +137,7 @@ const repositoryWith = async (
  * Stores a reprocessor and a 2027 external accreditation for its
  * registration in the database.
  *
- * @param {import('#organisation-read-model/repository/mongo-fixture.js').OrganisationReadRepositoryWith} organisationReadRepositoryWith
+ * @param {OrganisationReadRepositoryWith} organisationReadRepositoryWith
  */
 const storeReprocessorWithExternalAccreditation = async (
   organisationReadRepositoryWith
