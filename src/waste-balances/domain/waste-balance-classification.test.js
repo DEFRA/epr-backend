@@ -44,12 +44,11 @@ describe('classifyRecordForWasteBalance', () => {
     }))
 
     expect(
-      classifyRecordForWasteBalance(
-        buildRecord(),
+      classifyRecordForWasteBalance(buildRecord(), {
         tableSchemas,
-        null,
+        accreditation: null,
         overseasSites
-      )
+      })
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
       reasons: [],
@@ -61,12 +60,11 @@ describe('classifyRecordForWasteBalance', () => {
     const tableSchemas = tableSchemasWith(null)
 
     expect(
-      classifyRecordForWasteBalance(
-        buildRecord(),
+      classifyRecordForWasteBalance(buildRecord(), {
         tableSchemas,
         accreditation,
         overseasSites
-      )
+      })
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
       reasons: [],
@@ -81,12 +79,11 @@ describe('classifyRecordForWasteBalance', () => {
     }))
 
     expect(
-      classifyRecordForWasteBalance(
-        buildRecord(),
+      classifyRecordForWasteBalance(buildRecord(), {
         tableSchemas,
         accreditation,
         overseasSites
-      )
+      })
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.EXCLUDED,
       reasons: [{ code: 'MISSING_REQUIRED_FIELD', field: 'tonnage' }],
@@ -102,12 +99,11 @@ describe('classifyRecordForWasteBalance', () => {
     }))
 
     expect(
-      classifyRecordForWasteBalance(
-        buildRecord(),
+      classifyRecordForWasteBalance(buildRecord(), {
         tableSchemas,
         accreditation,
         overseasSites
-      )
+      })
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
       reasons: [{ code: 'WITHIN_ACCREDITATION_PERIOD' }],
@@ -122,12 +118,11 @@ describe('classifyRecordForWasteBalance', () => {
     }))
 
     expect(
-      classifyRecordForWasteBalance(
-        buildRecord(),
+      classifyRecordForWasteBalance(buildRecord(), {
         tableSchemas,
         accreditation,
         overseasSites
-      )
+      })
     ).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.IGNORED,
       reasons: [{ code: 'PRN_ISSUED' }],
