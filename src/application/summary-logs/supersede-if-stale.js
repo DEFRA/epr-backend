@@ -1,4 +1,5 @@
 /** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
+import Boom from '@hapi/boom'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -33,6 +34,19 @@ export const SUPERSEDE_REASON = Object.freeze({
 })
 
 /** @typedef {typeof SUPERSEDE_REASON[keyof typeof SUPERSEDE_REASON]} SupersedeReason */
+
+/**
+ * The answer to a submission `supersedeIfStale` turned away, carrying why.
+ *
+ * @param {SupersedeReason} reason
+ */
+export const staleSubmissionConflict = (reason) => {
+  const boom = Boom.conflict(
+    'This summary log can no longer be submitted as validated. Please re-upload.'
+  )
+  boom.output.payload.reason = reason
+  return boom
+}
 
 /**
  * @typedef {{

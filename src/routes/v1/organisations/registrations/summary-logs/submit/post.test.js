@@ -413,9 +413,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    expect(JSON.parse(response.payload).message).toBe(
-      'Waste records have changed since preview was generated. Please re-upload.'
-    )
+    expect(JSON.parse(response.payload)).toMatchObject({
+      message:
+        'This summary log can no longer be submitted as validated. Please re-upload.',
+      reason: 'newer_submission'
+    })
 
     const stored = await waitForVersion(
       summaryLogsRepository,
@@ -451,9 +453,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    expect(JSON.parse(response.payload).message).toBe(
-      'Waste records have changed since preview was generated. Please re-upload.'
-    )
+    expect(JSON.parse(response.payload)).toMatchObject({
+      message:
+        'This summary log can no longer be submitted as validated. Please re-upload.',
+      reason: 'no_commit'
+    })
     const stored = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
@@ -487,9 +491,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    expect(JSON.parse(response.payload).message).toBe(
-      'Waste records have changed since preview was generated. Please re-upload.'
-    )
+    expect(JSON.parse(response.payload)).toMatchObject({
+      message:
+        'This summary log can no longer be submitted as validated. Please re-upload.',
+      reason: 'context_changed'
+    })
     const stored = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
