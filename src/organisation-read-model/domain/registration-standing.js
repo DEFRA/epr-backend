@@ -10,6 +10,8 @@ import { approvedBy, approvedYears } from './status-timeline.js'
 /** @import { AccreditationStatus, RegistrationStatus, Standing, StandingByYear, StatusTimeline } from './model.js' */
 
 /**
+ * The timelines a registration's standing is worked out from.
+ *
  * @typedef {{
  *   accreditations: Record<Year, { status: { timeline: StatusTimeline<AccreditationStatus> }, year: Year }>
  *   status: { timeline: StatusTimeline<RegistrationStatus> }

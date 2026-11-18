@@ -3,7 +3,8 @@ import { standingByDate } from './registration-standing.js'
 import { registrationStatusWindows } from './registration-status-windows.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationStatus, Registration, RegistrationStatus, StatusTimeline } from './model.js' */
+/** @import { AccreditationStatus, RegistrationStatus, StatusTimeline } from './model.js' */
+/** @import { StandingSource } from './registration-standing.js' */
 
 /**
  * @template {string} S
@@ -35,23 +36,19 @@ const windows = ({
   registration = REGISTERED_LAST_YEAR,
   accreditations = {}
 }) => {
-  const source = /** @type {Registration} */ (
-    /** @type {unknown} */ ({
-      status: { timeline: registration },
-      accreditations: Object.fromEntries(
-        Object.entries(accreditations).map(([accreditationYear, timeline]) => [
-          accreditationYear,
-          { status: { timeline } }
-        ])
-      )
-    })
-  )
+  /** @type {StandingSource} */
+  const source = {
+    status: { timeline: registration },
+    accreditations: Object.fromEntries(
+      Object.entries(accreditations).map(([accreditationYear, timeline]) => [
+        accreditationYear,
+        { status: { timeline }, year: toYear(Number(accreditationYear)) }
+      ])
+    )
+  }
 
   return registrationStatusWindows(
-    {
-      ...source,
-      standingByDate: { [year]: standingByDate(source, year) }
-    },
+    { standingByDate: { [year]: standingByDate(source, year) } },
     year
   )
 }
@@ -406,11 +403,9 @@ describe('registrationStatusWindows', () => {
   })
 
   it('has no windows for a year with no status dates', () => {
-    const registration = /** @type {Registration} */ (
-      /** @type {unknown} */ ({ standingByDate: {} })
-    )
-
-    expect(registrationStatusWindows(registration, toYear(2026))).toEqual({
+    expect(
+      registrationStatusWindows({ standingByDate: {} }, toYear(2026))
+    ).toEqual({
       registeredOnly: [],
       accredited: []
     })
