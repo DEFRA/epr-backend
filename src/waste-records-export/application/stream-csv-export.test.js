@@ -18,6 +18,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
+/** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
@@ -281,7 +282,10 @@ const buildDeps = async ({
     },
     year,
     organisation,
-    registrationNumber
+    registrationNumber,
+    logger: /** @type {TypedLogger} */ (
+      /** @type {unknown} */ ({ warn: vi.fn() })
+    )
   }
 }
 
@@ -1326,6 +1330,94 @@ describe('streamCsvExport', () => {
 
       expect(cellsOf(header)).toStrictEqual(EXPORT_HEADER)
       expect(row).not.toContain('own-value')
+    })
+
+    it('warns once naming each left-out key and the registrations carrying it', async () => {
+      const deps = await buildDeps({
+        orgs: [
+          readModelOrg({
+            registrations: {
+              'REG-1': reprocessorRegistration(),
+              'REG-2': reprocessorRegistration()
+            }
+          })
+        ],
+        seeds: [
+          {
+            registrationNumber: 'REG-1',
+            summaryLogId: 'sl-1',
+            rows: [
+              receivedRowState({
+                rowId: '1001',
+                data: { OPERATOR_OWN_COLUMN: 'a' }
+              }),
+              receivedRowState({
+                rowId: '1002',
+                data: { OPERATOR_OWN_COLUMN: 'b' }
+              })
+            ]
+          },
+          {
+            registrationNumber: 'REG-2',
+            summaryLogId: 'sl-2',
+            rows: [
+              receivedRowState({
+                data: { OPERATOR_OWN_COLUMN: 'c', SECOND_OWN_COLUMN: 'd' }
+              })
+            ]
+          }
+        ]
+      })
+
+      await collect(streamCsvExport(deps))
+
+      expect(deps.logger.warn).toHaveBeenCalledExactlyOnceWith({
+        message:
+          'Waste records export for 2026 left out data keys no template declares: OPERATOR_OWN_COLUMN (REG-1, REG-2); SECOND_OWN_COLUMN (REG-2)',
+        event: {
+          category: 'server',
+          action: 'waste_records_export_undeclared_columns'
+        }
+      })
+    })
+
+    it('still warns when the export is abandoned part way', async () => {
+      const deps = await buildDeps({
+        orgs: [readModelOrg()],
+        seeds: [
+          {
+            rows: [
+              receivedRowState({
+                rowId: '1001',
+                data: { OPERATOR_OWN_COLUMN: 'a' }
+              }),
+              receivedRowState({ rowId: '1002' })
+            ]
+          }
+        ]
+      })
+      const lines = streamCsvExport(deps)
+
+      await lines.next()
+      await lines.next()
+      await lines.return(undefined)
+
+      expect(deps.logger.warn).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          message: expect.stringContaining('OPERATOR_OWN_COLUMN (REG-1)')
+        })
+      )
+    })
+
+    it('does not warn when every key is a template column', async () => {
+      const deps = await buildDeps({
+        orgs: [readModelOrg()],
+        seeds: [{ rows: [receivedRowState()] }]
+      })
+
+      await collect(streamCsvExport(deps))
+
+      expect(deps.logger.warn).not.toHaveBeenCalled()
     })
 
     it.for(TEMPLATE_TABLES)(

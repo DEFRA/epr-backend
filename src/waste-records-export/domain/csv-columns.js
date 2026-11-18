@@ -108,6 +108,19 @@ export const buildDataFieldColumns = (observedKeys) => {
 /** Every template column, alphabetically. */
 export const TEMPLATE_DATA_FIELD_COLUMNS = buildDataFieldColumns([])
 
+const TEMPLATE_COLUMNS = new Set(SCHEMA_FIELD_NAMES)
+
+/**
+ * The keys of a row's `data` that no template declares, so no column carries.
+ *
+ * @param {Record<string, unknown>} data
+ * @returns {string[]}
+ */
+export const undeclaredDataKeys = (data) =>
+  Object.keys(data).filter(
+    (key) => !TEMPLATE_COLUMNS.has(key) && !FIELDS_NEVER_EXPORTED.has(key)
+  )
+
 /**
  * Compose the full header row from the fixed metadata prefix and the dynamic
  * data-field columns.

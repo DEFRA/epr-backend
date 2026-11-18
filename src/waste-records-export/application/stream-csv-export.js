@@ -1,6 +1,7 @@
 import { writeToString } from '@fast-csv/format'
 import { Readable } from 'node:stream'
 
+import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
@@ -19,10 +20,12 @@ import { reclassifyWasteRecordState } from '#waste-records/application/reclassif
 import {
   TEMPLATE_DATA_FIELD_COLUMNS,
   buildHeaderRow,
-  buildDataRow
+  buildDataRow,
+  undeclaredDataKeys
 } from '../domain/csv-columns.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
+/** @import {TypedLogger} from '#common/hapi-types.js' */
 /** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
@@ -45,6 +48,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  * @property {Year} year - The year whose ledger partitions are exported.
  * @property {Organisation} [organisation] - When set, export only this organisation.
  * @property {RegistrationNumber} [registrationNumber] - When set (with organisation), export only this registration.
+ * @property {TypedLogger} logger
  */
 
 /**
@@ -175,6 +179,7 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
  * @param {WasteRecordState[]} input.rowStates
  * @param {{ submittedAt: string } | null} input.summaryLogEntry
  * @param {string[]} input.dataFieldColumns
+ * @param {LeftOutKeys} input.leftOutKeys
  * @returns {AsyncGenerator<string>}
  */
 async function* streamPartitionRows({
@@ -185,7 +190,8 @@ async function* streamPartitionRows({
   ledgerId,
   rowStates,
   summaryLogEntry,
-  dataFieldColumns
+  dataFieldColumns,
+  leftOutKeys
 }) {
   const { accreditationNumber, context } = heldAccreditation(
     ledgerIndex,
@@ -193,6 +199,7 @@ async function* streamPartitionRows({
   )
 
   for (const rowState of [...rowStates].sort(sortRowStates)) {
+    recordLeftOutKeys(leftOutKeys, rowState.data, registrationNumber)
     yield await encodeRow(
       buildDataRow({
         org,
@@ -222,6 +229,7 @@ async function* streamPartitionRows({
  * @property {Map<string, LedgerAccreditation>} ledgerIndex
  * @property {Map<string, { submittedAt: string }>} summaryLogMap
  * @property {string[]} dataFieldColumns
+ * @property {LeftOutKeys} leftOutKeys
  */
 
 /**
@@ -272,6 +280,7 @@ async function* streamLatestSubmissionRows({
  * @param {Map<string, LedgerAccreditation>} input.ledgerIndex
  * @param {LatestSubmittedSummaryLogPerLedger[]} input.entries - The registration's per-partition latest submissions.
  * @param {string[]} input.dataFieldColumns
+ * @param {LeftOutKeys} input.leftOutKeys
  * @param {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} input.summaryLogRowStatesRepository
  * @param {Pick<SummaryLogsRepository, 'findAll'>} input.summaryLogsRepository
  * @returns {AsyncGenerator<string>}
@@ -283,6 +292,7 @@ async function* streamRegistrationRows({
   ledgerIndex,
   entries,
   dataFieldColumns,
+  leftOutKeys,
   summaryLogRowStatesRepository,
   summaryLogsRepository
 }) {
@@ -296,6 +306,7 @@ async function* streamRegistrationRows({
     registration,
     ledgerIndex,
     dataFieldColumns,
+    leftOutKeys,
     summaryLogMap: await loadSummaryLogMap(summaryLogsRepository, org, {
       registrationNumber
     }),
@@ -329,8 +340,9 @@ const registrationsInOrder = (org, only) =>
  * Hard-fails on any iterator error — caller must close the response stream.
  *
  * Only the year's ledger partitions are exported. The header row is every
- * template's columns, so it is sent before any query and a key no template
- * declares is not exported. Each registration's ledger partitions are
+ * template's columns, so it is sent before any query; a key no template
+ * declares is not exported, and is logged once when the export ends. Each
+ * registration's ledger partitions are
  * resolved from a single cross-ledger query
  * (`findLatestSubmittedSummaryLogPerLedger`) narrowed to the year — a ledger
  * belongs to one year, so its latest submission is that year's — then rows
@@ -348,45 +360,94 @@ export async function* streamCsvExport(deps) {
     summaryLogsRepository,
     year,
     organisation,
-    registrationNumber: onlyRegistration
+    registrationNumber: onlyRegistration,
+    logger
   } = deps
 
   const dataFieldColumns = TEMPLATE_DATA_FIELD_COLUMNS
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
-  const entriesByRegistration = groupByRegistration(
-    (await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()).filter(
-      ({ ledgerId }) => ledgerId.year === year
+  /** @type {LeftOutKeys} */
+  const leftOutKeys = new Map()
+  try {
+    const entriesByRegistration = groupByRegistration(
+      (await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()).filter(
+        ({ ledgerId }) => ledgerId.year === year
+      )
     )
-  )
 
-  const orgsSorted = organisation
-    ? [organisation]
-    : await findExportableOrgs(organisationReadRepository)
-  // Test organisations are already left out of a full export.
-  const ledgerIndex = indexByLedger(orgsSorted, {
-    includeTestOrganisations: true
-  })
-  for (const org of orgsSorted) {
-    for (const [registrationNumber, registration] of registrationsInOrder(
-      org,
-      onlyRegistration
-    )) {
-      yield* streamRegistrationRows({
+    const orgsSorted = organisation
+      ? [organisation]
+      : await findExportableOrgs(organisationReadRepository)
+    // Test organisations are already left out of a full export.
+    const ledgerIndex = indexByLedger(orgsSorted, {
+      includeTestOrganisations: true
+    })
+    for (const org of orgsSorted) {
+      for (const [registrationNumber, registration] of registrationsInOrder(
         org,
-        registrationNumber,
-        registration,
-        ledgerIndex,
-        entries:
-          entriesByRegistration.get(
-            registrationKey(org.organisationNumber, registrationNumber)
-          ) ?? [],
-        dataFieldColumns,
-        summaryLogRowStatesRepository,
-        summaryLogsRepository
-      })
+        onlyRegistration
+      )) {
+        yield* streamRegistrationRows({
+          org,
+          registrationNumber,
+          registration,
+          ledgerIndex,
+          entries:
+            entriesByRegistration.get(
+              registrationKey(org.organisationNumber, registrationNumber)
+            ) ?? [],
+          dataFieldColumns,
+          leftOutKeys,
+          summaryLogRowStatesRepository,
+          summaryLogsRepository
+        })
+      }
     }
+  } finally {
+    warnOfLeftOutKeys(logger, year, leftOutKeys)
   }
+}
+
+/**
+ * @typedef {Map<string, Set<RegistrationNumber>>} LeftOutKeys - Each data key
+ *   no template declares, with the registrations whose exported rows carry it.
+ */
+
+/**
+ * @param {LeftOutKeys} leftOutKeys
+ * @param {Record<string, unknown>} data
+ * @param {RegistrationNumber} registrationNumber
+ */
+const recordLeftOutKeys = (leftOutKeys, data, registrationNumber) => {
+  for (const key of undeclaredDataKeys(data)) {
+    leftOutKeys.set(
+      key,
+      (leftOutKeys.get(key) ?? new Set()).add(registrationNumber)
+    )
+  }
+}
+
+/**
+ * @param {TypedLogger} logger
+ * @param {Year} year
+ * @param {LeftOutKeys} leftOutKeys
+ */
+const warnOfLeftOutKeys = (logger, year, leftOutKeys) => {
+  if (leftOutKeys.size === 0) {
+    return
+  }
+  const described = [...leftOutKeys]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, registrations]) => `${key} (${[...registrations].join(', ')})`)
+    .join('; ')
+  logger.warn({
+    message: `Waste records export for ${year} left out data keys no template declares: ${described}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: 'waste_records_export_undeclared_columns'
+    }
+  })
 }
 
 /**
