@@ -28,7 +28,7 @@ const REGISTERED_LAST_YEAR = [approvedOn('2025-06-02')]
  * @param {{
  *   year?: Year,
  *   registration?: StatusTimeline<RegistrationStatus>,
- *   accreditations?: Record<Year, StatusTimeline<AccreditationStatus>>
+ *   accreditations?: Record<number, StatusTimeline<AccreditationStatus>>
  * }} params
  */
 const windows = ({
@@ -116,7 +116,7 @@ describe('registrationStatusWindows', () => {
     it('stays registered-only when accredited only in another year', () => {
       expect(
         windows({
-          accreditations: { [toYear(2025)]: [approvedOn('2025-07-01')] }
+          accreditations: { 2025: [approvedOn('2025-07-01')] }
         })
       ).toEqual({
         registeredOnly: [WHOLE_YEAR],
@@ -129,7 +129,7 @@ describe('registrationStatusWindows', () => {
     it('is accredited across the full year', () => {
       expect(
         windows({
-          accreditations: { [toYear(2026)]: [approvedOn('2026-01-01')] }
+          accreditations: { 2026: [approvedOn('2026-01-01')] }
         })
       ).toEqual({
         registeredOnly: [],
@@ -141,7 +141,7 @@ describe('registrationStatusWindows', () => {
       it('is registered-only until the accreditation starts', () => {
         expect(
           windows({
-            accreditations: { [toYear(2026)]: [approvedOn('2026-07-01')] }
+            accreditations: { 2026: [approvedOn('2026-07-01')] }
           })
         ).toEqual({
           registeredOnly: [range('2026-01-01', '2026-06-30')],
@@ -152,7 +152,7 @@ describe('registrationStatusWindows', () => {
       it('is registered-only for exactly the first quarter when accredited on 1 April', () => {
         expect(
           windows({
-            accreditations: { [toYear(2026)]: [approvedOn('2026-04-01')] }
+            accreditations: { 2026: [approvedOn('2026-04-01')] }
           })
         ).toEqual({
           registeredOnly: [range('2026-01-01', '2026-03-31')],
@@ -163,7 +163,7 @@ describe('registrationStatusWindows', () => {
       it('splits a quarter when accredited part way through it', () => {
         expect(
           windows({
-            accreditations: { [toYear(2026)]: [approvedOn('2026-02-15')] }
+            accreditations: { 2026: [approvedOn('2026-02-15')] }
           })
         ).toEqual({
           registeredOnly: [range('2026-01-01', '2026-02-14')],
@@ -176,7 +176,7 @@ describe('registrationStatusWindows', () => {
       expect(
         windows({
           year: toYear(2025),
-          accreditations: { [toYear(2025)]: [approvedOn('2025-03-01')] }
+          accreditations: { 2025: [approvedOn('2025-03-01')] }
         })
       ).toEqual({
         registeredOnly: [],
@@ -189,7 +189,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-09-01'),
                 cancelledOn('2026-09-10')
@@ -206,7 +206,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-06-01'),
                 cancelledOn('2026-07-01')
@@ -223,7 +223,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-09-01'),
                 cancelledOn('2026-09-10'),
@@ -244,7 +244,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-06-01'),
                 cancelledOn('2026-06-15'),
@@ -265,7 +265,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-06-15'),
                 cancelledOn('2026-07-01'),
@@ -293,7 +293,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-05-05'),
                 approvedOn('2026-05-20')
@@ -310,7 +310,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-03-15'),
                 approvedOn('2026-07-15')
@@ -327,10 +327,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
-                approvedOn('2026-01-01'),
-                suspendedOn('2026-10-01')
-              ]
+              2026: [approvedOn('2026-01-01'), suspendedOn('2026-10-01')]
             }
           })
         ).toEqual({
@@ -343,7 +340,7 @@ describe('registrationStatusWindows', () => {
         expect(
           windows({
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 suspendedOn('2026-05-05', '09:00'),
                 approvedOn('2026-05-05', '15:00')
@@ -363,10 +360,7 @@ describe('registrationStatusWindows', () => {
           windows({
             registration: [approvedOn('2025-06-02'), cancelledOn('2026-08-01')],
             accreditations: {
-              [toYear(2026)]: [
-                approvedOn('2026-01-01'),
-                cancelledOn('2026-08-01')
-              ]
+              2026: [approvedOn('2026-01-01'), cancelledOn('2026-08-01')]
             }
           })
         ).toEqual({
@@ -384,7 +378,7 @@ describe('registrationStatusWindows', () => {
               approvedOn('2026-10-01')
             ],
             accreditations: {
-              [toYear(2026)]: [
+              2026: [
                 approvedOn('2026-01-01'),
                 cancelledOn('2026-08-01'),
                 approvedOn('2026-11-01')
