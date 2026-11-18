@@ -3,6 +3,8 @@ import { describe, beforeEach, expect } from 'vitest'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
+import { SummaryLogRowStateConflictError } from '../port.js'
+
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
@@ -288,6 +290,47 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
         expect(state.summaryLogIds).toEqual(['log-1'])
         expect(await storedStates('log-1')).toHaveLength(1)
+      })
+    })
+
+    describe('one-state-per-row-per-summary-log', () => {
+      it('refuses a second state for a row the summary log already holds', async () => {
+        const [held] = await repository.upsertSummaryLogRowStates(
+          withNumbers(DEFAULT_LEDGER_ID),
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+
+        await expect(
+          repository.upsertSummaryLogRowStates(
+            withNumbers(DEFAULT_LEDGER_ID),
+            [
+              buildSummaryLogRowStateEntry({
+                classification: excludedClassification
+              })
+            ],
+            'log-1'
+          )
+        ).rejects.toBeInstanceOf(SummaryLogRowStateConflictError)
+
+        expect(await storedStates('log-1')).toEqual([held])
+      })
+
+      it('refuses two states for one row in the same write', async () => {
+        await expect(
+          repository.upsertSummaryLogRowStates(
+            withNumbers(DEFAULT_LEDGER_ID),
+            [
+              buildSummaryLogRowStateEntry(),
+              buildSummaryLogRowStateEntry({
+                classification: excludedClassification
+              })
+            ],
+            'log-1'
+          )
+        ).rejects.toBeInstanceOf(SummaryLogRowStateConflictError)
+
+        expect(await storedStates('log-1')).toEqual([])
       })
     })
 
