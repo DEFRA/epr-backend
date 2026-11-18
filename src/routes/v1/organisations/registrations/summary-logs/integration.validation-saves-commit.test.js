@@ -120,7 +120,8 @@ describe('Validation saves what submission will commit', () => {
       ])
     ).toBe(SUMMARY_LOG_STATUS.VALIDATED)
 
-    expect((await storedLog(env, 'sl-second'))?.commit).toMatchObject({
+    expect((await storedLog(env, 'sl-second'))?.commit).toStrictEqual({
+      contextHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       payload: { creditTotal: 210, decemberCreditTotal: 0 },
       counts: { created: 1, updated: 1, decemberWasteRowCount: 0 }
     })
