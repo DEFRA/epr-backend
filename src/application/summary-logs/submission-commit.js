@@ -1,0 +1,102 @@
+import { add, toNumber } from '#common/helpers/decimal-utils.js'
+import {
+  decemberCreditTotalFor,
+  decemberRowCountFor
+} from '#waste-balances/application/december-credit-total.js'
+import {
+  classifyWasteRecord,
+  getTargetAmount
+} from '#waste-balances/application/target-amount.js'
+import { hashClassificationContext } from './classification-context-hash.js'
+import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
+
+/**
+ * @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js'
+ * @import {SummaryLogCommit} from '#domain/summary-logs/commit.js'
+ * @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js'
+ * @import {SummaryLogSubmittedTotals} from '#waste-balances/repository/ledger-schema.js'
+ * @import {RecordChange} from './record-change.js'
+ */
+
+/**
+ * @param {ValidatedWasteRecord[]} wasteRecords
+ * @param {RowClassificationContext} classificationContext
+ * @returns {SummaryLogSubmittedTotals}
+ */
+const submittedTotalsOf = (wasteRecords, classificationContext) => {
+  const { accreditation } = classificationContext
+  if (accreditation === null) {
+    return { creditTotal: 0, decemberCreditTotal: 0 }
+  }
+
+  const classifiedRows = wasteRecords.map(({ record }) =>
+    classifyWasteRecord(record, classificationContext)
+  )
+  let creditTotal = 0
+  for (const { classification } of classifiedRows) {
+    creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
+  }
+
+  return {
+    creditTotal,
+    decemberCreditTotal: decemberCreditTotalFor(classifiedRows, accreditation)
+  }
+}
+
+/** @type {Record<RecordChange, 'created' | 'updated' | null>} */
+const COUNT_FOR_RECORD_CHANGE = {
+  [RECORD_CHANGE.ADDED]: 'created',
+  [RECORD_CHANGE.ADJUSTED]: 'updated',
+  [RECORD_CHANGE.UNCHANGED]: null
+}
+
+/**
+ * @param {ValidatedWasteRecord[]} wasteRecords
+ * @param {RowClassificationContext} classificationContext
+ * @param {Map<string, RecordChange>} recordChanges
+ * @returns {SummaryLogCommit['counts']}
+ */
+const countsOf = (wasteRecords, classificationContext, recordChanges) => {
+  const counts = { created: 0, updated: 0 }
+  /** @type {ValidatedWasteRecord[]} */
+  const changed = []
+  for (const wasteRecord of wasteRecords) {
+    const count =
+      COUNT_FOR_RECORD_CHANGE[
+        recordChangeFor(recordChanges, wasteRecord.record)
+      ]
+    if (count) {
+      counts[count] += 1
+      changed.push(wasteRecord)
+    }
+  }
+
+  return {
+    ...counts,
+    decemberWasteRowCount: decemberRowCountFor(
+      changed.map(({ record }) =>
+        classifyWasteRecord(record, classificationContext)
+      ),
+      classificationContext.accreditation
+    )
+  }
+}
+
+/**
+ * What submitting a validated summary log commits (ADR-0058).
+ *
+ * @param {object} params
+ * @param {ValidatedWasteRecord[]} params.wasteRecords
+ * @param {RowClassificationContext} params.classificationContext
+ * @param {Map<string, RecordChange>} params.recordChanges
+ * @returns {SummaryLogCommit}
+ */
+export const submissionCommitOf = ({
+  wasteRecords,
+  classificationContext,
+  recordChanges
+}) => ({
+  contextHash: hashClassificationContext(classificationContext),
+  payload: submittedTotalsOf(wasteRecords, classificationContext),
+  counts: countsOf(wasteRecords, classificationContext, recordChanges)
+})
