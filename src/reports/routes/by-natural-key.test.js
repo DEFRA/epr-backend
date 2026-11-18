@@ -1,8 +1,5 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   accreditationsByYear,
@@ -71,9 +68,7 @@ const organisation = buildReadOrganisation({
     [EXPORTER_NUMBER]: buildReadExporterRegistration({
       accreditations: accreditationsByYear({
         ...buildReadAccreditation({
-          accreditationNumber: toAccreditationNumber(
-            EXPORTER_ACCREDITATION_NUMBER
-          )
+          accreditationNumber: EXPORTER_ACCREDITATION_NUMBER
         }),
         overseasSites: {}
       })

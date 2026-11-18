@@ -56,9 +56,7 @@ const servedExporter = () =>
   buildReadExporterRegistration({
     accreditations: accreditationsByYear(
       buildReadExporterAccreditation({
-        accreditationNumber: toAccreditationNumber(
-          EXPORTER_ACCREDITATION_NUMBER
-        )
+        accreditationNumber: EXPORTER_ACCREDITATION_NUMBER
       })
     )
   })
@@ -78,7 +76,7 @@ const organisation = buildReadOrganisation({
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
       accreditations: accreditationsByYear(
         buildReadAccreditation({
-          accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+          accreditationNumber: ACCREDITATION_NUMBER
         })
       )
     }),
@@ -121,7 +119,7 @@ const issuedNote = createMockIssuedPrn({
   },
   registration: { registrationNumber: accreditedLedgerId.registrationNumber },
   accreditation: buildAccreditationSnapshot({
-    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+    accreditationNumber: ACCREDITATION_NUMBER
   })
 })
 
@@ -558,8 +556,7 @@ describe('an accreditation held outside re-ex, with no database id', () => {
               [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
                 accreditations: accreditationsByYear(
                   buildReadAccreditation({
-                    accreditationNumber:
-                      toAccreditationNumber(ACCREDITATION_NUMBER)
+                    accreditationNumber: ACCREDITATION_NUMBER
                   }),
                   buildReadAccreditation({
                     year: toYear(2027),
