@@ -260,9 +260,11 @@ const publishedContribution = (rowState, partitions) => {
   const { registration, accreditation, overseasSites } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    tableSchemasOf(rowState.year, rowState.processingType),
-    accreditation,
-    overseasSites
+    {
+      tableSchemas: tableSchemasOf(rowState.year, rowState.processingType),
+      accreditation,
+      overseasSites
+    }
   )
 
   const contribution = monthlyContribution(

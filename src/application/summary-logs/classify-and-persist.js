@@ -16,15 +16,15 @@ import {
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {TableSchemas} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
 /** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 
 /**
  * Filters waste records to only those from tables that participate in waste balance.
  *
  * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {Record<string, TableSchema> | undefined} tableSchemas - The template's table schemas, absent when validation stopped before choosing it
+ * @param {TableSchemas | undefined} tableSchemas - absent when validation stopped before choosing the template
  * @returns {ValidatedWasteRecord[]}
  */
 export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
@@ -39,15 +39,13 @@ export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
  * @param {string} params.status - Summary log status after validation
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {Record<string, TableSchema> | undefined} params.tableSchemas - The template's table schemas
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
- * @param {ClassificationContext} [params.classificationContext]
+ * @param {RowClassificationContext} [params.classificationContext] - absent when validation stopped before reading the registration
  * @param {SummaryLogRegistration} [params.registration]
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
  * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
  */
 export const classifyLoads = ({
-  tableSchemas,
   status,
   wasteBalanceRecords,
   wasteRecords,
@@ -60,7 +58,6 @@ export const classifyLoads = ({
     status !== SUMMARY_LOG_STATUS.VALIDATED ||
     !wasteRecords ||
     !submittedRowStatesByKey ||
-    !tableSchemas ||
     !classificationContext
   ) {
     return {
@@ -72,8 +69,7 @@ export const classifyLoads = ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
-    tableSchemas,
-    ...classificationContext
+    classificationContext
   })
 
   const loads = mergeLoads(
@@ -92,7 +88,6 @@ export const classifyLoads = ({
         recordChanges,
         periodicReports,
         cadence: reportingCadenceOf(registration),
-        tableSchemas,
         operatorCategory: reportOperatorCategory(registration),
         classificationContext
       })

@@ -1,9 +1,7 @@
 /**
- * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
  * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
- * @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js'
- * @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
  * @import {WasteRecord} from '#domain/waste-records/model.js'
+ * @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js'
  */
 import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
 
@@ -22,29 +20,20 @@ import { projectSummaryLogRowState } from './project-summary-log-row-state.js'
  * @param {Object} params
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteRecord[]} params.wasteRecords
- * @param {Record<string, TableSchema>} params.tableSchemas - The table schemas of the summary log's template
- * @param {AccreditationValidity | null} params.accreditation
+ * @param {RowClassificationContext} params.classificationContext
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
- * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
  * @returns {Promise<void>}
  */
 export const writeSummaryLogRowStates = async ({
   summaryLogRowStatesRepository,
   wasteRecords,
-  tableSchemas,
-  accreditation,
+  classificationContext,
   ledgerId,
-  overseasSites,
   summaryLogId
 }) => {
   const classifiedRows = wasteRecords.map((record) =>
-    projectSummaryLogRowState(
-      record,
-      tableSchemas,
-      accreditation,
-      overseasSites
-    )
+    projectSummaryLogRowState(record, classificationContext)
   )
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(

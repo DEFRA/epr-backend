@@ -437,16 +437,18 @@ describe('syncFromSummaryLog', () => {
       ]),
       {
         user: TEST_USER,
-        accreditation: ACCREDITATION_VALIDITY,
-        overseasSites: {},
+        classificationContext: {
+          tableSchemas: tableSchemasOf(YEAR, PROCESSING_TYPES.EXPORTER),
+          accreditation: ACCREDITATION_VALIDITY,
+          overseasSites: {}
+        },
         summaryLogId: fileId,
         ledgerId: {
           organisationNumber: '500001',
           registrationNumber: 'REG-1',
           accreditationNumber: 'ACC-1',
           year: YEAR
-        },
-        tableSchemas: tableSchemasOf(YEAR, PROCESSING_TYPES.EXPORTER)
+        }
       }
     )
   })
@@ -511,10 +513,12 @@ describe('syncFromSummaryLog', () => {
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        overseasSites: {
-          '001': { validFrom: new Date('2024-01-01') },
-          '002': { validFrom: null }
-        }
+        classificationContext: expect.objectContaining({
+          overseasSites: {
+            '001': { validFrom: new Date('2024-01-01') },
+            '002': { validFrom: null }
+          }
+        })
       })
     )
   })

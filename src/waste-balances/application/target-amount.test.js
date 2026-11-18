@@ -32,12 +32,11 @@ describe('classifyWasteRecord', () => {
       data: { processingType: PROCESSING_TYPES.EXPORTER, tonnage: 42 }
     })
 
-    const result = classifyWasteRecord(
-      record,
+    const result = classifyWasteRecord(record, {
       tableSchemas,
       accreditation,
       overseasSites
-    )
+    })
 
     expect(result.rowId).toBe('row-7')
     expect(result.wasteRecordType).toBe(WASTE_RECORD_TYPE.EXPORTED)
@@ -54,12 +53,11 @@ describe('classifyWasteRecord', () => {
       transactionAmount: 100
     }))
 
-    const { classification } = classifyWasteRecord(
-      buildRecord(),
+    const { classification } = classifyWasteRecord(buildRecord(), {
       tableSchemas,
       accreditation,
       overseasSites
-    )
+    })
 
     expect(classification).toEqual({
       outcome: WASTE_BALANCE_OUTCOME.INCLUDED,
