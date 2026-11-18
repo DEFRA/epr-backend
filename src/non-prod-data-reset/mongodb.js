@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import { deleteStandInAccreditationsOf } from '#organisation-read-model/index.js'
+import { deleteExternalAccreditationsOf } from '#organisation-read-model/index.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -208,7 +208,7 @@ export const createNonProdDataReset = (
     const keys = extractCascadeKeys(organisation)
     const [counts, externalAccreditations] = await Promise.all([
       runCascade(db, buildCascadeSteps(organisation, keys)),
-      deleteStandInAccreditationsOf(db, organisation.organisationNumber)
+      deleteExternalAccreditationsOf(db, organisation.organisationNumber)
     ])
     const deletedOrganisations =
       await organisationAdministrationRepository.deleteByOrganisationNumber(

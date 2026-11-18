@@ -68,13 +68,14 @@ export const createMongoExternalAccreditationsRepository = async (db) => {
  * @param {Db} db
  * @returns {ExternalAccreditationsLoader}
  */
-const createStandInAccreditationsLoader = (db) => (year, organisationNumber) =>
-  externalAccreditations(db)
-    .find(
-      { year, ...(organisationNumber && { organisationNumber }) },
-      { projection: { _id: 0, overseasSites: 0 } }
-    )
-    .toArray()
+const createMongoExternalAccreditationsLoader =
+  (db) => (year, organisationNumber) =>
+    externalAccreditations(db)
+      .find(
+        { year, ...(organisationNumber && { organisationNumber }) },
+        { projection: { _id: 0, overseasSites: 0 } }
+      )
+      .toArray()
 
 /**
  * The `external-accreditations` collection as the registration service,
@@ -83,18 +84,20 @@ const createStandInAccreditationsLoader = (db) => (year, organisationNumber) =>
  * @param {Db} db
  * @returns {RegistrationService}
  */
-export const standInRegistrationService = (db) => () =>
-  createStandInAccreditationsLoader(db)
+export const mongoExternalAccreditationsRegistrationService = (db) => () =>
+  createMongoExternalAccreditationsLoader(db)
 
 /**
- * Deletes every external accreditation the stand-in holds for the
- * organisation, for the non-prod data reset.
+ * Deletes every external accreditation stored for the organisation, for the non-prod data reset.
  *
  * @param {Db} db
  * @param {OrganisationNumber} organisationNumber
  * @returns {Promise<number>} how many were deleted
  */
-export const deleteStandInAccreditationsOf = async (db, organisationNumber) => {
+export const deleteExternalAccreditationsOf = async (
+  db,
+  organisationNumber
+) => {
   const { deletedCount } = await externalAccreditations(db).deleteMany({
     organisationNumber
   })

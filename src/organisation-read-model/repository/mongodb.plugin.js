@@ -1,6 +1,6 @@
 import { registerDependency } from '#plugins/register-dependency.js'
 import { regAccredRegistrationService } from '../registration-service/reg-accred.js'
-import { standInRegistrationService } from '../registration-service/stand-in/mongodb.js'
+import { mongoExternalAccreditationsRegistrationService } from '../registration-service/external-accreditations/mongodb.js'
 import { createOrganisationReadRepository } from './mongodb.js'
 
 /** @import { Db } from 'mongodb' */
@@ -35,7 +35,7 @@ export const organisationReadRepositoryPlugin = {
       ? regAccredRegistrationService(
           /** @type {RegAccredApiConfig} */ (config.get('regAccredApi'))
         )
-      : standInRegistrationService(server.db)
+      : mongoExternalAccreditationsRegistrationService(server.db)
     const createRepository = createOrganisationReadRepository(
       server.db,
       registrationService

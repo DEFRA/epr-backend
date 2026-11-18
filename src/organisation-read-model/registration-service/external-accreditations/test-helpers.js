@@ -4,14 +4,14 @@ import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './mongodb.js'
 /** @import { ExternalAccreditation } from '../port.js' */
 
 /**
- * Stores the accreditation in the stand-in as given, without validating it,
- * with the overseas sites accreditations were once stored with, which the
- * stand-in no longer reads.
+ * Stores the external accreditation as given, without validating it, with the
+ * overseas sites accreditations were once stored with, which are no longer
+ * read.
  *
  * @param {Db} db
  * @param {ExternalAccreditation & { overseasSites?: object }} accreditation
  */
-export const storeStandInAccreditation = async (db, accreditation) => {
+export const storeExternalAccreditation = async (db, accreditation) => {
   await db
     .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
     .insertOne({ ...accreditation })
@@ -20,7 +20,7 @@ export const storeStandInAccreditation = async (db, accreditation) => {
 /**
  * @param {Db} db
  */
-export const clearStandInAccreditations = async (db) => {
+export const clearExternalAccreditations = async (db) => {
   await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).deleteMany({})
 }
 
@@ -28,5 +28,5 @@ export const clearStandInAccreditations = async (db) => {
  * @param {Db} db
  * @param {Filter<Document>} [filter]
  */
-export const countStandInAccreditations = (db, filter = {}) =>
+export const countExternalAccreditations = (db, filter = {}) =>
   db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).countDocuments(filter)

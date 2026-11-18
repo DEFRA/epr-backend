@@ -9,7 +9,7 @@ Code outside the module imports only `index.js`, or `test-support.js` in a test.
 The data comes from two sources:
 
 - **Re-ex's own store.** This source reads the organisations, their registrations and the accreditations that re-ex holds itself.
-- **The registration service.** This source supplies the accreditations held outside re-ex. It is either Reg Accred or a stand-in collection, and the plugin chooses between them.
+- **The registration service.** This source supplies the accreditations held outside re-ex. It is either Reg Accred or the external accreditations collection, and the plugin chooses between them.
 
 The repository merges the two sources and owns the rules for which year each source serves. The read model's types and the rules over them live in `domain/`, which imports nothing else from the module.
 

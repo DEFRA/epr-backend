@@ -19,7 +19,7 @@ export {
   toLinkedDefraOrganisation
 } from './repository/to-read-model.js'
 
-export * from './registration-service/stand-in/port.js'
-export { mongoExternalAccreditationsRepositoryPlugin } from './registration-service/stand-in/mongodb.plugin.js'
-export { deleteStandInAccreditationsOf } from './registration-service/stand-in/mongodb.js'
-export { devExternalAccreditationPut } from './registration-service/stand-in/dev-put.js'
+export * from './registration-service/external-accreditations/port.js'
+export { mongoExternalAccreditationsRepositoryPlugin } from './registration-service/external-accreditations/mongodb.plugin.js'
+export { deleteExternalAccreditationsOf } from './registration-service/external-accreditations/mongodb.js'
+export { devExternalAccreditationPut } from './registration-service/external-accreditations/dev-put.js'

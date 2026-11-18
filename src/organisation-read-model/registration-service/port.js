@@ -28,8 +28,8 @@
  */
 
 /**
- * Where external accreditations come from: Reg Accred, or the stand-in
- * collection where Reg Accred is not called. Given a request's logger, it
+ * Where external accreditations come from: Reg Accred, or the external
+ * accreditations collection where Reg Accred is not called. Given a request's logger, it
  * gives the loader for that request.
  *
  * @typedef {(dependencies: { logger: Pick<TypedLogger, 'warn'> }) => ExternalAccreditationsLoader} RegistrationService

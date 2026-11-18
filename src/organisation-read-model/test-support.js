@@ -1,6 +1,6 @@
 import { createInMemoryOrganisationReadRepository } from './repository/inmemory.js'
 import { createOrganisationReadRepository } from './repository/mongodb.js'
-import { standInRegistrationService } from './registration-service/stand-in/mongodb.js'
+import { mongoExternalAccreditationsRegistrationService } from './registration-service/external-accreditations/mongodb.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { OrganisationReadRepository } from './repository/port.js' */
@@ -27,8 +27,8 @@ export {
   reprocessor
 } from './repository/contract/organisation-read-test-helpers.js'
 export { buildExternalAccreditation } from './repository/contract/test-data.js'
-export { createMongoExternalAccreditationsRepository } from './registration-service/stand-in/mongodb.js'
-export * from './registration-service/stand-in/test-helpers.js'
+export { createMongoExternalAccreditationsRepository } from './registration-service/external-accreditations/mongodb.js'
+export * from './registration-service/external-accreditations/test-helpers.js'
 
 /**
  * An organisation read repository that serves no organisations.
@@ -39,10 +39,13 @@ export const emptyOrganisationReadRepository = () =>
   createInMemoryOrganisationReadRepository()()
 
 /**
- * The MongoDB organisation read repository, with the stand-in as its
- * registration service.
+ * The MongoDB organisation read repository, with the external
+ * accreditations collection as its registration service.
  *
  * @param {Db} db
  */
-export const createOrganisationReadRepositoryOnStandIn = (db) =>
-  createOrganisationReadRepository(db, standInRegistrationService(db))
+export const createOrganisationReadRepositoryOnExternalAccreditations = (db) =>
+  createOrganisationReadRepository(
+    db,
+    mongoExternalAccreditationsRegistrationService(db)
+  )

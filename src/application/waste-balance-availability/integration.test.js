@@ -22,9 +22,9 @@ import {
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildExternalAccreditation,
-  clearStandInAccreditations,
-  createOrganisationReadRepositoryOnStandIn,
-  storeStandInAccreditation
+  clearExternalAccreditations,
+  createOrganisationReadRepositoryOnExternalAccreditations,
+  storeExternalAccreditation
 } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
@@ -139,14 +139,13 @@ describe('aggregateAvailableBalance - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationReadRepository = createOrganisationReadRepositoryOnStandIn(
-        db
-      )({
-        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-        logger: { warn: () => {} }
-      })
+      organisationReadRepository =
+        createOrganisationReadRepositoryOnExternalAccreditations(db)({
+          overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+          logger: { warn: () => {} }
+        })
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await clearStandInAccreditations(db)
+      await clearExternalAccreditations(db)
       await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
     }
   )
@@ -258,7 +257,7 @@ describe('aggregateAvailableBalance - Integration', () => {
           { id: '1', material: MATERIAL.PLASTIC }
         ])
       )
-    await storeStandInAccreditation(
+    await storeExternalAccreditation(
       db,
       buildExternalAccreditation({
         organisationNumber: toOrganisationNumber(String(orgId1)),

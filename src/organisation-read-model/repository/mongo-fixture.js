@@ -2,12 +2,12 @@ import { MongoClient, ObjectId } from 'mongodb'
 
 import {
   createMongoExternalAccreditationsRepository,
-  standInRegistrationService
-} from '#organisation-read-model/registration-service/stand-in/mongodb.js'
+  mongoExternalAccreditationsRegistrationService
+} from '#organisation-read-model/registration-service/external-accreditations/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/index.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { clearStandInAccreditations } from '#organisation-read-model/registration-service/stand-in/test-helpers.js'
+import { clearExternalAccreditations } from '#organisation-read-model/registration-service/external-accreditations/test-helpers.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
 
 /** @import { TestAPI } from 'vitest' */
@@ -65,7 +65,7 @@ export const it = /** @type {TestAPI<MongoFixtures>} */ (
       const database = mongoClient.db(DATABASE_NAME)
       await database.collection('epr-organisations').deleteMany({})
       await database.collection('overseas-sites').deleteMany({})
-      await clearStandInAccreditations(database)
+      await clearExternalAccreditations(database)
 
       /** @type {OrganisationReadRepositoryWith} */
       const organisationReadRepositoryWith = async ({
@@ -99,7 +99,7 @@ export const it = /** @type {TestAPI<MongoFixtures>} */ (
 
         return createOrganisationReadRepository(
           database,
-          standInRegistrationService(database)
+          mongoExternalAccreditationsRegistrationService(database)
         )({
           overseasSitesRepository: (
             await createOverseasSitesRepository(database)

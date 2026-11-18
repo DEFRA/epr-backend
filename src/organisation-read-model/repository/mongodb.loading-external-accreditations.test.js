@@ -21,8 +21,8 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { regAccredRegistrationService } from '../registration-service/reg-accred.js'
-import { standInRegistrationService } from '../registration-service/stand-in/mongodb.js'
-import { storeStandInAccreditation } from '../registration-service/stand-in/test-helpers.js'
+import { mongoExternalAccreditationsRegistrationService } from '../registration-service/external-accreditations/mongodb.js'
+import { storeExternalAccreditation } from '../registration-service/external-accreditations/test-helpers.js'
 import { createOrganisationReadRepository } from './mongodb.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -126,7 +126,9 @@ const repositoryWith = async (
   const database = mongoClient.db('epr-backend')
   return createOrganisationReadRepository(
     database,
-    (registrationServiceOf ?? standInRegistrationService)(database)
+    (registrationServiceOf ?? mongoExternalAccreditationsRegistrationService)(
+      database
+    )
   )({
     overseasSitesRepository: (await createOverseasSitesRepository(database))(),
     logger
@@ -170,36 +172,25 @@ describe('loading external accreditations', () => {
     vi.useRealTimers()
   })
 
-  describe('from the stand-in', () => {
-    it.for(
-      /** @type {[string, RegistrationServiceOf | undefined][]} */ ([
-        ['no registration service', undefined],
-        ['the stand-in as the registration service', standInRegistrationService]
-      ])
-    )(
-      'serves the external accreditation held in the database with %s',
-      async (
-        [, registrationServiceOf],
-        { organisationReadRepositoryWith, mongoClient }
-      ) => {
-        const stored = await storeReprocessorWithExternalAccreditation(
-          organisationReadRepositoryWith
-        )
-        const repository = await repositoryWith(
-          mongoClient,
-          registrationServiceOf
-        )
+  describe('from the external accreditations collection', () => {
+    it('serves the external accreditation held in the database', async ({
+      organisationReadRepositoryWith,
+      mongoClient
+    }) => {
+      const stored = await storeReprocessorWithExternalAccreditation(
+        organisationReadRepositoryWith
+      )
+      const repository = await repositoryWith(mongoClient)
 
-        const organisation = await findOrganisation(
-          repository,
-          stored.organisationNumber
-        )
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
 
-        expect(accreditationNumber2027(organisation)).toBe(
-          STORED_ACCREDITATION_NUMBER
-        )
-      }
-    )
+      expect(accreditationNumber2027(organisation)).toBe(
+        STORED_ACCREDITATION_NUMBER
+      )
+    })
 
     it("lists the registration's overseas sites on an exporter's accreditation, ignoring any it was stored with", async ({
       organisationReadRepositoryWith,
@@ -210,7 +201,7 @@ describe('loading external accreditations', () => {
         organisations: [stored],
         overseasSites
       })
-      await storeStandInAccreditation(mongoClient.db('epr-backend'), {
+      await storeExternalAccreditation(mongoClient.db('epr-backend'), {
         ...buildExternalAccreditationFor(stored, {
           registrationNumber: toRegistrationNumber(EXPORTER_NUMBER)
         }),

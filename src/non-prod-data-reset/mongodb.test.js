@@ -11,8 +11,8 @@ import {
 } from '#domain/organisations/numbers.js'
 import {
   buildExternalAccreditation,
-  clearStandInAccreditations,
-  countStandInAccreditations,
+  clearExternalAccreditations,
+  countExternalAccreditations,
   createMongoExternalAccreditationsRepository
 } from '#organisation-read-model/test-support.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
@@ -114,7 +114,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       for (const name of COLLECTIONS) {
         await database.collection(name).deleteMany({})
       }
-      await clearStandInAccreditations(database)
+      await clearExternalAccreditations(database)
       await use(database)
     },
 
@@ -372,7 +372,7 @@ describe('non-prod data reset (mongo)', () => {
           `${name} should be empty`
         ).toBe(0)
       }
-      expect(await countStandInAccreditations(database)).toBe(0)
+      expect(await countExternalAccreditations(database)).toBe(0)
     })
 
     it('leaves unrelated organisations and their downstream data untouched', async ({
@@ -474,7 +474,7 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(0)
       expect(
-        await countStandInAccreditations(database, {
+        await countExternalAccreditations(database, {
           organisationNumber: other.organisation.organisationNumber
         })
       ).toBe(1)
@@ -612,7 +612,7 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       expect(counts['external-accreditations']).toBe(0)
-      expect(await countStandInAccreditations(database)).toBe(1)
+      expect(await countExternalAccreditations(database)).toBe(1)
     })
 
     it('refuses via the plugin when the CDP environment is prod', async ({
