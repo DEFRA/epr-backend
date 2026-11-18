@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, expect, onTestFinished } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { aggregateAvailableBalance } from './aggregate-available-balance.js'
@@ -14,6 +14,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 import {
   createMongoLedgerRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
@@ -246,6 +247,9 @@ describe('aggregateAvailableBalance - Integration', () => {
   })
 
   it('includes an accreditation held outside re-ex', async () => {
+    // External accreditations are held for 2027, so load only once it is open
+    config.set('openNextYear', true)
+    onTestFinished(() => config.reset('openNextYear'))
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
@@ -257,17 +261,21 @@ describe('aggregateAvailableBalance - Integration', () => {
       buildExternalAccreditation({
         organisationNumber: toOrganisationNumber(String(orgId1)),
         registrationNumber: toRegistrationNumber('REG-1'),
-        year: toYear(2026),
+        year: toYear(2027),
         accreditationNumber: toAccreditationNumber('ACC-EXTERNAL'),
         status: {
           current: 'approved',
-          lastUpdatedAt: '2026-01-01T00:00:00.000Z',
-          timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+          lastUpdatedAt: '2027-01-01T00:00:00.000Z',
+          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
         }
       })
     )
     await ledgerRepository.appendEvents([
-      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-EXTERNAL'), 1, 80)
+      ledgerEvent(
+        { ...ledgerIdOf(orgId1, '1', 'ACC-EXTERNAL'), year: toYear(2027) },
+        1,
+        80
+      )
     ])
 
     const result = await aggregate()

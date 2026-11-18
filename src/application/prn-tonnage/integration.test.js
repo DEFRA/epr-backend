@@ -638,6 +638,10 @@ describe('aggregatePrnTonnage - Integration', () => {
   })
 
   it('reports an accreditation known only by its number', async () => {
+    // External accreditations are held for 2027, so load only once it is open
+    config.set('openNextYear', true)
+    onTestFinished(() => config.reset('openNextYear'))
+    const externalLedgerId = { ...ledgerId, year: toYear(2027) }
     const { accreditationId: _, ...registration } = reprocessorRegistration(
       REPROCESSING_TYPE.INPUT
     )
@@ -647,24 +651,29 @@ describe('aggregatePrnTonnage - Integration', () => {
     })
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
-        organisationNumber: ledgerId.organisationNumber,
-        registrationNumber: ledgerId.registrationNumber,
-        year: ledgerId.year,
-        accreditationNumber: ledgerId.accreditationNumber,
+        organisationNumber: externalLedgerId.organisationNumber,
+        registrationNumber: externalLedgerId.registrationNumber,
+        year: externalLedgerId.year,
+        accreditationNumber: externalLedgerId.accreditationNumber,
         prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
         status: {
           current: 'approved',
-          lastUpdatedAt: '2026-01-01T00:00:00.000Z',
-          timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
+          lastUpdatedAt: '2027-01-01T00:00:00.000Z',
+          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
         }
       })
     )
-    await db
-      .collection(PRNS_COLLECTION)
-      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+    const prn = prnWithStatus(PRN_STATUS.ACCEPTED, 40)
+    await db.collection(PRNS_COLLECTION).insertOne({
+      ...prn,
+      accreditation: {
+        ...prn.accreditation,
+        accreditationYear: externalLedgerId.year
+      }
+    })
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
-        ...ledgerId,
+        ...externalLedgerId,
         closingBalance: { amount: 250, availableAmount: 125 }
       })
     ])

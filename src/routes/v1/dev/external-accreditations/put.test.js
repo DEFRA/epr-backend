@@ -35,11 +35,6 @@ const urlFor = (number) => `/v1/dev/external-accreditations/${number}/${year}`
 /** A registration only another organisation holds. */
 const OTHER_ORGANISATIONS_NUMBER = 'R26ER5009990001PL'
 
-const overseasSites = {
-  '001': { status: 'approved', approvedOn: '2027-01-01' },
-  '002': { status: 'pending' }
-}
-
 /** @param {{ devEndpoints: boolean }} featureFlags */
 const serverWith = async (featureFlags) => {
   const externalAccreditationsRepository =
@@ -129,19 +124,18 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     )
   })
 
-  it("stores an exporter accreditation's overseas sites", async () => {
+  it("stores an exporter's accreditation without overseas sites, as they are lifted from the registration", async () => {
     const { server, externalAccreditationsRepository } = await serverWith({
       devEndpoints: true
     })
     const exporterAccreditation = buildExternalAccreditation({
-      registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
-      overseasSites
+      registrationNumber: toRegistrationNumber(EXPORTER_NUMBER)
     })
 
     const response = await server.inject({
       method: 'PUT',
       url: urlFor(EXPORTER_NUMBER),
-      payload: { ...payload, overseasSites }
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -151,18 +145,26 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     )
   })
 
-  it("refuses overseas sites for a reprocessor's accreditation", async () => {
+  it('refuses an accreditation with overseas sites', async () => {
     const { server, externalAccreditationsRepository } = await serverWith({
       devEndpoints: true
     })
 
     const response = await server.inject({
       method: 'PUT',
-      url: urlFor(REPROCESSOR_NUMBER),
-      payload: { ...payload, overseasSites }
+      url: urlFor(EXPORTER_NUMBER),
+      payload: {
+        ...payload,
+        overseasSites: {
+          '001': { status: 'approved', approvedOn: '2027-01-01' }
+        }
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload).message).toBe(
+      '"overseasSites" is not allowed'
+    )
     expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
   })
 
@@ -202,30 +204,6 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
     }
   )
-
-  it.for([
-    {
-      description: 'an approved overseas site without its approval date',
-      overseasSites: { '001': { status: 'approved' } }
-    },
-    {
-      description: 'an overseas site in a status sites do not have',
-      overseasSites: { '001': { status: 'rejected' } }
-    }
-  ])('refuses $description', async ({ overseasSites }) => {
-    const { server, externalAccreditationsRepository } = await serverWith({
-      devEndpoints: true
-    })
-
-    const response = await server.inject({
-      method: 'PUT',
-      url: urlFor(EXPORTER_NUMBER),
-      payload: { ...payload, overseasSites }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
-  })
 
   it.for([
     {
@@ -303,6 +281,24 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
+
+  it.for([2026, 2028])(
+    'refuses %i, as the read model loads external accreditations for 2027 only',
+    async (otherYear) => {
+      const { server, externalAccreditationsRepository } = await serverWith({
+        devEndpoints: true
+      })
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/external-accreditations/${registrationNumber}/${otherYear}`,
+        payload
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+    }
+  )
 
   it('refuses a request without an accreditation', async () => {
     const { server } = await serverWith({ devEndpoints: true })

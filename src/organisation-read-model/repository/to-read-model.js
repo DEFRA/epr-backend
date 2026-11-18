@@ -46,9 +46,11 @@ import {
 
 /**
  * A registration's accreditation for a year, held outside the REEX database,
- * in the read model's shape, with the registration and year it is for.
+ * in the read model's shape, with the registration and year it is for. It
+ * holds no overseas sites: an exporter's are lifted from its registration, as
+ * a stored accreditation's are.
  *
- * @typedef {(ReprocessorAccreditation | ExporterAccreditation) & {
+ * @typedef {AccreditationCommon & {
  *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  *   year: Year
@@ -56,7 +58,7 @@ import {
  */
 
 /**
- * @typedef {Map<RegistrationNumber, Record<string, ReprocessorAccreditation | ExporterAccreditation>>} ExternalAccreditationsByRegistration
+ * @typedef {Map<RegistrationNumber, Record<string, AccreditationCommon>>} ExternalAccreditationsByRegistration
  */
 
 /**
@@ -64,7 +66,7 @@ import {
  *
  * @param {ExternalAccreditation} externalAccreditation
  * @param {OnDrop} onDrop
- * @returns {[string, ReprocessorAccreditation | ExporterAccreditation] | null}
+ * @returns {[string, AccreditationCommon] | null}
  */
 const toAccreditationEntryOfYear = (
   {
@@ -251,9 +253,9 @@ export function toLinkedDefraOrganisation(linked) {
  *   registration: StoredRegistration
  *   organisation: StoredOrganisation
  *   context: Context
- *   externalAccreditations: Record<string, ReprocessorAccreditation | ExporterAccreditation>
+ *   externalAccreditations: Record<string, AccreditationCommon>
  * }} options
- * @returns {Record<string, ReprocessorAccreditation | ExporterAccreditation>}
+ * @returns {Record<string, AccreditationCommon>}
  */
 function accreditationsUpTo({
   openYear,
@@ -291,7 +293,7 @@ function accreditationsUpTo({
  * @param {ExternalAccreditationsByRegistration} [externalByRegistration]
  * @returns {[string, Registration] | null}
  */
-export function toRegistrationEntry(
+function toRegistrationEntry(
   registration,
   organisation,
   context,
@@ -362,7 +364,7 @@ export function toRegistrationEntry(
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<string, AccreditationCommon>} accreditations
  * @param {Context} context
  * @returns {ExporterRegistration}
  */
@@ -384,7 +386,7 @@ function toExporterRegistration(registration, common, accreditations, context) {
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<string, ReprocessorAccreditation>} accreditations
  * @param {OnDrop} onDrop
  * @returns {ReprocessorRegistration | null}
  */
@@ -410,42 +412,17 @@ function toReprocessorRegistration(
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType,
     site: { address },
-    accreditations: withoutOverseasSites(
-      accreditations,
-      registrationNumber,
-      onDrop
-    )
+    accreditations
   }
 }
 
 /**
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
- * @param {StoredRegistration['registrationNumber']} registrationNumber
- * @param {OnDrop} onDrop
- * @returns {Record<string, ReprocessorAccreditation>}
- */
-function withoutOverseasSites(accreditations, registrationNumber, onDrop) {
-  return Object.fromEntries(
-    Object.entries(accreditations).map(([year, accreditation]) => {
-      if (!('overseasSites' in accreditation)) {
-        return [year, accreditation]
-      }
-      onDrop(
-        `Registration ${registrationNumber} accreditation year ${year} lists overseas sites, but a reprocessor has none`
-      )
-      const { overseasSites: _overseasSites, ...reprocessorAccreditation } =
-        accreditation
-      return [year, reprocessorAccreditation]
-    })
-  )
-}
-
-/**
- * Until per-year approvals come from the registration service, an exporter's
- * accreditation without its own sites lists every registration site with the
- * site's stored approval.
+ * Neither a stored nor an external accreditation holds overseas sites, so
+ * until per-year approvals come from the registration service an exporter's
+ * accreditation lists every registration site with the site's stored
+ * approval.
  *
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<string, AccreditationCommon>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {StoredRegistration} registration
  * @param {OnDrop} onDrop
@@ -463,34 +440,41 @@ function withAccreditedSites(
       year,
       {
         ...accreditation,
-        overseasSites:
-          'overseasSites' in accreditation
-            ? ownSites(accreditation, registration, overseasSites, onDrop)
-            : registrationSites
+        overseasSites: sitesHeldByRegistration(
+          registrationSites,
+          year,
+          registration,
+          onDrop
+        )
       }
     ])
   )
 }
 
 /**
- * @param {ExporterAccreditation} accreditation
+ * The accreditation's sites the registration holds. One it does not hold is
+ * dropped. While every accreditation's sites are lifted from its registration
+ * none is.
+ *
+ * @param {Record<string, AccreditedOverseasSite>} sites
+ * @param {string} year
  * @param {StoredRegistration} registration
- * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {OnDrop} onDrop
  * @returns {Record<string, AccreditedOverseasSite>}
  */
-function ownSites(accreditation, registration, overseasSites, onDrop) {
-  Object.keys(accreditation.overseasSites)
-    .filter((orsId) => !Object.hasOwn(registration.overseasSites ?? {}, orsId))
-    .forEach((orsId) =>
-      onDrop(
-        `Registration ${registration.registrationNumber} accreditation year ${accreditation.year} lists overseas site ${orsId}, which the registration does not hold`
-      )
-    )
+function sitesHeldByRegistration(sites, year, registration, onDrop) {
+  const held = registration.overseasSites ?? {}
   return Object.fromEntries(
-    Object.entries(accreditation.overseasSites).filter(([orsId]) =>
-      Object.hasOwn(overseasSites, orsId)
-    )
+    Object.entries(sites).filter(([orsId]) => {
+      const isHeld = Object.hasOwn(held, orsId)
+      /* v8 ignore if -- unreachable while sites are lifted from the registration */
+      if (!isHeld) {
+        onDrop(
+          `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
+        )
+      }
+      return isHeld
+    })
   )
 }
 
