@@ -17,9 +17,9 @@ import {
 } from '#waste-balances/application/read-model-accreditations.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
+  TEMPLATE_DATA_FIELD_COLUMNS,
   buildHeaderRow,
-  buildDataRow,
-  buildDataFieldColumns
+  buildDataRow
 } from '../domain/csv-columns.js'
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
@@ -39,7 +39,7 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
 /**
  * @typedef {Object} StreamCsvExportDeps
  * @property {Pick<OrganisationReadRepository, 'findAll'>} organisationReadRepository
- * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog' | 'findDistinctDataKeys'>} summaryLogRowStatesRepository
+ * @property {Pick<SummaryLogRowStatesRepository, 'findWasteRecordStatesForSummaryLog'>} summaryLogRowStatesRepository
  * @property {Pick<WasteBalanceLedgerRepository, 'findLatestSubmittedSummaryLogPerLedger'>} ledgerRepository
  * @property {Pick<SummaryLogsRepository, 'findAll'>} summaryLogsRepository
  * @property {Year} year - The year whose ledger partitions are exported.
@@ -328,18 +328,14 @@ const registrationsInOrder = (org, only) =>
  * Yields CSV-encoded lines (header first, then one per row state).
  * Hard-fails on any iterator error — caller must close the response stream.
  *
- * Only the year's ledger partitions are exported. The header row is
- * dynamically composed from the union of schema-declared field constants and
- * any keys observed on the year's stored row-state `data` objects. Observed
- * keys are discovered up-front via a server-side aggregation
- * (`findDistinctDataKeys`) so the export does not need to materialise any row
- * state to compose the header. Each registration's ledger partitions are
- * resolved up-front from a single cross-ledger query
+ * Only the year's ledger partitions are exported. The header row is every
+ * template's columns, so it is sent before any query and a key no template
+ * declares is not exported. Each registration's ledger partitions are
+ * resolved from a single cross-ledger query
  * (`findLatestSubmittedSummaryLogPerLedger`) narrowed to the year — a ledger
  * belongs to one year, so its latest submission is that year's — then rows
- * are streamed one
- * partition at a time — memory is bounded by the largest single partition's
- * row count, not the total across the system.
+ * are streamed one partition at a time — memory is bounded by the largest
+ * single partition's row count, not the total across the system.
  *
  * @param {StreamCsvExportDeps} deps
  * @returns {AsyncGenerator<string>}
@@ -355,16 +351,13 @@ export async function* streamCsvExport(deps) {
     registrationNumber: onlyRegistration
   } = deps
 
-  const [observedKeys, latestSubmittedEntries] = await Promise.all([
-    summaryLogRowStatesRepository.findDistinctDataKeys(year),
-    ledgerRepository.findLatestSubmittedSummaryLogPerLedger()
-  ])
-
-  const dataFieldColumns = buildDataFieldColumns(observedKeys)
+  const dataFieldColumns = TEMPLATE_DATA_FIELD_COLUMNS
   yield await encodeRow(buildHeaderRow(dataFieldColumns))
 
   const entriesByRegistration = groupByRegistration(
-    latestSubmittedEntries.filter(({ ledgerId }) => ledgerId.year === year)
+    (await ledgerRepository.findLatestSubmittedSummaryLogPerLedger()).filter(
+      ({ ledgerId }) => ledgerId.year === year
+    )
   )
 
   const orgsSorted = organisation

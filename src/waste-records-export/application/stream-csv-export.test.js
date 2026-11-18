@@ -1321,6 +1321,29 @@ describe('streamCsvExport', () => {
       expect(cellsOf(out[0])).toStrictEqual(EXPORT_HEADER)
     })
 
+    it('leaves out a data key no template declares', async () => {
+      const deps = await buildDeps({
+        orgs: [readModelOrg()],
+        seeds: [
+          {
+            rows: [
+              receivedRowState({
+                data: {
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                  OPERATOR_OWN_COLUMN: 'own-value'
+                }
+              })
+            ]
+          }
+        ]
+      })
+
+      const [header, row] = await collect(streamCsvExport(deps))
+
+      expect(cellsOf(header)).toStrictEqual(EXPORT_HEADER)
+      expect(row).not.toContain('own-value')
+    })
+
     it.for(TEMPLATE_TABLES)(
       'exports every $year $processingType $tableName column under its own header',
       async ({ processingType, wasteRecordType, year, columns }) => {
@@ -1375,72 +1398,6 @@ describe('streamCsvExportToReadable', () => {
     for (const column of buildHeaderRow(buildDataFieldColumns([]))) {
       expect(chunks[0]).toContain(column)
     }
-  })
-
-  it('includes runtime-observed data keys in the header even when not in any schema constant', async () => {
-    const deps = await buildDeps({
-      orgs: [readModelOrg()],
-      seeds: [
-        {
-          rows: [
-            receivedRowState({
-              data: {
-                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
-                BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
-              }
-            })
-          ]
-        }
-      ]
-    })
-    const out = await collect(streamCsvExport(deps))
-    expect(out[0]).toContain('BILL_OF_LANDING_REFERENCE_NUMBER')
-    expect(out[1]).toContain('BL-99')
-  })
-
-  it('composes the header from the row-state distinct keys without buffering any row', async () => {
-    const deps = await buildDeps({
-      orgs: [readModelOrg()],
-      seeds: [
-        {
-          rows: [
-            receivedRowState({
-              data: {
-                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
-                WASTE_TRANSFER_NOTE: 'WTN-1'
-              }
-            })
-          ]
-        }
-      ]
-    })
-    const findDistinctDataKeys = vi.spyOn(
-      deps.summaryLogRowStatesRepository,
-      'findDistinctDataKeys'
-    )
-
-    const out = await collect(streamCsvExport(deps))
-
-    expect(findDistinctDataKeys).toHaveBeenCalledTimes(1)
-    expect(findDistinctDataKeys).toHaveBeenCalledWith(DEFAULT_YEAR)
-    expect(out[0]).toContain('WASTE_TRANSFER_NOTE')
-  })
-
-  it("composes the header from the year's data keys only", async () => {
-    const deps = await buildDeps({
-      orgs: [readModelOrg()],
-      seeds: [
-        {
-          year: NEXT_YEAR,
-          summaryLogId: 'sl-next-year',
-          rows: [receivedRowState({ data: { ONLY_NEXT_YEAR: 'x' } })]
-        }
-      ]
-    })
-
-    const [header] = await collect(streamCsvExport(deps))
-
-    expect(header).not.toContain('ONLY_NEXT_YEAR')
   })
 })
 

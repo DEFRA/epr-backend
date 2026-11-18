@@ -82,8 +82,7 @@ export const METADATA_COL_INDEX = Object.freeze(
 // Both fields are already rendered in the metadata prefix:
 //   ROW_ID            -> 'Row ID'
 //   processingType    -> 'Operator Processing Type'
-// `findDistinctDataKeys` surfaces every key on `record.data`, including
-// `processingType`, so exclude them here to avoid duplicate columns.
+// A row's `data` carries both, so exclude them here to avoid duplicate columns.
 const FIELDS_NEVER_EXPORTED = new Set(['ROW_ID', 'processingType'])
 
 const collectFieldNames = (mod) =>
@@ -93,9 +92,8 @@ const collectFieldNames = (mod) =>
     .filter((v) => typeof v === 'string')
 
 /**
- * Field names declared in any summary-log table-schema's *_FIELDS constant.
- * Used as the baseline column set; runtime-observed keys are unioned on top
- * to capture template columns that have no FIELD constant in code.
+ * Field names declared in any summary-log table-schema's *_FIELDS constant:
+ * every column of every template.
  */
 export const SCHEMA_FIELD_NAMES = Object.freeze(
   Array.from(
@@ -113,14 +111,8 @@ export const SCHEMA_FIELD_NAMES = Object.freeze(
 )
 
 /**
- * Compute the data-field column list by unioning the schema-declared FIELD
- * constants with any keys observed at runtime on actual `record.data` objects.
- *
- * The schema baseline ensures all known templates have stable columns even
- * when no records exist for them yet. The observed-keys union picks up
- * template columns that exist in spreadsheets but are not declared in any
- * `*_FIELDS` constant (e.g. `WASTE_TRANSFER_NOTE`,
- * `BILL_OF_LANDING_REFERENCE_NUMBER`).
+ * Every template column plus any other key observed on the given rows' `data`,
+ * alphabetically.
  *
  * @param {Iterable<string>} observedKeys
  * @returns {string[]}
@@ -134,6 +126,9 @@ export const buildDataFieldColumns = (observedKeys) => {
   }
   return Array.from(all).sort((a, b) => a.localeCompare(b))
 }
+
+/** Every template column, alphabetically. */
+export const TEMPLATE_DATA_FIELD_COLUMNS = buildDataFieldColumns([])
 
 /**
  * Compose the full header row from the fixed metadata prefix and the dynamic
