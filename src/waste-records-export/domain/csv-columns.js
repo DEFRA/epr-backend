@@ -4,14 +4,8 @@ import {
   materialFromSpreadsheet,
   metaText
 } from '#domain/summary-logs/stored-meta.js'
+import { everyTemplateTable } from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-
-import * as exporter from '#domain/summary-logs/table-schemas/exporter/fields.js'
-import * as exporterRegisteredOnly from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
-import * as reprocessorInput from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
-import * as reprocessorOutput from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
-import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/reprocessor-registered-only/fields.js'
-import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
 /** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
@@ -85,27 +79,11 @@ export const METADATA_COL_INDEX = Object.freeze(
 // A row's `data` carries both, so exclude them here to avoid duplicate columns.
 const FIELDS_NEVER_EXPORTED = new Set(['ROW_ID', 'processingType'])
 
-const collectFieldNames = (mod) =>
-  Object.values(mod)
-    .filter((v) => v && typeof v === 'object')
-    .flatMap((v) => Object.values(v))
-    .filter((v) => typeof v === 'string')
-
-/**
- * Field names declared in any summary-log table-schema's *_FIELDS constant:
- * every column of every template.
- */
+/** Every column of every year's templates. */
 export const SCHEMA_FIELD_NAMES = Object.freeze(
   Array.from(
     new Set(
-      [
-        exporter,
-        exporterRegisteredOnly,
-        reprocessorInput,
-        reprocessorOutput,
-        reprocessorRegisteredOnly,
-        shared
-      ].flatMap(collectFieldNames)
+      everyTemplateTable().flatMap(({ schema }) => schema.requiredHeaders)
     )
   ).filter((f) => !FIELDS_NEVER_EXPORTED.has(f))
 )

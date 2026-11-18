@@ -13,7 +13,6 @@ import {
 } from './csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { everyTemplateTable } from '#domain/summary-logs/table-schemas/template-tables-test-helpers.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   toAccreditationNumber,
@@ -91,18 +90,6 @@ describe('csv-columns', () => {
   describe('SCHEMA_FIELD_NAMES', () => {
     it('does not contain ROW_ID (already in metadata prefix)', () => {
       expect(SCHEMA_FIELD_NAMES).not.toContain('ROW_ID')
-    })
-
-    it("is every column of every year's templates", () => {
-      const templateColumns = everyTemplateTable().flatMap(
-        ({ schema }) => schema.requiredHeaders
-      )
-
-      expect([...SCHEMA_FIELD_NAMES].sort()).toStrictEqual(
-        [...new Set(templateColumns)]
-          .filter((column) => column !== 'ROW_ID')
-          .sort()
-      )
     })
 
     it('has no duplicates', () => {
