@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
+import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -320,7 +321,7 @@ describe('stored and external accreditations together', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
     ).toMatchObject({
       overseasSites: {
         '001': { status: 'approved', approvedOn: '2026-01-01' },
@@ -353,7 +354,7 @@ describe('stored and external accreditations together', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
     ).toStrictEqual({
       ...externalAccreditation2027,
       overseasSites: {
@@ -389,7 +390,7 @@ describe('stored and external accreditations together', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
     ).toStrictEqual({
       ...externalAccreditation2027,
       overseasSites: { '001': { status: 'pending' } }
@@ -423,7 +424,7 @@ describe('stored and external accreditations together', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
     ).toStrictEqual({ ...externalAccreditation2027, overseasSites: {} })
     expect(logger.warn).toHaveBeenCalledWith({
       message: `Registration ${EXPORTER_NUMBER} accreditation year 2027 lists overseas site 001, which the registration does not hold`
@@ -465,7 +466,7 @@ describe('stored and external accreditations together', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
     ).toStrictEqual({
       ...externalAccreditation2027,
       overseasSites: { '001': { status: 'pending' } }
@@ -497,7 +498,9 @@ describe('stored and external accreditations together', () => {
     )
 
     expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027]
+      organisation.registrations[REPROCESSOR_NUMBER].accreditations[
+        toYear(2027)
+      ]
     ).toStrictEqual(externalAccreditation2027)
     expect(logger.warn).toHaveBeenCalledWith({
       message: `Registration ${REPROCESSOR_NUMBER} accreditation year 2027 lists overseas sites, but a reprocessor has none`
