@@ -1,6 +1,6 @@
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { writeSummaryLogRowStates } from '#waste-records/application/write-summary-log-row-states.js'
-import { ledgerIdFor } from './ledger-id.js'
+import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 import { submissionCommitOf } from './submission-commit.js'
 
 /**
@@ -32,7 +32,7 @@ export const stageSubmission = async ({
   recordChanges,
   summaryLogRowStatesRepository
 }) => {
-  const ledgerId = ledgerIdFor(summaryLog)
+  const ledgerId = pickLedgerId(summaryLog)
   const summaryLogId = summaryLog.file.id
 
   // Worked out before the row write: once rows are written a retry fails

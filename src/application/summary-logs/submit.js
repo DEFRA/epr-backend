@@ -11,7 +11,7 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 import { toLedgerUser } from '#waste-balances/application/ledger-user.js'
-import { ledgerIdFor } from './ledger-id.js'
+import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 import { supersedeIfStale } from './supersede-if-stale.js'
 
 /**
@@ -92,7 +92,7 @@ const appendSubmittedEvent = async (
   { payload },
   { wasteBalanceService, user }
 ) => {
-  const ledgerId = ledgerIdFor(summaryLog)
+  const ledgerId = pickLedgerId(summaryLog)
   const summaryLogId = summaryLog.file.id
 
   if (ledgerId.accreditationNumber === null) {

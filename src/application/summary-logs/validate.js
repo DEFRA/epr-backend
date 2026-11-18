@@ -31,7 +31,7 @@ import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { capIssuesForStorage } from './cap-issues-for-storage.js'
 import { transformAndValidateData } from './transform-and-validate-data.js'
-import { ledgerIdFor } from './ledger-id.js'
+import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 import { registrationForSummaryLog } from './registration-for-summary-log.js'
 import { recordValidationMetrics } from './validation-metrics.js'
 import { stageSubmission } from './stage-submission.js'
@@ -430,7 +430,7 @@ const loadSubmittedRowStatesByKey = async ({
   summaryLog
 }) => {
   const submittedRowStates = await summaryLogRowStatesForLedger({
-    ...ledgerIdFor(summaryLog),
+    ...pickLedgerId(summaryLog),
     ledgerRepository,
     summaryLogRowStatesRepository
   })

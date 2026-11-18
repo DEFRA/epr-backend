@@ -1,7 +1,7 @@
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { latestSubmittedSummaryLogRowStates } from '#waste-records/application/read-summary-log-row-states.js'
 import { validateDataBusiness } from './validations/data-business.js'
-import { ledgerIdFor } from './ledger-id.js'
+import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 
 /** @import {ValidatedSummaryLog, ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
@@ -35,7 +35,7 @@ export const transformAndValidateData = async ({
   ledgerRepository
 }) => {
   const previousSubmission = await latestSubmittedSummaryLogRowStates({
-    ...ledgerIdFor(summaryLog),
+    ...pickLedgerId(summaryLog),
     ledgerRepository,
     summaryLogRowStatesRepository
   })

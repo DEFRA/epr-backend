@@ -7,7 +7,7 @@ import { ObjectId } from 'mongodb'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
+import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   ACCREDITATION_STATUS,
@@ -769,7 +769,7 @@ describe('submitSummaryLog commits what validation saved', () => {
     )
     expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
     expect(
-      await deps.wasteBalanceService.currentBalance(ledgerIdFor(summaryLog))
+      await deps.wasteBalanceService.currentBalance(pickLedgerId(summaryLog))
     ).toBeNull()
   })
 
@@ -808,7 +808,7 @@ describe('submitSummaryLog commits what validation saved', () => {
     )
     expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
     expect(
-      await deps.wasteBalanceService.currentBalance(ledgerIdFor(summaryLog))
+      await deps.wasteBalanceService.currentBalance(pickLedgerId(summaryLog))
     ).toBeNull()
     expect(deps.logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -833,7 +833,7 @@ describe('submitSummaryLog commits what validation saved', () => {
     })
 
     const event = await deps.ledgerRepository.findLatestInLedger(
-      ledgerIdFor(summaryLog)
+      pickLedgerId(summaryLog)
     )
     expect(event?.createdBy).toEqual({
       id: SUBMIT_USER.id,
