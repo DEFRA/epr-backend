@@ -35,7 +35,7 @@ import {
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
 /** @import { PublishedWasteBalanceFigures } from '#market-insights/domain/waste-balance-figures.js' */
-/** @import { Organisation as ServedOrganisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation as ServedOrganisation, Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { WasteBalanceTable } from './waste-balance-table.js' */
@@ -79,6 +79,23 @@ const SITE_ADDRESS = {
 const servedFor = new WeakMap()
 
 /**
+ * The organisation with `change` applied to each of its registrations.
+ *
+ * @param {ServedOrganisation} organisation
+ * @param {(registration: Registration) => Registration} change
+ * @returns {ServedOrganisation}
+ */
+const changingRegistrations = (organisation, change) => ({
+  ...organisation,
+  registrations: Object.fromEntries(
+    Object.entries(organisation.registrations).map(([number, registration]) => [
+      number,
+      change(registration)
+    ])
+  )
+})
+
+/**
  * Records `served` as the read model's view of `stored`, each registration's
  * standing worked out from its timelines as the read model does while 2026 is
  * open.
@@ -89,15 +106,12 @@ const servedFor = new WeakMap()
  * @returns {T}
  */
 const serving = (stored, served) => {
-  servedFor.set(stored, {
-    ...served,
-    registrations: Object.fromEntries(
-      Object.entries(served.registrations).map(([number, registration]) => [
-        number,
-        withStandingThrough(registration, toYear(2026))
-      ])
+  servedFor.set(
+    stored,
+    changingRegistrations(served, (registration) =>
+      withStandingThrough(registration, toYear(2026))
     )
-  })
+  )
   return stored
 }
 
@@ -136,18 +150,11 @@ const APPROVED_STATUS = {
  * @param {object} stored
  * @param {(registration: any) => object} change
  */
-const servedWith = (stored, change) => {
-  const served = servedOf(stored)
-  return {
-    ...served,
-    registrations: Object.fromEntries(
-      Object.entries(served.registrations).map(([number, registration]) => [
-        number,
-        { ...registration, ...change(registration) }
-      ])
-    )
-  }
-}
+const servedWith = (stored, change) =>
+  changingRegistrations(servedOf(stored), (registration) => ({
+    ...registration,
+    ...change(registration)
+  }))
 
 /** The served registration with no accreditation, registered only all year. */
 const asRegisteredOnly = () => ({ accreditations: {} })
