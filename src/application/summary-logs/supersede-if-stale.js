@@ -80,22 +80,13 @@ const committableAs = async ({
 }
 
 /**
- * Supersedes a submitting summary log that can no longer be committed as
- * validated, so the operator uploads it again; otherwise returns the commit
- * validation saved for it.
- *
  * @param {SupersedeParams} params
- * @returns {Promise<{ reason: SupersedeReason, commit: null } | { reason: null, commit: SummaryLogCommit }>}
+ * @param {SupersedeReason} reason
  */
-export const supersedeIfStale = async (params) => {
-  const { summaryLogsRepository, logger, summaryLog, summaryLogId, version } =
-    params
-  const committable = await committableAs(params)
-  if (!committable.reason) {
-    return committable
-  }
-
-  const { reason } = committable
+const supersede = async (
+  { summaryLogsRepository, logger, summaryLog, summaryLogId, version },
+  reason
+) => {
   await summaryLogsRepository.update(
     summaryLogId,
     version,
@@ -114,5 +105,20 @@ export const supersedeIfStale = async (params) => {
       reason
     }
   })
+}
+
+/**
+ * Supersedes a submitting summary log that can no longer be committed as
+ * validated, so the operator uploads it again; otherwise returns the commit
+ * validation saved for it.
+ *
+ * @param {SupersedeParams} params
+ * @returns {Promise<{ reason: SupersedeReason, commit: null } | { reason: null, commit: SummaryLogCommit }>}
+ */
+export const supersedeIfStale = async (params) => {
+  const committable = await committableAs(params)
+  if (committable.reason) {
+    await supersede(params, committable.reason)
+  }
   return committable
 }
