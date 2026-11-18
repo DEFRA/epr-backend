@@ -4,13 +4,15 @@ import { createTestServer } from '#test/create-test-server.js'
 import { StatusCodes } from 'http-status-codes'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
-import { buildReadApprovedOrganisation } from '#organisation-read-model/test-support.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  buildReadApprovedOrganisation,
+  emptyOrganisationReadRepository
+} from '#organisation-read-model/test-support.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { createInMemoryPublicRegisterRepository } from '#public-register/repository/inmemory.js'
 import { publicRegisterGeneratePath } from '#public-register/routes/generate/post.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-import { emptyOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 
 const mockAuditPublicRegisterGenerate = vi.fn()
 

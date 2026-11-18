@@ -10,7 +10,10 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/index.js'
+import {
+  HELD_ACCREDITATION_STATUSES,
+  accreditationForYear
+} from '#organisation-read-model/index.js'
 import {
   addMeasures,
   figuresContributedTo,
@@ -31,7 +34,6 @@ import {
   operatorsByKey
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
-import { accreditationForYear } from '#organisation-read-model/index.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 

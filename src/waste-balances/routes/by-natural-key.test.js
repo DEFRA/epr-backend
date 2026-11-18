@@ -1,14 +1,18 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadApprovedOrganisation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/test-support.js'
 
 import { config } from '#root/config.js'
@@ -37,12 +41,6 @@ import {
 import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
-import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_ACCREDITATION_NUMBER,
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/test-support.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 

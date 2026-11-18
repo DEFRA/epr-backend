@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
 
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,

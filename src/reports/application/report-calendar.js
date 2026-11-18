@@ -1,8 +1,11 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
-import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/index.js'
-import { registrationStatusWindows } from '#organisation-read-model/index.js'
-import { firstApprovedAt } from '#organisation-read-model/index.js'
+import {
+  HELD_ACCREDITATION_STATUSES,
+  registrationStatusWindows,
+  firstApprovedAt,
+  accreditationForYear
+} from '#organisation-read-model/index.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -15,7 +18,6 @@ import { toPerson } from '#reports/domain/person.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
-import { accreditationForYear } from '#organisation-read-model/index.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'

@@ -1,7 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,

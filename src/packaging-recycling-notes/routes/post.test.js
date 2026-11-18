@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
@@ -8,7 +8,10 @@ import {
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -34,11 +37,6 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/test-support.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber

@@ -5,8 +5,10 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { accreditationForYear } from '#organisation-read-model/index.js'
-import { approvedYears } from '#organisation-read-model/index.js'
+import {
+  accreditationForYear,
+  approvedYears
+} from '#organisation-read-model/index.js'
 import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,

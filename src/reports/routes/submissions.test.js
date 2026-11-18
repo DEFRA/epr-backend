@@ -4,8 +4,8 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   buildReadApprovedOrganisation,
   buildReadOrganisation,
   buildReadReprocessorRegistration

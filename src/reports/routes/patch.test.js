@@ -1,11 +1,13 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/test-support.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { StatusCodes } from 'http-status-codes'
@@ -18,10 +20,6 @@ import {
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
-import {
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/test-support.js'
 import { buildUpdatedPrn } from './patch.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 

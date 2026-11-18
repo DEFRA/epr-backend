@@ -14,8 +14,8 @@ import { encodeRow } from '#waste-records-export/application/stream-csv-export.j
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   buildReadExporterRegistration,
   buildReadOrganisation
 } from '#organisation-read-model/test-support.js'

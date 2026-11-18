@@ -1,5 +1,9 @@
 import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createOrganisationBuilders,
+  buildAccreditation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -27,10 +31,6 @@ import {
 } from '#domain/organisations/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  buildAccreditation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { marketInsightsWasteBalancePath } from './waste-balance-get.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'

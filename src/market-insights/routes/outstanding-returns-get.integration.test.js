@@ -1,5 +1,9 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createOrganisationBuilders,
+  buildAccreditation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -22,10 +26,6 @@ import {
   TONNAGE_BAND,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import {
-  buildAccreditation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
 import { marketInsightsOutstandingReturnsPath } from './outstanding-returns-get.js'
 
 const organisationBuilders = createOrganisationBuilders()

@@ -11,8 +11,8 @@ import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   buildReadExporterRegistration,
   buildReadOrganisation as buildServedOrganisation
 } from '#organisation-read-model/test-support.js'

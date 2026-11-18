@@ -5,7 +5,10 @@ import { randomUUID } from 'node:crypto'
 import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
 
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toRegistrationNumber,
+  toOrganisationNumber
+} from '#domain/organisations/numbers.js'
 import {
   buildExternalAccreditation,
   clearStandInAccreditations,
@@ -21,7 +24,6 @@ import {
   buildCreateReportParams,
   uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
