@@ -153,74 +153,6 @@ describe('reconcileStalePrnProjections', () => {
     await ledgerCollection.deleteMany({})
   })
 
-  it('reports a PRN whose watermark sits behind the ledger, and writes nothing in dry-run', async (/** @type {*} */ {
-    prnCollection,
-    ledgerCollection,
-    prnRepository,
-    service,
-    findDrifting
-  }) => {
-    const created = await seedDriftingPrn(prnRepository, ledgerCollection)
-
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: true }
-    )
-
-    expect(result.total).toBe(1)
-    expect(result.drifting).toBe(1)
-    expect(result.repaired).toBe(0)
-    expect(result.stillDrifting).toBe(0)
-    expect(result.reports).toEqual([
-      {
-        prnId: created.id,
-        prnNumber: created.prnNumber,
-        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
-        lastAppliedEventNumber: 2,
-        unappliedCount: 1,
-        minUnappliedNumber: 3,
-        wouldBecomeStatus: PRN_STATUS.AWAITING_CANCELLATION
-      }
-    ])
-
-    const stored = await findStored(prnCollection, created.id)
-    expect(stored.version).toBe(1)
-    expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
-    expect(stored.lastAppliedEventNumber).toBe(2)
-  })
-
-  it('scans but does not flag a projection whose watermark is level with the ledger', async (/** @type {*} */ {
-    prnCollection,
-    ledgerCollection,
-    prnRepository,
-    service,
-    findDrifting
-  }) => {
-    const ids = buildAccreditationKeys()
-    const created = await prnRepository.create(
-      buildAwaitingAcceptancePrn({
-        ...underAccreditation(ids),
-        lastAppliedEventNumber: 3
-      })
-    )
-    // The event sits at the watermark, not past it — nothing to apply.
-    await ledgerCollection.insertOne(
-      buildPrnRejectedEvent({
-        ...ids,
-        number: 3,
-        payload: { prnId: created.id, amount: 50 }
-      })
-    )
-
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: true }
-    )
-
-    expect(result).toMatchObject({ total: 1, drifting: 0 })
-    expect(result.reports).toEqual([])
-  })
-
   it('skips a PRN flagged as drifting but deleted before its read', async (/** @type {*} */ {
     prnRepository,
     service
@@ -233,10 +165,12 @@ describe('reconcileStalePrnProjections', () => {
     const findDrifting = async () => ({ total: 1, driftingIds: [missingId] })
     const prnCollection = /** @type {*} */ ({ findOne: async () => null })
 
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: true }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository,
+      service
+    })
 
     expect(result).toMatchObject({
       total: 1,
@@ -278,10 +212,12 @@ describe('reconcileStalePrnProjections', () => {
       driftingIds: [ObjectId.createFromHexString(created.id)]
     })
 
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: false }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository,
+      service
+    })
 
     expect(result).toMatchObject({
       total: 1,
@@ -324,10 +260,12 @@ describe('reconcileStalePrnProjections', () => {
     )
     const created = await seedDriftingPrn(prnRepository, ledgerCollection)
 
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: true }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository,
+      service
+    })
 
     expect(result).toMatchObject({ total: 2, drifting: 1, failed: 1 })
     expect(
@@ -338,7 +276,7 @@ describe('reconcileStalePrnProjections', () => {
     expect(result.failures[0].error).toBeTypeOf('string')
   })
 
-  it('leaves a current projection untouched in repair mode', async (/** @type {*} */ {
+  it('leaves a current projection untouched', async (/** @type {*} */ {
     prnCollection,
     ledgerCollection,
     prnRepository,
@@ -361,10 +299,12 @@ describe('reconcileStalePrnProjections', () => {
       })
     )
 
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: false }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository,
+      service
+    })
 
     expect(result).toMatchObject({
       total: 1,
@@ -377,7 +317,7 @@ describe('reconcileStalePrnProjections', () => {
     expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
   })
 
-  it('folds and persists a drifting projection when not a dry run', async (/** @type {*} */ {
+  it('folds and persists a drifting projection, reporting what it found', async (/** @type {*} */ {
     prnCollection,
     ledgerCollection,
     prnRepository,
@@ -386,10 +326,12 @@ describe('reconcileStalePrnProjections', () => {
   }) => {
     const created = await seedDriftingPrn(prnRepository, ledgerCollection)
 
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: false }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository,
+      service
+    })
 
     expect(result).toMatchObject({
       total: 1,
@@ -399,6 +341,17 @@ describe('reconcileStalePrnProjections', () => {
       stamped: 0,
       stillDrifting: 0
     })
+    expect(result.reports).toEqual([
+      {
+        prnId: created.id,
+        prnNumber: created.prnNumber,
+        currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        lastAppliedEventNumber: 2,
+        unappliedCount: 1,
+        minUnappliedNumber: 3,
+        wouldBecomeStatus: PRN_STATUS.AWAITING_CANCELLATION
+      }
+    ])
 
     const stored = await findStored(prnCollection, created.id)
     expect(stored.version).toBe(2)
@@ -417,10 +370,12 @@ describe('reconcileStalePrnProjections', () => {
     const created = await seedBenignDriftingPrn(prnRepository, ledgerCollection)
     const before = await findStored(prnCollection, created.id)
 
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: false }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository,
+      service
+    })
 
     expect(result).toMatchObject({
       total: 1,
@@ -433,7 +388,18 @@ describe('reconcileStalePrnProjections', () => {
     })
     // The fold would have replayed the whole lifecycle (no watermark), which is
     // exactly the case a full fold would have duplicated a five-entry history.
-    expect(result.reports[0].unappliedCount).toBe(3)
+    // The report marks it benign by folding to the status it already carries.
+    expect(result.reports).toEqual([
+      {
+        prnId: created.id,
+        prnNumber: created.prnNumber,
+        currentStatus: PRN_STATUS.CANCELLED,
+        lastAppliedEventNumber: undefined,
+        unappliedCount: 3,
+        minUnappliedNumber: 1,
+        wouldBecomeStatus: PRN_STATUS.CANCELLED
+      }
+    ])
 
     const after = await findStored(prnCollection, created.id)
     // The watermark advanced to the latest event and the CAS bumped the version.
@@ -448,41 +414,6 @@ describe('reconcileStalePrnProjections', () => {
     // And it no longer lags the ledger, so it leaves the sweep for good.
     const { driftingIds } = await findDrifting()
     expect(driftingIds).toEqual([])
-  })
-
-  it('reports benign drift in dry-run without writing', async (/** @type {*} */ {
-    prnCollection,
-    ledgerCollection,
-    prnRepository,
-    service,
-    findDrifting
-  }) => {
-    const created = await seedBenignDriftingPrn(prnRepository, ledgerCollection)
-    const before = await findStored(prnCollection, created.id)
-
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: true }
-    )
-
-    // Option A keeps detection semantics: the benign PRN is still surfaced, its
-    // report marking it benign by folding to the status it already carries.
-    expect(result).toMatchObject({ total: 1, drifting: 1, repaired: 0 })
-    expect(result.reports).toEqual([
-      {
-        prnId: created.id,
-        prnNumber: created.prnNumber,
-        currentStatus: PRN_STATUS.CANCELLED,
-        lastAppliedEventNumber: undefined,
-        unappliedCount: 3,
-        minUnappliedNumber: 1,
-        wouldBecomeStatus: PRN_STATUS.CANCELLED
-      }
-    ])
-
-    const after = await findStored(prnCollection, created.id)
-    expect(after.version).toBe(before.version)
-    expect(after.lastAppliedEventNumber).toBeUndefined()
   })
 
   it('repairs the rest and counts the losers when a persist loses its race', async (/** @type {*} */ {
@@ -513,15 +444,12 @@ describe('reconcileStalePrnProjections', () => {
       }
     }
 
-    const result = await reconcileStalePrnProjections(
-      {
-        findDrifting,
-        prnCollection,
-        prnRepository: guardedRepository,
-        service
-      },
-      { isDryRun: false }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository: guardedRepository,
+      service
+    })
 
     expect(result).toMatchObject({
       total: 3,
@@ -557,15 +485,12 @@ describe('reconcileStalePrnProjections', () => {
       }
     }
 
-    const result = await reconcileStalePrnProjections(
-      {
-        findDrifting,
-        prnCollection,
-        prnRepository: erroringRepository,
-        service
-      },
-      { isDryRun: false }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository: erroringRepository,
+      service
+    })
 
     expect(result).toMatchObject({
       drifting: 0,
@@ -599,10 +524,12 @@ describe('reconcileStalePrnProjections', () => {
       })
     )
 
-    const result = await reconcileStalePrnProjections(
-      { findDrifting, prnCollection, prnRepository, service },
-      { isDryRun: true }
-    )
+    const result = await reconcileStalePrnProjections({
+      findDrifting,
+      prnCollection,
+      prnRepository,
+      service
+    })
 
     expect(result).toMatchObject({ total: 1, drifting: 1 })
     expect(result.reports).toEqual([
