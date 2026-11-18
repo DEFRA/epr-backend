@@ -6,6 +6,7 @@ import { ObjectId } from 'mongodb'
 import { toYear } from '#common/helpers/dates/year.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -68,7 +69,7 @@ const organisation = buildReadOrganisation({
           '2026-07-01': { standing: 'accredited' }
         }
       },
-      accreditations: { 2026: accredited }
+      accreditations: accreditationsByYear(accredited)
     })
   }
 })

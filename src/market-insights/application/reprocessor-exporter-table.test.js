@@ -89,8 +89,16 @@ const makeOperator = ({
   const accreditations = status
     ? {
         [year]: isExporter
-          ? buildReadExporterAccreditation({ accreditationNumber, status })
-          : buildReadAccreditation({ accreditationNumber, status })
+          ? buildReadExporterAccreditation({
+              accreditationNumber,
+              status,
+              year: toYear(year)
+            })
+          : buildReadAccreditation({
+              accreditationNumber,
+              status,
+              year: toYear(year)
+            })
       }
     : {}
   const common = {

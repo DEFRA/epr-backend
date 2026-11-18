@@ -2,6 +2,7 @@ import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadApprovedOrganisation,
@@ -60,13 +61,13 @@ const accreditedStanding = {
 const servedExporter = () =>
   buildReadExporterRegistration({
     standingByDate: accreditedStanding,
-    accreditations: {
-      2026: buildReadExporterAccreditation({
+    accreditations: accreditationsByYear(
+      buildReadExporterAccreditation({
         accreditationNumber: toAccreditationNumber(
           EXPORTER_ACCREDITATION_NUMBER
         )
       })
-    }
+    )
   })
 
 const organisation = buildReadOrganisation({
@@ -85,11 +86,11 @@ const organisation = buildReadOrganisation({
     }),
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
       standingByDate: accreditedStanding,
-      accreditations: {
-        2026: buildReadAccreditation({
+      accreditations: accreditationsByYear(
+        buildReadAccreditation({
           accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
         })
-      }
+      )
     }),
     [EXPORTER_NUMBER]: servedExporter()
   }
@@ -565,12 +566,13 @@ describe('an accreditation held outside re-ex, with no database id', () => {
             organisationNumber: organisation.organisationNumber,
             registrations: {
               [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-                accreditations: {
-                  2026: buildReadAccreditation({
+                accreditations: accreditationsByYear(
+                  buildReadAccreditation({
                     accreditationNumber:
                       toAccreditationNumber(ACCREDITATION_NUMBER)
                   }),
-                  2027: buildReadAccreditation({
+                  buildReadAccreditation({
+                    year: toYear(2027),
                     accreditationNumber: EXTERNAL_ACCREDITATION_NUMBER,
                     status: {
                       current: 'approved',
@@ -580,7 +582,7 @@ describe('an accreditation held outside re-ex, with no database id', () => {
                       ]
                     }
                   })
-                }
+                )
               })
             }
           })

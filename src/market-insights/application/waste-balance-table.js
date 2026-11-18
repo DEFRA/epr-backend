@@ -237,8 +237,8 @@ const resolvePublishedPartitions = (entries, index, logger) => {
       organisationNumber: ledgerAccreditation.organisation.organisationNumber,
       registrationNumber: ledgerAccreditation.registrationNumber,
       registration: ledgerAccreditation.registration,
-      accreditation: validityOf(ledgerAccreditation),
-      overseasSites: overseasSitesOf(ledgerAccreditation)
+      accreditation: validityOf(ledgerAccreditation.accreditation),
+      overseasSites: overseasSitesOf(ledgerAccreditation.accreditation)
     })
   }
   return partitions
@@ -260,9 +260,11 @@ const publishedContribution = (rowState, partitions) => {
   const { registration, accreditation, overseasSites } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    tableSchemasOf(rowState.year, rowState.processingType),
-    accreditation,
-    overseasSites
+    {
+      tableSchemas: tableSchemasOf(rowState.year, rowState.processingType),
+      accreditation,
+      overseasSites
+    }
   )
 
   const contribution = monthlyContribution(

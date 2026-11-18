@@ -60,10 +60,12 @@ const LEDGER_IDS = {
 
 /**
  * @param {AccreditationNumber} [accreditationNumber]
+ * @param {Year} [year]
  * @returns {ReprocessorAccreditation}
  */
 const readModelAccreditation = (
-  accreditationNumber = ACCREDITATION_NUMBER
+  accreditationNumber = ACCREDITATION_NUMBER,
+  year = toYear(2024)
 ) => ({
   accreditationNumber,
   prnIssuance: { tonnageBand: 'over_10000' },
@@ -71,7 +73,8 @@ const readModelAccreditation = (
     current: 'approved',
     lastUpdatedAt: '2025-01-01T00:00:00.000Z',
     timeline: [{ status: 'approved', at: '2025-01-01T00:00:00.000Z' }]
-  }
+  },
+  year
 })
 
 /**
@@ -1016,7 +1019,10 @@ describe('report-service', () => {
             registration: readModelRegistration({
               accreditations: {
                 2024: reportAccreditation,
-                2025: readModelAccreditation(currentAccreditationNumber)
+                2025: readModelAccreditation(
+                  currentAccreditationNumber,
+                  toYear(2025)
+                )
               }
             }),
             accreditation: reportAccreditation

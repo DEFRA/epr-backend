@@ -170,17 +170,17 @@ export const buildCreditedTonnageReport = async ({
       return []
     }
 
-    const { registration } = ledgerAccreditation
+    const { registration, accreditation } = ledgerAccreditation
 
     const rowStates = reclassifyWasteRecordStates(
       await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         ledgerId,
         summaryLogId
       ),
-      ledgerAccreditation.year,
+      accreditation.year,
       {
-        accreditation: validityOf(ledgerAccreditation),
-        overseasSites: overseasSitesOf(ledgerAccreditation)
+        accreditation: validityOf(accreditation),
+        overseasSites: overseasSitesOf(accreditation)
       }
     )
 

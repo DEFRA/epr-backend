@@ -48,22 +48,25 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('ACC-1')
 
 const APPROVED_FROM = '2023-01-01T00:00:00.000Z'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/domain/model.js' */
 
 /**
  * @param {AccreditationNumber} accreditationNumber
+ * @param {Year} [year]
  * @returns {AccreditationCommon}
  */
-const accreditationNumbered = (accreditationNumber) => ({
+const accreditationNumbered = (accreditationNumber, year = YEAR) => ({
   accreditationNumber,
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
     current: 'approved',
     lastUpdatedAt: APPROVED_FROM,
     timeline: [{ status: 'approved', at: APPROVED_FROM }]
-  }
+  },
+  year
 })
 
 /**
@@ -89,7 +92,10 @@ const organisationWith = ({ registration = {} } = {}) => ({
     'REG-2': {
       wasteProcessingType: 'reprocessor',
       accreditations: {
-        2022: accreditationNumbered(toAccreditationNumber('ACC-2'))
+        2022: accreditationNumbered(
+          toAccreditationNumber('ACC-2'),
+          toYear(2022)
+        )
       }
     },
     'REG-1': {
@@ -431,16 +437,18 @@ describe('syncFromSummaryLog', () => {
       ]),
       {
         user: TEST_USER,
-        accreditation: ACCREDITATION_VALIDITY,
-        overseasSites: {},
+        classificationContext: {
+          tableSchemas: tableSchemasOf(YEAR, PROCESSING_TYPES.EXPORTER),
+          accreditation: ACCREDITATION_VALIDITY,
+          overseasSites: {}
+        },
         summaryLogId: fileId,
         ledgerId: {
           organisationNumber: '500001',
           registrationNumber: 'REG-1',
           accreditationNumber: 'ACC-1',
           year: YEAR
-        },
-        tableSchemas: tableSchemasOf(YEAR, PROCESSING_TYPES.EXPORTER)
+        }
       }
     )
   })
@@ -456,7 +464,9 @@ describe('syncFromSummaryLog', () => {
     organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
       organisationWith({
         registration: {
-          accreditations: { 2027: accreditationNumbered(ACCREDITATION_NUMBER) }
+          accreditations: {
+            2027: accreditationNumbered(ACCREDITATION_NUMBER, toYear(2027))
+          }
         }
       })
     )
@@ -503,10 +513,12 @@ describe('syncFromSummaryLog', () => {
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        overseasSites: {
-          '001': { validFrom: new Date('2024-01-01') },
-          '002': { validFrom: null }
-        }
+        classificationContext: expect.objectContaining({
+          overseasSites: {
+            '001': { validFrom: new Date('2024-01-01') },
+            '002': { validFrom: null }
+          }
+        })
       })
     )
   })

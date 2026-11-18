@@ -138,7 +138,8 @@ describe('SummaryLogsValidator integration', () => {
                     },
                     ...(wasteProcessingType === 'exporter' && {
                       overseasSites: {}
-                    })
+                    }),
+                    year
                   }
                 }
               : {}

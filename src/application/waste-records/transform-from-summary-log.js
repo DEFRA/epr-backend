@@ -1,4 +1,4 @@
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {TableSchemas} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -98,7 +98,7 @@ const transformTable = (
  * flow through to the output.
  *
  * @param {ValidatedSummaryLog} parsedData - Validated summary log with TransformableRow[] in each table
- * @param {Record<string, TableSchema>} tableSchemas - The template's table schemas by table name
+ * @param {TableSchemas} tableSchemas
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
 export const transformFromSummaryLog = (parsedData, tableSchemas) => {
