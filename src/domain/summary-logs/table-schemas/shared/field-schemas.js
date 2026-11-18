@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
 import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
+import { lastDayOfYear } from '#common/helpers/dates/year.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 
 /**
@@ -36,8 +37,7 @@ export const AFTER_SUMMARY_LOG_YEAR_ERROR = 'date.afterSummaryLogYear'
  */
 const rejectAfterSummaryLogYear = (dateStr, helpers) => {
   const summaryLogYear = helpers.prefs.context?.summaryLogYear
-  return summaryLogYear !== undefined &&
-    Number(dateStr.slice(0, 4)) > summaryLogYear
+  return summaryLogYear !== undefined && dateStr > lastDayOfYear(summaryLogYear)
     ? helpers.error(AFTER_SUMMARY_LOG_YEAR_ERROR, { expected: summaryLogYear })
     : dateStr
 }

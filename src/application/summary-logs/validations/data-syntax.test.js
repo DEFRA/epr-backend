@@ -23,6 +23,7 @@ import {
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /** @import {CellLocation, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
+/** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /** @type {CellLocation} */
 const DEFAULT_TEST_LOCATION = { sheet: 'TestSheet', row: 1, column: 'A' }
@@ -1437,7 +1438,7 @@ describe('error codes for the shared field schemas', () => {
 describe('dates in a later year than the summary log', () => {
   /**
    * @param {unknown} dateValue
-   * @param {{ summaryLogYear: number }} options
+   * @param {SummaryLogValidationOptions} options
    */
   const validateDate = (dateValue, options) =>
     createDataSyntaxValidator(
@@ -1473,9 +1474,7 @@ describe('dates in a later year than the summary log', () => {
     )
 
   it('reports a later-year date as fatal with the summary log year expected', () => {
-    const dateValue = new Date('2027-01-01T00:00:00.000Z')
-
-    const result = validateDate(dateValue, {
+    const result = validateDate('2027-01-01', {
       summaryLogYear: toYear(2026)
     })
 
@@ -1487,7 +1486,7 @@ describe('dates in a later year than the summary log', () => {
       context: {
         errorCode: VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
         expected: 2026,
-        actual: dateValue,
+        actual: '2027-01-01',
         location: { header: 'DATE_FIELD', rowId: '1000', column: 'B' }
       }
     })

@@ -587,7 +587,9 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         VALUE: null // Normalised from 'Choose option'
       }
 
-      const result = classifyRow(parsedRow, schema)
+      const result = classifyRow(parsedRow, schema, {
+        summaryLogYear: toYear(2026)
+      })
 
       // Row is EXCLUDED because VALUE is missing (required for waste balance)
       expect(result.outcome).toBe('EXCLUDED')

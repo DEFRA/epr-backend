@@ -25,7 +25,7 @@ import {
 /** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {Pick<TableSchema, 'rowIdField' | 'requiredHeaders' | 'unfilledValues' | 'validationSchema' | 'classifyForWasteBalance'>} DataSyntaxTableSchema */
-/** @import {RowClassificationIssue, RowOutcome, RowValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {RowClassificationIssue, RowOutcome, SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
  * A validated row from the data syntax validation pipeline
@@ -335,7 +335,7 @@ const isTemplateRow = (rowObject, rowIdField) => {
  *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
  *   domainSchema: DataSyntaxTableSchema,
  *   location: CellLocation,
- *   options: RowValidationOptions
+ *   options: SummaryLogValidationOptions
  * }} params
  * @returns {{ issues: ValidationIssue[], rows: ValidatedRow[] }}
  */
@@ -397,7 +397,7 @@ const validateRows = ({
  *   tableName: string,
  *   tableData: DataSection,
  *   domainSchema: DataSyntaxTableSchema,
- *   options: RowValidationOptions
+ *   options: SummaryLogValidationOptions
  * }} params
  * @returns {{ issues: ValidationIssue[], table: ValidatedTableSection }} Validated table data (rows as ValidatedRow[]) and the issues it produced
  */
@@ -442,10 +442,6 @@ const validateTable = ({ tableName, tableData, domainSchema, options }) => {
  */
 
 /**
- * @typedef {Required<RowValidationOptions>} SummaryLogDateOptions
- */
-
-/**
  * Validates a parsed summary log against a template's table schemas
  *
  * Validates each table in parsed.data that has a defined schema in the template:
@@ -461,7 +457,7 @@ const validateTable = ({ tableName, tableData, domainSchema, options }) => {
  * - FATAL: Invalid row values on REJECTED rows block submission entirely
  *
  * @param {Record<string, DataSyntaxTableSchema>} tableSchemas - The template's table schemas by table name
- * @param {SummaryLogDateOptions} options
+ * @param {SummaryLogValidationOptions} options
  * @param {ParsedSummaryLog} parsed
  * @returns {DataSyntaxValidationResult}
  */
@@ -523,7 +519,7 @@ const validateDataSyntax = (tableSchemas, options, parsed) => {
  * summary log's year.
  *
  * @param {Record<string, DataSyntaxTableSchema>} tableSchemas - The template's table schemas by table name
- * @param {SummaryLogDateOptions} options
+ * @param {SummaryLogValidationOptions} options
  * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult}
  */
 export const createDataSyntaxValidator = (tableSchemas, options) => (parsed) =>

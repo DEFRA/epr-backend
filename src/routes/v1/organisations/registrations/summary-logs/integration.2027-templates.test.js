@@ -1,81 +1,32 @@
 import { http, HttpResponse } from 'msw'
-import { onTestFinished } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
-import {
-  SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
-} from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { config } from '#root/config.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
   asOperator,
-  buildGetUrl,
-  buildPostUrl,
   buildSubmitUrl,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
   createReprocessorReceivedRowValues,
-  createUploadPayload,
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
+  exporter2027Loads,
   getWasteBalance,
   ledgerIdOf,
-  pollForValidation,
+  openNextYear,
   pollWhileStatus,
   REPROCESSOR_RECEIVED_HEADERS,
   setupWasteBalanceIntegrationEnvironment,
-  tableOf
+  tableOf,
+  uploadAndValidate,
+  withTemplateYear
 } from './integration-test-helpers.js'
 
 const YEAR = toYear(2027)
-
-const meta2027 = (meta) => ({
-  ...meta,
-  TEMPLATE_VERSION: { ...meta.TEMPLATE_VERSION, value: 2027.01 }
-})
-
-const exporterLoads = (rows) => ({
-  RECEIVED_LOADS_FOR_EXPORT: {
-    location: { sheet: 'Exported (sections 1, 2 and 3)', row: 7, column: 'A' },
-    headers: [
-      ...EXPORTER_HEADERS,
-      'PREVIOUS_YEAR_ROW_ID',
-      'EXIT_PORT',
-      'DWT_EXPORT_ID',
-      'DWT_SUPPLY_ID'
-    ],
-    rows: rows.map(
-      (
-        {
-          previousYearRowId = null,
-          exitPort = null,
-          dwtExportId = null,
-          dwtSupplyId = null,
-          ...row
-        },
-        index
-      ) => ({
-        rowNumber: 8 + index,
-        values: [
-          ...createExporterRowValues({
-            dateReceived: '2027-01-15T00:00:00.000Z',
-            dateReceivedByOsr: '2027-01-18T00:00:00.000Z',
-            exportDate: '2027-01-20T00:00:00.000Z',
-            ...row
-          }),
-          previousYearRowId,
-          exitPort,
-          dwtExportId,
-          dwtSupplyId
-        ]
-      })
-    )
-  }
-})
 
 const reprocessorReceivedLoads = (rows) => ({
   RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -94,36 +45,6 @@ const reprocessorReceivedLoads = (rows) => ({
     }))
   }
 })
-
-const openYear2027 = () => {
-  config.set('openNextYear', true)
-  onTestFinished(() => config.reset('openNextYear'))
-}
-
-const upload = async (env, { summaryLogId, fileId }, parsed) => {
-  env.fileDataMap[fileId] = parsed
-  await env.server.inject({
-    method: 'POST',
-    url: buildPostUrl(summaryLogId, {
-      accredited: env.accredited,
-      year: env.year
-    }),
-    payload: createUploadPayload(
-      env.organisationId,
-      env.registrationId,
-      UPLOAD_STATUS.COMPLETE,
-      fileId,
-      `${fileId}.xlsx`
-    )
-  })
-  await pollForValidation(env.server, summaryLogId)
-  const response = await env.server.inject({
-    method: 'GET',
-    url: buildGetUrl(summaryLogId),
-    ...asOperator()
-  })
-  return JSON.parse(response.payload)
-}
 
 const submit = async (env, summaryLogId) => {
   await env.server.inject({
@@ -162,16 +83,16 @@ describe('2027 summary logs', () => {
       })
 
     it('validates and submits a 2027.01 log, crediting the balance and storing the new columns', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setup()
       const ids = {
         summaryLogId: 'summary-2027-exporter',
         fileId: 'file-2027-exporter'
       }
 
-      const validated = await upload(env, ids, {
-        meta: meta2027(createWasteBalanceMeta('EXPORTER')),
-        data: exporterLoads([
+      const validated = await uploadAndValidate(env, ids, {
+        meta: withTemplateYear(createWasteBalanceMeta('EXPORTER'), YEAR),
+        data: exporter2027Loads([
           {
             rowId: 1001,
             exportTonnage: 100,
@@ -217,18 +138,18 @@ describe('2027 summary logs', () => {
     ])(
       'rejects PREVIOUS_YEAR_ROW_ID %s as %s',
       async (previousYearRowId, code) => {
-        openYear2027()
+        openNextYear()
         const env = await setup()
 
-        const validated = await upload(
+        const validated = await uploadAndValidate(
           env,
           {
             summaryLogId: 'summary-2027-bad-previous-row',
             fileId: 'file-2027-bad-previous-row'
           },
           {
-            meta: meta2027(createWasteBalanceMeta('EXPORTER')),
-            data: exporterLoads([{ rowId: 1001, previousYearRowId }])
+            meta: withTemplateYear(createWasteBalanceMeta('EXPORTER'), YEAR),
+            data: exporter2027Loads([{ rowId: 1001, previousYearRowId }])
           }
         )
 
@@ -245,17 +166,17 @@ describe('2027 summary logs', () => {
     )
 
     it('rejects a 2027 log without the 2027 columns', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setup()
 
-      const validated = await upload(
+      const validated = await uploadAndValidate(
         env,
         {
           summaryLogId: 'summary-2027-2026-columns',
           fileId: 'file-2027-2026-columns'
         },
         {
-          meta: meta2027(createWasteBalanceMeta('EXPORTER')),
+          meta: withTemplateYear(createWasteBalanceMeta('EXPORTER'), YEAR),
           data: {
             RECEIVED_LOADS_FOR_EXPORT: tableOf('Exported', [
               Object.fromEntries(
@@ -281,15 +202,15 @@ describe('2027 summary logs', () => {
         year: toYear(2026)
       })
 
-      const validated = await upload(
+      const validated = await uploadAndValidate(
         env,
         {
           summaryLogId: 'summary-2026-2027-template',
           fileId: 'file-2026-2027-template'
         },
         {
-          meta: meta2027(createWasteBalanceMeta('EXPORTER')),
-          data: exporterLoads([{ rowId: 1001 }])
+          meta: withTemplateYear(createWasteBalanceMeta('EXPORTER'), YEAR),
+          data: exporter2027Loads([{ rowId: 1001 }])
         }
       )
 
@@ -304,10 +225,10 @@ describe('2027 summary logs', () => {
     })
 
     it('rejects a 2026 template in a 2027 log as TEMPLATE_YEAR_MISMATCH', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setup()
 
-      const validated = await upload(
+      const validated = await uploadAndValidate(
         env,
         {
           summaryLogId: 'summary-2027-2026-template',
@@ -315,7 +236,7 @@ describe('2027 summary logs', () => {
         },
         {
           meta: createWasteBalanceMeta('EXPORTER'),
-          data: exporterLoads([{ rowId: 1001 }])
+          data: exporter2027Loads([{ rowId: 1001 }])
         }
       )
 
@@ -332,7 +253,7 @@ describe('2027 summary logs', () => {
 
   describe('a registered-only reprocessor', () => {
     it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         accredited: false,
@@ -343,7 +264,7 @@ describe('2027 summary logs', () => {
         fileId: 'file-2027-registered-only'
       }
 
-      const validated = await upload(env, ids, {
+      const validated = await uploadAndValidate(env, ids, {
         meta: {
           REGISTRATION_NUMBER: {
             value: 'REG123',
@@ -399,7 +320,7 @@ describe('2027 summary logs', () => {
 
   describe('a registered-only exporter', () => {
     it('validates and submits a 2027.01 log, storing the new LOADS_EXPORTED columns', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         accredited: false,
@@ -410,8 +331,11 @@ describe('2027 summary logs', () => {
         fileId: 'file-2027-exporter-registered-only'
       }
 
-      const validated = await upload(env, ids, {
-        meta: meta2027(createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY')),
+      const validated = await uploadAndValidate(env, ids, {
+        meta: withTemplateYear(
+          createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY'),
+          YEAR
+        ),
         data: {
           LOADS_EXPORTED: tableOf('Exported', [
             {
@@ -468,7 +392,7 @@ describe('2027 summary logs', () => {
     ])
   )('an accredited $processingType', ({ reprocessingType, processingType }) => {
     it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         reprocessingType,
@@ -479,8 +403,8 @@ describe('2027 summary logs', () => {
         fileId: `file-2027-${reprocessingType}`
       }
 
-      const validated = await upload(env, ids, {
-        meta: meta2027(createWasteBalanceMeta(processingType)),
+      const validated = await uploadAndValidate(env, ids, {
+        meta: withTemplateYear(createWasteBalanceMeta(processingType), YEAR),
         data: reprocessorReceivedLoads([
           { rowId: 1001, dwtSupplyId: 12345678 },
           { rowId: 1002 }

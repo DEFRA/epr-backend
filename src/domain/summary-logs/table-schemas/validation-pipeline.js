@@ -1,3 +1,4 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
 import {
   CLASSIFICATION_REASON,
   ORS_VALIDATION_DISABLED
@@ -140,9 +141,13 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear?: number }} RowValidationOptions
+ * @typedef {{ summaryLogYear?: Year }} RowValidationOptions
  * Omitted, as when exporting stored rows, means dates are not checked against
  * the summary log year.
+ */
+
+/**
+ * @typedef {Required<RowValidationOptions>} SummaryLogValidationOptions
  */
 
 /**
@@ -224,7 +229,7 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Record<string, readonly string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance | null} [tableSchema.classifyForWasteBalance] - Waste balance classifier
- * @param {RowValidationOptions} [options]
+ * @param {SummaryLogValidationOptions} options
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[], data: Record<string, any> }}
  */
 export const classifyRow = (row, tableSchema, options) => {
