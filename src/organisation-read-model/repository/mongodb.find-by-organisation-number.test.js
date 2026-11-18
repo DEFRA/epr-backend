@@ -25,11 +25,15 @@ import {
   overseasSites,
   pendingOverseasSite,
   reprocessor,
-  reprocessorAt
+  reprocessorAt,
+  storedWithout
 } from './contract/organisation-read-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
+/** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { StoredRegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { ExporterRegistration, Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */
 /** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
@@ -539,7 +543,7 @@ describe('findByOrganisationNumber', () => {
   it('leaves out a contact phone number that was never given', async ({
     organisationReadRepositoryWith
   }) => {
-    const { phone: _phone, ...withoutPhone } = luke
+    const withoutPhone = storedWithout(luke, 'phone')
     const stored = buildOrganisation({
       registrations: [reprocessor({ applicationContactDetails: withoutPhone })]
     })
@@ -573,7 +577,9 @@ describe('findByOrganisationNumber for years', () => {
 
   /**
    * A status history recorded at the start of each day given.
-   * @param {[string, string][]} changes - status and day
+   * @template {string} S
+   * @param {[S, string][]} changes - status and day
+   * @returns {StatusHistoryEntryOf<S>[]}
    */
   const history = (changes) =>
     changes.map(([status, day]) => ({
@@ -584,8 +590,8 @@ describe('findByOrganisationNumber for years', () => {
   /**
    * A reprocessor approved from `validFrom`, with any later changes.
    * @param {string} validFrom
-   * @param {[string, string][]} [changes]
-   * @param {object} [overrides]
+   * @param {[StoredRegistrationStatus, string][]} [changes]
+   * @param {Partial<StoredRegistration>} [overrides]
    */
   const reprocessorFrom = (validFrom, changes = [], overrides = {}) =>
     reprocessor({

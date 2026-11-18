@@ -12,16 +12,19 @@ import {
 } from './contract/organisation-read-test-helpers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
+/** @import { Accreditation as StoredAccreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
 describe('status timeline', () => {
   /**
-   * @param {object[]} statusHistory
+   * @param {StoredRegistration['statusHistory']} statusHistory
    */
   const registrationWith = (statusHistory) => reprocessor({ statusHistory })
 
   /**
-   * @param {object} overrides
+   * @param {Partial<StoredAccreditation>} overrides
    */
   const organisationAccredited = (overrides) => {
     const accredited = accreditation(overrides)

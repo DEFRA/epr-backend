@@ -85,14 +85,14 @@ const registeredOnlyLog = {
   registrationId: registeredOnlyRegistration.id,
   accreditationId: null,
   organisationNumber,
-  registrationNumber: toRegistrationNumber(REGISTERED_ONLY_NUMBER),
+  registrationNumber: REGISTERED_ONLY_NUMBER,
   accreditationNumber: null
 }
 const accreditedLog = {
   registrationId: accreditedRegistration.id,
   accreditationId: accredited.id,
   organisationNumber,
-  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+  registrationNumber: REPROCESSOR_NUMBER,
   accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
 }
 
@@ -103,13 +103,13 @@ const uploadAddresses = [
   {
     kind: 'registered-only',
     uploads: `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${YEAR}`,
-    registration: registeredOnlyRegistration,
+    registrationNumber: REGISTERED_ONLY_NUMBER,
     accreditationNumber: null
   },
   {
     kind: 'accredited',
     uploads: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`,
-    registration: accreditedRegistration,
+    registrationNumber: REPROCESSOR_NUMBER,
     accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
   }
 ]
@@ -216,7 +216,7 @@ describe('summary-log routes by natural key', () => {
 
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
-    ({ uploads, registration, accreditationNumber }) => {
+    ({ uploads, registrationNumber, accreditationNumber }) => {
       it('starts the upload under the registration numbers, with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
@@ -229,7 +229,7 @@ describe('summary-log routes by natural key', () => {
         const { summaryLogId } = JSON.parse(response.payload)
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
           organisationNumber,
-          registrationNumber: registration.registrationNumber,
+          registrationNumber,
           callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
         })
       })
@@ -240,7 +240,7 @@ describe('summary-log routes by natural key', () => {
         const response = await server.inject({
           method: 'POST',
           url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
-          payload: uploadCompletedFor(registration.registrationNumber)
+          payload: uploadCompletedFor(registrationNumber)
         })
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -251,7 +251,7 @@ describe('summary-log routes by natural key', () => {
         )
         expect(stored.summaryLog).toMatchObject({
           organisationNumber,
-          registrationNumber: registration.registrationNumber,
+          registrationNumber,
           year: YEAR,
           accreditationNumber
         })

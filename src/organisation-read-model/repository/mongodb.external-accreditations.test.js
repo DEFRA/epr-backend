@@ -16,7 +16,8 @@ import {
   exporter,
   findOrganisation,
   overseasSites,
-  reprocessor
+  reprocessor,
+  storedWithout
 } from './contract/organisation-read-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -215,7 +216,11 @@ describe('stored and external accreditations together', () => {
       registrations: [reprocessor(), exporter()]
     })
     const other = buildOrganisation({
-      registrations: [reprocessor({ registrationNumber: 'R26ER5001189999PL' })]
+      registrations: [
+        reprocessor({
+          registrationNumber: toRegistrationNumber('R26ER5001189999PL')
+        })
+      ]
     })
     const repository = await organisationReadRepositoryWith({
       organisations: [stored, other],
@@ -274,7 +279,7 @@ describe('stored and external accreditations together', () => {
     organisationReadRepositoryWith
   }) => {
     const stored = buildOrganisation({
-      registrations: [reprocessor(), exporter({ validFrom: null })]
+      registrations: [reprocessor(), storedWithout(exporter(), 'validFrom')]
     })
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],

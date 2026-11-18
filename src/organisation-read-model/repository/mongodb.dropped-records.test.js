@@ -15,7 +15,8 @@ import {
   granted,
   overseasSites,
   reprocessor,
-  reprocessorAt
+  reprocessorAt,
+  storedWithout
 } from './contract/organisation-read-test-helpers.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
@@ -64,7 +65,7 @@ describe('records the model cannot represent', () => {
     const { registrations } = await registrationsOf(
       organisationReadRepositoryWith,
       buildOrganisation({
-        registrations: [reprocessor({ validFrom: null })]
+        registrations: [storedWithout(reprocessor(), 'validFrom')]
       })
     )
 
@@ -127,7 +128,7 @@ describe('records the model cannot represent', () => {
     const { registrations } = await registrationsOf(
       organisationReadRepositoryWith,
       buildOrganisation({
-        registrations: [reprocessor({ reprocessingType: null })]
+        registrations: [storedWithout(reprocessor(), 'reprocessingType')]
       })
     )
 
@@ -215,7 +216,7 @@ describe('records the model cannot represent', () => {
   it('leaves out an accreditation without validFrom', async ({
     organisationReadRepositoryWith
   }) => {
-    const undated = accreditation({ validFrom: undefined })
+    const undated = storedWithout(accreditation(), 'validFrom')
     const { registrations } = await registrationsOf(
       organisationReadRepositoryWith,
       buildOrganisation({

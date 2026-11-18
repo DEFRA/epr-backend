@@ -12,6 +12,8 @@ import {
 import { toReadModelOrganisations } from './to-read-model.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
+/** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
 /**
@@ -32,7 +34,10 @@ const reprocessorOf = async (organisation) => {
   return served.registrations[REPROCESSOR_NUMBER]
 }
 
-/** @param {string} updatedAt */
+/**
+ * @param {string} updatedAt
+ * @returns {StatusHistoryEntryOf<'created' | 'approved'>[]}
+ */
 const approvedSince = (updatedAt) => [
   { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
   { status: 'approved', updatedAt }
@@ -155,6 +160,7 @@ describe('toReadModelOrganisations', () => {
   })
 
   it('gives a registration recorded after its validFrom as approved in that year', async () => {
+    /** @type {StatusHistoryEntryOf<'created' | 'approved'>[]} */
     const recordedLate = [
       { status: 'created', updatedAt: '2026-10-14T14:30:47.171Z' },
       { status: 'approved', updatedAt: '2026-10-14T14:30:47.204Z' }
