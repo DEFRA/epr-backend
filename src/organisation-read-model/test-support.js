@@ -1,5 +1,8 @@
 import { createInMemoryOrganisationReadRepository } from './repository/inmemory.js'
+import { createOrganisationReadRepository } from './repository/mongodb.js'
+import { standInRegistrationService } from './registration-service/stand-in/mongodb.js'
 
+/** @import { Db } from 'mongodb' */
 /** @import { OrganisationReadRepository } from './repository/port.js' */
 
 /**
@@ -9,7 +12,6 @@ import { createInMemoryOrganisationReadRepository } from './repository/inmemory.
 
 export { createInMemoryOrganisationReadRepository }
 export { createInMemoryOrganisationReadRepositoryPlugin } from './repository/inmemory.plugin.js'
-export { createOrganisationReadRepository } from './repository/mongodb.js'
 export * from './repository/read-model-test-data.js'
 export {
   ACCREDITATION_NUMBER,
@@ -35,3 +37,12 @@ export * from './registration-service/stand-in/test-helpers.js'
  */
 export const emptyOrganisationReadRepository = () =>
   createInMemoryOrganisationReadRepository()()
+
+/**
+ * The MongoDB organisation read repository, with the stand-in as its
+ * registration service.
+ *
+ * @param {Db} db
+ */
+export const createOrganisationReadRepositoryOnStandIn = (db) =>
+  createOrganisationReadRepository(db, standInRegistrationService(db))

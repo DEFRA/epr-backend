@@ -22,7 +22,7 @@ import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-m
 import {
   buildExternalAccreditation,
   clearStandInAccreditations,
-  createOrganisationReadRepository,
+  createOrganisationReadRepositoryOnStandIn,
   storeStandInAccreditation
 } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -202,7 +202,9 @@ describe('aggregatePrnTonnage - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationReadRepository = createOrganisationReadRepository(db)({
+      organisationReadRepository = createOrganisationReadRepositoryOnStandIn(
+        db
+      )({
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         logger: { warn: () => {} }
       })

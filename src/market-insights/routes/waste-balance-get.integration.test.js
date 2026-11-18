@@ -9,7 +9,7 @@ import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { createOrganisationReadRepositoryOnStandIn } from '#organisation-read-model/test-support.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
@@ -80,14 +80,13 @@ const it =
               organisationAdministrationRepository: (
                 await createOrganisationsRepository(mongoDb)
               )(),
-              organisationReadRepository: createOrganisationReadRepository(
-                mongoDb
-              )({
-                overseasSitesRepository: (
-                  await createOverseasSitesRepository(mongoDb)
-                )(),
-                logger: { warn: () => {} }
-              }),
+              organisationReadRepository:
+                createOrganisationReadRepositoryOnStandIn(mongoDb)({
+                  overseasSitesRepository: (
+                    await createOverseasSitesRepository(mongoDb)
+                  )(),
+                  logger: { warn: () => {} }
+                }),
               summaryLogRowStatesRepository: (
                 await createMongoSummaryLogRowStatesRepository(mongoDb)
               )(),

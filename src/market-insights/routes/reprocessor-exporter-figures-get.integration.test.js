@@ -9,7 +9,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { createOrganisationReadRepositoryOnStandIn } from '#organisation-read-model/test-support.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
@@ -68,14 +68,13 @@ const it =
               organisationAdministrationRepository: (
                 await createOrganisationsRepository(mongoDb)
               )(),
-              organisationReadRepository: createOrganisationReadRepository(
-                mongoDb
-              )({
-                overseasSitesRepository: (
-                  await createOverseasSitesRepository(mongoDb)
-                )(),
-                logger: { warn: () => {} }
-              }),
+              organisationReadRepository:
+                createOrganisationReadRepositoryOnStandIn(mongoDb)({
+                  overseasSitesRepository: (
+                    await createOverseasSitesRepository(mongoDb)
+                  )(),
+                  logger: { warn: () => {} }
+                }),
               reportsRepository: (await createReportsRepository(mongoDb))()
             }
             const server = await createTestServer({ db: mongoDb, repositories })

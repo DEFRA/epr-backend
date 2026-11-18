@@ -2,7 +2,6 @@ import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 import { findAll, findOne, findPage } from '../reex-store/mongodb.js'
 import { REG_ACCRED_ACCREDITATION_YEAR } from '../registration-service/reg-accred.js'
-import { standInRegistrationService } from '../registration-service/stand-in/mongodb.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { Db } from 'mongodb' */
@@ -30,22 +29,21 @@ const whileYearIsOpen = (load) => async (year, organisationNumber) =>
  * the registration service holds for them, and serves what it finds in the
  * read model's shape. External accreditations exist only for 2027, so they are
  * loaded only once 2027 is open, and only when the year asked for is 2027 or
- * omitted. Without a registration service, the stand-in collection is it.
+ * omitted.
  *
  * `find` filters and counts the stored organisations, then puts the page into
  * the read model's shape. An organisation the model leaves out still counts
  * towards `totalItems`, so its page comes back short.
  *
  * @param {Db} db
- * @param {RegistrationService} [registrationService]
+ * @param {RegistrationService} registrationService
  * @returns {(dependencies: {
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
  */
 export const createOrganisationReadRepository =
-  (db, registrationService = standInRegistrationService(db)) =>
-  (dependencies) => {
+  (db, registrationService) => (dependencies) => {
     const loadExternalAccreditations = whileYearIsOpen(
       registrationService(dependencies)
     )

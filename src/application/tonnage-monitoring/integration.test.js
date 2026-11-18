@@ -9,7 +9,7 @@ import {
   GLASS_RECYCLING_PROCESS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { createOrganisationReadRepositoryOnStandIn } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mongodb.js'
@@ -246,7 +246,9 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       await db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).deleteMany({})
       await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationReadRepository = createOrganisationReadRepository(db)({
+      organisationReadRepository = createOrganisationReadRepositoryOnStandIn(
+        db
+      )({
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         logger: { warn: () => {} }
       })

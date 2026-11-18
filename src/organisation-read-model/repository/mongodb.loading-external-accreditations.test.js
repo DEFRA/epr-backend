@@ -126,7 +126,7 @@ const repositoryWith = async (
   const database = mongoClient.db('epr-backend')
   return createOrganisationReadRepository(
     database,
-    registrationServiceOf?.(database)
+    (registrationServiceOf ?? standInRegistrationService)(database)
   )({
     overseasSitesRepository: (await createOverseasSitesRepository(database))(),
     logger

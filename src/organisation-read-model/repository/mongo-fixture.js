@@ -1,6 +1,9 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
-import { createMongoExternalAccreditationsRepository } from '#organisation-read-model/registration-service/stand-in/mongodb.js'
+import {
+  createMongoExternalAccreditationsRepository,
+  standInRegistrationService
+} from '#organisation-read-model/registration-service/stand-in/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/index.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
@@ -94,7 +97,10 @@ export const it = /** @type {TestAPI<MongoFixtures>} */ (
           await externalAccreditationsRepository.upsert(externalAccreditation)
         }
 
-        return createOrganisationReadRepository(database)({
+        return createOrganisationReadRepository(
+          database,
+          standInRegistrationService(database)
+        )({
           overseasSitesRepository: (
             await createOverseasSitesRepository(database)
           )(),
