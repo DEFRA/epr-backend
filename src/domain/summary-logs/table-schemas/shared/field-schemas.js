@@ -169,7 +169,10 @@ export const createDateFieldSchema = () =>
 
       // Reject if the parsed date doesn't round-trip to the same string
       // (catches values like "2024-13-01" that Date silently rolls over)
-      if (utcCalendarDate(parsed) !== dateStr) {
+      if (
+        Number.isNaN(parsed.getTime()) ||
+        utcCalendarDate(parsed) !== dateStr
+      ) {
         return helpers.error(CALENDAR_DATE_ERROR)
       }
 

@@ -102,18 +102,20 @@ describe('summary logs with a date in a later year', () => {
       openNextYear()
       const env = await setup()
 
-      const validated = await upload(env, '2027-two-rows', {
+      const validated = await upload(env, '2027-three-rows', {
         meta: exporter2027Meta(),
         data: exporter2027Loads([
           { rowId: 1001, dateReceived: '2028-01-15' },
-          { rowId: 1002, dateReceivedByOsr: '2029-01-18' }
+          { rowId: 1002, dateReceivedByOsr: '2029-01-18' },
+          { rowId: 1003, dateRepatriated: '2028-02-01' }
         ])
       })
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
       expect(validated.validation.failures).toStrictEqual([
         laterYearFailure('DATE_RECEIVED_FOR_EXPORT', 2027),
-        laterYearFailure('DATE_RECEIVED_BY_OSR', 2027)
+        laterYearFailure('DATE_RECEIVED_BY_OSR', 2027),
+        laterYearFailure('DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED', 2027)
       ])
     })
 

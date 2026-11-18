@@ -139,6 +139,7 @@ describe('field-schemas', () => {
         description: 'date that rolls over (e.g. Feb 30)',
         input: '2024-02-30'
       },
+      { description: 'date with an impossible day', input: '2024-02-99' },
       { description: 'invalid date string', input: 'not-a-date' },
       { description: 'date before 2000', input: '1999-12-31' },
       { description: 'date after 2100', input: '2100-01-02' },
