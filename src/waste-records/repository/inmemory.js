@@ -162,15 +162,15 @@ const assertOneStatePerRow = (storage, ledgerId, candidates, summaryLogId) => {
     ...rowStatesForSummaryLog(storage, ledgerId, summaryLogId),
     ...candidates
   ]
-  for (const candidate of candidates) {
-    const conflict = held.some(
+  const conflicting = candidates.find((candidate) =>
+    held.some(
       (state) =>
         matchesRowIdentity(state, candidate) &&
         !matchesCommittedState(state, candidate)
     )
-    if (conflict) {
-      throw new SummaryLogRowStateConflictError(summaryLogId, candidate)
-    }
+  )
+  if (conflicting) {
+    throw new SummaryLogRowStateConflictError(summaryLogId, conflicting)
   }
 }
 
