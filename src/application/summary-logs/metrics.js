@@ -18,6 +18,7 @@ import {
  * @typedef {Object} StatusTransitionDimensions
  * @property {SummaryLogStatus} status
  * @property {ProcessingType} [processingType]
+ * @property {string} [reason] - why a summary log was superseded
  */
 
 /**
@@ -42,10 +43,10 @@ import {
  * Records a summary log status transition metric
  * @param {StatusTransitionDimensions} dimensions
  */
-async function recordStatusTransition({ status, processingType }) {
+async function recordStatusTransition({ status, processingType, reason }) {
   await incrementCounter(
     'summaryLog.statusTransition',
-    buildDimensions({ status, processingType })
+    buildDimensions({ status, processingType, reason })
   )
 }
 

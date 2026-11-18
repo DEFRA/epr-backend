@@ -26,7 +26,11 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  buildSummaryLogCommit,
+  buildSummaryLogCommitFor,
+  summaryLogFactory
+} from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
@@ -197,15 +201,17 @@ describe('summary-log routes by natural key', () => {
    * A summary log ready to submit: validated against no prior submission.
    *
    * @param {SeedOverrides} overrides
+   * @param {import('#domain/summary-logs/commit.js').SummaryLogCommit} [commit]
    */
-  const seedValidated = async (overrides) => {
+  const seedValidated = async (overrides, commit = buildSummaryLogCommit()) => {
     const { summaryLogId, version, summaryLog } = await seed(
       overrides,
       summaryLogFactory.validating
     )
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATED),
-      meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
+      meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT },
+      commit
     })
     await waitForVersion(summaryLogsRepository, summaryLogId, version + 1)
     return summaryLogId
@@ -375,7 +381,15 @@ describe('summary-log routes by natural key', () => {
     })
 
     it('is submitted, answering with its own address', async () => {
-      const summaryLogId = toSummaryLogId(await seedOwn())
+      const summaryLogId = toSummaryLogId(
+        await seedValidated(
+          accreditedLog,
+          await buildSummaryLogCommitFor(
+            createInMemoryOrganisationReadRepository([servedOrganisation])(),
+            { ...accreditedLog, year: YEAR }
+          )
+        )
+      )
 
       const response = await server.inject({
         method: 'POST',

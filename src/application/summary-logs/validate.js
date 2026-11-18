@@ -34,7 +34,7 @@ import { transformAndValidateData } from './transform-and-validate-data.js'
 import { ledgerIdFor } from './ledger-id.js'
 import { registrationForSummaryLog } from './registration-for-summary-log.js'
 import { recordValidationMetrics } from './validation-metrics.js'
-import { submissionCommitOf } from './submission-commit.js'
+import { stageSubmission } from './stage-submission.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -486,28 +486,36 @@ const classifyAndPersistResult = async ({
     submittedRowStatesByKey
   })
 
-  await persistValidationResult({
-    issues,
-    commit:
-      recordChanges &&
-      submissionCommitOf({
+  const withResubmissions = await withPeriodsRequiringResubmission({
+    loadsByReportingPeriod,
+    periodicReports,
+    wasteRecords,
+    registration,
+    classificationContext,
+    summaryLog,
+    summaryLogId,
+    reportsService,
+    summaryLogRowStatesRepository,
+    logger
+  })
+
+  // Last before the status update: a retry after the row write fails
+  // permanently, so nothing else that can fail belongs between the two.
+  const commit = recordChanges
+    ? await stageSubmission({
+        summaryLog,
         wasteRecords,
         classificationContext,
-        recordChanges
-      }),
+        recordChanges,
+        summaryLogRowStatesRepository
+      })
+    : null
+
+  await persistValidationResult({
+    issues,
+    commit,
     loads,
-    loadsByReportingPeriod: await withPeriodsRequiringResubmission({
-      loadsByReportingPeriod,
-      periodicReports,
-      wasteRecords,
-      registration,
-      classificationContext,
-      summaryLog,
-      summaryLogId,
-      reportsService,
-      summaryLogRowStatesRepository,
-      logger
-    }),
+    loadsByReportingPeriod: withResubmissions,
     meta,
     status,
     summaryLog,

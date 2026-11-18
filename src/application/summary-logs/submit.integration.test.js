@@ -6,6 +6,8 @@ import { ObjectId } from 'mongodb'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { ledgerIdFor } from '#application/summary-logs/ledger-id.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   ACCREDITATION_STATUS,
@@ -30,7 +32,10 @@ import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-perio
 import {
   REPROCESSOR_RECEIVED_HEADERS,
   createReprocessorReceivedRowValues,
-  createStandardMeta
+  createRegisteredOnlyMeta,
+  createRegisteredOnlyReceivedRow,
+  createStandardMeta,
+  tableOf
 } from '#routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -78,23 +83,45 @@ vi.mock(
 const VALID_FROM = '2026-01-01'
 const VALID_TO = '2026-12-31'
 
-const META = createStandardMeta('REPROCESSOR_INPUT')
+/**
+ * @param {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['meta']} meta
+ * @returns {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog['meta']}
+ */
+const forRegistration = (meta) => ({
+  ...meta,
+  REGISTRATION_NUMBER: { ...meta.REGISTRATION_NUMBER, value: 'REG-123' }
+})
+
+const META = forRegistration(createStandardMeta('REPROCESSOR_INPUT'))
+const REGISTERED_ONLY_META = forRegistration(
+  createRegisteredOnlyMeta('REPROCESSOR_REGISTERED_ONLY')
+)
+
+/**
+ * The builder's default tonnage breaches the maximum weight, and submission
+ * now needs a log that validates.
+ *
+ * @param {Parameters<typeof createReprocessorReceivedRowValues>[0]} overrides
+ */
+const receivedRow = (overrides) =>
+  createReprocessorReceivedRowValues({ tonnageReceived: 100, ...overrides })
 
 const RECEIVED_DATA = {
   RECEIVED_LOADS_FOR_REPROCESSING: {
     location: { sheet: 'Received', row: 7, column: 'A' },
     headers: REPROCESSOR_RECEIVED_HEADERS,
     rows: [
-      {
-        rowNumber: 8,
-        values: createReprocessorReceivedRowValues({ rowId: 1001 })
-      },
-      {
-        rowNumber: 9,
-        values: createReprocessorReceivedRowValues({ rowId: 1002 })
-      }
+      { rowNumber: 8, values: receivedRow({ rowId: 1001 }) },
+      { rowNumber: 9, values: receivedRow({ rowId: 1002 }) }
     ]
   }
+}
+
+const REGISTERED_ONLY_DATA = {
+  RECEIVED_LOADS_FOR_REPROCESSING: tableOf('Received', [
+    createRegisteredOnlyReceivedRow({ rowId: 1001, month: '2026-01-01' }),
+    createRegisteredOnlyReceivedRow({ rowId: 1002, month: '2026-02-01' })
+  ])
 }
 
 const SUBMIT_USER = {
@@ -204,12 +231,14 @@ const setupSubmit = async ({
           buildReadReprocessorRegistration({
             material: 'paper',
             status: approved,
-            accreditations: accreditationsByYear(
-              buildReadAccreditation({
-                accreditationNumber: toAccreditationNumber('ACC-123'),
-                status: approved
-              })
-            )
+            accreditations: accreditationNumber
+              ? accreditationsByYear(
+                  buildReadAccreditation({
+                    accreditationNumber: toAccreditationNumber('ACC-123'),
+                    status: approved
+                  })
+                )
+              : {}
           }),
           toYear(2027)
         )
@@ -218,30 +247,33 @@ const setupSubmit = async ({
   ])()
   const reportKey = reportKeyOf(organisation, organisation.registrations[0])
 
-  const summaryLog = summaryLogFactory.submitting({
+  const summaryLog = summaryLogFactory.validating({
     organisationId,
     registrationId,
     ...reportKey,
     year: toYear(2026),
     accreditationId,
     accreditationNumber,
-    meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
     ...(createdAt && { createdAt })
   })
   const summaryLogId = toSummaryLogId(`submit-${organisationId}`)
   await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
-  // Validation writes this artefact via update, not insert, so seed it the same way.
-  if (loadsByReportingPeriod) {
-    await summaryLogsRepository.update(summaryLogId, 1, {
-      loadsByReportingPeriod
-    })
-    await waitForVersion(summaryLogsRepository, summaryLogId, 2)
-  }
-
-  const summaryLogExtractor = createInMemorySummaryLogExtractor({
-    [summaryLog.file.id]: { meta: META, data: data ?? RECEIVED_DATA }
+  let fileAvailable = true
+  const fileStore = createInMemorySummaryLogExtractor({
+    [summaryLog.file.id]: accreditationNumber
+      ? { meta: META, data: data ?? RECEIVED_DATA }
+      : { meta: REGISTERED_ONLY_META, data: data ?? REGISTERED_ONLY_DATA }
   })
+  /** @type {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} */
+  const summaryLogExtractor = {
+    extract: async (log, options) => {
+      if (!fileAvailable) {
+        throw new Error('The summary log file is no longer available')
+      }
+      return fileStore.extract(log, options)
+    }
+  }
 
   const ledgerRepository = createInMemoryLedgerRepository()()
 
@@ -259,13 +291,37 @@ const setupSubmit = async ({
     onSummaryLogUploaded: vi.fn().mockResolvedValue(undefined)
   }
 
+  await createSummaryLogsValidator(deps)(summaryLogId)
+  const validated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+  expect(validated.summaryLog.validation?.issues).toEqual([])
+  expect(validated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+
+  // Seeded after validation, which computes its own, so the test controls it.
+  if (loadsByReportingPeriod) {
+    await summaryLogsRepository.update(summaryLogId, validated.version, {
+      loadsByReportingPeriod
+    })
+    await waitForVersion(summaryLogsRepository, summaryLogId, 3)
+  }
+
+  const submitting =
+    await summaryLogsRepository.transitionToSubmittingExclusive(summaryLogId)
+  expect(submitting.success).toBe(true)
+  const submittingVersion = submitting.version
+  await waitForVersion(summaryLogsRepository, summaryLogId, submittingVersion)
+
   return {
     deps,
     summaryLogId,
-    summaryLog,
+    summaryLog: submitting.summaryLog,
+    submittingVersion,
     organisation,
     reportKey,
-    summaryLogsRepository
+    organisationReadRepository,
+    summaryLogsRepository,
+    removeFile: () => {
+      fileAvailable = false
+    }
   }
 }
 
@@ -277,7 +333,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       summaryLog: { year },
       reportKey,
-      summaryLogsRepository
+      summaryLogsRepository,
+      submittingVersion
     } = await setupSubmit({
       reportsRepository,
       createdAt: '2025-01-01T00:00:00.000Z'
@@ -295,14 +352,14 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       PermanentError
     )
 
-    // The guard throws before any write, so the log is untouched at version 1.
+    // The guard throws before any write, so the log is untouched.
     const { summaryLog, version } = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
-      1
+      submittingVersion
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTING)
-    expect(version).toBe(1)
+    expect(version).toBe(submittingVersion)
   })
 
   it('proceeds when a report for a different year was submitted after the summary log was created', async () => {
@@ -312,7 +369,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       summaryLog: { year },
       reportKey,
-      summaryLogsRepository
+      summaryLogsRepository,
+      submittingVersion
     } = await setupSubmit({
       reportsRepository,
       createdAt: '2025-01-01T00:00:00.000Z'
@@ -328,7 +386,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
-      2
+      submittingVersion + 1
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
   })
@@ -340,7 +398,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       summaryLog: { year },
       reportKey,
-      summaryLogsRepository
+      summaryLogsRepository,
+      submittingVersion
     } = await setupSubmit({ reportsRepository })
 
     // An open (never-submitted) report of the log's year exists for the
@@ -367,7 +426,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
-      2
+      submittingVersion + 1
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
   })
@@ -381,7 +440,8 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
       summaryLogId,
       summaryLog: { year },
       reportKey,
-      summaryLogsRepository
+      summaryLogsRepository,
+      submittingVersion
     } = await setupSubmit({
       reportsRepository,
       createdAt: '2099-01-01T00:00:00.000Z'
@@ -397,7 +457,7 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const { summaryLog } = await waitForVersion(
       summaryLogsRepository,
       summaryLogId,
-      2
+      submittingVersion + 1
     )
     expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
   })
@@ -552,14 +612,14 @@ describe('submitSummaryLog December waste metric', () => {
         rows: [
           {
             rowNumber: 8,
-            values: createReprocessorReceivedRowValues({
+            values: receivedRow({
               rowId: 1001,
               dateReceived: '2026-12-15T00:00:00.000Z'
             })
           },
           {
             rowNumber: 9,
-            values: createReprocessorReceivedRowValues({
+            values: receivedRow({
               rowId: 1002,
               dateReceived: '2026-06-15T00:00:00.000Z'
             })
@@ -678,5 +738,107 @@ describe('submitSummaryLog for an accreditation held outside epr-backend', () =>
       expect.objectContaining(numbers),
       expect.objectContaining(numbers)
     ])
+  })
+})
+
+describe('submitSummaryLog commits what validation saved', () => {
+  it('supersedes a log validated before its commit was saved, committing nothing', async () => {
+    const { deps, summaryLog, reportKey, summaryLogsRepository } =
+      await setupSubmit({
+        reportsRepository: createInMemoryReportsRepository()()
+      })
+    const validatedBeforeRelease = toSummaryLogId(
+      `before-${summaryLog.file.id}`
+    )
+    await summaryLogsRepository.insert(
+      validatedBeforeRelease,
+      summaryLogFactory.submitting({
+        ...reportKey,
+        year: summaryLog.year,
+        accreditationNumber: summaryLog.accreditationNumber,
+        meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' }
+      })
+    )
+
+    await submitSummaryLog(validatedBeforeRelease, deps)
+
+    const stored = await waitForVersion(
+      summaryLogsRepository,
+      validatedBeforeRelease,
+      2
+    )
+    expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
+    expect(
+      await deps.wasteBalanceService.currentBalance(ledgerIdFor(summaryLog))
+    ).toBeNull()
+  })
+
+  it('supersedes the log when its accreditation changed after validation, committing nothing', async () => {
+    const {
+      deps,
+      summaryLogId,
+      summaryLog,
+      submittingVersion,
+      summaryLogsRepository,
+      organisationReadRepository
+    } = await setupSubmit({
+      reportsRepository: createInMemoryReportsRepository()()
+    })
+    const { findByOrganisationNumber } = organisationReadRepository
+    vi.spyOn(
+      organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockImplementation(async (...args) => {
+      const organisation = await findByOrganisationNumber(...args)
+      organisation?.registrations['REG-123']?.accreditations[
+        summaryLog.year
+      ]?.status.timeline.push({
+        status: 'suspended',
+        at: '2026-03-01T00:00:00.000Z'
+      })
+      return organisation
+    })
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    const stored = await waitForVersion(
+      summaryLogsRepository,
+      summaryLogId,
+      submittingVersion + 1
+    )
+    expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
+    expect(
+      await deps.wasteBalanceService.currentBalance(ledgerIdFor(summaryLog))
+    ).toBeNull()
+    expect(deps.logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          action: 'summary_log_superseded',
+          reason: 'context_changed'
+        })
+      })
+    )
+  })
+
+  it("stamps a registered-only submission's event with the submitter's name", async () => {
+    const { deps, summaryLogId, summaryLog } = await setupSubmit({
+      reportsRepository: createInMemoryReportsRepository()(),
+      accreditationId: null,
+      accreditationNumber: null
+    })
+
+    await submitSummaryLog(summaryLogId, {
+      ...deps,
+      user: { ...SUBMIT_USER, name: 'Olive Operator' }
+    })
+
+    const event = await deps.ledgerRepository.findLatestInLedger(
+      ledgerIdFor(summaryLog)
+    )
+    expect(event?.createdBy).toEqual({
+      id: SUBMIT_USER.id,
+      name: 'Olive Operator',
+      email: SUBMIT_USER.email
+    })
   })
 })

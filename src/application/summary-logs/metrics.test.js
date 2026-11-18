@@ -102,6 +102,20 @@ describe('summaryLogMetrics', () => {
       })
     })
 
+    it('records why a summary log was superseded', async () => {
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'superseded',
+        processingType: PROCESSING_TYPES.EXPORTER,
+        reason: 'context_changed'
+      })
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'superseded',
+        processingType: 'exporter',
+        reason: 'context_changed'
+      })
+    })
+
     it('omits processingType dimension for early lifecycle states', async () => {
       await summaryLogMetrics.recordStatusTransition({ status: 'validating' })
 

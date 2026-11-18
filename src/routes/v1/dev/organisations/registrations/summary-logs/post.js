@@ -219,13 +219,15 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     throw Boom.conflict('Another submission is in progress. Please try again.')
   }
 
-  const isStale = await supersedeIfStale({
+  const { reason } = await supersedeIfStale({
     summaryLogsRepository,
+    organisationReadRepository: deps.organisationReadRepository,
+    logger: deps.logger,
     summaryLog: transition.summaryLog,
     summaryLogId,
     version: transition.version
   })
-  if (isStale) {
+  if (reason) {
     throw Boom.conflict('Waste records have changed since validation.')
   }
 
