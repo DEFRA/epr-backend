@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { yearCalendar } from '#reports/application/report-calendar.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { toPerson } from './report-resource.js'
 import { reportsYearCalendarResponseSchema } from './response.schema.js'
 import { calendarQuerySchema } from './shared.js'
@@ -10,12 +11,25 @@ import { calendarQuerySchema } from './shared.js'
 /**
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { ReportListItem, ReportsRepository } from '#reports/repository/port.js'
+ * @import { ReportListItem, ReportStatus, ReportsRepository } from '#reports/repository/port.js'
+ * @import { Person } from './report-resource.js'
  * @import { ReportRequest } from './shared.js'
  */
 
 /**
+ * @typedef {{
+ *   status: ReportStatus,
+ *   submissionNumber: number,
+ *   submittedAt?: string,
+ *   submittedBy?: Person
+ * }} CalendarReport
+ */
+
+/**
+ * A report keeps its last submission after it is unsubmitted, so only a
+ * report submitted now serves one.
  * @param {ReportListItem} report
+ * @returns {CalendarReport}
  */
 const toCalendarReport = ({
   status,
@@ -25,8 +39,9 @@ const toCalendarReport = ({
 }) => ({
   status,
   submissionNumber,
-  ...(submittedAt && { submittedAt }),
-  ...(submittedBy && { submittedBy: toPerson(submittedBy) })
+  ...(status === REPORT_STATUS.SUBMITTED &&
+    submittedAt &&
+    submittedBy && { submittedAt, submittedBy: toPerson(submittedBy) })
 })
 
 /**

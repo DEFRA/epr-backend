@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   reportDetailResponseSchema,
   reportsYearCalendarResponseSchema
 } from './response.schema.js'
 
 const validReport = {
-  status: 'submitted',
+  status: REPORT_STATUS.SUBMITTED,
   submissionNumber: 1,
   submittedAt: '2026-02-10T09:00:00.000Z',
   submittedBy: { name: 'Test User', position: 'Officer' }
