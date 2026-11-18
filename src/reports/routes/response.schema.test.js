@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   reportDetailResponseSchema,
   reportsYearCalendarResponseSchema
 } from './response.schema.js'
 
 const validReport = {
-  id: 'report-1',
-  status: 'in_progress',
+  status: REPORT_STATUS.SUBMITTED,
   submissionNumber: 1,
-  submittedAt: null,
-  submittedBy: null
+  submittedAt: '2026-02-10T09:00:00.000Z',
+  submittedBy: { name: 'Test User', position: 'Officer' }
 }
 
 const validItem = {
@@ -22,7 +22,6 @@ const validItem = {
   dueDate: '2026-02-20',
   submissionNumber: 1,
   periodStatus: PERIOD_STATUS.DUE,
-  report: null,
   cadence: 'monthly'
 }
 
@@ -54,6 +53,35 @@ describe('reportsYearCalendarResponseSchema', () => {
       expect(error).toBeUndefined()
     }
   )
+
+  it.each([
+    ['a report id', { ...validReport, id: 'report-1' }],
+    [
+      'a submitter user id',
+      { ...validReport, submittedBy: { ...validReport.submittedBy, id: 'u' } }
+    ],
+    ['a null submittedAt', { ...validReport, submittedAt: null }],
+    ['a null submittedBy', { ...validReport, submittedBy: null }],
+    ['a null report', null],
+    [
+      'a submitted report without its submission time',
+      { ...validReport, submittedAt: undefined }
+    ],
+    [
+      'a submitted report without its submitter',
+      { ...validReport, submittedBy: undefined }
+    ],
+    [
+      'a submission on a report not submitted now',
+      { ...validReport, status: REPORT_STATUS.READY_TO_SUBMIT }
+    ]
+  ])('rejects %s', (_, report) => {
+    const response = accreditedCalendar([{ ...validItem, report }])
+
+    const { error } = reportsYearCalendarResponseSchema.validate(response)
+
+    expect(error).toBeDefined()
+  })
 
   it('rejects a null periodStatus', () => {
     const response = accreditedCalendar([{ ...validItem, periodStatus: null }])

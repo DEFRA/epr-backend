@@ -294,12 +294,6 @@
  */
 
 /**
- * Curated subset of ReportSummary used for list-style responses
- * (e.g. the reports calendar). Excludes heavy activity payloads.
- * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submissionNumber' | 'submittedAt' | 'submittedBy'>} ReportListItem
- */
-
-/**
  * @typedef {Object} ReportPerPeriod
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
  *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive

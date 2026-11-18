@@ -235,7 +235,12 @@ describe('yearCalendar', () => {
       status: REPORT_STATUS.SUBMITTED,
       submissionNumber: 1,
       submittedAt: '2026-04-10T09:00:00.000Z',
-      submittedBy: null,
+      submittedBy: {
+        id: 'user-1',
+        name: 'Test User',
+        email: 'test.user@example.com',
+        position: 'Officer'
+      },
       resubmissionRequired: null
     }
 
@@ -262,18 +267,17 @@ describe('yearCalendar', () => {
         })
       )
 
-    it('shows a stored report on its period', () => {
+    it("shows a stored report on its period, without its id or the submitter's", () => {
       const result = calendar({
         registration: registeredSinceLastYear(),
         storedReports: [storedQuarterOne(2026)]
       })
 
       expect(result.registeredOnly?.reportingPeriods[0].report).toEqual({
-        id: 'report-1',
         status: REPORT_STATUS.SUBMITTED,
         submissionNumber: 1,
         submittedAt: '2026-04-10T09:00:00.000Z',
-        submittedBy: null
+        submittedBy: { name: 'Test User', position: 'Officer' }
       })
     })
 
@@ -364,8 +368,10 @@ describe('yearCalendar', () => {
       })
 
       expect(
-        result.registeredOnly?.reportingPeriods.map(({ report }) => report)
-      ).toEqual([null, null, null, null])
+        result.registeredOnly?.reportingPeriods.map(
+          (period) => 'report' in period
+        )
+      ).toEqual([false, false, false, false])
     })
   })
 })
