@@ -153,12 +153,13 @@ const toCandidate = (ledgerId, entry, summaryLogId) =>
 
 /**
  * @param {SummaryLogRowState[]} storage
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogRowStateInsert[]} candidates
  * @param {SummaryLogFileId} summaryLogId
  */
-const assertOneStatePerRow = (storage, candidates, summaryLogId) => {
+const assertOneStatePerRow = (storage, ledgerId, candidates, summaryLogId) => {
   const held = [
-    ...storage.filter((doc) => doc.summaryLogIds.includes(summaryLogId)),
+    ...rowStatesForSummaryLog(storage, ledgerId, summaryLogId),
     ...candidates
   ]
   for (const candidate of candidates) {
@@ -212,7 +213,7 @@ const repositoryOver = (storage) => ({
     const candidates = summaryLogRowStates.map((entry) =>
       toCandidate(ledgerId, entry, summaryLogId)
     )
-    assertOneStatePerRow(storage, candidates, summaryLogId)
+    assertOneStatePerRow(storage, ledgerId, candidates, summaryLogId)
     return candidates.map((candidate) =>
       upsertOne(storage, candidate, summaryLogId)
     )
