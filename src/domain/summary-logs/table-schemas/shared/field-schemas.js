@@ -23,6 +23,24 @@ const DATE_MIN = new Date('2000-01-01')
 const DATE_MAX = new Date('2100-01-01')
 const CALENDAR_DATE_ERROR = 'any.calendarDate'
 const CALENDAR_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/
+const FIRST_OF_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-01$/
+export const AFTER_SUMMARY_LOG_YEAR_ERROR = 'date.afterSummaryLogYear'
+
+/**
+ * Rejects a YYYY-MM-DD date in a later year than the `summaryLogYear` in the
+ * Joi validation context. Without one, the date is not checked.
+ *
+ * @param {string} dateStr
+ * @param {import('joi').CustomHelpers} helpers
+ * @returns {string | import('joi').ErrorReport}
+ */
+const rejectAfterSummaryLogYear = (dateStr, helpers) => {
+  const summaryLogYear = helpers.prefs.context?.summaryLogYear
+  return summaryLogYear !== undefined &&
+    Number(dateStr.slice(0, 4)) > summaryLogYear
+    ? helpers.error(AFTER_SUMMARY_LOG_YEAR_ERROR, { expected: summaryLogYear })
+    : dateStr
+}
 
 /**
  * 3-digit ID constraints
@@ -101,11 +119,18 @@ export const createYesNoFieldSchema = () =>
  */
 export const createFirstOfMonthFieldSchema = () =>
   Joi.string()
-    .pattern(/^\d{4}-(0[1-9]|1[0-2])-01$/)
+    .pattern(FIRST_OF_MONTH_PATTERN)
+    .custom((value, helpers) =>
+      FIRST_OF_MONTH_PATTERN.test(value)
+        ? rejectAfterSummaryLogYear(value, helpers)
+        : value
+    )
     .optional()
     .messages({
       'string.base': MESSAGES.MUST_BE_A_STRING,
-      'string.pattern.base': 'must be a first-of-month date (YYYY-MM-01)'
+      'string.pattern.base': 'must be a first-of-month date (YYYY-MM-01)',
+      [AFTER_SUMMARY_LOG_YEAR_ERROR]:
+        MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR
     })
 
 /**
@@ -152,11 +177,13 @@ export const createDateFieldSchema = () =>
         return helpers.error(CALENDAR_DATE_ERROR)
       }
 
-      return dateStr
+      return rejectAfterSummaryLogYear(dateStr, helpers)
     })
     .optional()
     .messages({
-      [CALENDAR_DATE_ERROR]: MESSAGES.MUST_BE_A_VALID_DATE
+      [CALENDAR_DATE_ERROR]: MESSAGES.MUST_BE_A_VALID_DATE,
+      [AFTER_SUMMARY_LOG_YEAR_ERROR]:
+        MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR
     })
 
 /**

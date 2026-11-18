@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   createDataSyntaxValidator,
   JOI_MESSAGE_TO_ERROR_CODE
@@ -307,7 +308,9 @@ describe('createDataSyntaxValidator', () => {
       data: dataSections
     })
 
-  const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS.TEST)
+  const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS.TEST, {
+    summaryLogYear: toYear(2026)
+  })
 
   /**
    * Validates from row-object fixtures (headers auto-computed from keys).
@@ -1343,7 +1346,9 @@ describe('createDataSyntaxValidator with high issue volume', () => {
       }
     })
 
-    const validate = createDataSyntaxValidator(registry.TEST)
+    const validate = createDataSyntaxValidator(registry.TEST, {
+      summaryLogYear: toYear(2026)
+    })
 
     const result = validate(parsed)
 
@@ -1384,23 +1389,26 @@ describe('error codes for the shared field schemas', () => {
   ])(
     'reports a $joiType failure as $code with $errorCode',
     ({ fieldSchema, value, code, errorCode }) => {
-      const validateDataSyntax = createDataSyntaxValidator({
-        FIELD_TABLE: {
-          requiredHeaders: ['ROW_ID', 'FIELD'],
-          rowIdField: 'ROW_ID',
-          unfilledValues: {},
-          validationSchema: Joi.object({
-            ROW_ID: Joi.number().min(1000).optional(),
-            FIELD: fieldSchema
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false }),
-          classifyForWasteBalance: buildClassifyForWasteBalance(
-            ['ROW_ID', 'FIELD'],
-            {}
-          )
-        }
-      })
+      const validateDataSyntax = createDataSyntaxValidator(
+        {
+          FIELD_TABLE: {
+            requiredHeaders: ['ROW_ID', 'FIELD'],
+            rowIdField: 'ROW_ID',
+            unfilledValues: {},
+            validationSchema: Joi.object({
+              ROW_ID: Joi.number().min(1000).optional(),
+              FIELD: fieldSchema
+            })
+              .unknown(true)
+              .prefs({ abortEarly: false }),
+            classifyForWasteBalance: buildClassifyForWasteBalance(
+              ['ROW_ID', 'FIELD'],
+              {}
+            )
+          }
+        },
+        { summaryLogYear: toYear(2026) }
+      )
 
       const result = validateDataSyntax(
         /** @type {ParsedSummaryLog} */ ({
@@ -1424,4 +1432,82 @@ describe('error codes for the shared field schemas', () => {
       expect(fatal.context?.errorCode).toBe(errorCode)
     }
   )
+})
+
+describe('dates in a later year than the summary log', () => {
+  /**
+   * @param {unknown} dateValue
+   * @param {{ summaryLogYear: number }} options
+   */
+  const validateDate = (dateValue, options) =>
+    createDataSyntaxValidator(
+      {
+        DATE_TABLE: {
+          requiredHeaders: ['ROW_ID', 'DATE_FIELD'],
+          rowIdField: 'ROW_ID',
+          unfilledValues: {},
+          validationSchema: Joi.object({
+            ROW_ID: Joi.number().min(1000).optional(),
+            DATE_FIELD: createDateFieldSchema()
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          classifyForWasteBalance: buildClassifyForWasteBalance(
+            ['ROW_ID', 'DATE_FIELD'],
+            {}
+          )
+        }
+      },
+      options
+    )(
+      /** @type {ParsedSummaryLog} */ ({
+        meta: {},
+        data: {
+          DATE_TABLE: {
+            headers: ['ROW_ID', 'DATE_FIELD'],
+            rows: [{ rowNumber: 2, values: [1000, dateValue] }],
+            location: DEFAULT_TEST_LOCATION
+          }
+        }
+      })
+    )
+
+  it('reports a later-year date as fatal with the summary log year expected', () => {
+    const dateValue = new Date('2027-01-01T00:00:00.000Z')
+
+    const result = validateDate(dateValue, {
+      summaryLogYear: toYear(2026)
+    })
+
+    const fatal = expectOne(
+      result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    )
+    expect(fatal).toMatchObject({
+      code: VALIDATION_CODE.INVALID_DATE,
+      context: {
+        errorCode: VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
+        expected: 2026,
+        actual: dateValue,
+        location: { header: 'DATE_FIELD', rowId: '1000', column: 'B' }
+      }
+    })
+    expect(result.validatedData.data.DATE_TABLE?.rows).toStrictEqual([])
+  })
+
+  it('accepts a date in the summary log year', () => {
+    const result = validateDate('2026-12-31', {
+      summaryLogYear: toYear(2026)
+    })
+
+    expect(result.issues.getAllIssues()).toStrictEqual([])
+  })
+
+  it('does not add an expected value to other cell errors', () => {
+    const result = validateDate('2026-02-30', {
+      summaryLogYear: toYear(2026)
+    })
+
+    const fatal = expectOne(result.issues.getAllIssues())
+    expect(fatal.context).not.toHaveProperty('expected')
+  })
 })

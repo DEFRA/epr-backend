@@ -19,6 +19,7 @@
  * See: /docs/guides/spreadsheet-template-marker-guide.md for marker spec
  */
 
+import { toYear } from '#common/helpers/dates/year.js'
 import ExcelJS from 'exceljs'
 import Joi from 'joi'
 import { parse } from './exceljs-parser.js'
@@ -627,7 +628,8 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
       })
 
       const validateDataSyntax = createDataSyntaxValidator(
-        schemaRegistry.TEST_TYPE
+        schemaRegistry.TEST_TYPE,
+        { summaryLogYear: toYear(2026) }
       )
       const { validatedData } = validateDataSyntax({
         ...parsed,

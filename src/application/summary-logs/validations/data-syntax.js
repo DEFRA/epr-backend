@@ -11,6 +11,7 @@ import {
 } from '#domain/summary-logs/markers.js'
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
+import { AFTER_SUMMARY_LOG_YEAR_ERROR } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
 import {
@@ -24,7 +25,7 @@ import {
 /** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {Pick<TableSchema, 'rowIdField' | 'requiredHeaders' | 'unfilledValues' | 'validationSchema' | 'classifyForWasteBalance'>} DataSyntaxTableSchema */
-/** @import {RowClassificationIssue, RowOutcome} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {RowClassificationIssue, RowOutcome, RowValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
  * A validated row from the data syntax validation pipeline
@@ -63,6 +64,7 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'date.min': VALIDATION_CODE.INVALID_DATE,
   'date.max': VALIDATION_CODE.INVALID_DATE,
   'any.calendarDate': VALIDATION_CODE.INVALID_DATE,
+  [AFTER_SUMMARY_LOG_YEAR_ERROR]: VALIDATION_CODE.INVALID_DATE,
   'string.threeDigitId': VALIDATION_CODE.INVALID_TYPE,
   'custom.netWeightCalculationMismatch':
     VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
@@ -94,6 +96,8 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   [MESSAGES.MUST_BE_A_NUMBER]: VALIDATION_CODE.MUST_BE_A_NUMBER,
   [MESSAGES.MUST_BE_A_STRING]: VALIDATION_CODE.MUST_BE_A_STRING,
   [MESSAGES.MUST_BE_A_VALID_DATE]: VALIDATION_CODE.MUST_BE_A_VALID_DATE,
+  [MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR]:
+    VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
   [MESSAGES.MUST_BE_GREATER_THAN_ZERO]:
     VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO,
   [MESSAGES.MUST_BE_AT_LEAST_ZERO]: VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO,
@@ -275,6 +279,8 @@ const toApplicationIssue = ({
       location
     }),
     actual: rowObject[fieldName],
+    ...(isValidationError &&
+      issue.expected !== undefined && { expected: issue.expected }),
     ...(errorCode && { errorCode })
   }
 
@@ -328,7 +334,8 @@ const isTemplateRow = (rowObject, rowIdField) => {
  *   headerToIndexMap: Map<string, number>,
  *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
  *   domainSchema: DataSyntaxTableSchema,
- *   location: CellLocation
+ *   location: CellLocation,
+ *   options: RowValidationOptions
  * }} params
  * @returns {{ issues: ValidationIssue[], rows: ValidatedRow[] }}
  */
@@ -337,7 +344,8 @@ const validateRows = ({
   headerToIndexMap,
   rows,
   domainSchema,
-  location
+  location,
+  options
 }) => {
   const validatedRows = rows.flatMap(({ rowNumber, values }) => {
     /** @type {Record<string, unknown>} */
@@ -350,7 +358,7 @@ const validateRows = ({
       return []
     }
 
-    const classification = classifyRow(rowObject, domainSchema)
+    const classification = classifyRow(rowObject, domainSchema, options)
     const rowId = String(rowObject[domainSchema.rowIdField]) // NOSONAR: javascript:S6551 - ROW_ID is never an object
 
     const rowIssues = classification.issues.map((issue) =>
@@ -388,11 +396,12 @@ const validateRows = ({
  * @param {{
  *   tableName: string,
  *   tableData: DataSection,
- *   domainSchema: DataSyntaxTableSchema
+ *   domainSchema: DataSyntaxTableSchema,
+ *   options: RowValidationOptions
  * }} params
  * @returns {{ issues: ValidationIssue[], table: ValidatedTableSection }} Validated table data (rows as ValidatedRow[]) and the issues it produced
  */
-const validateTable = ({ tableName, tableData, domainSchema }) => {
+const validateTable = ({ tableName, tableData, domainSchema, options }) => {
   const { headers, rows, location } = tableData
 
   const headerIssues = validateHeaders({
@@ -413,7 +422,8 @@ const validateTable = ({ tableName, tableData, domainSchema }) => {
     headerToIndexMap,
     rows,
     domainSchema,
-    location
+    location,
+    options
   })
 
   return {
@@ -432,7 +442,11 @@ const validateTable = ({ tableName, tableData, domainSchema }) => {
  */
 
 /**
- * Creates a data syntax validator bound to a template's table schemas
+ * @typedef {Required<RowValidationOptions>} SummaryLogDateOptions
+ */
+
+/**
+ * Validates a parsed summary log against a template's table schemas
  *
  * Validates each table in parsed.data that has a defined schema in the template:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
@@ -447,9 +461,11 @@ const validateTable = ({ tableName, tableData, domainSchema }) => {
  * - FATAL: Invalid row values on REJECTED rows block submission entirely
  *
  * @param {Record<string, DataSyntaxTableSchema>} tableSchemas - The template's table schemas by table name
- * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult} Validator function that takes parsed summary log
+ * @param {SummaryLogDateOptions} options
+ * @param {ParsedSummaryLog} parsed
+ * @returns {DataSyntaxValidationResult}
  */
-export const createDataSyntaxValidator = (tableSchemas) => (parsed) => {
+const validateDataSyntax = (tableSchemas, options, parsed) => {
   const data = parsed?.data || {}
 
   const tableResults = Object.entries(data).map(([tableName, tableData]) => {
@@ -482,7 +498,8 @@ export const createDataSyntaxValidator = (tableSchemas) => (parsed) => {
     const { issues, table } = validateTable({
       tableName,
       tableData,
-      domainSchema
+      domainSchema,
+      options
     })
 
     return { tableName, table, issues }
@@ -500,3 +517,14 @@ export const createDataSyntaxValidator = (tableSchemas) => (parsed) => {
     }
   }
 }
+
+/**
+ * Creates a data syntax validator bound to a template's table schemas and the
+ * summary log's year.
+ *
+ * @param {Record<string, DataSyntaxTableSchema>} tableSchemas - The template's table schemas by table name
+ * @param {SummaryLogDateOptions} options
+ * @returns {(parsed: ParsedSummaryLog) => DataSyntaxValidationResult}
+ */
+export const createDataSyntaxValidator = (tableSchemas, options) => (parsed) =>
+  validateDataSyntax(tableSchemas, options, parsed)
