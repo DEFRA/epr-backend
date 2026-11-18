@@ -1,7 +1,6 @@
 import Joi from 'joi'
 
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
-import { accreditedOverseasSitesSchema } from '#common/validation/overseas-site-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { ORGANISATION_NUMBER_PATTERN } from '#domain/organisations/numbers.js'
@@ -34,6 +33,5 @@ export const externalAccreditationSchema = Joi.object({
         })
       )
       .required()
-  }).required(),
-  overseasSites: accreditedOverseasSitesSchema
+  }).required()
 })

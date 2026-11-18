@@ -35,11 +35,6 @@ const urlFor = (number) => `/v1/dev/external-accreditations/${number}/${year}`
 /** A registration only another organisation holds. */
 const OTHER_ORGANISATIONS_NUMBER = 'R26ER5009990001PL'
 
-const overseasSites = {
-  '001': { status: 'approved', approvedOn: '2027-01-01' },
-  '002': { status: 'pending' }
-}
-
 /** @param {{ devEndpoints: boolean }} featureFlags */
 const serverWith = async (featureFlags) => {
   const externalAccreditationsRepository =
@@ -129,19 +124,18 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     )
   })
 
-  it("stores an exporter accreditation's overseas sites", async () => {
+  it("stores an exporter's accreditation without overseas sites, as they are lifted from the registration", async () => {
     const { server, externalAccreditationsRepository } = await serverWith({
       devEndpoints: true
     })
     const exporterAccreditation = buildExternalAccreditation({
-      registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
-      overseasSites
+      registrationNumber: toRegistrationNumber(EXPORTER_NUMBER)
     })
 
     const response = await server.inject({
       method: 'PUT',
       url: urlFor(EXPORTER_NUMBER),
-      payload: { ...payload, overseasSites }
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -151,46 +145,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     )
   })
 
-  it("refuses overseas sites for a reprocessor's accreditation", async () => {
-    const { server, externalAccreditationsRepository } = await serverWith({
-      devEndpoints: true
-    })
-
-    const response = await server.inject({
-      method: 'PUT',
-      url: urlFor(REPROCESSOR_NUMBER),
-      payload: { ...payload, overseasSites }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(JSON.parse(response.payload).message).toBe(
-      `Registration ${REPROCESSOR_NUMBER} is not an exporter, so its accreditation has no overseas sites`
-    )
-    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
-  })
-
-  it('stores an exporter accreditation with no overseas sites', async () => {
-    const { server, externalAccreditationsRepository } = await serverWith({
-      devEndpoints: true
-    })
-    const exporterAccreditation = buildExternalAccreditation({
-      registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
-      overseasSites: {}
-    })
-
-    const response = await server.inject({
-      method: 'PUT',
-      url: urlFor(EXPORTER_NUMBER),
-      payload: { ...payload, overseasSites: {} }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(externalAccreditationsRepository.upsert).toHaveBeenCalledWith(
-      exporterAccreditation
-    )
-  })
-
-  it("refuses an exporter's accreditation without overseas sites", async () => {
+  it('refuses an accreditation with overseas sites', async () => {
     const { server, externalAccreditationsRepository } = await serverWith({
       devEndpoints: true
     })
@@ -198,12 +153,17 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     const response = await server.inject({
       method: 'PUT',
       url: urlFor(EXPORTER_NUMBER),
-      payload
+      payload: {
+        ...payload,
+        overseasSites: {
+          '001': { status: 'approved', approvedOn: '2027-01-01' }
+        }
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(JSON.parse(response.payload).message).toBe(
-      `Registration ${EXPORTER_NUMBER} is an exporter, so its accreditation lists its overseas sites`
+      '"overseasSites" is not allowed'
     )
     expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
   })
@@ -244,53 +204,6 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
     }
   )
-
-  it.for([
-    {
-      description: 'an approved overseas site without its approval date',
-      overseasSites: { '001': { status: 'approved' } }
-    },
-    {
-      description: 'an overseas site in a status sites do not have',
-      overseasSites: { '001': { status: 'rejected' } }
-    },
-    {
-      description: 'an overseas site keyed by other than a three-digit ORS ID',
-      overseasSites: { 1: { status: 'pending' } }
-    },
-    {
-      description:
-        'an approved overseas site approved on a date that does not exist',
-      overseasSites: { '001': { status: 'approved', approvedOn: '2027-02-30' } }
-    },
-    {
-      description: 'an approved overseas site approved at a date-time',
-      overseasSites: {
-        '001': { status: 'approved', approvedOn: '2027-03-01T00:00:00.000Z' }
-      }
-    },
-    {
-      description: 'a pending overseas site with an approval date',
-      overseasSites: { '001': { status: 'pending', approvedOn: '2027-03-01' } }
-    },
-    {
-      description: 'an overseas site with a field sites do not have',
-      overseasSites: { '001': { status: 'pending', name: 'Site' } }
-    }
-  ])('refuses $description', async ({ overseasSites }) => {
-    const { server, externalAccreditationsRepository } = await serverWith({
-      devEndpoints: true
-    })
-
-    const response = await server.inject({
-      method: 'PUT',
-      url: urlFor(EXPORTER_NUMBER),
-      payload: { ...payload, overseasSites }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
-  })
 
   it.for([
     {

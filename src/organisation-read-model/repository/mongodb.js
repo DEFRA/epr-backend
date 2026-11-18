@@ -53,6 +53,8 @@ const whileYearIsOpen = (load) => async (year, organisationNumber) =>
 
 /**
  * Loads external accreditations from the `external-accreditations` collection.
+ * Overseas sites an accreditation was stored with before they were lifted from
+ * its registration are not read.
  *
  * @param {Db} db
  * @returns {ExternalAccreditationsLoader}
@@ -64,7 +66,7 @@ const createMongoExternalAccreditationsLoader =
     )
       .find(
         { year, ...(organisationNumber && { organisationNumber }) },
-        { projection: { _id: 0 } }
+        { projection: { _id: 0, overseasSites: 0 } }
       )
       .toArray()
 

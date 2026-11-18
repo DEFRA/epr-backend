@@ -208,29 +208,9 @@ describe('createRegAccredAccreditationsLoader', () => {
           current: 'approved',
           lastUpdatedAt: '2027-03-10T09:15:00.000Z',
           timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
-        },
-        overseasSites: {}
+        }
       }
     ])
-  })
-
-  it("lists no overseas sites on a reprocessor's accreditation", async () => {
-    serveAccreditations([
-      {
-        organisationNumber: 990001,
-        registrationNumber: 'R26ER9900010001PA',
-        accreditationNumber: 'A27ER9900010001PA',
-        accreditationYear: 2027,
-        material: 'Paper',
-        wasteProcessingType: 'reprocessor',
-        status: 'approved',
-        tonnageBand: 'up_to_5000'
-      }
-    ])
-
-    const [accreditation] = await loadFor('990001')
-
-    expect(accreditation).not.toHaveProperty('overseasSites')
   })
 
   it('trims and upper-cases the registration and accreditation numbers', async () => {
@@ -254,8 +234,7 @@ describe('createRegAccredAccreditationsLoader', () => {
     { field: 'status', item: { status: 'withdrawn' } },
     { field: 'tonnageBand', item: { tonnageBand: 'up_to_a_lot' } },
     { field: 'registrationNumber', item: { registrationNumber: null } },
-    { field: 'accreditationNumber', item: { accreditationNumber: null } },
-    { field: 'wasteProcessingType', item: { wasteProcessingType: 'trader' } }
+    { field: 'accreditationNumber', item: { accreditationNumber: null } }
   ])(
     'drops and reports an accreditation with an invalid $field',
     async ({ field, item }) => {

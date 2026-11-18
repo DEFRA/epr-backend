@@ -28,7 +28,6 @@ export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
  *   registrationNumber: string
  *   accreditationNumber: string
  *   accreditationYear: number
- *   wasteProcessingType: 'reprocessor' | 'exporter'
  *   status: ExternalAccreditation['status']['current']
  *   tonnageBand: ExternalAccreditation['prnIssuance']['tonnageBand']
  * }} RegAccredAccreditationSummary
@@ -84,7 +83,6 @@ const regAccredAccreditationSummarySchema = Joi.object({
   registrationNumber: Joi.string().trim().uppercase().required(),
   accreditationNumber: Joi.string().trim().uppercase().required(),
   accreditationYear: Joi.number().integer().required(),
-  wasteProcessingType: Joi.string().valid('reprocessor', 'exporter').required(),
   status: Joi.string()
     .valid(...ACCREDITATION_STATUSES)
     .required(),
@@ -133,10 +131,7 @@ const toExternalAccreditation = (summary, loadedAt) =>
         // TODO: take this from the Reg Accred response once it serves the
         // accreditation's status history.
         timeline: [{ status: summary.status, at: REG_ACCRED_STATUS_SINCE }]
-      },
-      // TODO: take an exporter's accredited overseas sites from the Reg Accred
-      // response once it serves them. Until then it is accredited for none.
-      ...(summary.wasteProcessingType === 'exporter' && { overseasSites: {} })
+      }
     })
   )
 

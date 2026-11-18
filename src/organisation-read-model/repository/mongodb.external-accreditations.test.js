@@ -290,39 +290,7 @@ describe('stored and external accreditations together', () => {
     ])
   })
 
-  it("lists only an exporter's external accreditation's own overseas sites, rather than the registration's", async ({
-    organisationReadRepositoryWith
-  }) => {
-    const stored = buildOrganisation({ registrations: [exporter()] })
-    const accreditationSites = {
-      '001': { status: 'pending' },
-      '003': { status: 'approved', approvedOn: '2027-04-03' }
-    }
-    const repository = await organisationReadRepositoryWith({
-      organisations: [stored],
-      overseasSites,
-      externalAccreditations: [
-        buildExternalAccreditationFor(stored, {
-          registrationNumber: toRegistrationNumber(EXPORTER_NUMBER),
-          overseasSites: accreditationSites
-        })
-      ]
-    })
-
-    const organisation = await findOrganisation(
-      repository,
-      stored.organisationNumber
-    )
-
-    expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
-    ).toStrictEqual({
-      ...externalAccreditation2027,
-      overseasSites: accreditationSites
-    })
-  })
-
-  it("lists no overseas sites on an exporter's external accreditation that holds none, rather than the registration's", async ({
+  it("lists the registration's overseas sites on an exporter's external accreditation", async ({
     organisationReadRepositoryWith
   }) => {
     const stored = buildOrganisation({ registrations: [exporter()] })
@@ -343,35 +311,11 @@ describe('stored and external accreditations together', () => {
 
     expect(
       organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
-    ).toStrictEqual({ ...externalAccreditation2027, overseasSites: {} })
-  })
-
-  it("drops the overseas sites from a reprocessor's external accreditation, and logs it", async ({
-    organisationReadRepositoryWith
-  }) => {
-    const stored = buildOrganisation({ registrations: [reprocessor()] })
-    const logger = { warn: vi.fn() }
-    const repository = await organisationReadRepositoryWith({
-      organisations: [stored],
-      externalAccreditations: [
-        buildExternalAccreditationFor(stored, {
-          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-          overseasSites: { '001': { status: 'pending' } }
-        })
-      ],
-      logger
-    })
-
-    const organisation = await findOrganisation(
-      repository,
-      stored.organisationNumber
-    )
-
-    expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027]
-    ).toStrictEqual(externalAccreditation2027)
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: `Registration ${REPROCESSOR_NUMBER} accreditation year 2027 lists overseas sites, but a reprocessor has none`
+    ).toMatchObject({
+      overseasSites: {
+        '001': { status: 'approved', approvedOn: '2026-01-01' },
+        '002': { status: 'pending' }
+      }
     })
   })
 

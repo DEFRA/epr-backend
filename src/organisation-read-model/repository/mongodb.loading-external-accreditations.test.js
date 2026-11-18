@@ -20,7 +20,10 @@ import {
   overseasSites,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
-import { createOrganisationReadRepository } from './mongodb.js'
+import {
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
+  createOrganisationReadRepository
+} from './mongodb.js'
 
 /** @import { MongoClient } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -41,6 +44,12 @@ const REG_ACCRED_ACCREDITATION_NUMBER = 'A27ER5000560001AL'
 /** The query of the first page of a search for 2027 accreditations. */
 const firstPage = { year: '2027', pageNumber: '1', limit: '100' }
 
+/** The overseas sites the exporter registration holds, as an accreditation lists them. */
+const registrationSites = {
+  '001': { status: 'approved', approvedOn: '2026-01-01' },
+  '002': { status: 'pending' }
+}
+
 const mswServer = setupMsw()
 
 /**
@@ -55,13 +64,15 @@ const mswServer = setupMsw()
  *   registrationNumber?: string
  *   wasteProcessingType?: 'reprocessor' | 'exporter'
  *   organisationNumber?: string
- * }} [registration]
+ *   servedSites?: object
+ * }} [registration] - `servedSites`, when given, are served as the accreditation's overseas sites
  * @returns {URL[]} the URLs requested
  */
 const serveRegAccred = ({
   registrationNumber = REPROCESSOR_NUMBER,
   wasteProcessingType = 'reprocessor',
-  organisationNumber
+  organisationNumber,
+  servedSites
 } = {}) => {
   /** @type {URL[]} */
   const requested = []
@@ -84,7 +95,8 @@ const serveRegAccred = ({
             material: 'Paper',
             wasteProcessingType,
             status: 'approved',
-            tonnageBand: 'up_to_500'
+            tonnageBand: 'up_to_500',
+            ...(servedSites && { overseasSites: servedSites })
           }
         ]
       })
@@ -174,6 +186,36 @@ describe('loading external accreditations', () => {
         )
       }
     )
+
+    it("lists the registration's overseas sites on an exporter's accreditation, ignoring any it was stored with", async ({
+      organisationReadRepositoryWith,
+      mongoClient
+    }) => {
+      const stored = buildOrganisation({ registrations: [exporter()] })
+      await organisationReadRepositoryWith({
+        organisations: [stored],
+        overseasSites
+      })
+      await mongoClient
+        .db('epr-backend')
+        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+        .insertOne({
+          ...buildExternalAccreditationFor(stored, {
+            registrationNumber: toRegistrationNumber(EXPORTER_NUMBER)
+          }),
+          overseasSites: { '003': { status: 'pending' } }
+        })
+      const repository = await repositoryWith(mongoClient)
+
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+
+      expect(
+        organisation.registrations[EXPORTER_NUMBER].accreditations['2027']
+      ).toHaveProperty('overseasSites', registrationSites)
+    })
   })
 
   describe('with the Reg Accred API config', () => {
@@ -210,13 +252,14 @@ describe('loading external accreditations', () => {
       }
     )
 
-    it("lists no overseas sites on an exporter's accreditation from Reg Accred, rather than the registration's", async ({
+    it("lists the registration's overseas sites on an exporter's accreditation from Reg Accred, ignoring any it serves", async ({
       organisationReadRepositoryWith,
       mongoClient
     }) => {
       serveRegAccred({
         registrationNumber: EXPORTER_NUMBER,
-        wasteProcessingType: 'exporter'
+        wasteProcessingType: 'exporter',
+        servedSites: { '003': { status: 'pending' } }
       })
       const stored = buildOrganisation({ registrations: [exporter()] })
       await organisationReadRepositoryWith({
@@ -232,7 +275,7 @@ describe('loading external accreditations', () => {
 
       expect(
         organisation.registrations[EXPORTER_NUMBER].accreditations['2027']
-      ).toHaveProperty('overseasSites', {})
+      ).toHaveProperty('overseasSites', registrationSites)
     })
 
     it('leaves out and logs an accreditation from Reg Accred with a status the read model does not know', async ({
