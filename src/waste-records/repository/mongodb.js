@@ -47,9 +47,9 @@ const RETIRED_IDENTITY_INDEX_NAMES = [
  * summary-log row state design: a multikey index on `summaryLogIds` then
  * `_id` for the committed-state membership query, which reads in `_id` order
  * so the planner never prefers walking the whole collection by `_id`, and a
- * unique index on the
- * summary-log-row-state identity (ledger identity and year + content hash) that makes
- * the content-addressed dedup atomic under concurrent writers.
+ * unique index on the summary-log-row-state identity (ledger identity and
+ * year + content hash) that makes the content-addressed dedup atomic under
+ * concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
