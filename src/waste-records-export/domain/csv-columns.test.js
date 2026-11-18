@@ -13,6 +13,11 @@ import {
 } from './csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import {
+  getTemplate,
+  hasTemplate,
+  yearsWithTemplates
+} from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import {
   toAccreditationNumber,
@@ -92,12 +97,21 @@ describe('csv-columns', () => {
       expect(SCHEMA_FIELD_NAMES).not.toContain('ROW_ID')
     })
 
-    it('contains representative fields from each schema area', () => {
-      expect(SCHEMA_FIELD_NAMES).toContain('DATE_RECEIVED_FOR_EXPORT')
-      expect(SCHEMA_FIELD_NAMES).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
-      expect(SCHEMA_FIELD_NAMES).toContain('FINAL_DESTINATION_NAME')
-      expect(SCHEMA_FIELD_NAMES).toContain('WAS_THE_WASTE_REFUSED')
-      expect(SCHEMA_FIELD_NAMES).toContain('PRODUCT_DESCRIPTION')
+    it("is every column of every year's templates", () => {
+      const templateColumns = yearsWithTemplates().flatMap((year) =>
+        Object.values(PROCESSING_TYPES)
+          .filter((processingType) => hasTemplate(year, processingType))
+          .flatMap((processingType) =>
+            Object.values(getTemplate(year, processingType).tableSchemas)
+          )
+          .flatMap(({ requiredHeaders }) => requiredHeaders)
+      )
+
+      expect([...SCHEMA_FIELD_NAMES].sort()).toStrictEqual(
+        [...new Set(templateColumns)]
+          .filter((column) => column !== 'ROW_ID')
+          .sort()
+      )
     })
 
     it('has no duplicates', () => {

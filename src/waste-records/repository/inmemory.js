@@ -1,4 +1,3 @@
-/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
@@ -107,21 +106,6 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
 }
 
 /**
- * @param {SummaryLogRowState[]} storage
- * @param {Year} year
- * @returns {string[]}
- */
-const distinctDataKeys = (storage, year) => {
-  const keys = new Set()
-  for (const doc of storage.filter((stored) => stored.year === year)) {
-    for (const key of Object.keys(doc.data)) {
-      keys.add(key)
-    }
-  }
-  return [...keys]
-}
-
-/**
  * @param {SummaryLogRowState} doc
  * @returns {import('./port.js').WasteRecordState}
  */
@@ -215,9 +199,7 @@ const repositoryOver = (storage) => ({
    */
   streamRowStatesForSummaryLogs: async function* (summaryLogIds) {
     yield* submittedRowStatesForSummaryLogs(storage, summaryLogIds)
-  },
-
-  findDistinctDataKeys: async (year) => distinctDataKeys(storage, year)
+  }
 })
 
 /**

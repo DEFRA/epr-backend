@@ -13,7 +13,11 @@ import {
 } from '../domain/csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import {
+  getTemplate,
+  hasTemplate,
+  yearsWithTemplates
+} from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -393,18 +397,20 @@ const EXPORT_HEADER = [
   'YOUR_REFERENCE'
 ]
 
-const TEMPLATE_TABLES = [toYear(2026), toYear(2027)].flatMap((year) =>
-  Object.values(PROCESSING_TYPES).flatMap((processingType) =>
-    Object.entries(getTemplate(year, processingType).tableSchemas).map(
-      ([tableName, { wasteRecordType, requiredHeaders }]) => ({
-        year,
-        processingType,
-        tableName,
-        wasteRecordType,
-        columns: requiredHeaders.filter((column) => column !== 'ROW_ID')
-      })
+const TEMPLATE_TABLES = yearsWithTemplates().flatMap((year) =>
+  Object.values(PROCESSING_TYPES)
+    .filter((processingType) => hasTemplate(year, processingType))
+    .flatMap((processingType) =>
+      Object.entries(getTemplate(year, processingType).tableSchemas).map(
+        ([tableName, { wasteRecordType, requiredHeaders }]) => ({
+          year,
+          processingType,
+          tableName,
+          wasteRecordType,
+          columns: requiredHeaders.filter((column) => column !== 'ROW_ID')
+        })
+      )
     )
-  )
 )
 
 describe('streamCsvExport', () => {
