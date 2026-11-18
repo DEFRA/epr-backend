@@ -9,7 +9,7 @@ import {
 import { config } from '#root/config.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { it } from '#vite/fixtures/organisation-read-mongo.js'
+import { it } from '#organisation-read-model/repository/mongo-fixture.js'
 import { setupMsw } from '#vite/setup-msw.js'
 import { buildExternalAccreditationFor } from './contract/test-data.js'
 import {
@@ -20,15 +20,19 @@ import {
   overseasSites,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
-import {
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
-  createOrganisationReadRepository
-} from './mongodb.js'
+import { regAccredRegistrationService } from '../registration-service/reg-accred.js'
+import { standInRegistrationService } from '../registration-service/stand-in/mongodb.js'
+import { storeStandInAccreditation } from '../registration-service/stand-in/test-helpers.js'
+import { createOrganisationReadRepository } from './mongodb.js'
 
-/** @import { MongoClient } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OrganisationReadRepositoryOptions } from './mongodb.js' */
+/** @import { Db, MongoClient } from 'mongodb' */
+/** @import { RegistrationService } from '../registration-service/port.js' */
+
+/**
+ * @typedef {(database: Db) => RegistrationService} RegistrationServiceOf
+ */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -105,20 +109,23 @@ const serveRegAccred = ({
   return requested
 }
 
+/** @type {RegistrationServiceOf} */
+const regAccred = () => regAccredRegistrationService(regAccredApi)
+
 /**
  * @param {MongoClient} mongoClient
- * @param {OrganisationReadRepositoryOptions} [options]
+ * @param {RegistrationServiceOf} [registrationServiceOf]
  * @param {Pick<TypedLogger, 'warn'>} [logger]
  */
 const repositoryWith = async (
   mongoClient,
-  options,
+  registrationServiceOf,
   logger = { warn: () => {} }
 ) => {
   const database = mongoClient.db('epr-backend')
   return createOrganisationReadRepository(
     database,
-    options
+    registrationServiceOf?.(database)
   )({
     overseasSitesRepository: (await createOverseasSitesRepository(database))(),
     logger
@@ -129,7 +136,7 @@ const repositoryWith = async (
  * Stores a reprocessor and a 2027 external accreditation for its
  * registration in the database.
  *
- * @param {import('#vite/fixtures/organisation-read-mongo.js').OrganisationReadRepositoryWith} organisationReadRepositoryWith
+ * @param {import('#organisation-read-model/repository/mongo-fixture.js').OrganisationReadRepositoryWith} organisationReadRepositoryWith
  */
 const storeReprocessorWithExternalAccreditation = async (
   organisationReadRepositoryWith
@@ -162,19 +169,25 @@ describe('loading external accreditations', () => {
     vi.useRealTimers()
   })
 
-  describe('without the Reg Accred API config', () => {
+  describe('from the stand-in', () => {
     it.for(
-      /** @type {[string, OrganisationReadRepositoryOptions | undefined][]} */ ([
-        ['no options', undefined],
-        ['no regAccredApi', {}]
+      /** @type {[string, RegistrationServiceOf | undefined][]} */ ([
+        ['no registration service', undefined],
+        ['the stand-in as the registration service', standInRegistrationService]
       ])
     )(
       'serves the external accreditation held in the database with %s',
-      async ([, options], { organisationReadRepositoryWith, mongoClient }) => {
+      async (
+        [, registrationServiceOf],
+        { organisationReadRepositoryWith, mongoClient }
+      ) => {
         const stored = await storeReprocessorWithExternalAccreditation(
           organisationReadRepositoryWith
         )
-        const repository = await repositoryWith(mongoClient, options)
+        const repository = await repositoryWith(
+          mongoClient,
+          registrationServiceOf
+        )
 
         const organisation = await findOrganisation(
           repository,
@@ -196,15 +209,12 @@ describe('loading external accreditations', () => {
         organisations: [stored],
         overseasSites
       })
-      await mongoClient
-        .db('epr-backend')
-        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
-        .insertOne({
-          ...buildExternalAccreditationFor(stored, {
-            registrationNumber: toRegistrationNumber(EXPORTER_NUMBER)
-          }),
-          overseasSites: { '003': { status: 'pending' } }
-        })
+      await storeStandInAccreditation(mongoClient.db('epr-backend'), {
+        ...buildExternalAccreditationFor(stored, {
+          registrationNumber: toRegistrationNumber(EXPORTER_NUMBER)
+        }),
+        overseasSites: { '003': { status: 'pending' } }
+      })
       const repository = await repositoryWith(mongoClient)
 
       const organisation = await findOrganisation(
@@ -218,8 +228,8 @@ describe('loading external accreditations', () => {
     })
   })
 
-  describe('with the Reg Accred API config', () => {
-    const options = { regAccredApi }
+  describe('from Reg Accred', () => {
+    const options = regAccred
 
     it.for(
       /** @type {[string, Year | undefined][]} */ ([
@@ -393,7 +403,7 @@ describe('loading external accreditations', () => {
       const stored = await storeReprocessorWithExternalAccreditation(
         organisationReadRepositoryWith
       )
-      const repository = await repositoryWith(mongoClient, { regAccredApi })
+      const repository = await repositoryWith(mongoClient, regAccred)
 
       await repository.findByOrganisationNumber(stored.organisationNumber)
 
@@ -410,7 +420,7 @@ describe('loading external accreditations', () => {
       const requested = serveRegAccred({
         organisationNumber: stored.organisationNumber
       })
-      const repository = await repositoryWith(mongoClient, { regAccredApi })
+      const repository = await repositoryWith(mongoClient, regAccred)
 
       await repository.findAll()
 
@@ -428,7 +438,7 @@ describe('loading external accreditations', () => {
       const requested = serveRegAccred({
         organisationNumber: stored.organisationNumber
       })
-      const repository = await repositoryWith(mongoClient, { regAccredApi })
+      const repository = await repositoryWith(mongoClient, regAccred)
 
       const [organisation] = await repository.findAll()
 

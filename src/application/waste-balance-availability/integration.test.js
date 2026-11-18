@@ -21,10 +21,11 @@ import {
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
+  buildExternalAccreditation,
+  clearStandInAccreditations,
   createOrganisationReadRepository,
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
-} from '#organisation-read-model/repository/mongodb.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+  storeStandInAccreditation
+} from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -124,7 +125,7 @@ describe('aggregateAvailableBalance - Integration', () => {
   let db
   /** @type {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} */
   let ledgerRepository
-  /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+  /** @type {import('#organisation-read-model/index.js').OrganisationReadRepository} */
   let organisationReadRepository
 
   const aggregate = () =>
@@ -143,9 +144,7 @@ describe('aggregateAvailableBalance - Integration', () => {
         logger: { warn: () => {} }
       })
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await db
-        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
-        .deleteMany({})
+      await clearStandInAccreditations(db)
       await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
     }
   )
@@ -257,7 +256,8 @@ describe('aggregateAvailableBalance - Integration', () => {
           { id: '1', material: MATERIAL.PLASTIC }
         ])
       )
-    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+    await storeStandInAccreditation(
+      db,
       buildExternalAccreditation({
         organisationNumber: toOrganisationNumber(String(orgId1)),
         registrationNumber: toRegistrationNumber('REG-1'),

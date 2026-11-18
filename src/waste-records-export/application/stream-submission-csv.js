@@ -11,7 +11,7 @@ import {
   sortRowStates
 } from './stream-csv-export.js'
 
-/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/index.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 

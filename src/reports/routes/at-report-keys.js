@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 
 import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 
 /**
  * @import Joi from 'joi'

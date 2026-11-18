@@ -1,15 +1,9 @@
 import {
   ACTIVE_ACCREDITATION_STATUSES,
-  MATERIAL,
-  REGISTRATION_STATUS
+  MATERIAL
 } from '#domain/organisations/model.js'
-import { toCalendarDate } from '#common/helpers/date-formatter.js'
-import { yearBounds } from '#common/helpers/dates/year.js'
-import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 
-/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material } from '#domain/organisations/model.js' */
-/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
 
 /**
  * @typedef {{ accreditation: { status: StoredAccreditationStatus } | null }} AccreditationLink
@@ -28,23 +22,6 @@ export function isRegistrationAccredited({ accreditation }) {
   return accreditation
     ? ACTIVE_ACCREDITATION_STATUSES.has(accreditation.status)
     : false
-}
-
-/**
- * Whether the registration is approved and active during a specific year
- * @param {Pick<ReadModelRegistration, 'status'>} registration
- * @param {Year} year
- * @returns {boolean}
- */
-export function isRegistrationActiveInYear(registration, year) {
-  if (registration.status.current !== REGISTRATION_STATUS.APPROVED) {
-    return false
-  }
-  const approvedAt = firstApprovedAt(registration.status.timeline)
-  return (
-    approvedAt !== undefined &&
-    toCalendarDate(approvedAt) <= yearBounds(year).end
-  )
 }
 
 /**

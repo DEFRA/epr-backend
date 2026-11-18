@@ -37,7 +37,7 @@ const { ACCREDITATION_NUMBER: _accreditationNumber, ...REGISTERED_ONLY_META } =
   META
 
 /** @typedef {Awaited<ReturnType<typeof createEnvironment>>} Environment */
-/** @import { Registration as ReadRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { Registration as ReadRegistration } from '#organisation-read-model/index.js' */
 
 // Cell values are the parsed forms, not a sheet's: a row id is a string and a
 // date is a calendar date.

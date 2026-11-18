@@ -9,7 +9,7 @@ import { organisationViewSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/index.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @typedef {{ year?: Year }} OrganisationQuery */
 /** @typedef {{ prns: { open: boolean } }} PrnYearState */

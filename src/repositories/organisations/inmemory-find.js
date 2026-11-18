@@ -39,7 +39,7 @@ const anchoredMatcher = (value) => {
 }
 
 /**
- * The in-memory equivalent of the MongoDB find filter in mongodb-find.js. The
+ * The in-memory equivalent of the MongoDB find filter in find-filter.js. The
  * shared criteria semantics live in helpers.js and the find contract tests
  * hold the two implementations to the same behaviour.
  *

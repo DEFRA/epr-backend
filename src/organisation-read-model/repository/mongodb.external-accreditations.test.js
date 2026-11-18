@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import { it } from '#vite/fixtures/organisation-read-mongo.js'
+import { it } from '#organisation-read-model/repository/mongo-fixture.js'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'

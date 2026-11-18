@@ -1,18 +1,16 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
-import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
+import { createMongoExternalAccreditationsRepository } from '#organisation-read-model/registration-service/stand-in/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/index.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import {
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
-  createOrganisationReadRepository
-} from '#organisation-read-model/repository/mongodb.js'
+import { clearStandInAccreditations } from '#organisation-read-model/registration-service/stand-in/test-helpers.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
 
 /** @import { TestAPI } from 'vitest' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/registration-service/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 
 /**
@@ -64,9 +62,7 @@ export const it = /** @type {TestAPI<MongoFixtures>} */ (
       const database = mongoClient.db(DATABASE_NAME)
       await database.collection('epr-organisations').deleteMany({})
       await database.collection('overseas-sites').deleteMany({})
-      await database
-        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
-        .deleteMany({})
+      await clearStandInAccreditations(database)
 
       /** @type {OrganisationReadRepositoryWith} */
       const organisationReadRepositoryWith = async ({

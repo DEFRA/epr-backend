@@ -12,14 +12,14 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/index.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
   buildReadExporterRegistration,
   buildReadOrganisation
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'

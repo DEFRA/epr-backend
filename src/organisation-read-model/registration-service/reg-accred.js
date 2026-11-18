@@ -3,11 +3,10 @@ import Joi from 'joi'
 
 import { fetchJson } from '#common/helpers/fetch-json.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
-import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { ACCREDITATION_STATUSES } from '../domain/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { ExternalAccreditation, OnDrop } from './to-read-model.js' */
-/** @import { ExternalAccreditationsLoader } from './mongodb.js' */
+/** @import { ExternalAccreditation, ExternalAccreditationsLoader, OnDrop, RegistrationService } from './port.js' */
 
 /** The only year Reg Accred holds accreditations for. */
 export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
@@ -221,3 +220,17 @@ export const createRegAccredAccreditationsLoader =
       .filter((summary) => summary !== null)
       .map((summary) => toExternalAccreditation(summary, loadedAt))
   }
+
+/**
+ * Reg Accred as the registration service. An accreditation it drops is
+ * reported through the request's logger.
+ *
+ * @param {RegAccredApiConfig} config
+ * @returns {RegistrationService}
+ */
+export const regAccredRegistrationService =
+  (config) =>
+  ({ logger }) =>
+    createRegAccredAccreditationsLoader(config, {
+      onDrop: (message) => logger.warn({ message })
+    })

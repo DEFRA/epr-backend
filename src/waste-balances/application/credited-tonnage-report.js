@@ -16,7 +16,7 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#domain/organisations/model.js').Material} Material
  * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
  * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger

@@ -1,6 +1,6 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { reprocessor } from './contract/organisation-read-test-helpers.js'
-import { it } from '#vite/fixtures/organisation-read-mongo.js'
+import { it } from '#organisation-read-model/repository/mongo-fixture.js'
 
 const { buildOrganisation, nextOrganisationNumber } =
   createOrganisationBuilders()

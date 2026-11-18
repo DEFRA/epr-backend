@@ -7,9 +7,11 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { createMongoExternalAccreditationsRepository } from './mongodb.js'
+import {
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
+  createMongoExternalAccreditationsRepository
+} from './mongodb.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { TestAPI } from 'vitest' */

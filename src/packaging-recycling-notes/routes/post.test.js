@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
   accreditationsByYear,
   approvedStatusFrom,
@@ -9,7 +9,7 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -38,7 +38,7 @@ import {
   ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 import {
   toAccreditationNumber,
   toRegistrationNumber
@@ -98,7 +98,7 @@ const seedStream = (closingBalance = SEED_BALANCE, year = PRN_YEAR) =>
       : []
   )()
 
-/** @type {import('#organisation-read-model/domain/model.js').StatusTimeline<import('#organisation-read-model/domain/model.js').AccreditationStatus>} */
+/** @type {import('#organisation-read-model/index.js').StatusTimeline<import('#organisation-read-model/index.js').AccreditationStatus>} */
 const cancelledTimeline = [
   { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
   { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
@@ -139,7 +139,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    *   year?: number,
    *   material?: string,
    *   reprocessingType?: 'input' | 'output',
-   *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>,
+   *   status?: import('#organisation-read-model/index.js').Status<import('#organisation-read-model/index.js').AccreditationStatus>,
    *   tradingName?: string
    * }} [options]
    */
@@ -157,7 +157,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       status: status ?? approvedStatusFrom(validFrom),
       year: toYear(year)
     })
-    /** @type {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>} */
+    /** @type {Partial<import('#organisation-read-model/index.js').RegistrationCommon>} */
     const registrationFields = {
       material: /** @type {any} */ (material),
       status: approvedStatusFrom(validFrom),

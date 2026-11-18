@@ -48,7 +48,7 @@ export const marketInsightsWorkbookGet = {
    *   query: { unredacted: boolean },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
-   *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
+   *   organisationReadRepository: import('#organisation-read-model/index.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h

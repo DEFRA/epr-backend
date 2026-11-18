@@ -5,12 +5,12 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/test-support.js'
 import {
   REPROCESSOR_NUMBER,
   reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'

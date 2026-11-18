@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
 
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { it as organisationReadIt } from '#vite/fixtures/organisation-read-mongo.js'
+import { it as organisationReadIt } from '#organisation-read-model/repository/mongo-fixture.js'
 import {
   REPROCESSOR_NUMBER,
   accreditation,

@@ -1,6 +1,6 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
   accreditationsByYear,
   buildReadAccreditation,
@@ -9,7 +9,7 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -42,7 +42,7 @@ import {
   EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 

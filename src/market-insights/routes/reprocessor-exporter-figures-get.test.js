@@ -26,7 +26,7 @@ import {
 } from '#domain/organisations/model.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { servedOrganisations } from '#organisation-read-model/repository/read-model-test-data.js'
+import { servedOrganisations } from '#organisation-read-model/test-support.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
 import {

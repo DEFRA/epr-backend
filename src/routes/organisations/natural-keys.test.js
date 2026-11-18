@@ -2,7 +2,7 @@ import { createOrganisationBuilders } from '#repositories/organisations/contract
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { vi } from 'vitest'
-import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { REPROCESSOR_NUMBER } from '#organisation-read-model/test-support.js'
 import Joi from 'joi'
 import {
   findOrganisationAndRegistrationReadModels,

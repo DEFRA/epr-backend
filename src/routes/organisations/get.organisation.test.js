@@ -7,7 +7,7 @@ import {
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { config } from '#root/config.js'
 import { asOperator, asUnscopedAdminUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -22,7 +22,7 @@ import {
   useViewServer
 } from './organisation-view-test-helpers.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/index.js' */
 
 describe('GET /organisations/{organisationNumber}', () => {
   setupAuthContext()

@@ -29,7 +29,7 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
   accreditationsByYear,
   buildReadAccreditation,
@@ -37,7 +37,7 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation as buildServedOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { signedCallback } from '#test/upload-callback.js'
@@ -1044,7 +1044,7 @@ const buildComplexTestOrg = ({
  *   withOverseasSites?: boolean,
  *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
  * }} options
- * @returns {import('#organisation-read-model/domain/model.js').Organisation}
+ * @returns {import('#organisation-read-model/index.js').Organisation}
  */
 const buildComplexTestReadOrg = ({
   processingType,

@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
   accreditationsByYear,
   approvedStatusFrom,
@@ -10,11 +10,11 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 
-/** @import { Organisation, StandingByYear } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, StandingByYear } from '#organisation-read-model/index.js' */
 
 export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
 export const EXPORTER_NUMBER = 'R26EX5001180042PL'

@@ -8,7 +8,7 @@ import {
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
 import { coerceRowData } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/index.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
@@ -24,8 +24,8 @@ import {
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
-/** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/index.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/index.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */

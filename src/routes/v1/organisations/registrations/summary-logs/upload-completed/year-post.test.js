@@ -3,13 +3,13 @@ import {
   toOrganisationNumber
 } from '#domain/organisations/numbers.js'
 import { randomUUID } from 'node:crypto'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
   accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 import { StatusCodes } from 'http-status-codes'
@@ -18,7 +18,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'

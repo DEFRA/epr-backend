@@ -2,8 +2,8 @@ import { formatTonnageMonitoringResults } from '#application/common/material-agg
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { Organisation } from '#organisation-read-model/index.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 

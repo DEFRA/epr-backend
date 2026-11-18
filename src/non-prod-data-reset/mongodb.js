@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
+import { deleteStandInAccreditationsOf } from '#organisation-read-model/index.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { Organisation } from '#domain/organisations/model.js' */
@@ -27,8 +27,7 @@ const COLLECTIONS = {
   OVERSEAS_SITES: 'overseas-sites',
   SYSTEM_LOGS: 'system-logs',
   WASTE_BALANCE_EVENTS: 'waste-balance-events',
-  SUMMARY_LOG_ROW_STATES: 'summary-log-row-states',
-  EXTERNAL_ACCREDITATIONS: EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
+  SUMMARY_LOG_ROW_STATES: 'summary-log-row-states'
 }
 
 const EMPTY_COUNTS = Object.freeze({
@@ -76,8 +75,9 @@ const extractCascadeKeys = ({ registrations }) => ({
  * organisation's id, so they join against organisationId. The
  * 'registration', 'accreditation' and 'organisation' collections (written by
  * the journey-test apply path) are keyed by the numeric orgId. PRNs, reports,
- * summary logs, waste balance events, row states, external accreditations and
- * report system logs carry the organisation number instead.
+ * summary logs, waste balance events, row states and report system logs carry
+ * the organisation number instead. The organisation read model deletes the
+ * external accreditations it holds for the organisation itself.
  *
  * @param {Organisation} organisation
  * @param {{ overseasSiteIds: string[] }} keys
@@ -115,11 +115,6 @@ const buildCascadeSteps = (organisation, { overseasSiteIds }) => {
       label: 'overseas-sites',
       collection: COLLECTIONS.OVERSEAS_SITES,
       filter: anyOf('_id', overseasSiteIds.map(toObjectId))
-    },
-    {
-      label: 'external-accreditations',
-      collection: COLLECTIONS.EXTERNAL_ACCREDITATIONS,
-      filter: { organisationNumber }
     },
     {
       label: 'system-logs',
@@ -211,11 +206,18 @@ export const createNonProdDataReset = (
       return { ...EMPTY_COUNTS }
     }
     const keys = extractCascadeKeys(organisation)
-    const counts = await runCascade(db, buildCascadeSteps(organisation, keys))
+    const [counts, externalAccreditations] = await Promise.all([
+      runCascade(db, buildCascadeSteps(organisation, keys)),
+      deleteStandInAccreditationsOf(db, organisationNumber)
+    ])
     const deletedOrganisations =
       await organisationAdministrationRepository.deleteByOrganisationNumber(
         organisationNumber
       )
-    return { ...counts, 'epr-organisations': deletedOrganisations }
+    return {
+      ...counts,
+      'external-accreditations': externalAccreditations,
+      'epr-organisations': deletedOrganisations
+    }
   }
 })

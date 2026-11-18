@@ -75,7 +75,7 @@ export const countOutstandingReturns = (params) => {
  * the register and that year's monthly reports as they stand.
  *
  * @param {Object} params
- * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} params.organisationReadRepository
+ * @param {import('#organisation-read-model/index.js').OrganisationReadRepository} params.organisationReadRepository
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
  * @param {Year} params.year - the reporting year the months fall in
  * @param {YearMonth[]} params.months - the reporting months to publish

@@ -17,11 +17,11 @@ import {
   reprocessor,
   reprocessorAt
 } from './contract/organisation-read-test-helpers.js'
-import { it } from '#vite/fixtures/organisation-read-mongo.js'
+import { it } from '#organisation-read-model/repository/mongo-fixture.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
+/** @import { OrganisationReadRepositoryWith } from '#organisation-read-model/repository/mongo-fixture.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 describe('records the model cannot represent', () => {

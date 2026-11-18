@@ -16,7 +16,7 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
-import { mongoExternalAccreditationsRepositoryPlugin } from '#external-accreditations/repository/mongodb.plugin.js'
+import { mongoExternalAccreditationsRepositoryPlugin } from '#organisation-read-model/index.js'
 import { nonProdDataResetPlugin } from '#non-prod-data-reset/mongodb.plugin.js'
 import {
   orsImportsRepositoryPlugin,
@@ -35,7 +35,7 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { router } from '#plugins/router.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
-import { organisationReadRepositoryPlugin } from '#organisation-read-model/repository/mongodb.plugin.js'
+import { organisationReadRepositoryPlugin } from '#organisation-read-model/index.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'

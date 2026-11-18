@@ -1,6 +1,6 @@
 /** @import {StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, ReprocessingType, TonnageBand, User} from '#domain/organisations/model.js' */
 /** @import {AccreditationNumber} from '#domain/organisations/numbers.js' */
-/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/domain/model.js' */
+/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/index.js' */
 
 /**
  * `updatedAt` is a Date at rest (Joi `date()`, BSON Date).

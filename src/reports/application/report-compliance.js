@@ -10,7 +10,7 @@ import { reportableRegistrations } from '#reports/application/reportable-registr
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Organisation, Registration } from '#organisation-read-model/domain/model.js'
+ * @import { Organisation, Registration } from '#organisation-read-model/index.js'
  */
 
 /**

@@ -6,13 +6,13 @@ import {
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { accreditedMonths } from './accredited-months.js'
 
-/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/index.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 

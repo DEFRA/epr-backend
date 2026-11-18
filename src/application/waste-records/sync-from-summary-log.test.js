@@ -51,7 +51,7 @@ const APPROVED_FROM = '2023-01-01T00:00:00.000Z'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
-/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/index.js' */
 
 /**
  * @param {AccreditationNumber} accreditationNumber

@@ -3,12 +3,12 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
-import { ORGANISATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { ORGANISATION_STATUSES } from '#organisation-read-model/index.js'
 import { linkedDefraOrganisationViewSchema } from '#routes/organisations/response.schema.js'
 import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
 import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 import { getDefraTokenSummary } from '#auth/roles/helpers.js'
-import { toLinkedDefraOrganisation } from '#organisation-read-model/repository/to-read-model.js'
+import { toLinkedDefraOrganisation } from '#organisation-read-model/index.js'
 
 /** @import { ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js' */
 

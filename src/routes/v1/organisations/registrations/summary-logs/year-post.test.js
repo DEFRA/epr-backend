@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/test-support.js'
 import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import {
@@ -20,7 +20,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import { reprocessor } from '#organisation-read-model/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'

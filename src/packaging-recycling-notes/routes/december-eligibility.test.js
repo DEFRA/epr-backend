@@ -5,7 +5,7 @@ import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
   accreditationsByYear,
   approvedStatusFrom,
@@ -15,19 +15,19 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import {
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const approved = approvedTimelineFrom('2026-07-01')
 
-/** @type {import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>} */
+/** @type {import('#organisation-read-model/index.js').Status<import('#organisation-read-model/index.js').AccreditationStatus>} */
 const cancelledAfterApproval = {
   current: 'cancelled',
   lastUpdatedAt: '2026-11-01T09:00:00.000Z',
@@ -41,7 +41,7 @@ const cancelledAfterApproval = {
  * @param {{
  *   exporting?: boolean,
  *   reprocessingType?: 'input' | 'output',
- *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>
+ *   status?: import('#organisation-read-model/index.js').Status<import('#organisation-read-model/index.js').AccreditationStatus>
  * }} [options]
  */
 const organisationWith = ({
@@ -89,7 +89,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   /** @type {Awaited<ReturnType<typeof createTestServer>>} */
   let server
 
-  /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
+  /** @param {import('#organisation-read-model/index.js').Organisation} organisation */
   const startServer = async (organisation) => {
     server = await createTestServer({
       repositories: {

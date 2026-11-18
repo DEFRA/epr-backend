@@ -1,5 +1,5 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
-/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/index.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
 /** @import {OrganisationNumber, RegistrationNumber, AccreditationNumber} from '#domain/organisations/numbers.js' */
 
@@ -17,7 +17,7 @@ import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 
@@ -145,7 +145,7 @@ async function transform(summaryLogsStatsList, registrationLookup) {
 }
 
 /**
- * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
+ * @param {import('#organisation-read-model/index.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepo - Summary logs repository
  * @returns {Promise<{summaryLogUploads: SummaryLogUploadReportRow[], generatedAt: string}>} Report data with generation timestamp
  */

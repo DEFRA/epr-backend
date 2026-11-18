@@ -24,7 +24,7 @@ const SCOPES = Object.freeze([
  * @typedef {Object} ReadMarketInsightsFiguresParams
  * @property {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} ledgerRepository
  * @property {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
- * @property {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository
+ * @property {import('#organisation-read-model/index.js').OrganisationReadRepository} organisationReadRepository
  * @property {import('#reports/repository/port.js').ReportsRepository} reportsRepository
  * @property {import('#common/hapi-types.js').TypedLogger} logger
  * @property {Year} year

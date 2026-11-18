@@ -14,7 +14,7 @@ import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/r
 import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
 
 /** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/index.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */

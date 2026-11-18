@@ -16,7 +16,7 @@ import {
   buildReadExporterRegistration,
   buildReadOrganisation,
   servedOrganisations
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { createAccreditedOperatorInserter } from '#vite/helpers/insert-accredited-operator.js'
@@ -40,8 +40,8 @@ const insertAccreditedOperator =
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
-/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
+/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/index.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { RedactableTabContents } from './cells.js' */

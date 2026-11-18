@@ -1,8 +1,8 @@
-import { isRegistrationActiveInYear } from '#domain/organisations/registration-utils.js'
+import { isRegistrationActiveInYear } from '#organisation-read-model/index.js'
 import { hasTemplatesForYear } from '#domain/summary-logs/table-schemas/index.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import {Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {Registration} from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {{ eligible: true } | { eligible: false, reason: string }} UploadEligibilityResult

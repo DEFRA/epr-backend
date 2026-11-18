@@ -21,6 +21,10 @@ const OUTER_LAYERS = [
 const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
+// A module of ADR 0027's modular monolith. Code outside it imports only its
+// public interface: index.js, and test-support.js in a test.
+const ORGANISATION_READ_MODEL = './src/organisation-read-model'
+
 const ns = neostandard({
   env: ['node', 'vitest'],
   noJsx: true,
@@ -65,6 +69,26 @@ export default [
               message: DOMAIN_LAYERING_MESSAGE
             },
             {
+              target: [
+                './src/!(organisation-read-model)/**/*',
+                './src/*.js',
+                './.vite/**/*'
+              ],
+              from: ORGANISATION_READ_MODEL,
+              except: ['./index.js', './test-support.js'],
+              message:
+                'Import the organisation read model through its index.js, or test-support.js in a test.'
+            },
+            {
+              target: ORGANISATION_READ_MODEL,
+              from: [
+                './src/repositories/organisations/mongodb.js',
+                './src/repositories/organisations/mongodb-find.js'
+              ],
+              message:
+                'The organisations repository writes epr-organisations. The organisation read model reads it through its own find.'
+            },
+            {
               target: './src/domain',
               from: REPOSITORIES,
               // Tests in the domain build fixtures from the repository contract
@@ -95,7 +119,10 @@ export default [
     },
     settings: {
       vitest: {
-        vitestImports: [/#vite\/fixtures\//]
+        vitestImports: [
+          /#vite\/fixtures\//,
+          /#organisation-read-model\/repository\/mongo-fixture\.js$/
+        ]
       }
     }
   },
