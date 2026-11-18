@@ -14,6 +14,7 @@ import { hashClassificationContext } from '#application/summary-logs/classificat
 import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { SummaryLogCommit } from '#domain/summary-logs/commit.js' */
 
 export const generateFileId = () => toSummaryLogFileId(`file-${randomUUID()}`)
 
@@ -49,8 +50,8 @@ export const buildRejectedFile = (overrides = {}) => {
  * What validation saves for submission to commit, with nothing to credit, for
  * a registered-only summary log as the factory builds one.
  *
- * @param {Partial<import('#domain/summary-logs/commit.js').SummaryLogCommit>} [overrides]
- * @returns {import('#domain/summary-logs/commit.js').SummaryLogCommit}
+ * @param {Partial<SummaryLogCommit>} [overrides]
+ * @returns {SummaryLogCommit}
  */
 export const buildSummaryLogCommit = (overrides = {}) => ({
   contextHash: hashClassificationContext(
