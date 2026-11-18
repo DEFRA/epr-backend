@@ -18,7 +18,9 @@ import {
 } from './contract/organisation-seed-test-helpers.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { OrganisationReadRepository } from './port.js' */
 /** @import { OrganisationReadRepositoryServingFixture, OrganisationSeed, OverseasSiteSeed } from './port.contract.js' */
 /** @typedef {OrganisationSeed['registrations'][number]} SeededRegistration */
 
@@ -195,19 +197,46 @@ describe('in-memory organisation read repository', () => {
   })
 
   describe('copies', () => {
-    it('returns a copy, so changing it changes nothing held', async () => {
-      const held = buildReadOrganisation()
-      const repository = repositoryOf([held])
+    /** @type {{ method: string, served: (repository: OrganisationReadRepository, organisationNumber: OrganisationNumber) => Promise<Organisation> }[]} */
+    const servings = [
+      {
+        method: 'findByOrganisationNumber',
+        served: async (repository, organisationNumber) =>
+          /** @type {Organisation} */ (
+            await repository.findByOrganisationNumber(organisationNumber)
+          )
+      },
+      {
+        method: 'find',
+        served: async (repository, organisationNumber) => {
+          const { items } = await repository.find({
+            organisationNumber,
+            page: 1,
+            pageSize: 10
+          })
+          return items[0]
+        }
+      },
+      {
+        method: 'findAll',
+        served: async (repository) => (await repository.findAll())[0]
+      }
+    ]
 
-      const first = /** @type {Organisation} */ (
-        await repository.findByOrganisationNumber(held.organisationNumber)
-      )
-      first.name = 'Changed'
+    it.for(servings)(
+      'returns a copy from $method, so changing it changes nothing held',
+      async ({ served }) => {
+        const held = buildReadOrganisation()
+        const repository = repositoryOf([held])
 
-      expect(
-        await repository.findByOrganisationNumber(held.organisationNumber)
-      ).toHaveProperty('name', 'ACME ltd')
-    })
+        const first = await served(repository, held.organisationNumber)
+        first.name = 'Changed'
+
+        expect(
+          await served(repository, held.organisationNumber)
+        ).toHaveProperty('name', 'ACME ltd')
+      }
+    )
 
     it('is not changed by changes to the organisations it was given', async () => {
       const held = buildReadOrganisation()
