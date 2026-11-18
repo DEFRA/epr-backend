@@ -293,7 +293,7 @@ function accreditationsUpTo({
  * @param {ExternalAccreditationsByRegistration} [externalByRegistration]
  * @returns {[string, Registration] | null}
  */
-export function toRegistrationEntry(
+function toRegistrationEntry(
   registration,
   organisation,
   context,
