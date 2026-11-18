@@ -66,7 +66,8 @@ const makeAccreditation = ({
         { status: 'approved', at: `${approvedOn}T00:00:00.000Z` }
       ]
     },
-    ...(isExporter && { overseasSites })
+    ...(isExporter && { overseasSites }),
+    year: toYear(year)
   }
   const registration = {
     material,
@@ -513,7 +514,8 @@ describe('buildCreditedTonnageReport', () => {
             { status: 'created', at: '2025-11-01T00:00:00.000Z' },
             { status: 'approved', at: `${APPROVED_ON}T00:00:00.000Z` }
           ]
-        }
+        },
+        year: toYear(DEFAULT_YEAR)
       }
     })
     const commonFields = {

@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { toYear } from '#common/helpers/dates/year.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
@@ -182,7 +183,7 @@ describe('GET /organisations/{organisationNumber}', () => {
       buildReadOrganisation({
         registrations: {
           [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-            accreditations: { 2026: buildReadAccreditation() }
+            accreditations: accreditationsByYear(buildReadAccreditation())
           })
         }
       })
