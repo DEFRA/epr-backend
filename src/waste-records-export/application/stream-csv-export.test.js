@@ -4,20 +4,13 @@ import {
   streamCsvExportToReadable
 } from './stream-csv-export.js'
 import {
-  METADATA_COLUMNS,
   METADATA_COL_INDEX,
   OSR_COUNTRY_REVISED,
-  OSR_NAME_REVISED,
-  buildDataFieldColumns,
-  buildHeaderRow
+  OSR_NAME_REVISED
 } from '../domain/csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import {
-  getTemplate,
-  hasTemplate,
-  yearsWithTemplates
-} from '#domain/summary-logs/table-schemas/index.js'
+import { everyTemplateTable } from '#domain/summary-logs/table-schemas/template-tables-test-helpers.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -397,20 +390,14 @@ const EXPORT_HEADER = [
   'YOUR_REFERENCE'
 ]
 
-const TEMPLATE_TABLES = yearsWithTemplates().flatMap((year) =>
-  Object.values(PROCESSING_TYPES)
-    .filter((processingType) => hasTemplate(year, processingType))
-    .flatMap((processingType) =>
-      Object.entries(getTemplate(year, processingType).tableSchemas).map(
-        ([tableName, { wasteRecordType, requiredHeaders }]) => ({
-          year,
-          processingType,
-          tableName,
-          wasteRecordType,
-          columns: requiredHeaders.filter((column) => column !== 'ROW_ID')
-        })
-      )
-    )
+const TEMPLATE_TABLES = everyTemplateTable().map(
+  ({ year, processingType, tableName, schema }) => ({
+    year,
+    processingType,
+    tableName,
+    wasteRecordType: schema.wasteRecordType,
+    columns: schema.requiredHeaders.filter((column) => column !== 'ROW_ID')
+  })
 )
 
 describe('streamCsvExport', () => {
@@ -419,12 +406,7 @@ describe('streamCsvExport', () => {
     expect(out).toHaveLength(1)
     // The header row is CSV-encoded and ends with a newline
     expect(out[0].endsWith('\n')).toBe(true)
-    for (const column of METADATA_COLUMNS) {
-      expect(out[0]).toContain(column)
-    }
-    for (const column of buildHeaderRow(buildDataFieldColumns([]))) {
-      expect(out[0]).toContain(column)
-    }
+    expect(cellsOf(out[0])).toStrictEqual(EXPORT_HEADER)
   })
 
   it('emits one data row per row state with org/registration/row/summaryLog data populated', async () => {
@@ -506,9 +488,7 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const idx = buildHeaderRow(buildDataFieldColumns([])).indexOf(
-      'GROSS_WEIGHT'
-    )
+    const idx = EXPORT_HEADER.indexOf('GROSS_WEIGHT')
     expect(cellsOf(out[1])[idx]).toBe('10') // bare, not the quoted '"10"'
   })
 
@@ -658,7 +638,7 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const header = buildHeaderRow(buildDataFieldColumns([]))
+    const header = EXPORT_HEADER
     const cells = cellsOf(out[1])
     expect(cells[header.indexOf(OSR_COUNTRY_REVISED)]).toBe('Germany')
     expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('Acme Recycling')
@@ -671,7 +651,7 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const header = buildHeaderRow(buildDataFieldColumns([]))
+    const header = EXPORT_HEADER
     const cells = cellsOf(out[1])
     expect(cells[header.indexOf(OSR_COUNTRY_REVISED)]).toBe('')
     expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('')
@@ -1273,9 +1253,7 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const idx = buildHeaderRow(buildDataFieldColumns([])).indexOf(
-      'TONNAGE_RECEIVED_FOR_RECYCLING'
-    )
+    const idx = EXPORT_HEADER.indexOf('TONNAGE_RECEIVED_FOR_RECYCLING')
     expect(cellsOf(out[1])[idx]).toBe('9.5')
     expect(cellsOf(out[2])[idx]).toBe('9.5') // bare, not the quoted '"9.5"'
   })
@@ -1401,9 +1379,7 @@ describe('streamCsvExportToReadable', () => {
       chunks.push(chunk.toString('utf8'))
     }
     expect(chunks).toHaveLength(1)
-    for (const column of buildHeaderRow(buildDataFieldColumns([]))) {
-      expect(chunks[0]).toContain(column)
-    }
+    expect(cellsOf(chunks[0])).toStrictEqual(EXPORT_HEADER)
   })
 })
 
