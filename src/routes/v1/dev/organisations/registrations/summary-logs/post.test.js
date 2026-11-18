@@ -520,7 +520,10 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     )
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    expect(JSON.parse(response.payload).summaryLogId).toBe(minted.summaryLogId)
+    expect(JSON.parse(response.payload)).toMatchObject({
+      summaryLogId: minted.summaryLogId,
+      reason: 'newer_submission'
+    })
     const superseded = await storedAfterReplication(env, minted.summaryLogId)
     expect(superseded?.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
   })

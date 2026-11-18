@@ -13,7 +13,10 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
-import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.js'
+import {
+  staleSubmissionConflict,
+  supersedeIfStale
+} from '#application/summary-logs/supersede-if-stale.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
@@ -65,9 +68,7 @@ const startSubmitting = async (
   })
 
   if (reason) {
-    throw Boom.conflict(
-      'Waste records have changed since preview was generated. Please re-upload.'
-    )
+    throw staleSubmissionConflict(reason)
   }
 
   return summaryLog
