@@ -1,33 +1,17 @@
 import { createHash } from 'node:crypto'
+import { stringify } from 'safe-stable-stringify'
 
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
+ * Registered-only logs carry `ORS_VALIDATION_DISABLED` as their overseas
+ * sites, and a symbol would otherwise drop out of the JSON.
+ *
+ * @param {string} _key
  * @param {unknown} value
- * @returns {unknown}
  */
-const canonicalise = (value) => {
-  if (value instanceof Date) {
-    return value.toISOString()
-  }
-  if (typeof value === 'symbol') {
-    return value.toString()
-  }
-  if (Array.isArray(value)) {
-    return value.map(canonicalise)
-  }
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort((a, b) => a.localeCompare(b))
-        .map((key) => [
-          key,
-          canonicalise(/** @type {Record<string, unknown>} */ (value)[key])
-        ])
-    )
-  }
-  return value
-}
+const symbolAsString = (_key, value) =>
+  typeof value === 'symbol' ? value.toString() : value
 
 /**
  * The accreditation and overseas sites a summary log's rows were classified
@@ -39,5 +23,9 @@ const canonicalise = (value) => {
  */
 export const hashClassificationContext = ({ accreditation, overseasSites }) =>
   createHash('sha256')
-    .update(JSON.stringify(canonicalise({ accreditation, overseasSites })))
+    .update(
+      /** @type {string} */ (
+        stringify({ accreditation, overseasSites }, symbolAsString)
+      )
+    )
     .digest('hex')
