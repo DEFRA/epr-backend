@@ -133,19 +133,14 @@ const stampWatermark = (prnRepository, prn, projection) =>
 
 /**
  * Reconciles one PRN by id. Reads it point-wise, folds any events past its
- * watermark, and (unless dry-run) persists the correction. A PRN deleted since
- * the id snapshot reads as `vanished`; one with nothing unapplied as `current`.
+ * watermark, and persists the correction. A PRN deleted since the id snapshot
+ * reads as `vanished`; one with nothing unapplied as `current`.
  *
  * @param {import('mongodb').Document['_id']} id
  * @param {Deps} deps
- * @param {boolean} isDryRun
  * @returns {Promise<{ outcome: string, report?: DriftReport, repairKind?: 'fold' | 'watermark' }>}
  */
-const reconcileOne = async (
-  id,
-  { prnCollection, prnRepository, service },
-  isDryRun
-) => {
+const reconcileOne = async (id, { prnCollection, prnRepository, service }) => {
   const doc = await prnCollection.findOne({ _id: id })
   if (!doc) {
     return { outcome: 'vanished' }
@@ -159,10 +154,6 @@ const reconcileOne = async (
 
   const projection = applyCatchupEventsToPrn(prn, catchupEvents)
   const report = buildReport(prn, catchupEvents, projection)
-
-  if (isDryRun) {
-    return { outcome: 'drifting', report }
-  }
 
   // Status-changing drift (the frozen minority) is repaired by the full fold;
   // benign watermark-behind drift (status already correct) is retired by a
@@ -185,17 +176,15 @@ const reconcileOne = async (
  * Detection is delegated to `findDrifting`, a single indexed query returning the
  * ids behind their ledger (and the collection `total` for the summary); the tail
  * is then re-read per PRN through the validated catch-up path in `reconcileOne`,
- * so only the affected PRNs are folded. Read-only when `isDryRun`; otherwise it
- * persists each fold under the repository's version CAS and watermark guard, so
- * a lost race is left for the next run rather than forced. A PRN deleted or
+ * so only the affected PRNs are folded. Each fold is persisted under the
+ * repository's version CAS and watermark guard, so a lost race is left for the
+ * next run rather than forced. A PRN deleted or
  * healed between detection and its re-read is a benign skip; an unreadable
  * document or unmappable event fails only its own PRN (`failed`).
  *
  * @param {Deps} deps
- * @param {Object} options
- * @param {boolean} options.isDryRun
  */
-export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
+export const reconcileStalePrnProjections = async (deps) => {
   const tally = {
     drifting: 0,
     repaired: 0,
@@ -213,11 +202,7 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
 
   for (const id of driftingIds) {
     try {
-      const { outcome, report, repairKind } = await reconcileOne(
-        id,
-        deps,
-        isDryRun
-      )
+      const { outcome, report, repairKind } = await reconcileOne(id, deps)
       if (outcome === 'vanished') {
         continue
       }
@@ -231,7 +216,7 @@ export const reconcileStalePrnProjections = async (deps, { isDryRun }) => {
       } else if (outcome === 'stillDrifting') {
         tally.stillDrifting += 1
       } else {
-        // 'current' and a dry-run 'drifting' map to no repair outcome.
+        // 'current' maps to no repair outcome.
       }
     } catch (err) {
       failures.push({ prnId: String(id), error: String(err) })
