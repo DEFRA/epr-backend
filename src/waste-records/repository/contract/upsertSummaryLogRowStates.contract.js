@@ -332,6 +332,44 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
 
         expect(await storedStates('log-1')).toEqual([])
       })
+
+      it('accepts a different state for the same row under another ledger', async () => {
+        await repository.upsertSummaryLogRowStates(
+          withNumbers(DEFAULT_LEDGER_ID),
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+        const otherLedgerId = {
+          organisationId: 'org-1',
+          registrationId: 'reg-2',
+          accreditationId: 'acc-1'
+        }
+
+        const [other] = await repository.upsertSummaryLogRowStates(
+          withNumbers(otherLedgerId),
+          [
+            buildSummaryLogRowStateEntry({
+              classification: excludedClassification
+            })
+          ],
+          'log-1'
+        )
+
+        expect(other.classification).toEqual(excludedClassification)
+      })
+
+      it('accepts identical entries for one row in the same write', async () => {
+        const entry = buildSummaryLogRowStateEntry()
+
+        const [first, second] = await repository.upsertSummaryLogRowStates(
+          withNumbers(DEFAULT_LEDGER_ID),
+          [entry, entry],
+          'log-1'
+        )
+
+        expect(second.id).toBe(first.id)
+        expect(await storedStates('log-1')).toHaveLength(1)
+      })
     })
 
     describe('membership-only-grows', () => {
