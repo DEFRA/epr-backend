@@ -77,9 +77,6 @@
  */
 
 /**
- * `commit` is read through `savedCommitOf`, which checks it against today's
- * schema: a summary log may carry one saved before that schema changed.
- *
  * @typedef {{
  *   commit?: unknown,
  *   createdAt?: string,
