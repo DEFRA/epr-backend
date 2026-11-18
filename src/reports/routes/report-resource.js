@@ -78,7 +78,10 @@ export const PREVIEW_STATUS = /** @type {const} */ ('not_started')
  * @param {UserSummary} user
  * @returns {Person}
  */
-const toPerson = ({ name, position }) => ({ ...(name && { name }), position })
+export const toPerson = ({ name, position }) => ({
+  ...(name && { name }),
+  position
+})
 
 /**
  * @param {ReportStatusObject} status
@@ -237,7 +240,7 @@ export const toReportDetail = (body) => {
   return detail
 }
 
-const personSchema = Joi.object({
+export const personSchema = Joi.object({
   name: Joi.string(),
   position: Joi.string().required()
 })

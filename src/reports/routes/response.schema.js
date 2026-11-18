@@ -11,22 +11,15 @@ import {
   resubmissionRequiredSchema,
   staleSchema
 } from '#reports/repository/schema.js'
+import { personSchema } from './report-resource.js'
 
-const userSummarySchema = Joi.object({
-  id: Joi.string().required(),
-  name: Joi.string(),
-  email: Joi.string(),
-  position: Joi.string()
-}).unknown(true)
-
-const reportListItemSchema = Joi.object({
-  id: Joi.string().required(),
+const calendarReportSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
   submissionNumber: Joi.number().integer().required(),
-  submittedAt: Joi.string().allow(null).required(),
-  submittedBy: userSummarySchema.allow(null).required()
+  submittedAt: Joi.string(),
+  submittedBy: personSchema
 })
 
 const reportingPeriodSchema = Joi.object({
@@ -39,7 +32,7 @@ const reportingPeriodSchema = Joi.object({
   periodStatus: Joi.string()
     .valid(...Object.values(PERIOD_STATUS))
     .required(),
-  report: reportListItemSchema.allow(null).required()
+  report: calendarReportSchema
 })
 
 const yearCalendarPeriodSchema = (cadence) =>

@@ -805,6 +805,34 @@ describe('report routes by natural key', () => {
       ).toEqual([7, 8, 9, 10, 11, 12])
     })
 
+    it.each(['', '?expand=submissions'])(
+      'serves no database id and no null (%s)',
+      async (query) => {
+        const response = await server.inject({
+          ...calendar(REPROCESSOR_NUMBER),
+          url: `${calendar(REPROCESSOR_NUMBER).url}${query}`
+        })
+
+        const periods = Object.values(
+          JSON.parse(response.payload, (key, value) => {
+            expect(key).not.toBe('id')
+            expect(value).not.toBeNull()
+            return value
+          })
+        ).flatMap((kind) => kind.reportingPeriods ?? [])
+        expect(periods.find(({ period }) => period === 8)).toMatchObject({
+          report: {
+            status: REPORT_STATUS.SUBMITTED,
+            submittedAt: expect.any(String),
+            submittedBy: { position: expect.any(String) }
+          }
+        })
+        expect(periods.find(({ period }) => period === 9)).not.toHaveProperty(
+          'report'
+        )
+      }
+    )
+
     it('serves only the requested year', async () => {
       const response = await server.inject(calendar(REPROCESSOR_NUMBER, 2025))
 
