@@ -17,9 +17,9 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { createMockLogger } from '#test/mock-logger.js'
 import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
 
-/** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
@@ -282,9 +282,7 @@ const buildDeps = async ({
     year,
     organisation,
     registrationNumber,
-    logger: /** @type {TypedLogger} */ (
-      /** @type {unknown} */ ({ warn: vi.fn() })
-    )
+    logger: createMockLogger()
   }
 }
 
