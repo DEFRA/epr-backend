@@ -32,10 +32,11 @@ const submittedTotalsOf = (wasteRecords, classificationContext) => {
   const classifiedRows = wasteRecords.map(({ record }) =>
     classifyWasteRecord(record, classificationContext)
   )
-  let creditTotal = 0
-  for (const { classification } of classifiedRows) {
-    creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
-  }
+  const creditTotal = classifiedRows.reduce(
+    (total, { classification }) =>
+      toNumber(add(total, getTargetAmount(classification))),
+    0
+  )
 
   return {
     creditTotal,
