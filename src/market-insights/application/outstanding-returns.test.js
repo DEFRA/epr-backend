@@ -74,7 +74,7 @@ const makeOperator = ({
       organisationNumber,
       registrations: {
         [registrationNumber]: buildReadReprocessorRegistration({
-          material,
+          material: /** @type {any} */ (material),
           status: approvedStatusFrom('2025-12-01'),
           accreditations: registeredOnly
             ? {}

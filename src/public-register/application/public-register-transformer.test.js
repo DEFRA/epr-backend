@@ -2,7 +2,6 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
-  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -12,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { transform } from './public-register-transformer.js'
 
 /** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { TonnageBand } from '#domain/organisations/model.js' */
 
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000010001PL')
 
@@ -48,7 +48,7 @@ const APPROVAL_RECORDED_AT = '2026-01-05T09:12:00.000Z'
  * @returns {AccreditationCommon}
  */
 const accreditation = (overrides = {}) => ({
-  accreditationNumber: toAccreditationNumber('A26ER5000010001PL'),
+  accreditationNumber: /** @type {any} */ ('A26ER5000010001PL'),
   prnIssuance: { tonnageBand: 'up_to_10000' },
   status: {
     current: 'approved',
@@ -198,29 +198,29 @@ describe('transform', () => {
     expect(row.appropriateAgency).toBe('SEPA')
   })
 
-  it.each(
-    /** @type {const} */ ([
-      {
-        current: 'suspended',
-        tonnageBand: 'up_to_5000',
-        expected: ['Suspended', 'Up to 5,000 tonnes']
-      },
-      {
-        current: 'cancelled',
-        tonnageBand: 'up_to_500',
-        expected: ['Cancelled', 'Up to 500 tonnes']
-      }
-    ])
-  )(
+  it.each([
+    {
+      current: 'suspended',
+      tonnageBand: 'up_to_5000',
+      expected: ['Suspended', 'Up to 5,000 tonnes']
+    },
+    {
+      current: 'cancelled',
+      tonnageBand: 'up_to_500',
+      expected: ['Cancelled', 'Up to 500 tonnes']
+    }
+  ])(
     'gives a $current accreditation its status and tonnage band',
     async ({ current, tonnageBand, expected }) => {
       const row = await rowFor(
         reprocessor({
           accreditations: accreditationsByYear(
             accreditation({
-              prnIssuance: { tonnageBand },
+              prnIssuance: {
+                tonnageBand: /** @type {TonnageBand} */ (tonnageBand)
+              },
               status: {
-                current,
+                current: /** @type {any} */ (current),
                 lastUpdatedAt: APPROVAL_RECORDED_AT,
                 timeline: approvedTimeline
               }
@@ -238,14 +238,14 @@ describe('transform', () => {
       reprocessor({
         accreditations: accreditationsByYear(
           accreditation({
-            accreditationNumber: toAccreditationNumber('A25'),
+            accreditationNumber: /** @type {any} */ ('A25'),
             year: toYear(2025)
           }),
           accreditation({
-            accreditationNumber: toAccreditationNumber('A26')
+            accreditationNumber: /** @type {any} */ ('A26')
           }),
           accreditation({
-            accreditationNumber: toAccreditationNumber('A27'),
+            accreditationNumber: /** @type {any} */ ('A27'),
             year: toYear(2027)
           })
         )
@@ -383,15 +383,15 @@ describe('transform', () => {
     })
   })
 
-  it.each(
-    /** @type {const} */ ([
-      { material: 'glass_re_melt', category: 'Glass-remelt' },
-      { material: 'glass_other', category: 'Glass-other' }
-    ])
-  )(
+  it.each([
+    { material: 'glass_re_melt', category: 'Glass-remelt' },
+    { material: 'glass_other', category: 'Glass-other' }
+  ])(
     'gives $material glass its recycling process and the glass Annex II process',
     async ({ material, category }) => {
-      const row = await rowFor(reprocessor({ material }))
+      const row = await rowFor(
+        reprocessor({ material: /** @type {any} */ (material) })
+      )
 
       expect([row.packagingWasteCategory, row.annexIIProcess]).toEqual([
         category,

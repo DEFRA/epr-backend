@@ -41,8 +41,6 @@ import {
   submitSummaryLog
 } from '#vite/helpers/submit-summary-log.js'
 
-/** @import { ExporterAccreditation, ExporterRegistration } from '#organisation-read-model/domain/model.js' */
-
 const { buildOrganisation } = createOrganisationBuilders()
 
 const SUMMARY_LOG_ID = 'sl-1'
@@ -135,8 +133,8 @@ const accreditedReprocessor = () => {
 
 /**
  * @param {{
- *   overseasSites?: ExporterRegistration['overseasSites'],
- *   accreditedSites?: ExporterAccreditation['overseasSites']
+ *   overseasSites?: Record<string, object>,
+ *   accreditedSites?: Record<string, object>
  * }} [sites]
  */
 const accreditedExporter = ({
@@ -152,10 +150,10 @@ const accreditedExporter = ({
     accreditations: [accredited],
     readRegistration: buildReadExporterRegistration({
       ...approvedFrom('2026-01-01'),
-      overseasSites,
+      overseasSites: /** @type {any} */ (overseasSites),
       accreditations: accreditationsByYear({
         ...accreditedFromJanuary(EXPORTER_ACCREDITATION_NUMBER),
-        overseasSites: accreditedSites
+        overseasSites: /** @type {any} */ (accreditedSites)
       })
     })
   }

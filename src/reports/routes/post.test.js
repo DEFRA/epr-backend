@@ -1,7 +1,6 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
-  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
@@ -99,21 +98,19 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
             }
       })
     : undefined
-  const status = approvedStatusFrom(registration.validFrom)
+  const accreditations = served
+    ? { [YEAR]: isExporter ? buildReadExporterAccreditation(served) : served }
+    : {}
+  const fields = {
+    status: approvedStatusFrom(registration.validFrom),
+    accreditations
+  }
   return buildReadOrganisation({
     organisationNumber: org.organisationNumber,
     registrations: {
       [registration.registrationNumber]: isExporter
-        ? buildReadExporterRegistration({
-            status,
-            accreditations: served
-              ? accreditationsByYear(buildReadExporterAccreditation(served))
-              : {}
-          })
-        : buildReadReprocessorRegistration({
-            status,
-            accreditations: served ? accreditationsByYear(served) : {}
-          })
+        ? buildReadExporterRegistration(/** @type {any} */ (fields))
+        : buildReadReprocessorRegistration(/** @type {any} */ (fields))
     }
   })
 }

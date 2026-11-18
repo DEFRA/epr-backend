@@ -59,7 +59,7 @@ const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { AppliedForMaterial, Material, StoredRegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { AppliedForMaterial, StoredRegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -688,10 +688,6 @@ export const createRegisteredOnlyReceivedRow = (
   ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
 })
 
-/**
- * @param {Parameters<typeof createInMemorySummaryLogExtractor>[0]} extractorData
- * @param {{ reprocessingType?: ReprocessingType }} [options]
- */
 export const createTestInfrastructure = async (
   extractorData,
   { reprocessingType = 'input' } = {}
@@ -744,8 +740,8 @@ export const createTestInfrastructure = async (
 /**
  * @typedef {{
  *   processingType?: string,
- *   reprocessingType?: ReprocessingType,
- *   material?: Material,
+ *   reprocessingType?: string,
+ *   material?: string,
  *   organisationId?: string,
  *   registrationId?: string,
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
@@ -1042,8 +1038,8 @@ const buildComplexTestOrg = ({
  *
  * @param {{
  *   processingType: string,
- *   reprocessingType: ReprocessingType,
- *   material: Material,
+ *   reprocessingType: string,
+ *   material: string,
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   withOverseasSites?: boolean,
@@ -1080,7 +1076,7 @@ const buildComplexTestReadOrg = ({
     year: accreditationYear
   })
   const common = {
-    material,
+    material: /** @type {any} */ (material),
     status: approvedFrom(VALID_FROM)
   }
   const registration = isExporter
@@ -1123,7 +1119,7 @@ const buildComplexTestReadOrg = ({
       })
     : buildReadReprocessorRegistration({
         ...common,
-        reprocessingType,
+        reprocessingType: /** @type {any} */ (reprocessingType),
         accreditations: accredited ? accreditationsByYear(accreditation) : {}
       })
   return buildServedOrganisation({
@@ -1145,8 +1141,8 @@ const buildComplexTestReadOrg = ({
  *
  * @param {{
  *   wasteProcessingType: string,
- *   material?: Material,
- *   reprocessingType?: ReprocessingType,
+ *   material?: string,
+ *   reprocessingType?: string,
  *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
  * }} options
  */
