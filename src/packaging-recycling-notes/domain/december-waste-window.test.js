@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { describe, it, expect } from 'vitest'
 
 import {
@@ -14,21 +15,21 @@ import {
 const DEFAULT_CONFIG = { windowStart: '12-01T00:00' }
 
 const outputReprocessor = {
-  accreditationNumber: 'A26ER0000000001PA',
+  accreditationNumber: toAccreditationNumber('A26ER0000000001PA'),
   accreditationYear: toYear(2026),
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType: REPROCESSING_TYPE.OUTPUT
 }
 
 const inputReprocessor = {
-  accreditationNumber: 'A26ER0000000002PA',
+  accreditationNumber: toAccreditationNumber('A26ER0000000002PA'),
   accreditationYear: toYear(2026),
   wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType: REPROCESSING_TYPE.INPUT
 }
 
 const exporter = {
-  accreditationNumber: 'A26EX0000000003PA',
+  accreditationNumber: toAccreditationNumber('A26EX0000000003PA'),
   accreditationYear: toYear(2026),
   wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER
 }

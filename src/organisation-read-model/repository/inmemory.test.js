@@ -3,6 +3,7 @@ import { describe, expect, it as baseIt } from 'vitest'
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
@@ -10,6 +11,7 @@ import {
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from './read-model-test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   SEED_ACCREDITATION_YEAR,
   SEED_REGISTRATION_APPROVED_ON
@@ -72,7 +74,8 @@ const toReadAccreditedSites = (sites) =>
  */
 const accreditationFieldsFor = (accreditationNumber) => ({
   accreditationNumber,
-  status: approvedStatusFrom(`${SEED_ACCREDITATION_YEAR}-07-01`)
+  status: approvedStatusFrom(`${SEED_ACCREDITATION_YEAR}-07-01`),
+  year: toYear(SEED_ACCREDITATION_YEAR)
 })
 
 /**
@@ -97,23 +100,21 @@ const toReadRegistration = ({
       ...approved,
       overseasSites: toReadOverseasSites(overseasSites),
       accreditations: accreditationNumber
-        ? {
-            [SEED_ACCREDITATION_YEAR]: buildReadExporterAccreditation({
+        ? accreditationsByYear(
+            buildReadExporterAccreditation({
               ...accreditationFieldsFor(accreditationNumber),
               overseasSites: toReadAccreditedSites(overseasSites)
             })
-          }
+          )
         : {}
     })
   }
   return buildReadReprocessorRegistration({
     ...approved,
     accreditations: accreditationNumber
-      ? {
-          [SEED_ACCREDITATION_YEAR]: buildReadAccreditation(
-            accreditationFieldsFor(accreditationNumber)
-          )
-        }
+      ? accreditationsByYear(
+          buildReadAccreditation(accreditationFieldsFor(accreditationNumber))
+        )
       : {}
   })
 }
@@ -154,7 +155,7 @@ describe('in-memory organisation read repository', () => {
       buildReadOrganisation({
         registrations: {
           R26ER5001180041PL: buildReadReprocessorRegistration({
-            accreditations: { 2026: buildReadAccreditation() }
+            accreditations: accreditationsByYear(buildReadAccreditation())
           })
         }
       })

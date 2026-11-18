@@ -11,22 +11,27 @@ import {
   resubmissionRequiredSchema,
   staleSchema
 } from '#reports/repository/schema.js'
+import { personSchema } from './report-resource.js'
 
-const userSummarySchema = Joi.object({
-  id: Joi.string().required(),
-  name: Joi.string(),
-  email: Joi.string(),
-  position: Joi.string()
-}).unknown(true)
+/**
+ * @import { Cadence } from '#reports/domain/cadence.js'
+ */
 
-const reportListItemSchema = Joi.object({
-  id: Joi.string().required(),
+/** @param {Joi.Schema} schema */
+const whileSubmitted = (schema) =>
+  schema.when('status', {
+    is: REPORT_STATUS.SUBMITTED,
+    then: Joi.required(),
+    otherwise: Joi.forbidden()
+  })
+
+const calendarReportSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
   submissionNumber: Joi.number().integer().required(),
-  submittedAt: Joi.string().allow(null).required(),
-  submittedBy: userSummarySchema.allow(null).required()
+  submittedAt: whileSubmitted(Joi.string()),
+  submittedBy: whileSubmitted(personSchema)
 })
 
 const reportingPeriodSchema = Joi.object({
@@ -39,9 +44,10 @@ const reportingPeriodSchema = Joi.object({
   periodStatus: Joi.string()
     .valid(...Object.values(PERIOD_STATUS))
     .required(),
-  report: reportListItemSchema.allow(null).required()
+  report: calendarReportSchema
 })
 
+/** @param {Cadence} cadence */
 const yearCalendarPeriodSchema = (cadence) =>
   reportingPeriodSchema.keys({
     cadence: Joi.string().valid(cadence).required()

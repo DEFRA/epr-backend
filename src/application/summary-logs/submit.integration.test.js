@@ -42,6 +42,7 @@ import { summaryLogRowStatesForLedger } from '#waste-records/application/read-su
 import { createMockLogger } from '#test/mock-logger.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation as buildServedOrganisation,
   buildReadReprocessorRegistration
@@ -205,12 +206,12 @@ const setupSubmit = async ({
             2026: { [VALID_FROM]: { standing: 'accredited' } },
             2027: { '2027-01-01': { standing: 'registeredOnly' } }
           },
-          accreditations: {
-            2026: buildReadAccreditation({
+          accreditations: accreditationsByYear(
+            buildReadAccreditation({
               accreditationNumber: toAccreditationNumber('ACC-123'),
               status: approved
             })
-          }
+          )
         })
       }
     })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
@@ -13,6 +14,7 @@ import {
   servedOrganisations
 } from './read-model-test-data.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 describe('read-model-test-data', () => {
   describe('approvedTimelineFrom', () => {
@@ -64,7 +66,7 @@ describe('read-model-test-data', () => {
 
     it('is accredited from its accreditation approval, as the mapper makes it', () => {
       const registration = build({
-        accreditations: { 2026: buildReadExporterAccreditation() }
+        accreditations: accreditationsByYear(buildReadExporterAccreditation())
       })
 
       expect(registration.standingByDate).toEqual({
@@ -77,11 +79,12 @@ describe('read-model-test-data', () => {
 
     it('has a standing for each year up to its latest accreditation', () => {
       const registration = build({
-        accreditations: {
-          2027: buildReadExporterAccreditation({
-            status: approvedStatusFrom('2027-01-01')
+        accreditations: accreditationsByYear(
+          buildReadExporterAccreditation({
+            status: approvedStatusFrom('2027-01-01'),
+            year: toYear(2027)
           })
-        }
+        )
       })
 
       expect(registration.standingByDate).toEqual({

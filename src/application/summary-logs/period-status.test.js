@@ -9,7 +9,7 @@ import { RECORD_CHANGE } from './record-change.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {ProcessingTypeSchemas} from './period-status.js' */
+/** @import {TableSchemas} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {RecordChange} from './record-change.js' */
 
@@ -72,7 +72,7 @@ const STUB_RECEIVED_SCHEMA = {
   })
 }
 
-const STUB_TABLE_SCHEMAS = /** @type {ProcessingTypeSchemas} */ (
+const STUB_TABLE_SCHEMAS = /** @type {TableSchemas} */ (
   /** @type {unknown} */ ({
     RECEIVED_LOADS_FOR_REPROCESSING: STUB_RECEIVED_SCHEMA
   })
@@ -137,9 +137,7 @@ const classificationContext = /** @type {ClassificationContext} */ (
 
 const baseParams = {
   cadence: /** @type {'monthly' | 'quarterly'} */ ('monthly'),
-  tableSchemas: STUB_TABLE_SCHEMAS,
   operatorCategory: OPERATOR_CATEGORY.REPROCESSOR,
-  classificationContext,
   submittedRowStatesByKey: /** @type {Map<string, WasteRecordState>} */ (
     new Map()
   ),
@@ -150,10 +148,15 @@ const baseParams = {
  * Runs the projection, deriving the record-change map each waste record carries.
  * @param {{ wasteRecords: Array<ValidatedWasteRecord & { change: RecordChange }> } & Record<string, any>} params
  */
-const run = ({ wasteRecords, ...overrides }) =>
+const run = ({
+  wasteRecords,
+  tableSchemas = STUB_TABLE_SCHEMAS,
+  ...overrides
+}) =>
   classifyByPeriodStatus({
     ...baseParams,
     ...overrides,
+    classificationContext: { tableSchemas, ...classificationContext },
     wasteRecords,
     recordChanges: new Map(
       wasteRecords.map(({ record, change }) => [
@@ -473,7 +476,7 @@ describe('classifyByPeriodStatus', () => {
 
   describe('transaction amount for non-INCLUDED classification', () => {
     it('uses zero transaction amount when classifyForWasteBalance returns EXCLUDED', () => {
-      const schemasWithExcluded = /** @type {ProcessingTypeSchemas} */ (
+      const schemasWithExcluded = /** @type {TableSchemas} */ (
         /** @type {unknown} */ ({
           RECEIVED_LOADS_FOR_REPROCESSING: {
             ...STUB_RECEIVED_SCHEMA,

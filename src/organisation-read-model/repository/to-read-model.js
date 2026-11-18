@@ -83,7 +83,7 @@ const toAccreditationEntryOfYear = (
     )
     return null
   }
-  return [String(year), accreditation]
+  return [String(year), { ...accreditation, year }]
 }
 
 /**
@@ -506,12 +506,14 @@ function toAccreditationEntry(accreditation, { onDrop }) {
     return null
   }
 
+  const year = deriveAccreditationYear(accreditation)
   return [
-    String(deriveAccreditationYear(accreditation)),
+    String(year),
     {
       accreditationNumber,
       prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
-      status: { current: status, ...statusTimeline }
+      status: { current: status, ...statusTimeline },
+      year
     }
   ]
 }

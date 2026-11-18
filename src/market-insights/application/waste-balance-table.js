@@ -35,7 +35,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
@@ -197,7 +197,7 @@ const periodFigures = (cells, months) =>
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {string} accreditationNumber
+ * @param {AccreditationNumber} accreditationNumber
  * @param {Year} year
  */
 const warnAboutUnmatchedPartition = (logger, accreditationNumber, year) => {
@@ -237,8 +237,8 @@ const resolvePublishedPartitions = (entries, index, logger) => {
       organisationNumber: ledgerAccreditation.organisation.organisationNumber,
       registrationNumber: ledgerAccreditation.registrationNumber,
       registration: ledgerAccreditation.registration,
-      accreditation: validityOf(ledgerAccreditation),
-      overseasSites: overseasSitesOf(ledgerAccreditation)
+      accreditation: validityOf(ledgerAccreditation.accreditation),
+      overseasSites: overseasSitesOf(ledgerAccreditation.accreditation)
     })
   }
   return partitions
@@ -260,9 +260,11 @@ const publishedContribution = (rowState, partitions) => {
   const { registration, accreditation, overseasSites } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    tableSchemasOf(rowState.year, rowState.processingType),
-    accreditation,
-    overseasSites
+    {
+      tableSchemas: tableSchemasOf(rowState.year, rowState.processingType),
+      accreditation,
+      overseasSites
+    }
   )
 
   const contribution = monthlyContribution(

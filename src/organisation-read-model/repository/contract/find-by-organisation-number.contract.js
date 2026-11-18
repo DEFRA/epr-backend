@@ -61,11 +61,40 @@ export const testFindByOrganisationNumberBehaviour = (it) => {
         expect(registration.wasteProcessingType).toBe(wasteProcessingType)
         expect(registration.accreditations).toEqual({
           [SEED_ACCREDITATION_YEAR]: expect.objectContaining({
-            accreditationNumber
+            accreditationNumber,
+            year: SEED_ACCREDITATION_YEAR
           })
         })
       }
     )
+
+    it('serves each accreditation under its own year', async ({
+      organisationReadRepositoryServing
+    }) => {
+      const wanted = seedNamed('Beta Recycling', {
+        registrations: /** @type {const} */ (['reprocessor', 'exporter']).map(
+          (wasteProcessingType) => ({
+            registrationNumber: nextSeedRegistrationNumber(),
+            accreditationNumber: nextSeedAccreditationNumber(),
+            wasteProcessingType
+          })
+        )
+      })
+      const repository = await organisationReadRepositoryServing([wanted])
+
+      const organisation = await findOrganisation(
+        repository,
+        wanted.organisationNumber
+      )
+
+      const served = Object.values(organisation.registrations).flatMap(
+        ({ accreditations }) => Object.entries(accreditations)
+      )
+      expect(served).toHaveLength(2)
+      expect(served.map(([, { year }]) => String(year))).toEqual(
+        served.map(([key]) => key)
+      )
+    })
 
     it("gives an exporter's registration and accreditation their overseas sites, and a reprocessor's registration its site", async ({
       organisationReadRepositoryServing

@@ -105,7 +105,8 @@ describe('findByOrganisationNumber', () => {
             2026: {
               accreditationNumber: ACCREDITATION_NUMBER,
               prnIssuance: { tonnageBand: 'over_10000' },
-              status: approvedStatus('2026-07-01')
+              status: approvedStatus('2026-07-01'),
+              year: 2026
             }
           }
         }
