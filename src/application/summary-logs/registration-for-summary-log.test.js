@@ -1,4 +1,3 @@
-import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   buildReadAccreditation,
@@ -26,10 +25,9 @@ const registrationWith = (status, build = buildReadReprocessorRegistration) => {
     registration: build()
   }
   return status === null
-    ? { ...found, year: null, accreditation: null }
+    ? { ...found, accreditation: null }
     : {
         ...found,
-        year: toYear(2026),
         accreditation: buildReadAccreditation({
           status: {
             current: status,

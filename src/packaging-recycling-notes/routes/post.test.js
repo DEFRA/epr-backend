@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
@@ -153,7 +154,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const validFrom = `${year}-01-01`
     const served = buildReadAccreditation({
       accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
-      status: status ?? approvedStatusFrom(validFrom)
+      status: status ?? approvedStatusFrom(validFrom),
+      year: toYear(year)
     })
     /** @type {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>} */
     const registrationFields = {
@@ -171,14 +173,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         [registration.registrationNumber]: exporting
           ? buildReadExporterRegistration({
               ...registrationFields,
-              accreditations: {
-                [year]: buildReadExporterAccreditation(served)
-              }
+              accreditations: accreditationsByYear(
+                buildReadExporterAccreditation(served)
+              )
             })
           : buildReadReprocessorRegistration({
               ...registrationFields,
               reprocessingType,
-              accreditations: { [year]: served }
+              accreditations: accreditationsByYear(served)
             })
       }
     })

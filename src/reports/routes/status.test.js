@@ -1,6 +1,7 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadOrganisation,
@@ -91,8 +92,9 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       registrations: {
         [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
           accreditations: accreditationStatus
-            ? {
-                [YEAR]: buildReadAccreditation({
+            ? accreditationsByYear(
+                buildReadAccreditation({
+                  year: YEAR,
                   status: {
                     current:
                       /** @type {'approved' | 'suspended' | 'cancelled'} */ (
@@ -102,7 +104,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
                     timeline: approvedTimelineFrom('2026-07-01')
                   }
                 })
-              }
+              )
             : {}
         })
       }

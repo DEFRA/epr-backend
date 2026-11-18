@@ -20,6 +20,7 @@ import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
@@ -88,8 +89,8 @@ const organisationReadRepositoryWith = async ({
             '2026-07-01': { standing: 'accredited' }
           }
         },
-        accreditations: {
-          2026: buildReadAccreditation({
+        accreditations: accreditationsByYear(
+          buildReadAccreditation({
             accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
             status: laterStatus
               ? {
@@ -102,7 +103,7 @@ const organisationReadRepositoryWith = async ({
                 }
               : approvedStatusFrom('2026-07-01')
           })
-        }
+        )
       })
     }
   })

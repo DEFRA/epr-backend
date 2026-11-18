@@ -4,6 +4,7 @@
 /** @import { PeriodicReport, WasteSentSummary } from '#reports/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { ReportableRegistration } from '#reports/application/reportable-registrations.js' */
+/** @import { AccreditationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
@@ -49,8 +50,8 @@ import { reportableRegistrations } from '#reports/application/reportable-registr
  * @property {string} submitterEmail
  * @property {string} approvedPersonsEmail
  * @property {string} material
- * @property {string} registrationNumber
- * @property {string} accreditationNumber
+ * @property {RegistrationNumber} registrationNumber
+ * @property {AccreditationNumber | ''} accreditationNumber - empty for a registered-only report
  * @property {string} reportType
  * @property {string} reportingPeriod
  * @property {string} dueDate
@@ -136,7 +137,7 @@ function buildTonnageFields(report) {
  * @param {ReportableRegistration} reportable
  * @param {Cadence} cadence
  * @param {MergedPeriod} mergedPeriod
- * @param {string} accreditationNumber
+ * @param {AccreditationNumber | ''} accreditationNumber
  * @param {import('#reports/repository/port.js').ReportSummary | null} report
  * @returns {ReportSubmissionsRow}
  */

@@ -336,8 +336,7 @@ export const createPrn =
       const { organisation, registration } = request.app
       const accreditation = toIssuingAccreditation(
         registration,
-        request.app.accreditation,
-        params.year
+        request.app.accreditation
       )
 
       await assertCreatable({

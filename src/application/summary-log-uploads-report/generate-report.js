@@ -1,7 +1,7 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
 /** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
-/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {OrganisationNumber, RegistrationNumber, AccreditationNumber} from '#domain/organisations/numbers.js' */
 
 import {
   capitalize,
@@ -36,8 +36,8 @@ function buildLookupKey(organisationNumber, registrationNumber) {
  *   type: string;
  *   businessName: string;
  *   organisationNumber: OrganisationNumber;
- *   registrationNumber: string;
- *   accreditationNumber: string;
+ *   registrationNumber: RegistrationNumber;
+ *   accreditationNumber: AccreditationNumber | '';
  *   reprocessingSite: string;
  *   packagingWasteCategory: string;
  * }} FormattedRegistrationInfo
@@ -60,7 +60,7 @@ function transformRow(formattedInfo, summaryLogStats) {
 
 /**
  * @param {Registration} registration
- * @returns {string}
+ * @returns {AccreditationNumber | ''}
  */
 function accreditationNumberOf(registration) {
   return (
@@ -88,12 +88,10 @@ function buildRegistrationLookup(organisations) {
     organisations
       .filter((org) => !isTestOrganisation(org))
       .flatMap((org) =>
-        Object.entries(org.registrations).map(
-          ([registrationNumber, registration]) => [
-            buildLookupKey(
-              org.organisationNumber,
-              toRegistrationNumber(registrationNumber)
-            ),
+        Object.entries(org.registrations).map(([number, registration]) => {
+          const registrationNumber = toRegistrationNumber(number)
+          return [
+            buildLookupKey(org.organisationNumber, registrationNumber),
             {
               appropriateAgency: uppercaseString(
                 registration.submittedToRegulator.code
@@ -109,7 +107,7 @@ function buildRegistrationLookup(organisations) {
               )
             }
           ]
-        )
+        })
       )
   )
 }

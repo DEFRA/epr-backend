@@ -1,5 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
@@ -8,7 +9,7 @@ import { accreditationForYear } from './accreditation-for-year.js'
 describe('accreditationForYear', () => {
   const accreditation2026 = buildReadAccreditation()
   const registration = buildReadReprocessorRegistration({
-    accreditations: { 2026: accreditation2026 }
+    accreditations: accreditationsByYear(accreditation2026)
   })
 
   it('finds the accreditation for the year', () => {

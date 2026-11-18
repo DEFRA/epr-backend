@@ -345,7 +345,7 @@ async function findIssuingAccreditation(organisationReadRepository, prn) {
   ) {
     throw Boom.notFound(`Accreditation not found: ${accreditationNumber}`)
   }
-  return toIssuingAccreditation(registration, accreditation, year)
+  return toIssuingAccreditation(registration, accreditation)
 }
 
 /**

@@ -24,6 +24,7 @@ import { accreditationForYear } from '#organisation-read-model/domain/accreditat
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
  * @import { PeriodicReport, ReportListItem, ReportSummary } from '#reports/repository/port.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
@@ -204,7 +205,7 @@ const mergedPeriods = (
  * @returns {{
  *   registeredOnly: MergedPeriod[],
  *   accredited: MergedPeriod[],
- *   accreditationNumber?: string
+ *   accreditationNumber?: AccreditationNumber
  * }}
  */
 export const reportingPeriodsByKind = ({

@@ -1,5 +1,5 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { utcYearOf, yearBounds } from '#common/helpers/dates/year.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { accreditationForYear } from './accreditation-for-year.js'
 import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
@@ -11,7 +11,7 @@ import { approvedBy, approvedYears } from './status-timeline.js'
 
 /**
  * @typedef {{ status: { timeline: StatusTimeline } }} HasTimeline
- * @typedef {HasTimeline & { accreditations: Record<string, HasTimeline> }} StandingSource
+ * @typedef {HasTimeline & { accreditations: Record<string, HasTimeline & { year: Year }> }} StandingSource
  */
 
 /**
@@ -115,7 +115,7 @@ export const standingByDate = (registration, year) => {
 export const standingByYear = (registration, upToYear) => {
   const years = new Set([
     ...approvedYears(registration.status.timeline, upToYear),
-    ...Object.keys(registration.accreditations).map(utcYearOf)
+    ...Object.values(registration.accreditations).map(({ year }) => year)
   ])
 
   return Object.fromEntries(

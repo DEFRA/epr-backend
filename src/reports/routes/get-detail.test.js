@@ -2,6 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterRegistration,
@@ -125,7 +126,9 @@ const accreditedReprocessor = () => {
     accreditations: [accredited],
     readRegistration: buildReadReprocessorRegistration({
       ...approvedFrom('2026-01-01', 'accredited'),
-      accreditations: { 2026: accreditedFromJanuary(ACCREDITATION_NUMBER) }
+      accreditations: accreditationsByYear(
+        accreditedFromJanuary(ACCREDITATION_NUMBER)
+      )
     })
   }
 }
@@ -150,12 +153,10 @@ const accreditedExporter = ({
     readRegistration: buildReadExporterRegistration({
       ...approvedFrom('2026-01-01', 'accredited'),
       overseasSites: /** @type {any} */ (overseasSites),
-      accreditations: {
-        2026: {
-          ...accreditedFromJanuary(EXPORTER_ACCREDITATION_NUMBER),
-          overseasSites: /** @type {any} */ (accreditedSites)
-        }
-      }
+      accreditations: accreditationsByYear({
+        ...accreditedFromJanuary(EXPORTER_ACCREDITATION_NUMBER),
+        overseasSites: /** @type {any} */ (accreditedSites)
+      })
     })
   }
 }
