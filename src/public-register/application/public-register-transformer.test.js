@@ -51,6 +51,7 @@ const accreditation = (overrides = {}) => ({
     lastUpdatedAt: APPROVAL_RECORDED_AT,
     timeline: approvedTimeline
   },
+  year: toYear(2026),
   ...overrides
 })
 
@@ -233,13 +234,15 @@ describe('transform', () => {
       reprocessor({
         accreditations: {
           2025: accreditation({
-            accreditationNumber: /** @type {any} */ ('A25')
+            accreditationNumber: /** @type {any} */ ('A25'),
+            year: toYear(2025)
           }),
           2026: accreditation({
             accreditationNumber: /** @type {any} */ ('A26')
           }),
           2027: accreditation({
-            accreditationNumber: /** @type {any} */ ('A27')
+            accreditationNumber: /** @type {any} */ ('A27'),
+            year: toYear(2027)
           })
         }
       })

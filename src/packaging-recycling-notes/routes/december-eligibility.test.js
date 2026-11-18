@@ -7,6 +7,7 @@ import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
@@ -58,13 +59,15 @@ const organisationWith = ({
     registrations: exporting
       ? {
           [EXPORTER_NUMBER]: buildReadExporterRegistration({
-            accreditations: { 2026: buildReadExporterAccreditation(accredited) }
+            accreditations: accreditationsByYear(
+              buildReadExporterAccreditation(accredited)
+            )
           })
         }
       : {
           [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
             reprocessingType,
-            accreditations: { 2026: accredited }
+            accreditations: accreditationsByYear(accredited)
           })
         }
   })

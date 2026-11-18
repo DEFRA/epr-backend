@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportSubmissions } from './report-submissions.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
@@ -507,12 +508,12 @@ const accreditedAs = (
             [from]: { standing: /** @type {const} */ ('accredited') }
           }
   },
-  accreditations: {
-    2026: buildReadAccreditation({
+  accreditations: accreditationsByYear(
+    buildReadAccreditation({
       accreditationNumber: toAccreditationNumber(accreditationNumber),
       status
     })
-  }
+  )
 })
 
 /** @param {import('#organisation-read-model/domain/model.js').Organisation[]} orgs */

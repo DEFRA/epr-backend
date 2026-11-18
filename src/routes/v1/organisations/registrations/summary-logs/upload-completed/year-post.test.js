@@ -5,10 +5,12 @@ import {
 import { randomUUID } from 'node:crypto'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 import { StatusCodes } from 'http-status-codes'
 
@@ -163,15 +165,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               organisationNumber: accreditedOrganisationNumber,
               registrations: {
                 [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-                  accreditations: {
-                    2026: buildReadAccreditation({
+                  accreditations: accreditationsByYear(
+                    buildReadAccreditation({
                       accreditationNumber:
                         toAccreditationNumber(ACCREDITATION_NUMBER)
                     }),
-                    2027: buildReadAccreditation({
+                    buildReadAccreditation({
+                      year: toYear(2027),
                       accreditationNumber: EXTERNAL_ACCREDITATION_NUMBER
                     })
-                  }
+                  )
                 })
               }
             })

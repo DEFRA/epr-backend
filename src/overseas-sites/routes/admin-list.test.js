@@ -3,6 +3,7 @@ import Boom from '@hapi/boom'
 
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
@@ -47,11 +48,11 @@ const thirdSite = {
 const accreditedOrganisation = buildReadOrganisation({
   registrations: {
     [ALPHA_REGISTRATION]: buildReadExporterRegistration({
-      accreditations: {
-        2026: buildReadExporterAccreditation({
+      accreditations: accreditationsByYear(
+        buildReadExporterAccreditation({
           accreditationNumber: ACCREDITATION_NUMBER
         })
-      },
+      ),
       overseasSites: { '002': minimalSite, '001': fullSite }
     }),
     [REPROCESSOR_REGISTRATION]: buildReadReprocessorRegistration()

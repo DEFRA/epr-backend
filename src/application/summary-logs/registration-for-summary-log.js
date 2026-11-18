@@ -5,7 +5,6 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 
-/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
@@ -14,13 +13,13 @@ import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 
 /**
  * A summary log's registration as the read model serves it, and the
- * accreditation its number names with that accreditation's year. Both are
- * none for a registered-only summary log.
+ * accreditation its number names, none for a registered-only summary log.
  *
- * @typedef {{ registrationNumber: RegistrationNumber, registration: Registration } & (
- *   | { year: Year, accreditation: Registration['accreditations'][string] }
- *   | { year: null, accreditation: null }
- * )} SummaryLogRegistration
+ * @typedef {{
+ *   registrationNumber: RegistrationNumber
+ *   registration: Registration
+ *   accreditation: Registration['accreditations'][string] | null
+ * }} SummaryLogRegistration
  */
 
 /**
@@ -55,7 +54,7 @@ export const registrationForSummaryLog = async (
   }
   const registration = organisation.registrations[registrationNumber]
   if (accreditationNumber === null) {
-    return { registrationNumber, registration, year: null, accreditation: null }
+    return { registrationNumber, registration, accreditation: null }
   }
   const held = indexByLedger([organisation], {
     includeTestOrganisations: true
@@ -72,12 +71,7 @@ export const registrationForSummaryLog = async (
       `Accreditation with number ${accreditationNumber} for ${year} not found`
     )
   }
-  return {
-    registrationNumber,
-    registration,
-    year: held.year,
-    accreditation: held.accreditation
-  }
+  return { registrationNumber, registration, accreditation: held.accreditation }
 }
 
 /**

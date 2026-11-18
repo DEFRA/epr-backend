@@ -1,28 +1,29 @@
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { toYear, yearBounds } from '#common/helpers/dates/year.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 
-/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
-/** @import { AccreditationCommon as ReadModelAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
+ * @typedef {ReprocessorAccreditation | ExporterAccreditation} ReadModelAccreditation
+ */
+
+/**
  * A ledger's accreditation as the organisation read model serves it, with the
- * organisation and registration that hold it and the year it is for.
+ * organisation and registration that hold it.
  *
  * @typedef {Object} LedgerAccreditation
  * @property {ReadModelOrganisation} organisation
  * @property {RegistrationNumber} registrationNumber
  * @property {ReadModelRegistration} registration
- * @property {Year} year
  * @property {ReadModelAccreditation} accreditation
  */
 
@@ -50,25 +51,21 @@ export const indexByLedger = (
         Object.entries(organisation.registrations).flatMap(
           ([number, registration]) => {
             const registrationNumber = toRegistrationNumber(number)
-            return Object.entries(registration.accreditations).map(
-              ([key, accreditation]) => {
-                const year = toYear(Number(key))
-                return [
-                  ledgerKey({
-                    organisationNumber: organisation.organisationNumber,
-                    registrationNumber,
-                    accreditationNumber: accreditation.accreditationNumber,
-                    year
-                  }),
-                  {
-                    organisation,
-                    registrationNumber,
-                    registration,
-                    year,
-                    accreditation
-                  }
-                ]
-              }
+            return Object.values(registration.accreditations).map(
+              (accreditation) => [
+                ledgerKey({
+                  organisationNumber: organisation.organisationNumber,
+                  registrationNumber,
+                  accreditationNumber: accreditation.accreditationNumber,
+                  year: accreditation.year
+                }),
+                {
+                  organisation,
+                  registrationNumber,
+                  registration,
+                  accreditation
+                }
+              ]
             )
           }
         )
@@ -76,16 +73,15 @@ export const indexByLedger = (
   )
 
 /**
- * The validity window and status timeline that classification reads, taken
- * from the read model's accreditation for its year. ADR-0044 has an
- * accreditation valid from its approval to the end of its scheme year.
+ * The validity window and status timeline that classification reads from the
+ * read model's accreditation. ADR-0044 has an accreditation valid from its
+ * approval to the end of its scheme year.
  *
- * @param {Pick<LedgerAccreditation, 'registration' | 'year'>} ledgerAccreditation
+ * @param {Pick<ReadModelAccreditation, 'status' | 'year'>} accreditation
  * @returns {AccreditationValidity}
  */
-export const validityOf = ({ registration, year }) => {
+export const validityOf = ({ status: { timeline }, year }) => {
   const { start, end } = yearBounds(year)
-  const { timeline } = registration.accreditations[year].status
   const approvedAt = firstApprovedAt(timeline)
   return {
     timeline,
@@ -103,15 +99,13 @@ export const validityOf = ({ registration, year }) => {
  * The approval date of each overseas site an exporter's accreditation lists,
  * by the site's key, as classification reads it.
  *
- * @param {Pick<LedgerAccreditation, 'registration' | 'year'>} ledgerAccreditation
+ * @param {ReadModelAccreditation} accreditation
  * @returns {OverseasSitesContext}
  */
-export const overseasSitesOf = ({ registration, year }) =>
+export const overseasSitesOf = (accreditation) =>
   Object.fromEntries(
     Object.entries(
-      registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-        ? registration.accreditations[year].overseasSites
-        : {}
+      'overseasSites' in accreditation ? accreditation.overseasSites : {}
     ).map(([key, site]) => [
       key,
       {
@@ -125,13 +119,13 @@ export const overseasSitesOf = ({ registration, year }) =>
  * registered-only summary log. Only an accredited exporter's overseas sites
  * are checked.
  *
- * @param {{ registration: ReadModelRegistration, year: Year | null }} accreditationYear
+ * @param {{ accreditation: ReadModelAccreditation | null }} summaryLogAccreditation
  * @returns {ClassificationContext}
  */
-export const classificationContextOf = ({ registration, year }) =>
-  year === null
+export const classificationContextOf = ({ accreditation }) =>
+  accreditation === null
     ? { accreditation: null, overseasSites: ORS_VALIDATION_DISABLED }
     : {
-        accreditation: validityOf({ registration, year }),
-        overseasSites: overseasSitesOf({ registration, year })
+        accreditation: validityOf(accreditation),
+        overseasSites: overseasSitesOf(accreditation)
       }
