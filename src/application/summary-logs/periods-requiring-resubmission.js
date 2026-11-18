@@ -15,12 +15,11 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {ReportableWasteRecordState} from '#reports/domain/aggregation/aggregate-report-detail.js' */
-/** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {OrsDetails} from '#reports/domain/ors-details.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
@@ -44,25 +43,16 @@ const NO_SOURCE = { summaryLogId: null, lastUploadedAt: null }
  * share one shape.
  *
  * @param {ValidatedWasteRecord[]} wasteRecords
- * @param {Record<string, TableSchema>} tableSchemas
- * @param {ClassificationContext} classificationContext
+ * @param {RowClassificationContext} classificationContext
  * @returns {ReportableWasteRecordState[]}
  */
-const toNewHeadRowStates = (
-  wasteRecords,
-  tableSchemas,
-  { accreditation, overseasSites }
-) =>
+const toNewHeadRowStates = (wasteRecords, classificationContext) =>
   wasteRecords.map((wasteRecord) => ({
     wasteRecordType: /** @type {WasteRecordType} */ (
       wasteRecord.wasteRecordType
     ),
-    data: projectSummaryLogRowState(
-      wasteRecord.record,
-      tableSchemas,
-      accreditation,
-      overseasSites
-    ).data
+    data: projectSummaryLogRowState(wasteRecord.record, classificationContext)
+      .data
   }))
 
 /**
@@ -241,9 +231,8 @@ const logPeriodOutcome = (
  * @param {PeriodRef[]} params.closedPeriods
  * @param {PeriodicReport[]} params.periodicReports
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {Record<string, TableSchema>} params.tableSchemas - The table schemas of the summary log's template
  * @param {SummaryLogRegistration | undefined} params.registration
- * @param {ClassificationContext | undefined} params.classificationContext
+ * @param {RowClassificationContext | undefined} params.classificationContext
  * @param {ReportsService} params.reportsService
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {WasteBalanceLedgerId} params.ledgerId
@@ -257,7 +246,6 @@ const computePeriodsRequiringResubmission = async ({
   closedPeriods,
   periodicReports,
   wasteRecords,
-  tableSchemas,
   registration,
   classificationContext,
   reportsService,
@@ -274,11 +262,7 @@ const computePeriodsRequiringResubmission = async ({
 
   const context = buildFiguresContext({
     registration,
-    newHeadRowStates: toNewHeadRowStates(
-      wasteRecords,
-      tableSchemas,
-      classificationContext
-    ),
+    newHeadRowStates: toNewHeadRowStates(wasteRecords, classificationContext),
     summaryLogRowStatesRepository,
     ledgerId
   })
@@ -307,10 +291,9 @@ const computePeriodsRequiringResubmission = async ({
  * A failure propagates so the queue retries the validation rather than
  * guessing a verdict.
  *
- * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'tableSchemas' | 'ledgerId'> & {
+ * @param {Omit<Parameters<typeof computePeriodsRequiringResubmission>[0], 'closedPeriods' | 'wasteRecords' | 'ledgerId'> & {
  *   loadsByReportingPeriod: LoadsByReportingPeriod | null,
  *   wasteRecords: ValidatedWasteRecord[] | null,
- *   tableSchemas: Record<string, TableSchema> | undefined,
  *   summaryLog: SubmittedSummaryLog
  * }} params
  * @returns {Promise<LoadsByReportingPeriod | null>}
@@ -318,7 +301,6 @@ const computePeriodsRequiringResubmission = async ({
 export const withPeriodsRequiringResubmission = async ({
   loadsByReportingPeriod,
   wasteRecords,
-  tableSchemas,
   summaryLog,
   ...params
 }) => {
@@ -330,10 +312,8 @@ export const withPeriodsRequiringResubmission = async ({
     await computePeriodsRequiringResubmission({
       ...params,
       closedPeriods: loadsByReportingPeriod.closedPeriods,
-      // classifyLoads yields a loadsByReportingPeriod only for present records
-      // and table schemas.
+      // classifyLoads yields a loadsByReportingPeriod only for present records.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
-      tableSchemas: /** @type {Record<string, TableSchema>} */ (tableSchemas),
       ledgerId: ledgerIdFor(summaryLog)
     })
 
