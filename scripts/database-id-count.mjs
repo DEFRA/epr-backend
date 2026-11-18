@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url'
 
 const TEST_CODE =
   /\.test\.js$|\.contract\.js$|test-helpers|test-fixtures|test-data|\/contract\/|\/fixtures\/|^src\/test\//
+const NON_PROD_CODE =
+  /^src\/(server\/seed\/(create-seed-data|seed-scenarios)\.js$|routes\/v1\/dev\/|non-prod-data-reset\/)/
 const REPOSITORY_FILE = /\/repositor(y|ies)\//
 const REPOSITORY_PORT = /\/([^/]*-)?port\.js$/
 
@@ -115,7 +117,7 @@ export const MEASURES = [
 ]
 
 const SCOPE =
-  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. The repository adapters are left out too: any file under a `repository/` or `repositories/` directory, except a port, `port.js` or a file ending `-port.js`, because a port is the boundary these counts guard.'
+  'Only `.js` files under `src/` are read. Test code is left out: `*.test.js`, `*.contract.js`, and anything under a `contract/`, `fixtures/` or `src/test/` directory or with `test-helpers`, `test-fixtures` or `test-data` in its path. Code that never runs in production is left out: `src/server/seed/create-seed-data.js`, `src/server/seed/seed-scenarios.js`, `src/routes/v1/dev/` and `src/non-prod-data-reset/`. The repository adapters are left out too: any file under a `repository/` or `repositories/` directory, except a port, `port.js` or a file ending `-port.js`, because a port is the boundary these counts guard.'
 
 /** @param {string} path */
 const isRepositoryAdapter = (path) =>
@@ -126,6 +128,7 @@ export const isCounted = (path) =>
   path.startsWith('src/') &&
   path.endsWith('.js') &&
   !TEST_CODE.test(path) &&
+  !NON_PROD_CODE.test(path) &&
   !isRepositoryAdapter(path)
 
 /**
