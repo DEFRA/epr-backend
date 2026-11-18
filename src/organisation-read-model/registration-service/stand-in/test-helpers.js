@@ -5,10 +5,11 @@ import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './mongodb.js'
 
 /**
  * Stores the accreditation in the stand-in as given, without validating it,
- * along with any fields the stand-in no longer reads.
+ * with the overseas sites accreditations were once stored with, which the
+ * stand-in no longer reads.
  *
  * @param {Db} db
- * @param {ExternalAccreditation & Record<string, unknown>} accreditation
+ * @param {ExternalAccreditation & { overseasSites?: object }} accreditation
  */
 export const storeStandInAccreditation = async (db, accreditation) => {
   await db
