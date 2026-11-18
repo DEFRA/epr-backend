@@ -1,8 +1,8 @@
 import { createHmac } from 'node:crypto'
 import { tracing } from '@defra/hapi-tracing'
 import Hapi from '@hapi/hapi'
-import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { delay, http, HttpResponse } from 'msw'
+import { describe, expect, it, vi } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { getTracingHeaderName } from '#common/helpers/request-tracing.js'
@@ -129,10 +129,13 @@ const servePagedAccreditations = (total) => {
  * Loads 2027 accreditations.
  *
  * @param {string} [organisationNumber]
- * @param {{ now?: () => Date, onDrop?: (message: string) => void }} [options]
+ * @param {{ now?: () => Date, onDrop?: (message: string) => void, timeoutMs?: number }} [options]
  */
-const loadFor = (organisationNumber, { now, onDrop = () => {} } = {}) =>
-  createRegAccredAccreditationsLoader(config, { now, onDrop })(
+const loadFor = (
+  organisationNumber,
+  { now, onDrop = () => {}, timeoutMs } = {}
+) =>
+  createRegAccredAccreditationsLoader(config, { now, onDrop, timeoutMs })(
     toYear(2027),
     organisationNumber === undefined
       ? undefined
@@ -408,5 +411,34 @@ describe('createRegAccredAccreditationsLoader', () => {
     await expect(loadFor('990001')).rejects.toMatchObject({
       output: { statusCode: 503 }
     })
+  })
+
+  it('fails when Reg Accred takes longer than the timeout to serve a page', async () => {
+    mswServer.use(
+      http.get(ACCREDITATIONS_URL, async () => {
+        await delay(1_000)
+        return HttpResponse.json({
+          pageNumber: 1,
+          limit: 100,
+          totalItems: 0,
+          items: []
+        })
+      })
+    )
+
+    await expect(loadFor('990001', { timeoutMs: 20 })).rejects.toMatchObject({
+      output: { statusCode: 500 },
+      event: { reason: expect.stringContaining('type=TimeoutError') }
+    })
+  })
+
+  it('times out each page request after 10 seconds by default', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout')
+    serveAccreditations()
+
+    await loadFor('990001')
+
+    expect(timeout).toHaveBeenCalledWith(10_000)
+    timeout.mockRestore()
   })
 })
