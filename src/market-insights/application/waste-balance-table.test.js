@@ -29,9 +29,16 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
+/** @import { RegulatorValue, StoredAccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
+/** @import { PublishedWasteBalanceFigures } from '#market-insights/domain/waste-balance-figures.js' */
 /** @import { Organisation as ServedOrganisation, Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
+/** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
+/** @import { WasteBalanceTable } from './waste-balance-table.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
 const TEST_ORG_ID = 999999
@@ -198,7 +205,7 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *   overseasSites?: Record<string, { overseasSiteId: string }>,
  *   validFrom?: string,
  *   validTo?: string,
- *   regulator?: import('#domain/organisations/model.js').RegulatorValue,
+ *   regulator?: RegulatorValue,
  *   siteApproved?: boolean
  * }} options
  */
@@ -473,7 +480,7 @@ const registeredOnly = ({ organisation }) =>
  * accreditation, approved on `approvedOn`.
  *
  * @param {ReturnType<typeof makeOperator>} operator
- * @param {import('#domain/organisations/numbers.js').AccreditationNumber} accreditationNumber
+ * @param {AccreditationNumber} accreditationNumber
  * @param {string} approvedOn - `YYYY-MM-DD`
  */
 const heldOutside = (operator, accreditationNumber, approvedOn) => {
@@ -497,7 +504,7 @@ const heldOutside = (operator, accreditationNumber, approvedOn) => {
 }
 
 /**
- * @typedef {Pick<import('#reports/repository/port.js').CreateReportParams, 'organisationNumber' | 'registrationNumber' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
+ * @typedef {Pick<CreateReportParams, 'organisationNumber' | 'registrationNumber' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
  */
 
 /**
@@ -635,7 +642,7 @@ const monthlyReport = ({ organisation }, period) => ({
  *   reports?: MonthlyReportRef[],
  *   unsubmittedReports?: MonthlyReportRef[],
  *   readModelOrganisations?: any[],
- *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
+ *   months?: YearMonth[],
  *   now?: Date
  * }} options
  */
@@ -655,7 +662,7 @@ const run = async ({
   for (const report of unsubmittedReports) {
     await buildUnsubmittedReport(seededReports, report)
   }
-  /** @type {import('#reports/repository/port.js').ReportsRepository} */
+  /** @type {ReportsRepository} */
   const reportsRepository = {
     ...seededReports,
     findAllPeriodicReports: async () => {
@@ -704,7 +711,7 @@ const run = async ({
   return { table, logger }
 }
 
-/** @type {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures & import('#market-insights/application/operator-counts.js').OperatorCounts} */
+/** @type {PublishedWasteBalanceFigures & OperatorCounts} */
 const NO_ACTIVITY = {
   totalCredited: 0,
   eligibleForWasteBalance: 0,
@@ -719,7 +726,7 @@ const NO_ACTIVITY = {
  * their operator counts. The table carries a zero cell for every other
  * combination, which these tests are not about.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const reported = (table) =>
   Object.entries(table.data.months).flatMap(([month, { figures }]) =>
@@ -745,7 +752,7 @@ const reported = (table) =>
  * One of the operator counts of every cell where it is not zero, keyed
  * `month material type`.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  * @param {'operatorCount' | 'submittingOperatorCount'} [count]
  */
 const operatorCounts = (table, count = 'operatorCount') =>
@@ -763,7 +770,7 @@ const operatorCounts = (table, count = 'operatorCount') =>
   )
 
 /**
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const submittingOperatorCounts = (table) =>
   operatorCounts(table, 'submittingOperatorCount')
@@ -772,7 +779,7 @@ const submittingOperatorCounts = (table) =>
  * The operator counts of every row's whole-period total that any operator
  * was accredited for, keyed `material type`.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const periodOperatorCounts = (table) =>
   Object.fromEntries(
@@ -791,7 +798,7 @@ const periodOperatorCounts = (table) =>
  * The monthly report counts the table carries, one pair per month served and
  * one for the period.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const monthlyReports = ({ data: { months, period } }) => ({
   byMonth: Object.fromEntries(
@@ -1550,7 +1557,7 @@ describe('buildWasteBalanceTable', () => {
 
   describe('an exported load', () => {
     /**
-     * @param {import('#overseas-sites/repository/port.js').OverseasSite} site
+     * @param {OverseasSite} site
      */
     const eligibleExportTo = async (site) => {
       const exporter = makeOperator({
