@@ -18,7 +18,8 @@ describe('isCounted', () => {
     'src/domain/uploads/repository/port.js',
     'src/common/helpers/mongo-client.js',
     'src/common/helpers/plugins/mongo-db-plugin.js',
-    'src/non-prod-data-reset/mongodb.js'
+    'src/common/helpers/parse-test-organisations.js',
+    'src/server/seed/seed-database.js'
   ])('counts production code: %s', (path) => {
     expect(isCounted(path)).toBe(true)
   })
@@ -43,6 +44,10 @@ describe('isCounted', () => {
     'src/routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js',
     'src/data/fixtures/organisation.json',
     'src/test/create-test-server.js',
+    'src/server/seed/create-seed-data.js',
+    'src/server/seed/seed-scenarios.js',
+    'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
+    'src/non-prod-data-reset/mongodb.js',
     'scripts/database-id-count.mjs'
   ])('leaves out %s', (path) => {
     expect(isCounted(path)).toBe(false)
