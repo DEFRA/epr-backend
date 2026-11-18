@@ -13,6 +13,7 @@ import {
 } from '../domain/csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -296,6 +297,115 @@ const cellsByRowId = (out) =>
       return [cells[METADATA_COL_INDEX['Row ID']], cells]
     })
   )
+
+const EXPORT_HEADER = [
+  'Regulator',
+  'Organisation Name',
+  'Registration Number',
+  'Material',
+  'Operator Processing Type',
+  'Accredited',
+  'Accreditation Number',
+  'Waste Record Type',
+  'Submitted At',
+  'Included in Waste Balance',
+  'Waste Balance Exclusion Reason',
+  'Waste Balance Tonnage',
+  'Row ID',
+  'OSR Country Revised',
+  'OSR Name Revised',
+  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+  'ADD_PRODUCT_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'BASEL_EXPORT_CODE',
+  'BILL_OF_LANDING_REFERENCE_NUMBER',
+  'CARRIER_NAME',
+  'CARRIER_VEHICLE_REGISTRATION_NUMBER',
+  'CBD',
+  'CBD_REG_NUMBER',
+  'CONTAINER_NUMBER',
+  'CUSTOMER_INVOICE_REFERENCE',
+  'CUSTOMER_NAME',
+  'CUSTOMS_CODES',
+  'CUSTOMS_DECLARATION_NUMBER',
+  'DATE_LOAD_LEFT_SITE',
+  'DATE_OF_EXPORT',
+  'DATE_RECEIVED_BY_OSR',
+  'DATE_RECEIVED_FOR_EXPORT',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+  'DESCRIPTION_WASTE',
+  'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
+  'DWT_EXPORT_ID',
+  'DWT_SUPPLY_ID',
+  'END_OF_WASTE_STANDARDS',
+  'EWC_CODE',
+  'EXIT_PORT',
+  'EXPORT_CONTROLS',
+  'FINAL_DESTINATION_ADDRESS',
+  'FINAL_DESTINATION_EMAIL',
+  'FINAL_DESTINATION_FACILITY_TYPE',
+  'FINAL_DESTINATION_NAME',
+  'FINAL_DESTINATION_PHONE',
+  'FINAL_DESTINATION_POSTCODE',
+  'GROSS_WEIGHT',
+  'HAULIER_NAME',
+  'HAULIER_VEHICLE_REGISTRATION_NUMBER',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'INTERIM_SITE_ID',
+  'LOADING_SITE_ADDRESS',
+  'LOADING_SITE_EMAIL',
+  'LOADING_SITE_NAME',
+  'LOADING_SITE_PHONE_NUMBER',
+  'LOADING_SITE_POSTCODE',
+  'MONTH_RECEIVED_FOR_EXPORT',
+  'MONTH_RECEIVED_FOR_REPROCESSING',
+  'NET_WEIGHT',
+  'OSR_COUNTRY',
+  'OSR_ID',
+  'OSR_NAME',
+  'PALLET_WEIGHT',
+  'PREVIOUS_YEAR_ROW_ID',
+  'PRODUCT_DESCRIPTION',
+  'PRODUCT_TONNAGE',
+  'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'SUPPLIER_ADDRESS',
+  'SUPPLIER_EMAIL',
+  'SUPPLIER_NAME',
+  'SUPPLIER_PHONE_NUMBER',
+  'SUPPLIER_POSTCODE',
+  'TARE_WEIGHT',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+  'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
+  'TONNAGE_RECEIVED_BY_OSR',
+  'TONNAGE_RECEIVED_FOR_EXPORT',
+  'TONNAGE_RECEIVED_FOR_RECYCLING',
+  'UK_PACKAGING_WEIGHT_PERCENTAGE',
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED',
+  'WASTE_TRANSFER_NOTE',
+  'WEIGHBRIDGE_TICKET',
+  'WEIGHBRIDGE_TICKET_NUMBER',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  'YOUR_REFERENCE'
+]
+
+const TEMPLATE_TABLES = [toYear(2026), toYear(2027)].flatMap((year) =>
+  Object.values(PROCESSING_TYPES).flatMap((processingType) =>
+    Object.entries(getTemplate(year, processingType).tableSchemas).map(
+      ([tableName, { wasteRecordType, requiredHeaders }]) => ({
+        year,
+        processingType,
+        tableName,
+        wasteRecordType,
+        columns: requiredHeaders.filter((column) => column !== 'ROW_ID')
+      })
+    )
+  )
+)
 
 describe('streamCsvExport', () => {
   it('emits the header row even when no organisations exist', async () => {
@@ -1202,6 +1312,55 @@ describe('streamCsvExport', () => {
       () => Promise.reject(new Error('cursor died'))
 
     await expect(collect(streamCsvExport(deps))).rejects.toThrow('cursor died')
+  })
+
+  describe('columns', () => {
+    it('emits the metadata columns then every template column, alphabetically', async () => {
+      const out = await collect(streamCsvExport(await buildDeps()))
+
+      expect(cellsOf(out[0])).toStrictEqual(EXPORT_HEADER)
+    })
+
+    it.for(TEMPLATE_TABLES)(
+      'exports every $year $processingType $tableName column under its own header',
+      async ({ processingType, wasteRecordType, year, columns }) => {
+        const deps = await buildDeps({
+          orgs: [readModelOrg()],
+          seeds: [
+            {
+              year,
+              rows: [
+                {
+                  rowId: '1001',
+                  wasteRecordType,
+                  processingType,
+                  data: Object.fromEntries(
+                    columns.map((column) => [column, `v-${column}`])
+                  ),
+                  classification: naClassification()
+                }
+              ]
+            }
+          ],
+          year
+        })
+
+        const [header, row] = (await collect(streamCsvExport(deps))).map(
+          cellsOf
+        )
+        const exported = Object.fromEntries(
+          header.map((column, i) => [column, row[i]])
+        )
+
+        expect(
+          Object.fromEntries(
+            columns.map((column) => [column, exported[column]])
+          )
+        ).toStrictEqual(
+          Object.fromEntries(columns.map((column) => [column, `v-${column}`]))
+        )
+      }
+    )
   })
 })
 
