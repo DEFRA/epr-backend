@@ -312,6 +312,7 @@ describe('reconcileStalePrnProjections', () => {
       repaired: 0,
       stillDrifting: 0
     })
+    expect(result.reports).toEqual([])
     const stored = await findStored(prnCollection, created.id)
     expect(stored.version).toBe(1)
     expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
@@ -531,7 +532,16 @@ describe('reconcileStalePrnProjections', () => {
       service
     })
 
-    expect(result).toMatchObject({ total: 1, drifting: 1 })
+    expect(result).toMatchObject({
+      total: 1,
+      drifting: 1,
+      repaired: 1,
+      folded: 1,
+      stillDrifting: 0
+    })
+    const stored = await findStored(prnCollection, created.id)
+    expect(stored.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+    expect(stored.lastAppliedEventNumber).toBe(1)
     expect(result.reports).toEqual([
       {
         prnId: created.id,
