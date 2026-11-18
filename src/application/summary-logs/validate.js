@@ -15,7 +15,7 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
@@ -54,9 +54,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
 
 /**
  * @param {{
@@ -128,8 +126,7 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {SummaryLogRegistration} [registration] - Registration fetched during validation
- * @property {ClassificationContext} [classificationContext] - The read model's accreditation for classifying rows, read with the registration
- * @property {Record<string, TableSchema>} [tableSchemas] - The template's table schemas, once meta syntax has chosen it
+ * @property {RowClassificationContext} [classificationContext] - The template's table schemas and the read model's accreditation for classifying rows, once meta syntax has chosen the template and the registration is read
  */
 
 /**
@@ -181,8 +178,7 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
 
 const markIgnoredByDateRange = (
   /** @type ValidatedWasteRecord[] */ wasteRecords,
-  /** @type {AccreditationValidity | null} */ accreditation,
-  /** @type Record<string, TableSchema> */ tableSchemas
+  /** @type {RowClassificationContext} */ { tableSchemas, accreditation }
 ) => {
   for (const wasteRecord of wasteRecords) {
     const schema = tableSchemas[wasteRecord.tableName]
@@ -293,8 +289,7 @@ const runValidationChecks = async (
     return
   }
 
-  const { tableSchemas } = getTemplate(summaryLog.year, meta.PROCESSING_TYPE)
-  result.tableSchemas = tableSchemas
+  const tableSchemas = tableSchemasOf(summaryLog.year, meta.PROCESSING_TYPE)
 
   const registration = await fetchRegistration({
     organisationReadRepository,
@@ -303,7 +298,10 @@ const runValidationChecks = async (
     logger
   })
   result.registration = registration
-  const classificationContext = classificationContextOf(registration)
+  const classificationContext = {
+    tableSchemas,
+    ...classificationContextOf(registration)
+  }
   result.classificationContext = classificationContext
   issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
@@ -330,11 +328,7 @@ const runValidationChecks = async (
 
   result.wasteRecords = dataResult.wasteRecords
 
-  markIgnoredByDateRange(
-    dataResult.wasteRecords,
-    classificationContext.accreditation,
-    tableSchemas
-  )
+  markIgnoredByDateRange(dataResult.wasteRecords, classificationContext)
 
   issues.merge(dataResult.issues)
 }
@@ -449,7 +443,6 @@ const loadSubmittedRowStatesByKey = async ({
  */
 const classifyAndPersistResult = async ({
   issues,
-  tableSchemas,
   status,
   summaryLogId,
   wasteBalanceRecords,
@@ -479,7 +472,6 @@ const classifyAndPersistResult = async ({
   })
 
   const { loads, loadsByReportingPeriod } = classifyLoads({
-    tableSchemas,
     status,
     wasteBalanceRecords,
     wasteRecords,
@@ -496,7 +488,6 @@ const classifyAndPersistResult = async ({
       loadsByReportingPeriod,
       periodicReports,
       wasteRecords,
-      tableSchemas,
       registration,
       classificationContext,
       summaryLog,
@@ -552,22 +543,16 @@ export const createSummaryLogsValidator = ({
     )
 
     const validationStart = Date.now()
-    const {
-      issues,
-      wasteRecords,
-      meta,
-      registration,
-      classificationContext,
-      tableSchemas
-    } = await performValidationChecks({
-      summaryLog,
-      loggingContext,
-      logger,
-      summaryLogExtractor,
-      organisationReadRepository,
-      summaryLogRowStatesRepository,
-      ledgerRepository
-    })
+    const { issues, wasteRecords, meta, registration, classificationContext } =
+      await performValidationChecks({
+        summaryLog,
+        loggingContext,
+        logger,
+        summaryLogExtractor,
+        organisationReadRepository,
+        summaryLogRowStatesRepository,
+        ledgerRepository
+      })
 
     logValidationIssues({ summaryLogId, summaryLog, issues, logger })
 
@@ -577,7 +562,7 @@ export const createSummaryLogsValidator = ({
       : SUMMARY_LOG_STATUS.VALIDATED
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
-      tableSchemas
+      classificationContext?.tableSchemas
     )
 
     await recordValidationMetrics({
@@ -590,7 +575,6 @@ export const createSummaryLogsValidator = ({
 
     await classifyAndPersistResult({
       issues,
-      tableSchemas,
       status,
       summaryLogId,
       wasteBalanceRecords,
