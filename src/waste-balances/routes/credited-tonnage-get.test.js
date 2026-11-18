@@ -6,6 +6,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
@@ -57,12 +58,12 @@ const accreditedFrom2026 = (
         standingByDate: {
           2026: { '2026-01-01': { standing: 'accredited' } }
         },
-        accreditations: {
-          2026: buildReadAccreditation({
+        accreditations: accreditationsByYear(
+          buildReadAccreditation({
             accreditationNumber: toAccreditationNumber(accreditationNumber),
             status: approved
           })
-        }
+        )
       })
     }
   })

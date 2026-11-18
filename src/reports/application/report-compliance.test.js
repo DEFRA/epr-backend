@@ -10,6 +10,7 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
@@ -471,11 +472,11 @@ describe('generateReportCompliance', () => {
                       [accreditedFrom]: { standing: 'accredited' }
                     }
             },
-            accreditations: {
-              2026: buildReadAccreditation({
+            accreditations: accreditationsByYear(
+              buildReadAccreditation({
                 status: approvedStatusFrom(accreditedFrom)
               })
-            }
+            )
           })
         }
       })

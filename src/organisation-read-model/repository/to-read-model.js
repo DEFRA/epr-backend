@@ -81,7 +81,7 @@ const toAccreditationEntryOfYear = (
     )
     return null
   }
-  return [String(year), accreditation]
+  return [String(year), { ...accreditation, year }]
 }
 
 /**
@@ -465,7 +465,7 @@ function withAccreditedSites(
         ...accreditation,
         overseasSites:
           'overseasSites' in accreditation
-            ? ownSites(accreditation, year, registration, overseasSites, onDrop)
+            ? ownSites(accreditation, registration, overseasSites, onDrop)
             : registrationSites
       }
     ])
@@ -474,18 +474,17 @@ function withAccreditedSites(
 
 /**
  * @param {ExporterAccreditation} accreditation
- * @param {string} year
  * @param {StoredRegistration} registration
  * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {OnDrop} onDrop
  * @returns {Record<string, AccreditedOverseasSite>}
  */
-function ownSites(accreditation, year, registration, overseasSites, onDrop) {
+function ownSites(accreditation, registration, overseasSites, onDrop) {
   Object.keys(accreditation.overseasSites)
     .filter((orsId) => !Object.hasOwn(registration.overseasSites ?? {}, orsId))
     .forEach((orsId) =>
       onDrop(
-        `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
+        `Registration ${registration.registrationNumber} accreditation year ${accreditation.year} lists overseas site ${orsId}, which the registration does not hold`
       )
     )
   return Object.fromEntries(
@@ -523,12 +522,14 @@ function toAccreditationEntry(accreditation, { onDrop }) {
     return null
   }
 
+  const year = deriveAccreditationYear(accreditation)
   return [
-    String(deriveAccreditationYear(accreditation)),
+    String(year),
     {
       accreditationNumber,
       prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
-      status: { current: status, ...statusTimeline }
+      status: { current: status, ...statusTimeline },
+      year
     }
   ]
 }

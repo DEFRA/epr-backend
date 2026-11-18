@@ -7,6 +7,7 @@ import { accreditationWindow } from '#common/helpers/dates/accreditation.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { statusOn } from '#organisation-read-model/domain/model.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
@@ -126,10 +127,11 @@ const everyGranted = (organisations, years) =>
   reportableRegistrations(organisations).flatMap(
     ({ organisationNumber, registrationNumber, registration, key }) =>
       years.flatMap((year) => {
-        if (!Object.hasOwn(registration.accreditations, year)) {
+        const held = accreditationForYear(registration, year)
+        if (held === undefined) {
           return []
         }
-        const accreditation = validityOf({ registration, year })
+        const accreditation = validityOf(held)
         const window = accreditationWindow(accreditation)
         return window === null
           ? []

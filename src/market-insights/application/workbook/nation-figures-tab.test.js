@@ -10,6 +10,7 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
@@ -89,8 +90,8 @@ const accreditedExporter = ({
         material: /** @type {any} */ (material),
         submittedToRegulator: { code: regulator },
         status: approvedStatusFrom('2025-12-01'),
-        accreditations: {
-          2026: buildReadExporterAccreditation({
+        accreditations: accreditationsByYear(
+          buildReadExporterAccreditation({
             accreditationNumber: toAccreditationNumber(
               `ACC-${registrationNumber}`
             ),
@@ -100,7 +101,7 @@ const accreditedExporter = ({
               timeline
             }
           })
-        }
+        )
       })
     }
   })

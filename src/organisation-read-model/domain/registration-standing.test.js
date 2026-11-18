@@ -205,7 +205,9 @@ describe('standingByYear', () => {
 
   it('covers the year of an accreditation up to the year given', () => {
     const withAccreditationFor2027 = partialMock(
-      approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
+      approvedFrom('2026-06-02', {
+        2027: { ...approvedFrom('2026-10-01'), year: toYear(2027) }
+      })
     )
 
     expect(standingByYear(withAccreditationFor2027, UP_TO_2026)).toEqual({
