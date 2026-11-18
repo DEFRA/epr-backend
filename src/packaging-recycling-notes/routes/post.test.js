@@ -47,6 +47,7 @@ import {
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { MockInstance } from 'vitest' */
+/** @import { Material } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -137,7 +138,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {{
    *   exporting?: boolean,
    *   year?: number,
-   *   material?: string,
+   *   material?: Material,
    *   reprocessingType?: 'input' | 'output',
    *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>,
    *   tradingName?: string
@@ -159,7 +160,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
     /** @type {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>} */
     const registrationFields = {
-      material: /** @type {any} */ (material),
+      material,
       status: approvedStatusFrom(validFrom)
     }
     const registration = {
