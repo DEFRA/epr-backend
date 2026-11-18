@@ -5,7 +5,6 @@ import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-no
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
-import { config } from '../config.js'
 
 import { runReconcileStalePrnProjections } from './run-reconcile-stale-prn-projections.js'
 
@@ -31,7 +30,6 @@ vi.mock(
     reconcileStalePrnProjections: vi.fn()
   })
 )
-vi.mock('../config.js', () => ({ config: { get: vi.fn() } }))
 
 const cleanResult = {
   total: 2,
@@ -68,36 +66,26 @@ describe('runReconcileStalePrnProjections', () => {
     )
     vi.mocked(createWasteBalanceService).mockReturnValue(/** @type {*} */ ({}))
     vi.mocked(reconcileStalePrnProjections).mockResolvedValue(cleanResult)
-    vi.mocked(config.get).mockReturnValue(false)
   })
 
-  it('runs in dry-run when the feature flag is off, and reports the summary', async () => {
+  it('sweeps under the lock and reports the summary', async () => {
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(config.get).toHaveBeenCalledWith(
-      'featureFlags.reconcileStalePrnProjections'
-    )
     expect(mockServer.db.collection).toHaveBeenCalledWith(
       'packaging-recycling-notes'
     )
-    expect(reconcileStalePrnProjections).toHaveBeenCalledWith(
-      expect.anything(),
-      {
-        isDryRun: true
-      }
-    )
+    expect(reconcileStalePrnProjections).toHaveBeenCalled()
     expect(mockServer.locker.lock).toHaveBeenCalledWith(
       'reconcile-stale-prn-projections'
     )
     expect(mockLock.free).toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (dry-run): total=2 drifting=0 repaired=0 folded=0 stamped=0 stillDrifting=0 failed=0'
+        'Reconcile stale PRN projections: total=2 drifting=0 repaired=0 folded=0 stamped=0 stillDrifting=0 failed=0'
     })
   })
 
-  it('repairs and logs each drift finding and failure when the feature flag is on', async () => {
-    vi.mocked(config.get).mockReturnValue(true)
+  it('logs each drift finding and failure', async () => {
     vi.mocked(reconcileStalePrnProjections).mockResolvedValue({
       total: 2,
       drifting: 1,
@@ -122,12 +110,6 @@ describe('runReconcileStalePrnProjections', () => {
 
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(reconcileStalePrnProjections).toHaveBeenCalledWith(
-      expect.anything(),
-      {
-        isDryRun: false
-      }
-    )
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Stale PRN projection: prnId=prn-1 prnNumber=TT2600001 currentStatus=awaiting_acceptance lastAppliedEventNumber=2 unapplied=1 minUnappliedNumber=3 wouldBecomeStatus=awaiting_cancellation'
@@ -137,7 +119,7 @@ describe('runReconcileStalePrnProjections', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Reconcile stale PRN projections (repair): total=2 drifting=1 repaired=1 folded=1 stamped=0 stillDrifting=0 failed=1'
+        'Reconcile stale PRN projections: total=2 drifting=1 repaired=1 folded=1 stamped=0 stillDrifting=0 failed=1'
     })
   })
 

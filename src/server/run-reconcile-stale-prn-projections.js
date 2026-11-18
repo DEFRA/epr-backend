@@ -8,8 +8,6 @@ import {
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 
-import { config } from '../config.js'
-
 /** @import { StartedServer } from '#common/hapi-types.js' */
 /** @import { DriftReport } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js' */
 
@@ -30,7 +28,7 @@ const formatReport = (report) =>
 
 /**
  * `findDrifting` detects the ids behind their ledger in one indexed query; each
- * is then re-read point-wise off the raw collection and, on repair, written back
+ * is then re-read point-wise off the raw collection and written back
  * through the repository's version CAS. Catch-up events come from the
  * waste-balance service over the shared ledger.
  *
@@ -55,8 +53,6 @@ const buildDependencies = async (server) => {
 
 /** @param {StartedServer} server */
 const runReconcile = async (server) => {
-  // Flag off (the default) is diagnostic only; on lets it write the fold back.
-  const isDryRun = !config.get('featureFlags.reconcileStalePrnProjections')
   const deps = await buildDependencies(server)
 
   const {
@@ -69,7 +65,7 @@ const runReconcile = async (server) => {
     failed,
     reports,
     failures
-  } = await reconcileStalePrnProjections(deps, { isDryRun })
+  } = await reconcileStalePrnProjections(deps)
 
   for (const report of reports) {
     logger.info({ message: formatReport(report) })
@@ -81,20 +77,18 @@ const runReconcile = async (server) => {
     })
   }
 
-  const mode = isDryRun ? 'dry-run' : 'repair'
   logger.info({
-    message: `Reconcile stale PRN projections (${mode}): total=${total} drifting=${drifting} repaired=${repaired} folded=${folded} stamped=${stamped} stillDrifting=${stillDrifting} failed=${failed}`
+    message: `Reconcile stale PRN projections: total=${total} drifting=${drifting} repaired=${repaired} folded=${folded} stamped=${stamped} stillDrifting=${stillDrifting} failed=${failed}`
   })
 }
 
 /**
  * Startup sweep for PRN projections whose stored status lags their ledger — the
  * drift a dropped write-back leaves, which the admin list and download read
- * paths never fold away (ADR-0047). Off by default it only reports; the
- * `reconcileStalePrnProjections` flag lets it repair.
+ * paths never fold away (ADR-0047).
  *
- * Findings log at info, not warn: they are for a human to confirm and info
- * keeps them off the OpenSearch alerts. Runs under a cross-instance lock so one
+ * Findings log at info, not warn: repaired drift is not an incident, and info
+ * keeps it off the OpenSearch alerts. Runs under a cross-instance lock so one
  * pod per deploy sweeps.
  *
  * @param {StartedServer} server
