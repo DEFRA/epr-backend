@@ -39,7 +39,7 @@ const mapStatus = (status) => {
 }
 
 /**
- * @template {{ id: string } | { organisationNumber: string }} K
+ * @template {{ id: string } | { organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} K
  * @param {K} key
  * @param {{ name: string; tradingName?: string; registrationType?: string }} org
  */

@@ -18,6 +18,8 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
  * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#domain/organisations/model.js').Material} Material
+ * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
+ * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
 
@@ -43,7 +45,7 @@ const READ_CONCURRENCY = 10
  * @typedef {Object} CreditedTonnageRow
  * @property {string} month - `YYYY-MM`
  * @property {{ reference: string }} organisation - external reference
- * @property {{ accreditationNumber: string, processingType: string, material: Material }} accreditation
+ * @property {{ accreditationNumber: AccreditationNumber, processingType: string, material: Material }} accreditation
  * @property {{ totalCredited: number, eligibleForWasteBalance: number, sentOnDeductions: number }} tonnage
  */
 
@@ -135,6 +137,10 @@ export const buildCreditedTonnageReport = async ({
   // (accreditationNumber null) carry zero-delta submissions and never appear in
   // this report.
   const creditedEntries = entries.filter(
+    /**
+     * @param {LatestSubmittedSummaryLogPerLedger} entry
+     * @returns {entry is LatestSubmittedSummaryLogPerLedger & { ledgerId: { accreditationNumber: AccreditationNumber } }}
+     */
     (entry) => entry.ledgerId.accreditationNumber !== null
   )
 
@@ -148,8 +154,7 @@ export const buildCreditedTonnageReport = async ({
    * @returns {Promise<CreditedTonnageRow[]>}
    */
   const rowsForEntry = async ({ ledgerId, summaryLogId }) => {
-    // creditedEntries holds accredited partitions only.
-    const accreditationNumber = String(ledgerId.accreditationNumber)
+    const { accreditationNumber } = ledgerId
     const ledgerAccreditation = index.get(ledgerKey(ledgerId))
     if (!ledgerAccreditation) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {

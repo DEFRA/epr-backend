@@ -51,6 +51,7 @@ import { createStatusesValidator } from './validation.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  *
  * @typedef {RegistrationParams & { year: Year }} AccreditationParams
  * @typedef {import('#packaging-recycling-notes/repository/port.js').AccreditationNumbers} AccreditationNumbers
@@ -75,13 +76,13 @@ import { createStatusesValidator } from './validation.js'
  *     registrationType?: string
  *   },
  *   issuer: {
- *     organisationNumber: string,
+ *     organisationNumber: OrganisationNumber,
  *     name: string,
  *     tradingName?: string,
  *     registration: {
- *       registrationNumber: string,
+ *       registrationNumber: RegistrationNumber,
  *       accreditation: {
- *         accreditationNumber: string,
+ *         accreditationNumber: AccreditationNumber,
  *         accreditationYear: Year,
  *         wasteProcessingType: WasteProcessingTypeValue,
  *         material: Material,

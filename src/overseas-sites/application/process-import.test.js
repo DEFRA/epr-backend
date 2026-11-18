@@ -3,10 +3,13 @@ import Boom from '@hapi/boom'
 
 import { processOrsImport } from './process-import.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   ORS_FILE_RESULT_STATUS,
   ORS_IMPORT_STATUS
 } from '../domain/import-status.js'
+
+const REGISTRATION_NUMBER = toRegistrationNumber('EPR/AB1234CD/R1')
 
 vi.mock('./process-import-file.js')
 
@@ -89,7 +92,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 3,
       mappingsUpdated: 3,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     }
     vi.mocked(processImportFile).mockResolvedValue(successResult)
@@ -142,7 +145,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 3,
       mappingsUpdated: 3,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     }
     vi.mocked(processImportFile).mockResolvedValue(successResult)
@@ -177,7 +180,7 @@ describe('processOrsImport', () => {
         status: ORS_FILE_RESULT_STATUS.SUCCESS,
         sitesCreated: 5,
         mappingsUpdated: 5,
-        registrationNumber: 'EPR/AB1234CD/R1',
+        registrationNumber: REGISTRATION_NUMBER,
         errors: []
       })
       .mockResolvedValueOnce({
@@ -214,7 +217,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     })
 
@@ -259,7 +262,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     })
 
@@ -304,7 +307,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     })
 
@@ -361,7 +364,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 2,
       mappingsUpdated: 2,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     }
     vi.mocked(processImportFile)
@@ -539,7 +542,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     })
 
@@ -566,7 +569,7 @@ describe('processOrsImport', () => {
       status: ORS_FILE_RESULT_STATUS.SUCCESS,
       sitesCreated: 1,
       mappingsUpdated: 1,
-      registrationNumber: 'EPR/AB1234CD/R1',
+      registrationNumber: REGISTRATION_NUMBER,
       errors: []
     })
     orsImportsRepository.updateStatus

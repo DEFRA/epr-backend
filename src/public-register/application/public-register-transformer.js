@@ -6,6 +6,7 @@
 /** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData, ReportComplianceEntry} from '#reports/application/report-compliance.js' */
+/** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 import {
@@ -63,7 +64,7 @@ function buildReportComplianceFields(periods, submittedDates) {
 
 /**
  * @param {Organisation} organisation
- * @param {string} registrationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {Registration} registration
  * @param {Record<string, string>} reportComplianceFields
  * @returns {PublicRegisterRow}

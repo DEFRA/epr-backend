@@ -1,14 +1,16 @@
 import { formatTonnageMonitoringResults } from '#application/common/material-aggregation.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {{
- *   organisationNumber: string
- *   registrationNumber: string
+ *   organisationNumber: OrganisationNumber
+ *   registrationNumber: RegistrationNumber
  *   year: number
  *   monthNumber: number
  *   month: string
@@ -18,8 +20,8 @@ import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisati
  */
 
 /**
- * @param {string} organisationNumber
- * @param {string} registrationNumber
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  */
 const registrationKey = (organisationNumber, registrationNumber) =>
   `${organisationNumber}:${registrationNumber}`
@@ -40,7 +42,10 @@ const materialByRegistration = (organisations) =>
       .flatMap(({ organisationNumber, registrations }) =>
         Object.entries(registrations).map(
           ([registrationNumber, { material }]) => [
-            registrationKey(organisationNumber, registrationNumber),
+            registrationKey(
+              organisationNumber,
+              toRegistrationNumber(registrationNumber)
+            ),
             material
           ]
         )
