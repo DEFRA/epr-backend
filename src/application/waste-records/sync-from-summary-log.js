@@ -8,7 +8,7 @@ import { classifyRecordChanges } from '#application/summary-logs/classify-record
 import { RECORD_CHANGE } from '#application/summary-logs/record-change.js'
 import { decemberRowCountFor } from '#waste-balances/application/december-credit-total.js'
 import { classifyWasteRecord } from '#waste-balances/application/target-amount.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import {
   isEprMarker,
   SKIP_HEADER_ROW_TEXT
@@ -18,7 +18,9 @@ import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipel
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { TableSchema } from '#domain/summary-logs/table-schemas/index.js'
+ * @import { TableSchemas } from '#domain/summary-logs/table-schemas/index.js'
+ * @import { RowClassificationContext } from '#waste-balances/domain/waste-balance-classification.js'
+ * @import { AccreditedRowClassificationContext } from '#waste-balances/application/update-via-ledger.js'
  * @import { TypedLogger } from '#common/helpers/logging/logger.js'
  * @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -95,7 +97,7 @@ const prepareRows = (headers, rows, rowIdField) => {
  * Only processes tables that have schemas defined.
  *
  * @param {Object} parsedData - The parsed summary log data
- * @param {Record<string, TableSchema>} tableSchemas - The template's table schemas by table name
+ * @param {TableSchemas} tableSchemas
  * @returns {Object} New structure with row data objects built
  */
 const prepareRowsForTransformation = (parsedData, tableSchemas) => {
@@ -124,7 +126,6 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
 }
 
 /**
- * @import { AccreditationValidity } from '#domain/organisations/accreditation.js'
  * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
  * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
@@ -133,24 +134,20 @@ const prepareRowsForTransformation = (parsedData, tableSchemas) => {
 /**
  * @param {object} params
  * @param {ParsedSummaryLog} params.parsedData
- * @param {AccreditationValidity} params.accreditation
+ * @param {AccreditedRowClassificationContext} params.classificationContext
  * @param {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} params.wasteBalanceService
  * @param {{ record: import('#domain/waste-records/model.js').WasteRecord }[]} params.wasteRecords
- * @param {Record<string, TableSchema>} params.tableSchemas
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
  * @param {WasteBalanceLedgerId} params.ledgerId
  */
 const updateWasteBalances = async ({
   ledgerId,
   parsedData,
-  accreditation,
+  classificationContext,
   wasteBalanceService,
   wasteRecords,
-  tableSchemas,
   user,
-  overseasSites,
   summaryLogId
 }) => {
   // We only calculate waste balance for exporters and reprocessor inputs currently
@@ -163,14 +160,7 @@ const updateWasteBalances = async ({
   if (shouldCalculateWasteBalance) {
     await wasteBalanceService.submitSummaryLog(
       wasteRecords.map((r) => r.record),
-      {
-        user,
-        accreditation,
-        overseasSites,
-        summaryLogId,
-        ledgerId,
-        tableSchemas
-      }
+      { user, classificationContext, summaryLogId, ledgerId }
     )
   }
 }
@@ -181,26 +171,22 @@ const updateWasteBalances = async ({
  * `0` for registered-only submissions (`accreditation` is `null`).
  *
  * @param {ValidatedWasteRecord[]} changedRecords
- * @param {Record<string, TableSchema>} tableSchemas
- * @param {AccreditationValidity | null} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {RowClassificationContext} classificationContext
  * @returns {number}
  */
-const decemberWasteRowCountFor = (
-  changedRecords,
-  tableSchemas,
-  accreditation,
-  overseasSites
-) => {
-  if (accreditation === null) {
+const decemberWasteRowCountFor = (changedRecords, classificationContext) => {
+  if (classificationContext.accreditation === null) {
     return 0
   }
 
   const classifiedRows = changedRecords.map(({ record }) =>
-    classifyWasteRecord(record, tableSchemas, accreditation, overseasSites)
+    classifyWasteRecord(record, classificationContext)
   )
 
-  return decemberRowCountFor(classifiedRows, accreditation)
+  return decemberRowCountFor(
+    classifiedRows,
+    classificationContext.accreditation
+  )
 }
 
 /**
@@ -216,9 +202,7 @@ const decemberWasteRowCountFor = (
  *
  * @param {object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {Record<string, TableSchema>} params.tableSchemas
- * @param {AccreditationValidity | null} params.accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
+ * @param {RowClassificationContext} params.classificationContext
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
@@ -226,9 +210,7 @@ const decemberWasteRowCountFor = (
  */
 const countRecordChanges = async ({
   wasteRecords,
-  tableSchemas,
-  accreditation,
-  overseasSites,
+  classificationContext,
   ledgerId,
   ledgerRepository,
   summaryLogRowStatesRepository
@@ -249,9 +231,7 @@ const countRecordChanges = async ({
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
-    tableSchemas,
-    accreditation,
-    overseasSites
+    classificationContext
   })
 
   let created = 0
@@ -276,9 +256,7 @@ const countRecordChanges = async ({
     updated,
     decemberWasteRowCount: decemberWasteRowCountFor(
       changedRecords,
-      tableSchemas,
-      accreditation,
-      overseasSites
+      classificationContext
     )
   }
 }
@@ -297,10 +275,8 @@ const countRecordChanges = async ({
  * @param {object} params
  * @param {SummaryLogFileId} params.summaryLogId
  * @param {WasteBalanceLedgerId} params.ledgerId
- * @param {AccreditationValidity | null} params.accreditation
+ * @param {RowClassificationContext} params.classificationContext
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {Record<string, TableSchema>} params.tableSchemas
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
  * @param {ParsedSummaryLog} params.parsedData
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
@@ -309,10 +285,8 @@ const countRecordChanges = async ({
 const commitStateAndBalance = async ({
   summaryLogId,
   ledgerId,
-  accreditation,
+  classificationContext,
   wasteRecords,
-  tableSchemas,
-  overseasSites,
   parsedData,
   user,
   summaryLogRowStatesRepository,
@@ -321,23 +295,20 @@ const commitStateAndBalance = async ({
   await writeSummaryLogRowStates({
     summaryLogRowStatesRepository,
     wasteRecords: wasteRecords.map((wasteRecord) => wasteRecord.record),
-    tableSchemas,
-    accreditation,
+    classificationContext,
     ledgerId,
-    overseasSites,
     summaryLogId
   })
 
+  const { accreditation } = classificationContext
   if (accreditation) {
     await updateWasteBalances({
       ledgerId,
       parsedData,
-      accreditation,
+      classificationContext: { ...classificationContext, accreditation },
       wasteBalanceService,
       wasteRecords,
-      tableSchemas,
       user,
-      overseasSites,
       summaryLogId
     })
   } else {
@@ -395,7 +366,7 @@ export const syncFromSummaryLog = (dependencies) => {
 
     // 2. Extract row IDs for transformation, using the template validation chose
     const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
-    const { tableSchemas } = getTemplate(summaryLog.year, processingType)
+    const tableSchemas = tableSchemasOf(summaryLog.year, processingType)
     const preparedData = prepareRowsForTransformation(parsedData, tableSchemas)
 
     const {
@@ -411,9 +382,13 @@ export const syncFromSummaryLog = (dependencies) => {
       accreditationNumber,
       year
     }
-    const { accreditation, overseasSites } = classificationContextOf(
-      await registrationForSummaryLog(organisationReadRepository, summaryLog)
-    )
+    /** @type {RowClassificationContext} */
+    const classificationContext = {
+      tableSchemas,
+      ...classificationContextOf(
+        await registrationForSummaryLog(organisationReadRepository, summaryLog)
+      )
+    }
 
     // 3. Transform to waste records
     const wasteRecords = transformFromSummaryLog(preparedData, tableSchemas)
@@ -421,9 +396,7 @@ export const syncFromSummaryLog = (dependencies) => {
     // 4. Classify created/updated against the committed head, before committing
     const metrics = await countRecordChanges({
       wasteRecords,
-      tableSchemas,
-      accreditation,
-      overseasSites,
+      classificationContext,
       ledgerId,
       ledgerRepository,
       summaryLogRowStatesRepository
@@ -434,10 +407,8 @@ export const syncFromSummaryLog = (dependencies) => {
     await commitStateAndBalance({
       summaryLogId: summaryLog.file.id,
       ledgerId,
-      accreditation,
+      classificationContext,
       wasteRecords,
-      tableSchemas,
-      overseasSites,
       parsedData,
       user,
       summaryLogRowStatesRepository,

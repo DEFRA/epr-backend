@@ -427,12 +427,11 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     const repository = summaryLogRowStatesRepository()
 
     // First submission: project and persist the zero-debit sent-on row.
-    const entry = projectSummaryLogRowState(
-      zeroTonnageSentOn,
+    const entry = projectSummaryLogRowState(zeroTonnageSentOn, {
       tableSchemas,
       accreditation,
       overseasSites
-    )
+    })
     await repository.upsertSummaryLogRowStates(
       withNumbers(DEFAULT_LEDGER_ID),
       [entry],
@@ -452,9 +451,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentUpload],
       submittedRowStatesByKey,
-      tableSchemas,
-      accreditation,
-      overseasSites
+      classificationContext: { tableSchemas, accreditation, overseasSites }
     })
 
     expect(changes.get('sentOn:5000')).toBe(RECORD_CHANGE.UNCHANGED)

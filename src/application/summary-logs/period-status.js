@@ -21,14 +21,13 @@ const PERIOD_STATUS = Object.freeze({ OPEN: 'open', CLOSED: 'closed' })
 /** @import {PeriodicReport} from '#reports/repository/port.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
 /** @import {ClassificationContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {TableSchema, TableSchemas} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
 /** @import {LoadsByReportingPeriod, PeriodStatusByRecordChange, RowDetail, RowIdentity} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {PeriodRef} from '#reports/domain/period-key.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {OperatorCategory} from '#reports/domain/operator-category.js' */
 /** @import {RecordChange} from './record-change.js' */
-
-/** @typedef {Record<string, TableSchema>} ProcessingTypeSchemas */
 
 /**
  * A single fold entry produced by classifying one record. Each entry is one
@@ -410,7 +409,7 @@ const classifyAdjustedWasteRecord = ({
  * @param {Map<string, RecordChange>} params.recordChanges
  * @param {Set<string>} params.submittedPeriods
  * @param {Cadence} params.cadence
- * @param {ProcessingTypeSchemas} params.tableSchemas
+ * @param {TableSchemas} params.tableSchemas
  * @param {string[]} params.reportingDateFields
  * @returns {PeriodRef[]}
  */
@@ -494,9 +493,8 @@ const contributesLoadLegs = (
  * @param {Map<string, RecordChange>} params.recordChanges
  * @param {PeriodicReport[]} params.periodicReports
  * @param {Cadence} params.cadence
- * @param {ProcessingTypeSchemas} params.tableSchemas
  * @param {OperatorCategory} params.operatorCategory - the registration's category, as the report uses, so rows land in the periods the report places them in
- * @param {ClassificationContext} params.classificationContext
+ * @param {RowClassificationContext} params.classificationContext
  * @returns {LoadsByReportingPeriod}
  */
 export const classifyByPeriodStatus = ({
@@ -505,10 +503,10 @@ export const classifyByPeriodStatus = ({
   recordChanges,
   periodicReports,
   cadence,
-  tableSchemas,
   operatorCategory,
   classificationContext
 }) => {
+  const { tableSchemas, ...classifierContext } = classificationContext
   const submittedPeriods = buildSubmittedPeriods(periodicReports, cadence)
   const reportingDateFields = reportingDateFieldsFor(operatorCategory)
   const periodContext = {
@@ -539,7 +537,7 @@ export const classifyByPeriodStatus = ({
       )
       if (period) {
         const { transactionAmount, exclusionReasons } =
-          classifyRowForWasteBalance(schema, record.data, classificationContext)
+          classifyRowForWasteBalance(schema, record.data, classifierContext)
         entries.push(
           ...classifyAddedRecord({
             period,
@@ -561,7 +559,7 @@ export const classifyByPeriodStatus = ({
           reportingDateFields,
           submittedPeriods,
           cadence,
-          context: classificationContext
+          context: classifierContext
         })
       )
     }

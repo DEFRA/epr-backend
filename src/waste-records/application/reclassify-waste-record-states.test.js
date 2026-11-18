@@ -227,9 +227,11 @@ describe('reclassifying a projected row state preserves the stamped classificati
   it('drops precision below two decimal places when it stamps and stores the row', () => {
     const stamped = projectSummaryLogRowState(
       fullPrecisionReceivedRecord(fullPrecisionTonnage),
-      reprocessorInputTableSchemas,
-      covering,
-      ORS_VALIDATION_DISABLED
+      {
+        tableSchemas: reprocessorInputTableSchemas,
+        accreditation: covering,
+        overseasSites: ORS_VALIDATION_DISABLED
+      }
     )
 
     expect(twoDecimalPlaceTonnage).not.toBe(fullPrecisionTonnage)
@@ -244,9 +246,11 @@ describe('reclassifying a projected row state preserves the stamped classificati
   it('reproduces the stamped classification when it re-derives from the stored two-decimal-place data', () => {
     const stamped = projectSummaryLogRowState(
       fullPrecisionReceivedRecord(fullPrecisionTonnage),
-      reprocessorInputTableSchemas,
-      covering,
-      ORS_VALIDATION_DISABLED
+      {
+        tableSchemas: reprocessorInputTableSchemas,
+        accreditation: covering,
+        overseasSites: ORS_VALIDATION_DISABLED
+      }
     )
 
     const reclassified = reclassifyWasteRecordState(stamped, toYear(2026), {
