@@ -58,19 +58,14 @@ const COUNT_FOR_RECORD_CHANGE = {
  * @returns {SummaryLogCommit['counts']}
  */
 const countsOf = (wasteRecords, classificationContext, recordChanges) => {
-  const counts = { created: 0, updated: 0 }
-  /** @type {ValidatedWasteRecord[]} */
-  const changed = []
-  for (const wasteRecord of wasteRecords) {
-    const count =
-      COUNT_FOR_RECORD_CHANGE[
-        recordChangeFor(recordChanges, wasteRecord.record)
-      ]
-    if (count) {
-      counts[count] += 1
-      changed.push(wasteRecord)
-    }
-  }
+  /** @param {ValidatedWasteRecord} wasteRecord */
+  const changeOf = ({ record }) =>
+    COUNT_FOR_RECORD_CHANGE[recordChangeFor(recordChanges, record)]
+  const changed = wasteRecords.filter(changeOf)
+  /** @param {'created' | 'updated'} kind */
+  const countOf = (kind) =>
+    changed.filter((wasteRecord) => changeOf(wasteRecord) === kind).length
+  const counts = { created: countOf('created'), updated: countOf('updated') }
 
   return {
     ...counts,
