@@ -13,6 +13,10 @@ import {
 } from '#reports/repository/schema.js'
 import { personSchema } from './report-resource.js'
 
+/**
+ * @import { Cadence } from '#reports/domain/cadence.js'
+ */
+
 const calendarReportSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
@@ -35,6 +39,7 @@ const reportingPeriodSchema = Joi.object({
   report: calendarReportSchema
 })
 
+/** @param {Cadence} cadence */
 const yearCalendarPeriodSchema = (cadence) =>
   reportingPeriodSchema.keys({
     cadence: Joi.string().valid(cadence).required()
