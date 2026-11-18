@@ -80,6 +80,15 @@ export default [
                 'Import the organisation read model through its index.js, or test-support.js in a test.'
             },
             {
+              target: [
+                './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-fixtures|test-support).js',
+                './src/!(*.test).js'
+              ],
+              from: `${ORGANISATION_READ_MODEL}/test-support.js`,
+              message:
+                'Only tests import the organisation read model through test-support.js.'
+            },
+            {
               target: ORGANISATION_READ_MODEL,
               from: [
                 './src/repositories/organisations/mongodb.js',

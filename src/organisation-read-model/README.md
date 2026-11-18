@@ -7,7 +7,7 @@ This is the first module built to [ADR 0027's modular monolith](https://github.c
 Code outside this folder imports from two files only. The `import-x/no-restricted-paths` rule in `eslint.config.js` refuses any other import.
 
 - **`index.js`** exports the port, the plugin that registers it as `organisationReadRepository`, and the domain vocabulary: the `Organisation`, `Registration` and `Accreditation` types, the status constants, and the functions that read standings and timelines. It also exports the stand-in's repository and its plugin, the dev route that writes the stand-in, and the delete the non-prod data reset calls, because the server, the dev routes and the reset wire them in.
-- **`test-support.js`** exports what other modules' tests need: the in-memory repository and its plugin, the MongoDB repository over the stand-in, the test data builders, and helpers that seed the stand-in. Only tests import it.
+- **`test-support.js`** exports what other modules' tests need: the in-memory repository and its plugin, the MongoDB repository over the stand-in, the test data builders, and helpers that seed the stand-in. A second zone in the same rule refuses it outside tests.
 
 ## Inside
 
