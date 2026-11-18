@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from '#organisation-read-model/repository/reg-accred-accreditations.js'
 import { registrationParams } from '#routes/organisations/natural-keys.js'
 import { externalAccreditationPayloadSchema } from './put.schema.js'
 
@@ -31,9 +32,13 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
 export const externalAccreditationPath =
   '/v1/dev/external-accreditations/{registrationNumber}/{year}'
 
+/**
+ * Only 2027 is accepted: the read model loads external accreditations for
+ * that year alone, so one stored for any other year would never be served.
+ */
 export const externalAccreditationParams = Joi.object({
   registrationNumber: registrationParams.registrationNumber,
-  year: yearSchema().required()
+  year: yearSchema().valid(REG_ACCRED_ACCREDITATION_YEAR).required()
 })
 
 /**

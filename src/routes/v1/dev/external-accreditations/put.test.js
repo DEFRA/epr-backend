@@ -369,6 +369,24 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
+  it.for([2026, 2028])(
+    'refuses %i, as the read model loads external accreditations for 2027 only',
+    async (otherYear) => {
+      const { server, externalAccreditationsRepository } = await serverWith({
+        devEndpoints: true
+      })
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/external-accreditations/${registrationNumber}/${otherYear}`,
+        payload
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+    }
+  )
+
   it('refuses a request without an accreditation', async () => {
     const { server } = await serverWith({ devEndpoints: true })
 
