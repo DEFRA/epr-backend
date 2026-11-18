@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { yearSchema } from '#common/validation/year-schema.js'
+import { toPerson } from '#reports/domain/person.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import {
   cadenceSchema,
@@ -13,9 +14,10 @@ import {
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { Person } from '#reports/domain/person.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Issue } from '#reports/application/report-mandatory/assert-report-data-complete.js'
- * @import { ExportActivity, PrnData, RecyclingActivity, Report, ReportResubmissionRequired, ReportSource, ReportStale, ReportStatus as StoredStatus, ReportStatusObject, ReportSubmittedSlot, UserSummary, WasteSent } from '#reports/repository/port.js'
+ * @import { ExportActivity, PrnData, RecyclingActivity, Report, ReportResubmissionRequired, ReportSource, ReportStale, ReportStatus as StoredStatus, ReportStatusObject, ReportSubmittedSlot, WasteSent } from '#reports/repository/port.js'
  */
 
 /**
@@ -28,8 +30,6 @@ import {
  *   canRequestResubmission: boolean,
  *   incompleteSummaryLogRows?: IncompleteSummaryLogRows
  * }} PreviewBody
- *
- * @typedef {{ name?: string, position: string }} Person
  *
  * @typedef {Omit<RecyclingActivity, 'tonnageRecycled' | 'tonnageNotRecycled'>
  *   & Partial<Pick<RecyclingActivity, 'tonnageRecycled' | 'tonnageNotRecycled'>>} ServedRecyclingActivity
@@ -73,12 +73,6 @@ import {
 
 /** Status of a report that has not been created yet. Never stored. */
 export const PREVIEW_STATUS = /** @type {const} */ ('not_started')
-
-/**
- * @param {UserSummary} user
- * @returns {Person}
- */
-const toPerson = ({ name, position }) => ({ ...(name && { name }), position })
 
 /**
  * @param {ReportStatusObject} status
@@ -237,7 +231,7 @@ export const toReportDetail = (body) => {
   return detail
 }
 
-const personSchema = Joi.object({
+export const personSchema = Joi.object({
   name: Joi.string(),
   position: Joi.string().required()
 })

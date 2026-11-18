@@ -804,6 +804,98 @@ describe('report routes by natural key', () => {
       ).toEqual([7, 8, 9, 10, 11, 12])
     })
 
+    /**
+     * The calendar's periods, read while checking that nothing in the body is
+     * a database id or a null.
+     * @param {string} [query]
+     * @returns {Promise<Array<{ period: number, submissionNumber: number, report?: Record<string, unknown> }>>}
+     */
+    const servedPeriods = async (query = '') => {
+      const response = await server.inject({
+        ...calendar(REPROCESSOR_NUMBER),
+        url: `${calendar(REPROCESSOR_NUMBER).url}${query}`
+      })
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      /** @type {Record<string, { reportingPeriods?: [] }>} */
+      const body = JSON.parse(
+        response.payload,
+        (/** @type {string} */ key, /** @type {unknown} */ value) => {
+          expect(key).not.toBe('id')
+          expect(value).not.toBeNull()
+          return value
+        }
+      )
+      return Object.values(body).flatMap((kind) => kind.reportingPeriods ?? [])
+    }
+
+    const [, accreditedStream] = streams
+    const accreditedSubmission = (/** @type {number} */ period) =>
+      submission(accreditedStream.reports, period)
+
+    it.each(['', '?expand=submissions'])(
+      'serves a report only where there is one, and its submission only once submitted (%s)',
+      async (query) => {
+        const periods = await servedPeriods(query)
+
+        expect(periods.find(({ period }) => period === 8)?.report).toEqual({
+          status: REPORT_STATUS.SUBMITTED,
+          submissionNumber: 1,
+          submittedAt: expect.any(String),
+          submittedBy: {
+            name: expect.any(String),
+            position: expect.any(String)
+          }
+        })
+        expect(periods.find(({ period }) => period === 7)?.report).toEqual({
+          status: REPORT_STATUS.IN_PROGRESS,
+          submissionNumber: 1
+        })
+        expect(periods.find(({ period }) => period === 9)).not.toHaveProperty(
+          'report'
+        )
+      }
+    )
+
+    it('serves no submission for a report unsubmitted since', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `${accreditedSubmission(8)}/unsubmit`,
+        ...asServiceMaintainerWrite()
+      })
+
+      const periods = await servedPeriods()
+
+      expect(periods.find(({ period }) => period === 8)?.report).toEqual({
+        status: REPORT_STATUS.READY_TO_SUBMIT,
+        submissionNumber: 1
+      })
+    })
+
+    it('serves an earlier submission when asked to expand them', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `${accreditedSubmission(8)}/request-resubmission`,
+        ...asOperator()
+      })
+      await createAndSubmitReport(reportsRepository, {
+        ...numbersOf(accreditedRegistration),
+        year: YEAR,
+        cadence: CADENCE.monthly,
+        period: 8,
+        submissionNumber: 2,
+        prn: accreditedStream.prn
+      })
+
+      const periods = await servedPeriods('?expand=submissions')
+
+      expect(
+        periods
+          .filter(({ period }) => period === 8)
+          .map(({ report }) => report?.submissionNumber)
+      ).toEqual([1, 2])
+    })
+
     it('serves only the requested year', async () => {
       const response = await server.inject(calendar(REPROCESSOR_NUMBER, 2025))
 
