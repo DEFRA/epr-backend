@@ -17,13 +17,21 @@ import { personSchema } from './report-resource.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  */
 
+/** @param {Joi.Schema} schema */
+const whileSubmitted = (schema) =>
+  schema.when('status', {
+    is: REPORT_STATUS.SUBMITTED,
+    then: Joi.required(),
+    otherwise: Joi.forbidden()
+  })
+
 const calendarReportSchema = Joi.object({
   status: Joi.string()
     .valid(...Object.values(REPORT_STATUS))
     .required(),
   submissionNumber: Joi.number().integer().required(),
-  submittedAt: Joi.string(),
-  submittedBy: personSchema
+  submittedAt: whileSubmitted(Joi.string()),
+  submittedBy: whileSubmitted(personSchema)
 })
 
 const reportingPeriodSchema = Joi.object({

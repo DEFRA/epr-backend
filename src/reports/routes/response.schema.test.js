@@ -62,7 +62,19 @@ describe('reportsYearCalendarResponseSchema', () => {
     ],
     ['a null submittedAt', { ...validReport, submittedAt: null }],
     ['a null submittedBy', { ...validReport, submittedBy: null }],
-    ['a null report', null]
+    ['a null report', null],
+    [
+      'a submitted report without its submission time',
+      { ...validReport, submittedAt: undefined }
+    ],
+    [
+      'a submitted report without its submitter',
+      { ...validReport, submittedBy: undefined }
+    ],
+    [
+      'a submission on a report not submitted now',
+      { ...validReport, status: REPORT_STATUS.READY_TO_SUBMIT }
+    ]
   ])('rejects %s', (_, report) => {
     const response = accreditedCalendar([{ ...validItem, report }])
 
