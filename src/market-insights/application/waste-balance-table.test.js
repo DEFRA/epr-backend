@@ -89,6 +89,16 @@ const changingRegistrations = (organisation, change) => ({
 })
 
 /**
+ * The registration with its standing worked out from its timelines, as the
+ * read model serves it while 2026 is open.
+ *
+ * @param {Registration} registration
+ * @returns {Registration}
+ */
+const withOpenYearStanding = (registration) =>
+  withStandingThrough(registration, toYear(2026))
+
+/**
  * Records `served` as the read model's view of `stored`, each registration's
  * standing worked out from its timelines as the read model does while 2026 is
  * open.
@@ -99,12 +109,7 @@ const changingRegistrations = (organisation, change) => ({
  * @returns {T}
  */
 const serving = (stored, served) => {
-  servedFor.set(
-    stored,
-    changingRegistrations(served, (registration) =>
-      withStandingThrough(registration, toYear(2026))
-    )
-  )
+  servedFor.set(stored, changingRegistrations(served, withOpenYearStanding))
   return stored
 }
 
@@ -138,16 +143,15 @@ const APPROVED_STATUS = {
 
 /**
  * The served organisation with each registration's accreditations changed by
- * `change`.
+ * `change`, its standing worked out afresh from the changed timelines.
  *
  * @param {object} stored
  * @param {(registration: any) => object} change
  */
 const servedWith = (stored, change) =>
-  changingRegistrations(servedOf(stored), (registration) => ({
-    ...registration,
-    ...change(registration)
-  }))
+  changingRegistrations(servedOf(stored), (registration) =>
+    withOpenYearStanding({ ...registration, ...change(registration) })
+  )
 
 /** The served registration with no accreditation, registered only all year. */
 const asRegisteredOnly = () => ({ accreditations: {} })
