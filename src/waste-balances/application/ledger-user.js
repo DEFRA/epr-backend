@@ -1,8 +1,11 @@
+/** @import { SubmitUser } from '#domain/summary-logs/worker/port.js' */
+/** @import { LedgerUserSummary } from '#waste-balances/repository/ledger-schema.js' */
+
 /**
  * The submitting operator as a ledger event records them.
  *
- * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} user
- * @returns {import('../repository/ledger-schema.js').LedgerUserSummary}
+ * @param {SubmitUser} user
+ * @returns {LedgerUserSummary}
  */
 export const toLedgerUser = ({ id, name, email }) => ({
   id,
