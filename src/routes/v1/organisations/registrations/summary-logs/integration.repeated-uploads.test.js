@@ -4,7 +4,8 @@ import { ObjectId } from 'mongodb'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
+import { createReportsService } from '#reports/application/report-service.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -24,6 +25,7 @@ import {
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
+  createTestSubmitterWorker,
   createUploadPayload,
   pollForValidation,
   pollWhileStatus,
@@ -227,36 +229,16 @@ describe('Repeated uploads of identical data', () => {
         })
       })
 
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: summaryLogExtractor,
-        wasteBalanceService: createWasteBalanceService(ledgerRepository),
-        summaryLogRowStatesRepository,
-        ledgerRepository,
+      const summaryLogsWorker = createTestSubmitterWorker({
+        logger: mockLogger,
+        summaryLogsRepository,
         organisationReadRepository,
-        logger: mockLogger
+        wasteBalanceService: createWasteBalanceService(ledgerRepository),
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        ),
+        validateSummaryLog
       })
-
-      const summaryLogsWorker = {
-        validate: validateSummaryLog,
-        submit: async (summaryLogId) => {
-          await new Promise((resolve) => setImmediate(resolve))
-
-          const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } =
-            /** @type {import('#repositories/summary-logs/port.js').SummaryLogVersion} */ (
-              existing
-            )
-
-          await syncWasteRecords(summaryLog, {
-            id: 'test-user',
-            email: 'test-user@example.com'
-          })
-
-          await summaryLogsRepository.update(summaryLogId, version, {
-            status: SUMMARY_LOG_STATUS.SUBMITTED
-          })
-        }
-      }
 
       server = await createTestServer({
         repositories: {

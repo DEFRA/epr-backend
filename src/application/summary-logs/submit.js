@@ -9,22 +9,22 @@ import {
 } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
+import { toLedgerUser } from '#waste-balances/application/ledger-user.js'
+import { ledgerIdFor } from './ledger-id.js'
+import { supersedeIfStale } from './supersede-if-stale.js'
 
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { SummaryLogExtractor } from '#domain/summary-logs/extractor/port.js'
+ * @import { SummaryLogCommit } from '#domain/summary-logs/commit.js'
  * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
  * @import { ReportsService } from '#reports/application/report-service.js'
  * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
  * @import { OrganisationReadRepository } from '#organisation-read-model/index.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
- * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
- * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  */
 
 /**
@@ -32,11 +32,8 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {OrganisationReadRepository} organisationReadRepository
- * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
- * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {ReturnType<typeof createWasteBalanceService>} wasteBalanceService
  * @property {ReportsService} reportsService
- * @property {SummaryLogExtractor} summaryLogExtractor
  * @property {SubmitUser} user
  * @property {OnSummaryLogUploaded} onSummaryLogUploaded
  */
@@ -85,27 +82,56 @@ const assertNoReportSubmittedSinceCreation = async (
 }
 
 /**
- * Syncs the summary log's waste records, transitions it to SUBMITTED and records
- * the submission metrics.
+ * @param {SubmittableSummaryLog} summaryLog
+ * @param {SummaryLogCommit} commit
+ * @param {SubmitDependencies} deps
+ * @returns {Promise<void>}
+ */
+const appendSubmittedEvent = async (
+  summaryLog,
+  { payload },
+  { wasteBalanceService, user }
+) => {
+  const ledgerId = ledgerIdFor(summaryLog)
+  const summaryLogId = summaryLog.file.id
+
+  if (ledgerId.accreditationNumber === null) {
+    await wasteBalanceService.commitSummaryLogSubmittedEvent(
+      ledgerId,
+      { summaryLogId, ...payload },
+      toLedgerUser(user)
+    )
+    return
+  }
+
+  await wasteBalanceService.submitSummaryLog({
+    ledgerId,
+    summaryLogId,
+    totals: payload,
+    user
+  })
+}
+
+/**
+ * Appends the summary-log-submitted event validation worked out, transitions
+ * the summary log to SUBMITTED and records the submission metrics.
  *
  * @param {SummaryLogId} summaryLogId
  * @param {number} version
  * @param {SubmittableSummaryLog} summaryLog
+ * @param {SummaryLogCommit} commit
  * @param {SubmitDependencies} deps
  * @returns {Promise<void>}
  */
-const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
-  const {
-    logger,
-    summaryLogsRepository,
-    organisationReadRepository,
-    summaryLogRowStatesRepository,
-    ledgerRepository,
-    wasteBalanceService,
-    summaryLogExtractor,
-    user,
-    onSummaryLogUploaded
-  } = deps
+const commitAndFinalise = async (
+  summaryLogId,
+  version,
+  summaryLog,
+  commit,
+  deps
+) => {
+  const { logger, summaryLogsRepository, onSummaryLogUploaded } = deps
+  const { created, updated, decemberWasteRowCount } = commit.counts
 
   const {
     file: { id: fileId, name: filename }
@@ -124,19 +150,9 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     }
   })
 
-  const sync = syncFromSummaryLog({
-    extractor: summaryLogExtractor,
-    wasteBalanceService,
-    organisationReadRepository,
-    summaryLogRowStatesRepository,
-    ledgerRepository,
-    logger
-  })
-
-  const { created, updated, decemberWasteRowCount } =
-    await summaryLogMetrics.timedSubmission({ processingType }, () =>
-      sync(summaryLog, user)
-    )
+  await summaryLogMetrics.timedSubmission({ processingType }, () =>
+    appendSubmittedEvent(summaryLog, commit, deps)
+  )
 
   await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
   await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
@@ -175,14 +191,20 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
 }
 
 /**
- * Submits a summary log by syncing its waste records and updating status.
+ * Submits a validated summary log by committing what validation saved, or
+ * supersedes it when that can no longer be committed as validated.
  *
  * @param {SummaryLogId} summaryLogId
  * @param {SubmitDependencies} deps
  * @returns {Promise<void>}
  */
 export const submitSummaryLog = async (summaryLogId, deps) => {
-  const { summaryLogsRepository, reportsService } = deps
+  const {
+    logger,
+    summaryLogsRepository,
+    organisationReadRepository,
+    reportsService
+  } = deps
 
   const existing = await summaryLogsRepository.findById(summaryLogId)
 
@@ -206,5 +228,17 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     reportsService
   )
 
-  await syncAndFinalise(summaryLogId, version, submittableLog, deps)
+  const { commit } = await supersedeIfStale({
+    summaryLogsRepository,
+    organisationReadRepository,
+    logger,
+    summaryLog,
+    summaryLogId,
+    version
+  })
+  if (!commit) {
+    return
+  }
+
+  await commitAndFinalise(summaryLogId, version, submittableLog, commit, deps)
 }

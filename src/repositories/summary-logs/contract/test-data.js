@@ -11,6 +11,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { hashClassificationContext } from '#application/summary-logs/classification-context-hash.js'
+import { registrationForSummaryLog } from '#application/summary-logs/registration-for-summary-log.js'
 import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
@@ -61,6 +62,28 @@ export const buildSummaryLogCommit = (overrides = {}) => ({
   counts: { created: 0, updated: 0, decemberWasteRowCount: 0 },
   ...overrides
 })
+
+/**
+ * What validation saves for a summary log, classified against the
+ * registration the read model serves for it now.
+ *
+ * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository
+ * @param {Parameters<typeof registrationForSummaryLog>[1]} summaryLog
+ * @param {Partial<import('#domain/summary-logs/commit.js').SummaryLogCommit>} [overrides]
+ */
+export const buildSummaryLogCommitFor = async (
+  organisationReadRepository,
+  summaryLog,
+  overrides = {}
+) =>
+  buildSummaryLogCommit({
+    contextHash: hashClassificationContext(
+      classificationContextOf(
+        await registrationForSummaryLog(organisationReadRepository, summaryLog)
+      )
+    ),
+    ...overrides
+  })
 
 // ============================================================================
 // Summary Log Factory

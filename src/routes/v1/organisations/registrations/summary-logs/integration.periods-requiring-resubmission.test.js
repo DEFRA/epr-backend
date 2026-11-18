@@ -636,17 +636,11 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         env,
         'sl-first',
         'file-first',
-        createExporterUploadData([refusedJanuaryExport]),
+        createExporterUploadData([
+          { ...refusedJanuaryExport, dateRepatriated: storedDateRepatriated }
+        ]),
         exporterMeta
       )
-      // Submit stores rows without reading their dates, so swapping the file
-      // here stores the value as an upload from before dates were read would.
-      env.fileDataMap['file-first'] = {
-        meta: exporterMeta,
-        data: createExporterUploadData([
-          { ...refusedJanuaryExport, dateRepatriated: storedDateRepatriated }
-        ])
-      }
       await submitAndPoll(env, 'sl-first')
       await generateAndSubmitReport(env, JANUARY_2026)
       await generateAndSubmitReport(env, FEBRUARY_2026)
