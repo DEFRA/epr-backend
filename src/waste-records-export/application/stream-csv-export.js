@@ -48,21 +48,19 @@ import { loadSummaryLogMap } from './load-summary-log-map.js'
  */
 
 /**
+ * Natural order ('9' before '10') that still works for non-numeric rowIds.
+ * Built once: `localeCompare` with options builds a collator per call.
+ */
+const naturalOrder = new Intl.Collator(undefined, { numeric: true }).compare
+
+/**
  * @param {Pick<SummaryLogRowState, 'wasteRecordType' | 'rowId'>} a
  * @param {Pick<SummaryLogRowState, 'wasteRecordType' | 'rowId'>} b
  * @returns {number}
  */
-export const sortRowStates = (a, b) => {
-  const t = a.wasteRecordType.localeCompare(b.wasteRecordType)
-  // `numeric: true` gives natural ordering ('9' before '10') while still
-  // working for non-numeric rowIds.
-  return (
-    t ||
-    String(a.rowId).localeCompare(String(b.rowId), undefined, {
-      numeric: true
-    })
-  )
-}
+export const sortRowStates = (a, b) =>
+  a.wasteRecordType.localeCompare(b.wasteRecordType) ||
+  naturalOrder(String(a.rowId), String(b.rowId))
 
 /**
  * Surface a row state's stored data in the schema's canonical types — the same
