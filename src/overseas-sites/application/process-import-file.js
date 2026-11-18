@@ -5,7 +5,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
 /**
  * @import { TypedLogger } from '#common/hapi-types.js'
  * @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js'
- * @import { OrganisationNumber } from '#domain/organisations/numbers.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository, SystemLogHumanActor } from '#repositories/system-logs/port.js'
  */
@@ -18,7 +18,7 @@ import { ORS_FILE_RESULT_STATUS } from '#overseas-sites/domain/import-status.js'
  * @typedef {{
  *   errors: OrsFileError[]
  *   mappingsUpdated: number
- *   registrationNumber: string | null
+ *   registrationNumber: RegistrationNumber | null
  *   sitesCreated: number
  *   status: string
  * }} OrsFileResult
@@ -212,7 +212,7 @@ const resolveRegistration = async (
  *   organisationId: string
  *   organisationNumber: OrganisationNumber
  *   registrationId: string
- *   registrationNumber: string
+ *   registrationNumber: RegistrationNumber
  *   sitesCreated: number
  *   mappingsUpdated: number
  * }} importCompleted
@@ -256,7 +256,7 @@ const recordImportSystemLog = async (
 }
 
 /**
- * @param {string | null} registrationNumber
+ * @param {RegistrationNumber | null} registrationNumber
  * @param {OrsFileError[]} errors
  * @returns {OrsFileResult}
  */

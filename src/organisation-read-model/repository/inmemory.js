@@ -1,5 +1,6 @@
 import { organisationInYear } from './organisation-in-year.js'
 import { findPage } from '#repositories/organisations/inmemory-find.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
@@ -13,9 +14,9 @@ import { findPage } from '#repositories/organisations/inmemory-find.js'
 const searchable = (organisation) => ({
   organisationNumber: organisation.organisationNumber,
   companyDetails: { name: organisation.name },
-  registrations: Object.keys(organisation.registrations).map(
-    (registrationNumber) => ({ registrationNumber })
-  ),
+  registrations: Object.keys(organisation.registrations).map((number) => ({
+    registrationNumber: toRegistrationNumber(number)
+  })),
   accreditations: Object.values(organisation.registrations).flatMap(
     (registration) =>
       Object.values(registration.accreditations).map(

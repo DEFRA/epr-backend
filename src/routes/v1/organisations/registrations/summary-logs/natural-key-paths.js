@@ -3,12 +3,13 @@ import { toUploadCallbackPath } from '#common/helpers/auth/upload-callback-signa
 /**
  * @import { UploadCallbackPath } from '#common/helpers/auth/upload-callback-signature.js'
  * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
  * @typedef {{
- *   organisationNumber: string,
- *   registrationNumber: string,
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
  *   year: Year,
  *   accredited: boolean,
  *   summaryLogId: string

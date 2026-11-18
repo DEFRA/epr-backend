@@ -65,7 +65,7 @@ export const LOG_OPERATION_BY_EVENT_KIND = Object.freeze({
  * the rejection as data; the contextual HTTP-shaped error is built here, where
  * the ledger identity is in hand.
  *
- * @type {Record<import('#packaging-recycling-notes/domain/prn-transition.js').PrnLedgerRejection, (accreditationNumber: string, refusal: PrnLedgerRejectionError) => Error>}
+ * @type {Record<import('#packaging-recycling-notes/domain/prn-transition.js').PrnLedgerRejection, (accreditationNumber: import('#domain/organisations/numbers.js').AccreditationNumber, refusal: PrnLedgerRejectionError) => Error>}
  */
 const REJECTION_TO_ERROR = Object.freeze({
   [PRN_COMMAND_REJECTION.NO_LEDGER]: (accreditationNumber) =>
@@ -91,7 +91,7 @@ const REJECTION_TO_ERROR = Object.freeze({
  * the classes the routes already map, and pass through untouched.
  *
  * @param {Error} error - the error the domain returned
- * @param {string} accreditationNumber
+ * @param {import('#domain/organisations/numbers.js').AccreditationNumber} accreditationNumber
  * @returns {Error}
  */
 export const toTransitionError = (error, accreditationNumber) => {
