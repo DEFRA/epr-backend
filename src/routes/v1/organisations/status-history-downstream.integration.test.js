@@ -142,13 +142,9 @@ const storePrnAwaitingAuthorisation = async (db, organisation) => {
  * @param {Organisation} organisation
  */
 const storeLedgerWithBalance = async (db, organisation) => {
-  const [registration] = organisation.registrations
   const ledgerRepository = (await createMongoLedgerRepository(db))()
   await ledgerRepository.appendEvents([
     buildLedgerEvent({
-      organisationId: organisation.id,
-      registrationId: registration.id,
-      accreditationId: /** @type {string} */ (registration.accreditationId),
       ...numbersOf(organisation),
       number: 1,
       payload: { summaryLogId: 'log-1', creditTotal: 500 },

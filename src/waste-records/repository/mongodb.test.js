@@ -15,12 +15,7 @@ import {
   SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
 } from './mongodb.js'
 import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
-import {
-  buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID,
-  registrationNumbersOf,
-  withNumbers
-} from './test-data.js'
+import { buildSummaryLogRowStateEntry, DEFAULT_LEDGER_ID } from './test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
@@ -153,11 +148,11 @@ describe('ensureSummaryLogRowStatesCollection', () => {
 
     await ensureSummaryLogRowStatesCollection(mongoClient.db(DATABASE_NAME))
     const entry = buildSummaryLogRowStateEntry()
-    const ledger2026 = withNumbers({
+    const ledger2026 = {
       ...DEFAULT_LEDGER_ID,
-      accreditationId: null,
+      accreditationNumber: null,
       year: toYear(2026)
-    })
+    }
     await repository.upsertSummaryLogRowStates(
       ledger2026,
       [entry],
@@ -236,7 +231,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       await Promise.all(
         summaryLogIds.map((summaryLogId) =>
           repository.upsertSummaryLogRowStates(
-            withNumbers(DEFAULT_LEDGER_ID),
+            DEFAULT_LEDGER_ID,
             [entry],
             summaryLogId
           )
@@ -246,7 +241,8 @@ describe('summary-log row states repository - mongodb implementation', () => {
       const [first, ...rest] = await Promise.all(
         summaryLogIds.map((summaryLogId) =>
           repository.findRowStatesForSummaryLogFile(
-            ...registrationNumbersOf(DEFAULT_LEDGER_ID),
+            DEFAULT_LEDGER_ID.organisationNumber,
+            DEFAULT_LEDGER_ID.registrationNumber,
             summaryLogId
           )
         )
@@ -269,7 +265,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
       await Promise.all(
         Array.from({ length: CONCURRENT_WRITERS }, () =>
           repository.upsertSummaryLogRowStates(
-            withNumbers(DEFAULT_LEDGER_ID),
+            DEFAULT_LEDGER_ID,
             [entry],
             'log-1'
           )
@@ -277,14 +273,15 @@ describe('summary-log row states repository - mongodb implementation', () => {
       )
 
       const history = await repository.findRowStatesForSummaryLogFile(
-        ...registrationNumbersOf(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID.organisationNumber,
+        DEFAULT_LEDGER_ID.registrationNumber,
         'log-1'
       )
       expect(history).toHaveLength(1)
       expect(history[0].summaryLogIds).toEqual(['log-1'])
 
       const committed = await repository.findWasteRecordStatesForSummaryLog(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         'log-1'
       )
       expect(committed).toHaveLength(1)
@@ -308,7 +305,7 @@ describe('summary-log row states repository - mongodb implementation', () => {
 
       await expect(
         repository.upsertSummaryLogRowStates(
-          withNumbers(DEFAULT_LEDGER_ID),
+          DEFAULT_LEDGER_ID,
           [buildSummaryLogRowStateEntry()],
           toSummaryLogFileId('log-1')
         )
@@ -348,7 +345,7 @@ describe('write round-trip count', () => {
       )
       return countCommands(monitoredClient, () =>
         repository.upsertSummaryLogRowStates(
-          withNumbers(DEFAULT_LEDGER_ID),
+          DEFAULT_LEDGER_ID,
           entries,
           summaryLogId
         )
@@ -413,7 +410,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
       overseasSites
     })
     await repository.upsertSummaryLogRowStates(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       [entry],
       'log-1'
     )
@@ -421,7 +418,7 @@ describe('negative-zero classification survives the Mongo round-trip', () => {
     // Read the submitted state back through Mongo, then compare the identical
     // row's fresh projection against it — exactly what a resubmission does.
     const submitted = await repository.findWasteRecordStatesForSummaryLog(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       'log-1'
     )
     const submittedRowStatesByKey = new Map(
