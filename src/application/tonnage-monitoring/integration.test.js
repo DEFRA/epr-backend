@@ -73,6 +73,7 @@ const createRowState = ({
   organisationId,
   registrationId,
   accreditationId = null,
+  year = 2026,
   wasteRecordType,
   processingType,
   data,
@@ -81,6 +82,7 @@ const createRowState = ({
   organisationNumber: String(ORGANISATION_NUMBERS[organisationId]),
   registrationNumber: registrationNumberFor(registrationId),
   accreditationNumber: accreditationId,
+  year,
   wasteRecordType,
   rowId: `row-${Math.random()}`,
   processingType,
@@ -178,6 +180,7 @@ const submittedSummaryLogEvent = ({
   registrationId,
   registrationNumber = registrationNumberFor(registrationId),
   accreditationId,
+  year = 2026,
   summaryLogId,
   number,
   year = REPORT_YEAR
@@ -220,14 +223,18 @@ describe('aggregateTonnageByMaterial - Integration', () => {
 
     const submissions = new Map()
     for (const row of rows) {
-      submissions.set(`${row.registrationNumber}::${row.accreditationNumber}`, {
-        organisationId: Object.keys(ORGANISATION_NUMBERS).find(
-          (id) => String(ORGANISATION_NUMBERS[id]) === row.organisationNumber
-        ),
-        registrationNumber: row.registrationNumber,
-        accreditationId: row.accreditationNumber,
-        summaryLogId: row.summaryLogIds[0]
-      })
+      submissions.set(
+        `${row.registrationNumber}::${row.accreditationNumber}::${row.year}`,
+        {
+          organisationId: Object.keys(ORGANISATION_NUMBERS).find(
+            (id) => String(ORGANISATION_NUMBERS[id]) === row.organisationNumber
+          ),
+          registrationNumber: row.registrationNumber,
+          accreditationId: row.accreditationNumber,
+          year: row.year,
+          summaryLogId: row.summaryLogIds[0]
+        }
+      )
     }
 
     await db
@@ -819,6 +826,40 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     const result = await aggregate()
 
     expect(result.total).toBe(130)
+  })
+
+  it('counts a December 2026 export once when a 2027 summary log row also carries it', async () => {
+    vi.setSystemTime(new Date('2027-01-15T10:00:00.000Z'))
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC)
+        ])
+      )
+
+    const exportedInDecember2026 = (year) =>
+      createRowState({
+        organisationId: orgId1,
+        registrationId: regId1,
+        year,
+        summaryLogId: `sl-${regId1}-${year}`,
+        wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+        processingType: PROCESSING_TYPES.EXPORTER,
+        data: {
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 40,
+          DATE_OF_EXPORT: '2026-12-28'
+        }
+      })
+
+    await submitRows([
+      exportedInDecember2026(2026),
+      exportedInDecember2026(2027)
+    ])
+
+    const result = await aggregate()
+
+    expect(result.total).toBe(40)
   })
 
   it('excludes records without dispatch date', async () => {

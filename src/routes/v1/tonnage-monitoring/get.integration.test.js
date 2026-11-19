@@ -69,6 +69,7 @@ const seedExporterRow = (db, tonnage, dateOfExport) =>
     organisationNumber: String(orgNumber),
     registrationNumber: regNumber,
     accreditationNumber: null,
+    year: 2026,
     rowId: 'row-1',
     wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
     processingType: PROCESSING_TYPES.EXPORTER,

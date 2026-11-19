@@ -186,6 +186,12 @@ const buildValidRecordMatchStage = () => ({
   }
 })
 
+// A later year's rows can carry earlier-year dates; counting them would count
+// the same load in both years' ledgers.
+const buildOwnYearMatchStage = () => ({
+  $match: { $expr: { $eq: [buildYearExpression(), '$year'] } }
+})
+
 const buildDateFieldsStage = () => ({
   $addFields: {
     year: buildYearExpression(),
@@ -225,6 +231,7 @@ const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
   buildLatestSubmittedRowStateMatchStage(latestSubmittedSummaryLogIds),
   buildComputedFieldsStage(),
   buildValidRecordMatchStage(),
+  buildOwnYearMatchStage(),
   buildDateFieldsStage(),
   buildTonnageGroupStage(),
   buildFlattenStage()
