@@ -12,7 +12,7 @@ import {
 } from './helpers.js'
 
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
-/** @import {Registration} from '#organisation-read-model/index.js' */
+/** @import {Registration} from '#organisation-read-model/domain/model.js' */
 
 /**
  * Validates that the material in the spreadsheet matches the registration's

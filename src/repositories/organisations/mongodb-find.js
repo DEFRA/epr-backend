@@ -1,14 +1,21 @@
 import Boom from '@hapi/boom'
 
-import { buildFindFilter } from './find-filter.js'
-import { mapDocumentWithCurrentStatuses } from './helpers.js'
+import {
+  anchoredPattern,
+  escapeRegex,
+  mapDocumentWithCurrentStatuses,
+  normaliseCriteria,
+  parseOrgIdCriterion
+} from './helpers.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Db, Document, Filter } from 'mongodb' */
-/** @import { FindParams } from './administration-port.js' */
+/** @import { FindParams, SearchCriteria } from './administration-port.js' */
 
 /**
- * How the organisations repository reads organisations from MongoDB.
+ * How organisations are read from MongoDB. The organisations repository and
+ * the organisation read repository both read this collection, and share these
+ * reads so they look organisations up and search them the same way.
  */
 
 export const COLLECTION_NAME = 'epr-organisations'
@@ -75,6 +82,68 @@ export const findOneAtMinimumVersion = async (
   }
 
   throw Boom.internal('Consistency timeout waiting for minimum version')
+}
+
+/** Matches no organisation, used when a criterion cannot be parsed. */
+const UNSATISFIABLE_FILTER = { _id: { $in: [] } }
+
+/**
+ * @param {string} value
+ * @returns {{ $regex: string, $options: string }} - anchored, case-insensitive
+ */
+const anchoredCaseInsensitive = (value) => ({
+  $regex: anchoredPattern(value),
+  $options: 'i'
+})
+
+/**
+ * @param {string} value
+ * @returns {object} - the organisation-id fragment, unsatisfiable when unparseable
+ */
+const buildOrgIdFilter = (value) => {
+  const orgId = parseOrgIdCriterion(value)
+  return orgId === null ? UNSATISFIABLE_FILTER : { orgId }
+}
+
+/**
+ * Builds the MongoDB filter for a find query. The in-memory equivalent is in
+ * inmemory-find.js; the shared criteria semantics live in helpers.js and the
+ * find contract tests hold the two implementations to the same behaviour.
+ *
+ * @param {SearchCriteria} criteria
+ * @returns {object} - a filter matching organisations satisfying every criterion
+ */
+const buildFindFilter = (criteria) => {
+  const {
+    search,
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber
+  } = normaliseCriteria(criteria)
+
+  const conditions = []
+  if (search !== '') {
+    conditions.push({
+      'companyDetails.name': { $regex: escapeRegex(search), $options: 'i' }
+    })
+  }
+  if (organisationNumber !== '') {
+    conditions.push(buildOrgIdFilter(organisationNumber))
+  }
+  if (registrationNumber !== '') {
+    conditions.push({
+      'registrations.registrationNumber':
+        anchoredCaseInsensitive(registrationNumber)
+    })
+  }
+  if (accreditationNumber !== '') {
+    conditions.push({
+      'accreditations.accreditationNumber':
+        anchoredCaseInsensitive(accreditationNumber)
+    })
+  }
+
+  return conditions.length === 0 ? {} : { $and: conditions }
 }
 
 /**

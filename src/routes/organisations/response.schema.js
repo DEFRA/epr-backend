@@ -17,7 +17,7 @@ import {
   ORGANISATION_STATUSES,
   REGISTRATION_STATUSES,
   STANDING
-} from '#organisation-read-model/index.js'
+} from '#organisation-read-model/domain/model.js'
 
 /*
  * Routes validate responses with `stripUnknown`, so these schemas also decide

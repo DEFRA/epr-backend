@@ -14,9 +14,9 @@ import {
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
-  createInMemoryOrganisationReadRepository
+  buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
@@ -30,7 +30,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/index.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 
 const NOW = new Date('2026-04-15T12:00:00.000Z')
 

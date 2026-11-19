@@ -19,12 +19,9 @@ import {
   PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
-import {
-  buildExternalAccreditation,
-  clearExternalAccreditations,
-  createOrganisationReadRepositoryOnExternalAccreditations,
-  storeExternalAccreditation
-} from '#organisation-read-model/test-support.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
@@ -202,17 +199,18 @@ describe('aggregatePrnTonnage - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationReadRepository =
-        createOrganisationReadRepositoryOnExternalAccreditations(db)({
-          overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-          logger: { warn: () => {} }
-        })
+      organisationReadRepository = createOrganisationReadRepository(db)({
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+        logger: { warn: () => {} }
+      })
       prnRepository = (await createPackagingRecyclingNotesRepository(db, []))(
         createMockLogger()
       )
       await db.collection(PRNS_COLLECTION).deleteMany({})
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await clearExternalAccreditations(db)
+      await db
+        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+        .deleteMany({})
       await ledgerRepository.deleteAllInLedger(ledgerId)
       await ledgerRepository.deleteAllInLedger(otherLedgerId)
     }
@@ -649,8 +647,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       ...organisationWithRegistration(registration),
       accreditations: []
     })
-    await storeExternalAccreditation(
-      db,
+    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
         organisationNumber: externalLedgerId.organisationNumber,
         registrationNumber: externalLedgerId.registrationNumber,
@@ -701,8 +698,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(organisationWithRegistration())
-    await storeExternalAccreditation(
-      db,
+    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
         organisationNumber: ledgerId.organisationNumber,
         registrationNumber: ledgerId.registrationNumber,

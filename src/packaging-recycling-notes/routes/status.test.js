@@ -18,14 +18,16 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/test-support.js'
+import {
   ACCREDITATION_NUMBER,
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/test-support.js'

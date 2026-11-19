@@ -1,11 +1,8 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
-import {
-  HELD_ACCREDITATION_STATUSES,
-  registrationStatusWindows,
-  firstApprovedAt,
-  accreditationForYear
-} from '#organisation-read-model/index.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
+import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -18,13 +15,14 @@ import { toPerson } from '#reports/domain/person.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Registration } from '#organisation-read-model/index.js'
+ * @import { Registration } from '#organisation-read-model/domain/model.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { CalendarDateRange } from '#organisation-read-model/index.js'
+ * @import { CalendarDateRange } from '#organisation-read-model/domain/status-timeline.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
  * @import { Person } from '#reports/domain/person.js'

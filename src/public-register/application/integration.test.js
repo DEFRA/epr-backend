@@ -2,10 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generatePublicRegister } from './generate-public-register.js'
 import { createInMemoryPublicRegisterRepository } from '#public-register/repository/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import {
-  createInMemoryOrganisationReadRepository,
-  buildReadApprovedOrganisation
-} from '#organisation-read-model/test-support.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { buildReadApprovedOrganisation } from '#organisation-read-model/test-support.js'
 import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 
@@ -34,7 +32,7 @@ const servedOrganisation = () => {
     year: 2026
   })
   const registration =
-    /** @type {import('#organisation-read-model/index.js').ReprocessorRegistration} */ (
+    /** @type {import('#organisation-read-model/domain/model.js').ReprocessorRegistration} */ (
       organisation.registrations.REG200001
     )
   return {

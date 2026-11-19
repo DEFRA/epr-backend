@@ -19,7 +19,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import {Registration as ReadModelRegistration} from '#organisation-read-model/index.js' */
+/** @import {Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
 
 describe('csv-columns', () => {
   const contact = { email: 'test@example.com', fullName: 'Test User' }

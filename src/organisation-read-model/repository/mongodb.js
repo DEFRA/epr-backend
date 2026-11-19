@@ -1,16 +1,43 @@
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
-import { findAll, findOne, findPage } from '../reex-store/mongodb.js'
-import { REG_ACCRED_ACCREDITATION_YEAR } from '../registration-service/reg-accred.js'
+import {
+  findAll,
+  findOne,
+  findPage
+} from '#repositories/organisations/mongodb-find.js'
+import {
+  REG_ACCRED_ACCREDITATION_YEAR,
+  createRegAccredAccreditationsLoader
+} from './reg-accred-accreditations.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
-/** @import { Db } from 'mongodb' */
+/** @import { Collection, Db } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
-/** @import { ExternalAccreditation, ExternalAccreditationsLoader, RegistrationService } from '../registration-service/port.js' */
+/** @import { ExternalAccreditation } from './to-read-model.js' */
+/** @import { RegAccredApiConfig } from './reg-accred-accreditations.js' */
+
+export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
+
+/**
+ * Loads the external accreditations for a year of the given organisation, or
+ * of every organisation when none is given.
+ *
+ * @typedef {(year: Year, organisationNumber?: OrganisationNumber) => Promise<ExternalAccreditation[]>} ExternalAccreditationsLoader
+ */
+
+/**
+ * Given `regAccredApi`, external accreditations come from Reg Accred. Left
+ * out, they come from the `external-accreditations` collection.
+ *
+ * @typedef {{
+ *   regAccredApi?: RegAccredApiConfig
+ * }} OrganisationReadRepositoryOptions
+ */
 
 /**
  * Wraps a loader so it loads nothing for a year the service does not serve
@@ -25,27 +52,56 @@ const whileYearIsOpen = (load) => async (year, organisationNumber) =>
   year <= latestOpenYear() ? load(year, organisationNumber) : []
 
 /**
- * Reads organisations from re-ex's store, adds the external accreditations
- * the registration service holds for them, and serves what it finds in the
- * read model's shape. External accreditations exist only for 2027, so they are
- * loaded only once 2027 is open, and only when the year asked for is 2027 or
- * omitted.
+ * Loads external accreditations from the `external-accreditations` collection.
+ * Overseas sites an accreditation was stored with before they were lifted from
+ * its registration are not read.
+ *
+ * @param {Db} db
+ * @returns {ExternalAccreditationsLoader}
+ */
+const createMongoExternalAccreditationsLoader =
+  (db) => (year, organisationNumber) =>
+    /** @type {Collection<ExternalAccreditation>} */ (
+      db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+    )
+      .find(
+        { year, ...(organisationNumber && { organisationNumber }) },
+        { projection: { _id: 0, overseasSites: 0 } }
+      )
+      .toArray()
+
+/**
+ * Reads the organisations collection directly, adds the external
+ * accreditations held for them, and serves what it finds in the read model's
+ * shape. External accreditations exist only for 2027, so they are loaded only
+ * once 2027 is open, and only when the year asked for is 2027 or omitted.
+ *
+ * It shares the organisations repository's reads through the
+ * `#repositories/organisations/mongodb-find.js` import while both read
+ * `epr-organisations`, so a change to that repository's find changes this one
+ * too. Once the read model has its own collection, that import is the place
+ * to separate them.
  *
  * `find` filters and counts the stored organisations, then puts the page into
  * the read model's shape. An organisation the model leaves out still counts
  * towards `totalItems`, so its page comes back short.
  *
  * @param {Db} db
- * @param {RegistrationService} registrationService
+ * @param {OrganisationReadRepositoryOptions} [options]
  * @returns {(dependencies: {
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
  */
 export const createOrganisationReadRepository =
-  (db, registrationService) => (dependencies) => {
+  (db, { regAccredApi } = {}) =>
+  (dependencies) => {
     const loadExternalAccreditations = whileYearIsOpen(
-      registrationService(dependencies)
+      regAccredApi
+        ? createRegAccredAccreditationsLoader(regAccredApi, {
+            onDrop: (message) => dependencies.logger.warn({ message })
+          })
+        : createMongoExternalAccreditationsLoader(db)
     )
 
     /**

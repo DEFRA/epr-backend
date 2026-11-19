@@ -1,12 +1,11 @@
 import { CADENCE } from '#reports/domain/cadence.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedTimelineFrom,
   buildReadAccreditation,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
-  REPROCESSOR_NUMBER
+  buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 import { toYear } from '#common/helpers/dates/year.js'
@@ -21,6 +20,7 @@ import {
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
+import { REPROCESSOR_NUMBER } from '#organisation-read-model/test-support.js'
 import * as reportAudit from '#reports/application/audit.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 

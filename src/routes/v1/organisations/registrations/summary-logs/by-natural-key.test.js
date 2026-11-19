@@ -1,14 +1,10 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
-  ACCREDITATION_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  reprocessor
+  buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
 import { randomUUID } from 'node:crypto'
 
@@ -32,6 +28,12 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { config } from '#root/config.js'
+import {
+  ACCREDITATION_NUMBER,
+  REPROCESSOR_NUMBER,
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'

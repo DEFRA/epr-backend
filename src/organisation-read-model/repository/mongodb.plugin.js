@@ -1,11 +1,9 @@
 import { registerDependency } from '#plugins/register-dependency.js'
-import { regAccredRegistrationService } from '../registration-service/reg-accred.js'
-import { mongoExternalAccreditationsRegistrationService } from '../registration-service/external-accreditations/mongodb.js'
 import { createOrganisationReadRepository } from './mongodb.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { RegAccredApiConfig } from '../registration-service/reg-accred.js' */
+/** @import { RegAccredApiConfig } from './reg-accred-accreditations.js' */
 
 /**
  * Reads exporters' sites through `server.app.overseasSitesRepository`, so it
@@ -29,17 +27,14 @@ export const organisationReadRepositoryPlugin = {
       server.app.overseasSitesRepository
     )
     const { config } = options
-    const registrationService = config?.get(
+    const regAccredApi = config?.get(
       'featureFlags.regAccredExternalAccreditations'
     )
-      ? regAccredRegistrationService(
-          /** @type {RegAccredApiConfig} */ (config.get('regAccredApi'))
-        )
-      : mongoExternalAccreditationsRegistrationService(server.db)
-    const createRepository = createOrganisationReadRepository(
-      server.db,
-      registrationService
-    )
+      ? /** @type {RegAccredApiConfig} */ (config.get('regAccredApi'))
+      : undefined
+    const createRepository = createOrganisationReadRepository(server.db, {
+      regAccredApi
+    })
     registerDependency(server, 'organisationReadRepository', ({ logger }) =>
       createRepository({ overseasSitesRepository, logger })
     )

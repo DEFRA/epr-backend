@@ -1,25 +1,10 @@
-/**
- * The organisation read model's public interface. Code outside the module
- * imports from here, or from `test-support.js` in a test, and from no other
- * file in it.
- */
-
-export * from './domain/model.js'
-export * from './domain/accreditation-for-year.js'
-export * from './domain/organisation-years.js'
-export * from './domain/registration-active-in-year.js'
-export * from './domain/registration-standing.js'
-export * from './domain/registration-status-windows.js'
-export * from './domain/status-timeline.js'
-
-export * from './repository/port.js'
 export { organisationReadRepositoryPlugin } from './repository/mongodb.plugin.js'
+export { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './repository/mongodb.js'
+export { REG_ACCRED_ACCREDITATION_YEAR } from './repository/reg-accred-accreditations.js'
 export {
   servesOrganisationOn,
   toLinkedDefraOrganisation
 } from './repository/to-read-model.js'
 
-export * from './registration-service/external-accreditations/port.js'
-export { mongoExternalAccreditationsRepositoryPlugin } from './registration-service/external-accreditations/mongodb.plugin.js'
-export { deleteExternalAccreditationsOf } from './registration-service/external-accreditations/mongodb.js'
-export { devExternalAccreditationPut } from './registration-service/external-accreditations/dev-put.js'
+/** @typedef {import('./repository/port.js').OrganisationReadRepository} OrganisationReadRepository */
+/** @typedef {import('./repository/to-read-model.js').ExternalAccreditation} ExternalAccreditation */

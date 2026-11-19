@@ -4,8 +4,8 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainerRead } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,

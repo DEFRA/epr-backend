@@ -1,12 +1,12 @@
 import Boom from '@hapi/boom'
 
-import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/index.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 
 /** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Registration} from '#organisation-read-model/index.js' */
+/** @import {Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/index.js' */
 /** @import {Cadence} from '#reports/domain/cadence.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */

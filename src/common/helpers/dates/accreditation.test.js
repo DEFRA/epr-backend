@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   accreditationWindow,
+  deriveAccreditationYear,
   isAccreditedAtDates,
   isWithinAccreditationDateRange
 } from './accreditation.js'
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/index.js' */
+/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/domain/model.js' */
 /** @import {AccreditationWindow} from './accreditation.js' */
 
 /**
@@ -278,5 +279,19 @@ describe('accreditation date helpers', () => {
         )
       ).toBe(true)
     })
+  })
+})
+
+describe('deriveAccreditationYear', () => {
+  it('derives the year from validFrom', () => {
+    expect(
+      deriveAccreditationYear({ id: 'acc-1', validFrom: '2026-03-01' })
+    ).toBe(2026)
+  })
+
+  it('throws when validFrom is missing', () => {
+    expect(() => deriveAccreditationYear({ id: 'acc-1' })).toThrow(
+      /missing validFrom/
+    )
   })
 })

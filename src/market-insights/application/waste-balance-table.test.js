@@ -65,7 +65,7 @@ const SITE_ADDRESS = {
  * The read model's view of each stored organisation a test builds, so the
  * read repository is seeded with what the read model serves for it.
  *
- * @type {WeakMap<object, import('#organisation-read-model/index.js').Organisation>}
+ * @type {WeakMap<object, import('#organisation-read-model/domain/model.js').Organisation>}
  */
 const servedFor = new WeakMap()
 
@@ -74,7 +74,7 @@ const servedFor = new WeakMap()
  *
  * @template {object} T
  * @param {T} stored
- * @param {import('#organisation-read-model/index.js').Organisation} served
+ * @param {import('#organisation-read-model/domain/model.js').Organisation} served
  * @returns {T}
  */
 const serving = (stored, served) => {
@@ -84,7 +84,7 @@ const serving = (stored, served) => {
 
 /**
  * @param {object} stored
- * @returns {import('#organisation-read-model/index.js').Organisation}
+ * @returns {import('#organisation-read-model/domain/model.js').Organisation}
  */
 const servedOf = (stored) => {
   const served = servedFor.get(stored)
@@ -219,7 +219,7 @@ const makeOperator = ({
     year: toYear(2026)
   }
   const siteNumbers = Object.keys(overseasSites ?? {})
-  /** @type {import('#organisation-read-model/index.js').Organisation} */
+  /** @type {import('#organisation-read-model/domain/model.js').Organisation} */
   const served = /** @type {any} */ ({
     organisationNumber: toOrganisationNumber(String(orgId)),
     name: `Operator ${orgId}`,

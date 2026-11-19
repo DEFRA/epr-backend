@@ -1,15 +1,12 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   buildReadAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
-  EXPORTER_ACCREDITATION_NUMBER,
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
+  buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
@@ -33,6 +30,11 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
+import {
+  EXPORTER_ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
@@ -57,7 +59,7 @@ const registeredOnlyRegistration = {
 }
 const accreditedRegistration = { registrationNumber: REPROCESSOR_NUMBER }
 const accreditedExporter = { registrationNumber: EXPORTER_NUMBER }
-/** @type {import('#organisation-read-model/index.js').StandingByYear} */
+/** @type {import('#organisation-read-model/domain/model.js').StandingByYear} */
 const accreditedStanding = {
   [YEAR]: {
     '2026-02-01': { standing: 'registeredOnly' },

@@ -5,7 +5,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { ExternalAccreditation } from '#organisation-read-model/registration-service/port.js' */
+/** @import { ExternalAccreditation } from '../to-read-model.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500056')

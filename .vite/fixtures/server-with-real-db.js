@@ -6,7 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
-import { createOrganisationReadRepositoryOnExternalAccreditations } from '#organisation-read-model/test-support.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 
 /**
@@ -52,13 +52,14 @@ export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
           )()
           const packagingRecyclingNotesRepository =
             await createPackagingRecyclingNotesRepository(mongoDb, [])
-          const organisationReadRepository =
-            createOrganisationReadRepositoryOnExternalAccreditations(mongoDb)({
-              overseasSitesRepository: (
-                await createOverseasSitesRepository(mongoDb)
-              )(),
-              logger: { warn: () => {} }
-            })
+          const organisationReadRepository = createOrganisationReadRepository(
+            mongoDb
+          )({
+            overseasSitesRepository: (
+              await createOverseasSitesRepository(mongoDb)
+            )(),
+            logger: { warn: () => {} }
+          })
           const server = await createTestServer({
             db: mongoDb,
             repositories: {

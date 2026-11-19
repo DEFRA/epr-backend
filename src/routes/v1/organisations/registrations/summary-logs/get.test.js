@@ -6,12 +6,10 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import {
-  reprocessor,
-  createInMemoryOrganisationReadRepository,
-  buildReadOrganisationWithNumbersOf
-} from '#organisation-read-model/test-support.js'
+import { reprocessor } from '#organisation-read-model/test-support.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/test-support.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'

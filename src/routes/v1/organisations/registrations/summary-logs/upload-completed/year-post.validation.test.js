@@ -1,12 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import {
-  createInMemoryOrganisationReadRepository,
-  buildReadOrganisationWithNumbersOf,
-  reprocessor
-} from '#organisation-read-model/test-support.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { reprocessor } from '#organisation-read-model/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { signedCallback } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'

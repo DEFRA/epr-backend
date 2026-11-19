@@ -12,11 +12,11 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { Organisation } from '#organisation-read-model/index.js' */
+/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   buildReadExporterRegistration,
   buildReadOrganisation
 } from '#organisation-read-model/test-support.js'

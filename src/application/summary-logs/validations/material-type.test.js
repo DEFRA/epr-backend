@@ -5,7 +5,7 @@ import {
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
-/** @import {Registration} from '#organisation-read-model/index.js' */
+/** @import {Registration} from '#organisation-read-model/domain/model.js' */
 
 /**
  * A registration the read model serves with this material.

@@ -4,14 +4,12 @@ import {
 } from '#domain/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
 import { toYear } from '#common/helpers/dates/year.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
-  ACCREDITATION_NUMBER,
-  REPROCESSOR_NUMBER
+  buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -43,6 +41,10 @@ import {
   buildPrnCreationCancelledEvent,
   buildPrnIssuedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
+import {
+  ACCREDITATION_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 
 /**

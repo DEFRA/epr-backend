@@ -10,10 +10,7 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import {
-  HELD_ACCREDITATION_STATUSES,
-  accreditationForYear
-} from '#organisation-read-model/index.js'
+import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 import {
   addMeasures,
   figuresContributedTo,
@@ -34,6 +31,7 @@ import {
   operatorsByKey
 } from '#market-insights/application/operator-counts.js'
 import { recordOf } from '#common/helpers/record-of.js'
+import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -42,9 +40,9 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  * @typedef {import('#common/helpers/dates/year-month.js').YearMonth} YearMonth
  * @typedef {import('#domain/organisations/model.js').Material} Material
- * @typedef {import('#organisation-read-model/index.js').Organisation} Organisation
+ * @typedef {import('#organisation-read-model/domain/model.js').Organisation} Organisation
  * @typedef {import('#domain/organisations/model.js').RegulatorValue} RegulatorValue
- * @typedef {import('#organisation-read-model/index.js').Registration} Registration
+ * @typedef {import('#organisation-read-model/domain/model.js').Registration} Registration
  * @typedef {import('#reports/repository/port.js').PeriodicReport} PeriodicReport
  * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue} WasteProcessingTypeValue
  * @typedef {import('#market-insights/application/accredited-months.js').RegistrationOfOrganisation} RegistrationOfOrganisation

@@ -1,12 +1,9 @@
-import {
-  toOrganisationNumber,
-  toAccreditationNumber
-} from '#domain/organisations/numbers.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportSubmissions } from './report-submissions.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
@@ -21,6 +18,7 @@ import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.j
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { config } from '#root/config.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 
@@ -77,7 +75,7 @@ describe('generateReportSubmissions (integration)', () => {
       material: 'Glass-remelt',
       reportType: 'Monthly'
     }
-    /** @param {import('#organisation-read-model/index.js').Organisation} org */
+    /** @param {import('#organisation-read-model/domain/model.js').Organisation} org */
     const rowFor = (org) => ({
       ...baseRow,
       registrationNumber: `REG${org.organisationNumber}`,
@@ -454,7 +452,7 @@ const approvedFromJanuary = approvedStatusFrom('2026-01-01')
  * @param {{
  *   organisationNumber?: string,
  *   name?: string,
- *   registration?: Partial<import('#organisation-read-model/index.js').ReprocessorRegistration>
+ *   registration?: Partial<import('#organisation-read-model/domain/model.js').ReprocessorRegistration>
  * }} [options]
  */
 const buildOrg = ({
@@ -493,7 +491,7 @@ const buildOrg = ({
  * A registration accredited for 2026 from `from`.
  *
  * @param {string} accreditationNumber
- * @param {import('#organisation-read-model/index.js').Status<'approved' | 'suspended'>} [status]
+ * @param {import('#organisation-read-model/domain/model.js').Status<'approved' | 'suspended'>} [status]
  * @param {string} [from]
  */
 const accreditedAs = (
@@ -518,7 +516,7 @@ const accreditedAs = (
   )
 })
 
-/** @param {import('#organisation-read-model/index.js').Organisation[]} orgs */
+/** @param {import('#organisation-read-model/domain/model.js').Organisation[]} orgs */
 const makeOrgsRepo = (orgs) => createInMemoryOrganisationReadRepository(orgs)()
 
 const makeReportsRepo = (allPeriodicReports = []) =>

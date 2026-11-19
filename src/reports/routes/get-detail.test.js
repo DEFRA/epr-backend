@@ -1,21 +1,13 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
-  ACCREDITATION_NUMBER,
-  EXPORTER_ACCREDITATION_NUMBER,
-  accreditation,
-  approvedOverseasSite,
-  exporter,
-  exporterAccreditation,
-  pendingOverseasSite,
-  reprocessor
+  buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -33,6 +25,16 @@ import {
   createAndSubmitReport,
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
+import {
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
+  accreditation,
+  approvedOverseasSite,
+  exporter,
+  exporterAccreditation,
+  pendingOverseasSite,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {
   emptySummaryLogStores,
@@ -90,7 +92,7 @@ const seedRepositories = async (
  * A registration approved from `validFrom`, as the read model serves it.
  * @param {string} validFrom
  * @param {'registeredOnly' | 'accredited'} standing
- * @returns {Partial<import('#organisation-read-model/index.js').RegistrationCommon>}
+ * @returns {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>}
  */
 const approvedFrom = (validFrom, standing = 'registeredOnly') => ({
   status: approvedStatusFrom(validFrom),
@@ -162,7 +164,7 @@ const accreditedExporter = ({
 /**
  * @param {{
  *   registration: Record<string, any>,
- *   readRegistration: import('#organisation-read-model/index.js').Registration,
+ *   readRegistration: import('#organisation-read-model/domain/model.js').Registration,
  *   accreditations?: object[],
  *   wasteRecords?: { type: string, data: object }[],
  *   reportDataValidation?: boolean

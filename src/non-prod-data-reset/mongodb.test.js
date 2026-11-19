@@ -5,16 +5,10 @@ import { randomUUID } from 'node:crypto'
 import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
 
-import {
-  toRegistrationNumber,
-  toOrganisationNumber
-} from '#domain/organisations/numbers.js'
-import {
-  buildExternalAccreditation,
-  clearExternalAccreditations,
-  countExternalAccreditations,
-  createMongoExternalAccreditationsRepository
-} from '#organisation-read-model/test-support.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
+import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
@@ -24,6 +18,7 @@ import {
   buildCreateReportParams,
   uniqueRegistrationNumber
 } from '#reports/repository/contract/test-data.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import {
   buildRegistration,
@@ -78,7 +73,8 @@ const COLLECTIONS = [
   'summary-logs',
   'overseas-sites',
   'system-logs',
-  'summary-log-row-states'
+  'summary-log-row-states',
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
 ]
 
 const mockS3Config = { s3Client: {}, preSignedUrlExpiry: 60 }
@@ -96,7 +92,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { organisations: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#organisation-read-model/index.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
+ * @property {object & { organisations: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#external-accreditations/repository/port.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */
@@ -114,7 +110,6 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
       for (const name of COLLECTIONS) {
         await database.collection(name).deleteMany({})
       }
-      await clearExternalAccreditations(database)
       await use(database)
     },
 
@@ -372,7 +367,6 @@ describe('non-prod data reset (mongo)', () => {
           `${name} should be empty`
         ).toBe(0)
       }
-      expect(await countExternalAccreditations(database)).toBe(0)
     })
 
     it('leaves unrelated organisations and their downstream data untouched', async ({
@@ -474,9 +468,11 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(0)
       expect(
-        await countExternalAccreditations(database, {
-          organisationNumber: other.organisation.organisationNumber
-        })
+        await database
+          .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+          .countDocuments({
+            organisationNumber: other.organisation.organisationNumber
+          })
       ).toBe(1)
     })
 
@@ -612,7 +608,11 @@ describe('non-prod data reset (mongo)', () => {
       )
 
       expect(counts['external-accreditations']).toBe(0)
-      expect(await countExternalAccreditations(database)).toBe(1)
+      expect(
+        await database
+          .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+          .countDocuments()
+      ).toBe(1)
     })
 
     it('refuses via the plugin when the CDP environment is prod', async ({

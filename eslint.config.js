@@ -22,7 +22,7 @@ const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
 // A module of ADR 0027's modular monolith. Code outside it imports only its
-// public interface: index.js, and test-support.js in a test.
+// public interface: index.js, its domain/ folder, and test-support.js in a test.
 const ORGANISATION_READ_MODEL = './src/organisation-read-model'
 
 const ns = neostandard({
@@ -69,15 +69,23 @@ export default [
               message: DOMAIN_LAYERING_MESSAGE
             },
             {
+              target: './src/domain',
+              from: REPOSITORIES,
+              // Tests in the domain build fixtures from the repository contract
+              // test data. Nothing else in a repository is available to it.
+              except: ['./organisations/contract'],
+              message: DOMAIN_LAYERING_MESSAGE
+            },
+            {
               target: [
                 './src/!(organisation-read-model)/**/*',
                 './src/*.js',
                 './.vite/**/*'
               ],
               from: ORGANISATION_READ_MODEL,
-              except: ['./index.js', './test-support.js'],
+              except: ['./index.js', './domain', './test-support.js'],
               message:
-                'Import the organisation read model through its index.js, or test-support.js in a test.'
+                'Import the organisation read model through its index.js, its domain/ folder, or test-support.js in a test.'
             },
             {
               target: [
@@ -87,23 +95,6 @@ export default [
               from: `${ORGANISATION_READ_MODEL}/test-support.js`,
               message:
                 'Only tests import the organisation read model through test-support.js.'
-            },
-            {
-              target: ORGANISATION_READ_MODEL,
-              from: [
-                './src/repositories/organisations/mongodb.js',
-                './src/repositories/organisations/mongodb-find.js'
-              ],
-              message:
-                'The organisations repository writes epr-organisations. The organisation read model reads it through its own find.'
-            },
-            {
-              target: './src/domain',
-              from: REPOSITORIES,
-              // Tests in the domain build fixtures from the repository contract
-              // test data. Nothing else in a repository is available to it.
-              except: ['./organisations/contract'],
-              message: DOMAIN_LAYERING_MESSAGE
             }
           ]
         }
@@ -128,10 +119,7 @@ export default [
     },
     settings: {
       vitest: {
-        vitestImports: [
-          /#vite\/fixtures\//,
-          /#organisation-read-model\/repository\/mongo-fixture\.js$/
-        ]
+        vitestImports: [/#vite\/fixtures\//]
       }
     }
   },

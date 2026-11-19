@@ -1,5 +1,5 @@
 import { onTestFinished } from 'vitest'
-import { it } from '#organisation-read-model/repository/mongo-fixture.js'
+import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
 import { config } from '#root/config.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'

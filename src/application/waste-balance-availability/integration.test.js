@@ -20,12 +20,9 @@ import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  buildExternalAccreditation,
-  clearExternalAccreditations,
-  createOrganisationReadRepositoryOnExternalAccreditations,
-  storeExternalAccreditation
-} from '#organisation-read-model/test-support.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -139,13 +136,14 @@ describe('aggregateAvailableBalance - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationReadRepository =
-        createOrganisationReadRepositoryOnExternalAccreditations(db)({
-          overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
-          logger: { warn: () => {} }
-        })
+      organisationReadRepository = createOrganisationReadRepository(db)({
+        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
+        logger: { warn: () => {} }
+      })
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
-      await clearExternalAccreditations(db)
+      await db
+        .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
+        .deleteMany({})
       await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).deleteMany({})
     }
   )
@@ -257,8 +255,7 @@ describe('aggregateAvailableBalance - Integration', () => {
           { id: '1', material: MATERIAL.PLASTIC }
         ])
       )
-    await storeExternalAccreditation(
-      db,
+    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
         organisationNumber: toOrganisationNumber(String(orgId1)),
         registrationNumber: toRegistrationNumber('REG-1'),

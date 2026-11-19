@@ -12,7 +12,7 @@ import { setupMsw } from '#vite/setup-msw.js'
 import {
   createRegAccredAccreditationsLoader,
   signedHeaders
-} from './reg-accred.js'
+} from './reg-accred-accreditations.js'
 
 const config = {
   baseUrl: 'https://reg-accred.test',

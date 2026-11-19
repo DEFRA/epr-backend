@@ -5,8 +5,8 @@ import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
@@ -14,7 +14,9 @@ import {
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/test-support.js'
+import {
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
@@ -25,7 +27,7 @@ import {
 
 const approved = approvedTimelineFrom('2026-07-01')
 
-/** @type {import('#organisation-read-model/index.js').Status<import('#organisation-read-model/index.js').AccreditationStatus>} */
+/** @type {import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>} */
 const cancelledAfterApproval = {
   current: 'cancelled',
   lastUpdatedAt: '2026-11-01T09:00:00.000Z',
@@ -39,7 +41,7 @@ const cancelledAfterApproval = {
  * @param {{
  *   exporting?: boolean,
  *   reprocessingType?: 'input' | 'output',
- *   status?: import('#organisation-read-model/index.js').Status<import('#organisation-read-model/index.js').AccreditationStatus>
+ *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>
  * }} [options]
  */
 const organisationWith = ({
@@ -87,7 +89,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   /** @type {Awaited<ReturnType<typeof createTestServer>>} */
   let server
 
-  /** @param {import('#organisation-read-model/index.js').Organisation} organisation */
+  /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
   const startServer = async (organisation) => {
     server = await createTestServer({
       repositories: {

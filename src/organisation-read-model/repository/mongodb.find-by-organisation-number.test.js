@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
-import { it } from '#organisation-read-model/repository/mongo-fixture.js'
+import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
@@ -31,8 +31,8 @@ import {
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { ExporterRegistration, Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/registration-service/port.js' */
-/** @import { OrganisationReadRepositoryWith } from '#organisation-read-model/repository/mongo-fixture.js' */
+/** @import { ExternalAccreditation } from './to-read-model.js' */
+/** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
 
 describe('findByOrganisationNumber', () => {
   it('returns the organisation with granted registrations keyed by number and accreditations by year', async ({

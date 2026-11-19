@@ -4,7 +4,7 @@ import { registrationKey } from '#reports/domain/registration-key.js'
 
 /**
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { Organisation, Registration } from '#organisation-read-model/index.js'
+ * @import { Organisation, Registration } from '#organisation-read-model/domain/model.js'
  *
  * @typedef {{
  *   organisation: Organisation,

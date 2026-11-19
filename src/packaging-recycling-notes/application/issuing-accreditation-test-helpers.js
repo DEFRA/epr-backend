@@ -1,7 +1,7 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
-  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
@@ -13,7 +13,7 @@ import {
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { AccreditationStatus, Registration } from '#organisation-read-model/index.js' */
+/** @import { AccreditationStatus, Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
