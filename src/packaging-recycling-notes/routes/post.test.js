@@ -39,10 +39,7 @@ import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -64,7 +61,7 @@ const { organisationNumber } = buildOrganisation()
 const ledgerUnder = (registrationNumber, year = PRN_YEAR) => ({
   organisationNumber,
   registrationNumber: toRegistrationNumber(registrationNumber),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+  accreditationNumber: ACCREDITATION_NUMBER,
   year
 })
 
@@ -154,7 +151,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   } = {}) => {
     const validFrom = `${year}-01-01`
     const served = buildReadAccreditation({
-      accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+      accreditationNumber: ACCREDITATION_NUMBER,
       status: status ?? approvedStatusFrom(validFrom),
       year: toYear(year)
     })

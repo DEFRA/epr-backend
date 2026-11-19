@@ -19,7 +19,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
-  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -75,7 +74,7 @@ const servedOrganisation = buildReadOrganisation({
       accreditations: accreditationsByYear(
         buildReadAccreditation({
           year: YEAR,
-          accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+          accreditationNumber: ACCREDITATION_NUMBER
         })
       )
     })
@@ -93,7 +92,7 @@ const accreditedLog = {
   accreditationId: accredited.id,
   organisationNumber,
   registrationNumber: REPROCESSOR_NUMBER,
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  accreditationNumber: ACCREDITATION_NUMBER
 }
 
 const registrations = `/organisations/${organisationNumber}/registrations`
@@ -110,7 +109,7 @@ const uploadAddresses = [
     kind: 'accredited',
     uploads: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`,
     registrationNumber: REPROCESSOR_NUMBER,
-    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+    accreditationNumber: ACCREDITATION_NUMBER
   }
 ]
 

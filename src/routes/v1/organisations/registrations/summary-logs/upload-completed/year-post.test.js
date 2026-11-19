@@ -167,8 +167,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
                 [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
                   accreditations: accreditationsByYear(
                     buildReadAccreditation({
-                      accreditationNumber:
-                        toAccreditationNumber(ACCREDITATION_NUMBER)
+                      accreditationNumber: ACCREDITATION_NUMBER
                     }),
                     buildReadAccreditation({
                       year: toYear(2027),

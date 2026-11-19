@@ -356,7 +356,34 @@ const baseConfig = {
       env: 'PACKAGING_RECYCLING_NOTES_EXTERNAL_API_JWKS_URL'
     }
   },
+  regAccredApi: {
+    baseUrl: {
+      doc: 'Base URL of the Reg Accred (epr-register-enrol-backend) API',
+      format: String,
+      default: 'http://localhost:3001',
+      env: 'REG_ACCRED_API_BASE_URL'
+    },
+    clientId: {
+      doc: 'Client id this service signs Reg Accred requests with',
+      format: String,
+      default: 'epr-ReEx-Client',
+      env: 'REG_ACCRED_API_CLIENT_ID'
+    },
+    sharedSecret: {
+      doc: 'Shared secret this service signs Reg Accred requests with',
+      format: String,
+      sensitive: true,
+      default: '',
+      env: 'REG_ACCRED_API_SHARED_SECRET'
+    }
+  },
   featureFlags: {
+    regAccredExternalAccreditations: {
+      doc: 'Feature Flag: Load 2027 external accreditations from Reg Accred instead of the external-accreditations collection',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS'
+    },
     devEndpoints: {
       doc: 'Feature Flag: Enable development endpoints',
       format: Boolean,
@@ -540,6 +567,15 @@ function getConfig(overrides = {}) {
 
   if (isProd(cfg.get('cdpEnvironment')) && cfg.get('openNextYear')) {
     throw new Error('OPEN_NEXT_YEAR must not be true when ENVIRONMENT is prod')
+  }
+
+  if (
+    cfg.get('featureFlags.regAccredExternalAccreditations') &&
+    !cfg.get('regAccredApi.sharedSecret')
+  ) {
+    throw new Error(
+      'REG_ACCRED_API_SHARED_SECRET must be set when FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS is true'
+    )
   }
 
   return cfg

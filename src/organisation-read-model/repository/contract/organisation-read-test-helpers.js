@@ -12,8 +12,9 @@ import {
 
 export const REPROCESSOR_NUMBER = toRegistrationNumber('R26ER5001180041PL')
 export const EXPORTER_NUMBER = toRegistrationNumber('R26EX5001180042PL')
-export const ACCREDITATION_NUMBER = 'A26ER5001180114PL'
-export const EXPORTER_ACCREDITATION_NUMBER = 'A26EX5001180115PL'
+export const ACCREDITATION_NUMBER = toAccreditationNumber('A26ER5001180114PL')
+export const EXPORTER_ACCREDITATION_NUMBER =
+  toAccreditationNumber('A26EX5001180115PL')
 
 export const APPROVED_SITE_ID = new ObjectId().toString()
 export const PENDING_SITE_ID = new ObjectId().toString()
