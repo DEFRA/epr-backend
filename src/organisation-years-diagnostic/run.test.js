@@ -1,10 +1,18 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import {
   approvedStatusFrom,
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
+import { buildStoredOrganisation } from '#organisation-years-diagnostic/validity-test-data.js'
+import {
+  buildAccreditation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { runOrganisationYearsDiagnostic } from './run.js'
@@ -23,6 +31,7 @@ describe('runOrganisationYearsDiagnostic', () => {
   /** @type {Lock} */
   let lock
   const findAll = vi.fn()
+  const findAllStored = vi.fn()
 
   /** @param {Organisation[]} organisations */
   const serveOrganisations = (organisations) =>
@@ -35,12 +44,16 @@ describe('runOrganisationYearsDiagnostic', () => {
     lock = partialMock({ free: vi.fn().mockResolvedValue(true) })
     server = partialMock({
       app: partialMock({
-        organisationReadRepository: partialMock({ findAll })
+        organisationReadRepository: partialMock({ findAll }),
+        organisationAdministrationRepository: partialMock({
+          findAll: findAllStored
+        })
       }),
       locker: partialMock({ lock: vi.fn().mockResolvedValue(lock) })
     })
 
     serveOrganisations([])
+    findAllStored.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -101,6 +114,91 @@ describe('runOrganisationYearsDiagnostic', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message:
         'Organisation years diagnostic: openYear=2026 scannedOrganisations=0 organisationsWithOtherYears=0 otherYearsInTestOrganisations=0 organisationsWithNoYear=0 organisationsByYear=none'
+    })
+  })
+
+  it('logs one line per registration and accreditation valid outside the year plus the summary', async () => {
+    findAllStored.mockResolvedValue([
+      buildStoredOrganisation({
+        registrations: [
+          buildRegistration({
+            id: 'reg-1',
+            registrationNumber: toRegistrationNumber('R25ER500001PL'),
+            status: 'approved',
+            validFrom: '2025-11-01'
+          }),
+          buildRegistration({
+            id: 'reg-2',
+            registrationNumber: null,
+            status: 'created',
+            validFrom: '2024-01-01'
+          })
+        ],
+        accreditations: [
+          buildAccreditation({
+            id: 'acc-1',
+            accreditationNumber: toAccreditationNumber('A26ER500001PL'),
+            status: 'approved',
+            validFrom: '2026-01-01',
+            validTo: '2027-03-31'
+          }),
+          buildAccreditation({
+            id: 'acc-3',
+            accreditationNumber: toAccreditationNumber('A26ER500002PL'),
+            status: 'approved',
+            validFrom: '2026-01-01',
+            validTo: '2027-01-01'
+          }),
+          buildAccreditation({
+            id: 'acc-2',
+            accreditationNumber: null,
+            status: 'created',
+            validFrom: '2025-01-01'
+          }),
+          buildAccreditation({
+            id: 'acc-4',
+            accreditationNumber: null,
+            status: 'created',
+            validTo: '2027-06-30'
+          })
+        ]
+      })
+    ])
+
+    await runOrganisationYearsDiagnostic(server)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Registration validity: organisationNumber=500001 testOrganisation=false registrationId=reg-1 registrationNumber=R25ER500001PL status=approved validFrom=2025-11-01'
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Registration validity: organisationNumber=500001 testOrganisation=false registrationId=reg-2 registrationNumber=none status=created validFrom=2024-01-01'
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Accreditation validity: organisationNumber=500001 testOrganisation=false accreditationId=acc-1 accreditationNumber=A26ER500001PL status=approved validFrom=2026-01-01 validTo=2027-03-31'
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Accreditation validity: organisationNumber=500001 testOrganisation=false accreditationId=acc-2 accreditationNumber=none status=created validFrom=2025-01-01 validTo=none'
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Accreditation validity: organisationNumber=500001 testOrganisation=false accreditationId=acc-4 accreditationNumber=none status=created validFrom=none validTo=2027-06-30'
+    })
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Validity diagnostic: year=2026 scannedRegistrations=2 registrationsStartingBefore=2 scannedAccreditations=4 accreditationsStartingBefore=1 accreditationsEndingAfter=2 accreditationsEndingOnFirstJanuary=1 unparseableDates=0 rowsInTestOrganisations=0'
+    })
+  })
+
+  it('logs a validity summary with nothing outside the year', async () => {
+    await runOrganisationYearsDiagnostic(server)
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Validity diagnostic: year=2026 scannedRegistrations=0 registrationsStartingBefore=0 scannedAccreditations=0 accreditationsStartingBefore=0 accreditationsEndingAfter=0 accreditationsEndingOnFirstJanuary=0 unparseableDates=0 rowsInTestOrganisations=0'
     })
   })
 
