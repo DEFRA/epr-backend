@@ -14,7 +14,7 @@ import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CoversRegistration, GrantedRegistration } from '#market-insights/application/accredited-months.js' */
 
@@ -40,7 +40,7 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * latest status change dated in or before the month decides it.
  *
  * @param {YearMonth} month
- * @param {StatusTimeline} timeline
+ * @param {StatusTimeline<AccreditationStatus>} timeline
  */
 const isCancelledByEndOf = (month, timeline) =>
   timeline.findLast(

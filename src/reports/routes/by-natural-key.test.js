@@ -1,5 +1,5 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
   accreditationsByYear,
@@ -50,7 +50,7 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportRequestResubmission: vi.fn().mockResolvedValue(undefined)
 }))
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const REGISTERED_ONLY_NUMBER = toRegistrationNumber('R26ER5001180099PL')
 const YEAR = toYear(2026)
 
 const accredited = buildReadAccreditation()
@@ -59,27 +59,16 @@ const registeredOnlyRegistration = {
 }
 const accreditedRegistration = { registrationNumber: REPROCESSOR_NUMBER }
 const accreditedExporter = { registrationNumber: EXPORTER_NUMBER }
-/** @type {import('#organisation-read-model/domain/model.js').StandingByYear} */
-const accreditedStanding = {
-  [YEAR]: {
-    '2026-02-01': { standing: 'registeredOnly' },
-    '2026-07-01': { standing: 'accredited' }
-  }
-}
 const organisation = buildReadOrganisation({
   registrations: {
     [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      standingByDate: accreditedStanding,
       accreditations: accreditationsByYear(accredited)
     }),
     [EXPORTER_NUMBER]: buildReadExporterRegistration({
-      standingByDate: accreditedStanding,
       accreditations: accreditationsByYear({
         ...buildReadAccreditation({
-          accreditationNumber: toAccreditationNumber(
-            EXPORTER_ACCREDITATION_NUMBER
-          )
+          accreditationNumber: EXPORTER_ACCREDITATION_NUMBER
         }),
         overseasSites: {}
       })
@@ -92,7 +81,8 @@ const registrations = `/organisations/${organisation.organisationNumber}/registr
 /** @param {{ registrationNumber?: string }} registration */
 const numbersOf = (registration) => reportKeyOf(organisation, registration)
 
-const OTHER_ORGANISATION_REGISTRATION_NUMBER = 'R26ER5001180098PL'
+const OTHER_ORGANISATION_REGISTRATION_NUMBER =
+  toRegistrationNumber('R26ER5001180098PL')
 const otherOrganisation = buildReadOrganisation({
   registrations: {
     [OTHER_ORGANISATION_REGISTRATION_NUMBER]: buildReadReprocessorRegistration()

@@ -1,6 +1,7 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { reprocessor } from './contract/organisation-read-test-helpers.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation, nextOrganisationNumber } =
   createOrganisationBuilders()
@@ -15,7 +16,11 @@ const named = (name, overrides = {}) =>
   buildOrganisation({
     companyDetails: { name },
     registrations: [
-      reprocessor({ registrationNumber: `R26ER${nextOrganisationNumber()}PL` })
+      reprocessor({
+        registrationNumber: toRegistrationNumber(
+          `R26ER${nextOrganisationNumber()}PL`
+        )
+      })
     ],
     accreditations: [],
     ...overrides

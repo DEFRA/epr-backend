@@ -12,7 +12,7 @@ import { accreditationForYear } from '#organisation-read-model/domain/accreditat
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation, Registration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, Registration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { AccreditationWindow } from '#common/helpers/dates/accreditation.js' */
@@ -82,7 +82,7 @@ const daysOf = ({ startDate, endDate }) => {
  * The last status on a day holds for the whole day.
  *
  * @param {CalendarDate} day
- * @param {StatusTimeline} timeline
+ * @param {StatusTimeline<AccreditationStatus>} timeline
  */
 const isCancelledOn = (day, timeline) =>
   statusOn(timeline, day) === ACCREDITATION_STATUS.CANCELLED
@@ -108,7 +108,7 @@ const withinWindow = ({ startDate, endDate }, { validFrom, validTo }) => ({
  *
  * @param {Period} period
  * @param {AccreditationWindow} window
- * @param {StatusTimeline} timeline
+ * @param {StatusTimeline<AccreditationStatus>} timeline
  */
 const isAccreditedDuring = (period, window, timeline) =>
   daysOf(withinWindow(period, window)).some(

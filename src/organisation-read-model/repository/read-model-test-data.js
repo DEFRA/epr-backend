@@ -7,6 +7,7 @@ import { utcYearOf } from '#common/helpers/dates/year.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 
 /** @import { Organisation, ReprocessorAccreditation, ExporterAccreditation, ReprocessorRegistration, ExporterRegistration, RegistrationCommon, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { StandingSource } from '#organisation-read-model/domain/registration-standing.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -92,45 +93,47 @@ export const buildReadExporterAccreditation = (overrides = {}) => ({
  *
  * @template {{ year: Year }} A
  * @param {...A} accreditations
- * @returns {Record<string, A>}
+ * @returns {Record<Year, A>}
  */
 export const accreditationsByYear = (...accreditations) =>
-  Object.fromEntries(
-    accreditations.map((accreditation) => [
-      String(accreditation.year),
-      accreditation
-    ])
+  /** @type {Record<Year, A>} */ (
+    Object.fromEntries(
+      accreditations.map((accreditation) => [accreditation.year, accreditation])
+    )
   )
 
 /**
- * The registration with `standingByDate` as the read model works it out from
- * the registration's and its accreditations' timelines, for every year up to
- * the last one they name, unless the registration already gives one. So an
- * accredited registration is accredited from its accreditation's approval, as
- * the mapper would make it.
+ * The registration with its standing worked out up to the end of `year`, as
+ * the read model serves it while `year` is open.
  *
- * @template {Omit<RegistrationCommon, 'standingByDate'> & Partial<Pick<RegistrationCommon, 'standingByDate'>> & { accreditations: Record<string, { status: { timeline: StatusTimeline }, year: Year }> }} R
+ * @template {StandingSource} R
+ * @param {R} registration
+ * @param {Year} year
+ * @returns {R & Pick<RegistrationCommon, 'standingByDate'>}
+ */
+export const withStandingThrough = (registration, year) => ({
+  ...registration,
+  standingByDate: standingByYear(registration, year)
+})
+
+/**
+ * The registration with its standing worked out from the registration's and
+ * its accreditations' timelines, for every year up to the last one they name.
+ * So an accredited registration is accredited from its accreditation's
+ * approval, as the mapper would make it.
+ *
+ * @template {StandingSource} R
  * @param {R} registration
  * @returns {R & Pick<RegistrationCommon, 'standingByDate'>}
  */
 const withStanding = (registration) => {
-  if (registration.standingByDate) {
-    return /** @type {R & Pick<RegistrationCommon, 'standingByDate'>} */ (
-      registration
-    )
-  }
-  const [firstYear, ...years] = [
-    ...registration.status.timeline.map(({ at }) => at),
-    ...Object.keys(registration.accreditations)
-  ].map(utcYearOf)
-  const lastYear = years.reduce(
-    (latest, year) => (year > latest ? year : latest),
-    firstYear
+  const lastYear = Math.max(
+    ...[
+      ...Object.keys(registration.accreditations),
+      ...registration.status.timeline.map(({ at }) => at)
+    ].map(utcYearOf)
   )
-  return {
-    ...registration,
-    standingByDate: standingByYear(registration, lastYear)
-  }
+  return withStandingThrough(registration, utcYearOf(`${lastYear}-12-31`))
 }
 
 const commonRegistrationDefaults = () => ({
@@ -143,10 +146,10 @@ const commonRegistrationDefaults = () => ({
 })
 
 /**
- * An approved registration from 2026-02-01. Without a `standingByDate`
- * override, its standing follows from its timeline and accreditations.
+ * An approved registration from 2026-02-01, its standing following from its
+ * timeline and accreditations.
  *
- * @param {Partial<ReprocessorRegistration>} [overrides]
+ * @param {Partial<Omit<ReprocessorRegistration, 'standingByDate'>>} [overrides]
  * @returns {ReprocessorRegistration}
  */
 export const buildReadReprocessorRegistration = (overrides = {}) =>
@@ -166,10 +169,10 @@ export const buildReadReprocessorRegistration = (overrides = {}) =>
   })
 
 /**
- * An approved registration from 2026-02-01. Without a `standingByDate`
- * override, its standing follows from its timeline and accreditations.
+ * An approved registration from 2026-02-01, its standing following from its
+ * timeline and accreditations.
  *
- * @param {Partial<ExporterRegistration>} [overrides]
+ * @param {Partial<Omit<ExporterRegistration, 'standingByDate'>>} [overrides]
  * @returns {ExporterRegistration}
  */
 export const buildReadExporterRegistration = (overrides = {}) =>
@@ -201,14 +204,15 @@ export const buildReadOrganisation = (overrides = {}) => ({
  * The read model's view of an organisation built by `createApprovedOrgBuilder`:
  * one input reprocessor registered as `REG<organisationNumber>` and
  * accredited as `ACC<organisationNumber>`, both approved from `validFrom`,
- * the first day of `year` unless given.
+ * the first day of `year` unless given. Its standing runs to the end of
+ * `openYear`, or of the last year its timelines name.
  *
  * @param {{
  *   organisationNumber?: Organisation['organisationNumber'],
  *   year?: number,
  *   validFrom?: string,
- *   standingByDate?: ReprocessorRegistration['standingByDate'],
- *   overrides?: Partial<ReprocessorRegistration>
+ *   openYear?: Year,
+ *   overrides?: Partial<Omit<ReprocessorRegistration, 'standingByDate'>>
  * }} [options]
  * @returns {Organisation}
  */
@@ -216,27 +220,27 @@ export const buildReadApprovedOrganisation = ({
   organisationNumber = nextReadOrganisationNumber(),
   year = 2026,
   validFrom = `${year}-01-01`,
-  standingByDate,
+  openYear,
   overrides = {}
 } = {}) => {
   const approved = approvedStatusFrom(validFrom)
+  const registration = buildReadReprocessorRegistration({
+    status: approved,
+    accreditations: accreditationsByYear(
+      buildReadAccreditation({
+        accreditationNumber: toAccreditationNumber(`ACC${organisationNumber}`),
+        status: approved,
+        year: utcYearOf(`${year}-01-01`)
+      })
+    ),
+    ...overrides
+  })
   return buildReadOrganisation({
     organisationNumber,
     registrations: {
-      [`REG${organisationNumber}`]: buildReadReprocessorRegistration({
-        status: approved,
-        standingByDate,
-        accreditations: accreditationsByYear(
-          buildReadAccreditation({
-            accreditationNumber: toAccreditationNumber(
-              `ACC${organisationNumber}`
-            ),
-            status: approved,
-            year: utcYearOf(`${year}-01-01`)
-          })
-        ),
-        ...overrides
-      })
+      [`REG${organisationNumber}`]: openYear
+        ? withStandingThrough(registration, openYear)
+        : registration
     }
   })
 }
