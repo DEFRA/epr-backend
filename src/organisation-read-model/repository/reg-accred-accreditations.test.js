@@ -157,8 +157,8 @@ describe('signedHeaders', () => {
     expect(headers).toStrictEqual({
       'x-cdp-client-id': 'example-client',
       'x-cdp-auth-timestamp': '2027-01-15T10:30:00Z',
-      'x-cdp-auth-nonce': 'bm9uY2UtZXhhbXBsZS0wMDAx',
-      'x-cdp-auth-signature': 'mJPc+QOEbTNBzB60Pj2NjSOy8bOYmvoCjCwPQS2CSTk='
+      'x-cdp-auth-nonce': 'bm9uY2UtZXhhbXBsZS0wMDAx', // gitleaks:allow
+      'x-cdp-auth-signature': 'mJPc+QOEbTNBzB60Pj2NjSOy8bOYmvoCjCwPQS2CSTk=' // gitleaks:allow
     })
   })
 
