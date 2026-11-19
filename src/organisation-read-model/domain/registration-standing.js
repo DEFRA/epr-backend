@@ -7,15 +7,19 @@ import { approvedBy, approvedYears } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Standing, StandingByYear, StatusTimeline } from './model.js' */
+/** @import { AccreditationStatus, RegistrationStatus, Standing, StandingByYear, StatusTimeline } from './model.js' */
 
 /**
- * @typedef {{ status: { timeline: StatusTimeline } }} HasTimeline
- * @typedef {HasTimeline & { accreditations: Record<string, HasTimeline & { year: Year }> }} StandingSource
+ * The timelines a registration's standing is worked out from.
+ *
+ * @typedef {{
+ *   accreditations: Record<Year, { status: { timeline: StatusTimeline<AccreditationStatus> }, year: Year }>
+ *   status: { timeline: StatusTimeline<RegistrationStatus> }
+ * }} StandingSource
  */
 
 /**
- * @param {StatusTimeline} accreditationTimeline
+ * @param {StatusTimeline<AccreditationStatus>} accreditationTimeline
  * @param {CalendarDate} date
  */
 const holdsAccreditationOn = (accreditationTimeline, date) => {
@@ -25,8 +29,8 @@ const holdsAccreditationOn = (accreditationTimeline, date) => {
 }
 
 /**
- * @param {StatusTimeline} registrationTimeline
- * @param {StatusTimeline} accreditationTimeline
+ * @param {StatusTimeline<RegistrationStatus>} registrationTimeline
+ * @param {StatusTimeline<AccreditationStatus>} accreditationTimeline
  * @param {CalendarDate} date
  * @returns {Standing | undefined}
  */
@@ -49,7 +53,7 @@ const standingOn = (registrationTimeline, accreditationTimeline, date) => {
 /**
  * 1 January, then every date in `year` on which a timeline changes, oldest first.
  *
- * @param {StatusTimeline[]} timelines
+ * @param {StatusTimeline<string>[]} timelines
  * @param {Year} year
  * @returns {CalendarDate[]}
  */

@@ -1,6 +1,7 @@
 import { CADENCE } from '#reports/domain/cadence.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
@@ -87,6 +88,10 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
               lastUpdatedAt: '2026-02-01T09:00:00.000Z',
               timeline: [
                 {
+                  status: /** @type {const} */ ('approved'),
+                  at: '2026-02-01T00:00:00.000Z'
+                },
+                {
                   status: /** @type {const} */ ('cancelled'),
                   at: '2026-02-01T09:00:00.000Z'
                 }
@@ -94,25 +99,21 @@ const readOrganisationOf = (org, registration, accreditationRecord) => {
             }
       })
     : undefined
-  const accreditations = served
-    ? { [YEAR]: isExporter ? buildReadExporterAccreditation(served) : served }
-    : {}
-  const fields = {
-    status: approvedStatusFrom(registration.validFrom),
-    standingByDate: {
-      [YEAR]: {
-        [registration.validFrom]: { standing: 'registeredOnly' },
-        ...(served && approved && { '2026-07-01': { standing: 'accredited' } })
-      }
-    },
-    accreditations
-  }
+  const status = approvedStatusFrom(registration.validFrom)
   return buildReadOrganisation({
     organisationNumber: org.organisationNumber,
     registrations: {
       [registration.registrationNumber]: isExporter
-        ? buildReadExporterRegistration(/** @type {any} */ (fields))
-        : buildReadReprocessorRegistration(/** @type {any} */ (fields))
+        ? buildReadExporterRegistration({
+            status,
+            accreditations: served
+              ? accreditationsByYear(buildReadExporterAccreditation(served))
+              : {}
+          })
+        : buildReadReprocessorRegistration({
+            status,
+            accreditations: served ? accreditationsByYear(served) : {}
+          })
     }
   })
 }

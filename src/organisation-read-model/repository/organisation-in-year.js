@@ -5,13 +5,13 @@ import { approvedYears } from '#organisation-read-model/domain/status-timeline.j
 
 /**
  * The entry of `byYear` for `year`, or none when it has none for it.
- * @template T
- * @param {Record<string, T>} byYear
+ * @template {Partial<Record<Year, unknown>>} R
+ * @param {R} byYear
  * @param {Year} year
- * @returns {Record<string, T>}
+ * @returns {R}
  */
 const onlyYear = (byYear, year) =>
-  Object.hasOwn(byYear, year) ? { [year]: byYear[year] } : {}
+  /** @type {R} */ (Object.hasOwn(byYear, year) ? { [year]: byYear[year] } : {})
 
 /**
  * The organisation in `year`: registrations approved at any point in it, each

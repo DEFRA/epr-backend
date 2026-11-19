@@ -18,6 +18,7 @@ import {
 
 const { buildOrganisation } = createOrganisationBuilders()
 
+/** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { OrganisationReadRepositoryServingFixture, OrganisationSeed, OverseasSiteSeed } from './port.contract.js' */
 /** @typedef {OrganisationSeed['registrations'][number]} SeededRegistration */
 
@@ -73,6 +74,7 @@ const toStoredRegistration = ({
   const storedAccreditation = accreditationNumber
     ? toStoredAccreditation(accreditationNumber, exporting)
     : undefined
+  /** @type {Partial<StoredRegistration>} */
   const approved = {
     registrationNumber,
     accreditationId: storedAccreditation?.id,

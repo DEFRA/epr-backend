@@ -45,7 +45,8 @@ import {
   accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation as buildServedOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  withStandingThrough
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
@@ -199,20 +200,19 @@ const setupSubmit = async ({
     buildServedOrganisation({
       organisationNumber: organisation.organisationNumber,
       registrations: {
-        'REG-123': buildReadReprocessorRegistration({
-          material: 'paper',
-          status: approved,
-          standingByDate: {
-            2026: { [VALID_FROM]: { standing: 'accredited' } },
-            2027: { '2027-01-01': { standing: 'registeredOnly' } }
-          },
-          accreditations: accreditationsByYear(
-            buildReadAccreditation({
-              accreditationNumber: toAccreditationNumber('ACC-123'),
-              status: approved
-            })
-          )
-        })
+        [toRegistrationNumber('REG-123')]: withStandingThrough(
+          buildReadReprocessorRegistration({
+            material: 'paper',
+            status: approved,
+            accreditations: accreditationsByYear(
+              buildReadAccreditation({
+                accreditationNumber: toAccreditationNumber('ACC-123'),
+                status: approved
+              })
+            )
+          }),
+          toYear(2027)
+        )
       }
     })
   ])()

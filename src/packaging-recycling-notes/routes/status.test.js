@@ -3,10 +3,7 @@ import {
   PRN_YEAR,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -59,7 +56,7 @@ const { organisationNumber } = buildOrganisation()
 const LEDGER = {
   organisationNumber,
   registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+  accreditationNumber: ACCREDITATION_NUMBER,
   year: PRN_YEAR
 }
 const prns = `/organisations/${organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
@@ -83,15 +80,9 @@ const organisationReadRepositoryWith = async ({
     registrations: {
       [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
         submittedToRegulator,
-        standingByDate: {
-          2026: {
-            '2026-02-01': { standing: 'registeredOnly' },
-            '2026-07-01': { standing: 'accredited' }
-          }
-        },
         accreditations: accreditationsByYear(
           buildReadAccreditation({
-            accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+            accreditationNumber: ACCREDITATION_NUMBER,
             status: laterStatus
               ? {
                   current: laterStatus,
