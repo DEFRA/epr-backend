@@ -775,6 +775,36 @@ describe('findByOrganisationNumber for years', () => {
     ]).toStrictEqual(['active', 'cancelled'])
   })
 
+  it('serves a past year’s accreditation with its latest status', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const granted2025 = accreditation({
+      validFrom: '2025-02-01',
+      validTo: '2025-12-31',
+      statusHistory: history([
+        ['created', '2024-01-01'],
+        ['approved', '2025-02-01'],
+        ['cancelled', '2026-01-02']
+      ])
+    })
+    const stored = buildOrganisation({
+      registrations: [
+        reprocessorFrom('2025-02-01', [], { accreditationId: granted2025.id })
+      ],
+      accreditations: [granted2025]
+    })
+
+    const { registrations } = await findInYear(
+      organisationReadRepositoryWith,
+      stored,
+      2025
+    )
+
+    expect(
+      registrations[REPROCESSOR_NUMBER].accreditations[2025].status.current
+    ).toBe('cancelled')
+  })
+
   it('serves the current year’s statuses as they stand today', async ({
     organisationReadRepositoryWith
   }) => {
