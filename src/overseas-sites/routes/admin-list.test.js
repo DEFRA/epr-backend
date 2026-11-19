@@ -1,8 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
 
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,

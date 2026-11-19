@@ -5,8 +5,8 @@ import { asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   approvedTimelineFrom,
@@ -14,9 +14,7 @@ import {
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/test-support.js'
-import {
+  buildReadReprocessorRegistration,
   ACCREDITATION_NUMBER,
   EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,

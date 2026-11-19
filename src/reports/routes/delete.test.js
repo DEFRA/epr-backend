@@ -1,8 +1,9 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -16,7 +17,6 @@ import {
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
-import { REPROCESSOR_NUMBER } from '#organisation-read-model/test-support.js'
 import * as reportAudit from '#reports/application/audit.js'
 
 vi.mock('#reports/application/audit.js', () => ({

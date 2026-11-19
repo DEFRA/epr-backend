@@ -8,17 +8,17 @@ import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmissi
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration,
   registrationOf,
-  servedOrganisations
+  servedOrganisations,
+  REPROCESSOR_NUMBER
 } from '#organisation-read-model/test-support.js'
-import { REPROCESSOR_NUMBER } from '#organisation-read-model/test-support.js'
 import { config } from '#root/config.js'
 
 // ---------------------------------------------------------------------------

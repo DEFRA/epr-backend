@@ -14,9 +14,9 @@ import {
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  createInMemoryOrganisationReadRepository
 } from '#organisation-read-model/test-support.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmission.js'

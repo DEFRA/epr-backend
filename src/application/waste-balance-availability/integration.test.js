@@ -21,8 +21,10 @@ import {
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
-import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
+import {
+  createOrganisationReadRepository,
+  buildExternalAccreditation
+} from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'

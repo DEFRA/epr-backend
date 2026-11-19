@@ -5,9 +5,9 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
-import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/test-support.js'
 import {
+  createInMemoryOrganisationReadRepository,
+  buildReadOrganisationWithNumbersOf,
   REPROCESSOR_NUMBER,
   reprocessor
 } from '#organisation-read-model/test-support.js'

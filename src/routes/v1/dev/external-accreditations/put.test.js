@@ -7,11 +7,9 @@ import {
 } from '#domain/organisations/numbers.js'
 import {
   EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/test-support.js'
-import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
-import {
+  REPROCESSOR_NUMBER,
+  buildExternalAccreditation,
+  createInMemoryOrganisationReadRepository,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
