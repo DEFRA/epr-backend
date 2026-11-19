@@ -66,7 +66,8 @@ export const registrationWasteRecordsExportByNumber = {
           summaryLogsRepository: request.summaryLogsRepository,
           year,
           organisation,
-          registrationNumber
+          registrationNumber,
+          logger: request.logger
         })
       )
       .type('text/csv; charset=utf-8')
