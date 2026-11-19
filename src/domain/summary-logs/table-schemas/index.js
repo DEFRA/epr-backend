@@ -102,6 +102,22 @@ export const yearsWithTemplates = () => [
 ]
 
 /**
+ * Every table of every year's templates.
+ *
+ * @returns {{processingType: ProcessingType, schema: TableSchema, tableName: string, year: Year}[]}
+ */
+export const everyTemplateTable = () =>
+  yearsWithTemplates().flatMap((year) =>
+    Object.values(PROCESSING_TYPES)
+      .filter((processingType) => hasTemplate(year, processingType))
+      .flatMap((processingType) =>
+        Object.entries(tableSchemasOf(year, processingType)).map(
+          ([tableName, schema]) => ({ processingType, schema, tableName, year })
+        )
+      )
+  )
+
+/**
  * Whether any processing type has a template for the year.
  *
  * @param {Year} year

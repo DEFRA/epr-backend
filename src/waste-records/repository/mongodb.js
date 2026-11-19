@@ -1,4 +1,3 @@
-/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import { Collection, Db } from 'mongodb' */
 
@@ -37,6 +36,8 @@ export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
 const RETIRED_ROW_HISTORY_INDEX_NAMES = ['row_history', 'row_history_by_number']
 
+const RETIRED_MEMBERSHIP_INDEX_NAME = 'summary_log_membership'
+
 const RETIRED_IDENTITY_INDEX_NAMES = [
   'summary_log_row_state_identity',
   'summary_log_row_state_identity_by_number'
@@ -44,10 +45,12 @@ const RETIRED_IDENTITY_INDEX_NAMES = [
 
 /**
  * Ensures the row-states collection exists with the indexes required by the
- * summary-log row state design: a multikey index on `summaryLogIds` for the
- * committed-state membership query, and a unique index on the
- * summary-log-row-state identity (ledger identity and year + content hash) that makes
- * the content-addressed dedup atomic under concurrent writers.
+ * summary-log row state design: a multikey index on `summaryLogIds` then
+ * `_id` for the committed-state membership query, which reads in `_id` order
+ * so the planner never prefers walking the whole collection by `_id`, and a
+ * unique index on the summary-log-row-state identity (ledger identity and
+ * year + content hash) that makes the content-addressed dedup atomic under
+ * concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -59,13 +62,13 @@ export async function ensureSummaryLogRowStatesCollection(db) {
   const collection = db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
 
   await collection.createIndex(
-    { summaryLogIds: 1 },
-    { name: 'summary_log_membership' }
+    { summaryLogIds: 1, _id: 1 },
+    { name: 'summary_log_membership_by_id' }
   )
 
   await Promise.all(
-    RETIRED_ROW_HISTORY_INDEX_NAMES.map((name) =>
-      dropIndexIfPresent(collection, name)
+    [...RETIRED_ROW_HISTORY_INDEX_NAMES, RETIRED_MEMBERSHIP_INDEX_NAME].map(
+      (name) => dropIndexIfPresent(collection, name)
     )
   )
 
@@ -341,7 +344,7 @@ const performFindWasteRecordStatesForSummaryLog =
   }
 
 /**
- * Rides the multikey `summary_log_membership` index, as
+ * Rides the multikey `summary_log_membership_by_id` index, as
  * `findWasteRecordStatesForSummaryLog` does — a file id is selective enough
  * that the organisation and registration are a residual filter, not a key
  * prefix.
@@ -413,27 +416,6 @@ const performStreamRowStatesForSummaryLogs = (collection) =>
   }
 
 /**
- * The union of keys observed on `data` across the year's state documents,
- * computed server-side so the CSV export composes its dynamic header without
- * pulling any document into memory. Cost scales with the count of distinct
- * field names (typically <200) rather than the document count.
- *
- * @param {Collection} collection
- * @returns {(year: Year) => Promise<string[]>}
- */
-const performFindDistinctDataKeys = (collection) => async (year) => {
-  const docs = await collection
-    .aggregate([
-      { $match: { year } },
-      { $project: { kv: { $objectToArray: '$data' } } },
-      { $unwind: '$kv' },
-      { $group: { _id: '$kv.k' } }
-    ])
-    .toArray()
-  return docs.map((doc) => /** @type {string} */ (doc._id))
-}
-
-/**
  * Creates a MongoDB-backed summary-log row state repository.
  *
  * @param {Db} db
@@ -449,7 +431,6 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
     findRowStatesForSummaryLogFile:
       performFindRowStatesForSummaryLogFile(collection),
     streamRowStatesForSummaryLogs:
-      performStreamRowStatesForSummaryLogs(collection),
-    findDistinctDataKeys: performFindDistinctDataKeys(collection)
+      performStreamRowStatesForSummaryLogs(collection)
   })
 }

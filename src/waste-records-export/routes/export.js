@@ -54,7 +54,8 @@ export const wasteRecordsExportRoute = {
       summaryLogRowStatesRepository: request.summaryLogRowStatesRepository,
       ledgerRepository: request.ledgerRepository,
       summaryLogsRepository: request.summaryLogsRepository,
-      year: request.query.year
+      year: request.query.year,
+      logger: request.logger
     })
 
     return h
