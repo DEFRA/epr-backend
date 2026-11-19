@@ -56,7 +56,12 @@ const yearMatches = (date, predicate) =>
   date ? predicate(utcYearOf(date)) : false
 
 /** @param {string | null | undefined} date */
-const dayOf = (date) => (date ? utcCalendarDate(new Date(date)) : undefined)
+const dayOf = (date) => {
+  const instant = new Date(date ?? Number.NaN)
+  return date && !Number.isNaN(instant.getTime())
+    ? utcCalendarDate(instant)
+    : undefined
+}
 
 /**
  * Lists every stored registration whose `validFrom` falls before `year`, and

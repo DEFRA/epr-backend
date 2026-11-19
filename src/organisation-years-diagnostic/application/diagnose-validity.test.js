@@ -149,7 +149,7 @@ describe('diagnoseValidity', () => {
     expect(summary.accreditationsEndingOnFirstJanuary).toBe(3)
   })
 
-  it('ignores registrations and accreditations without dates, whether missing or null', () => {
+  it('ignores registrations and accreditations without dates, whether missing, null or unparseable', () => {
     const { registrations, accreditations, summary } = diagnoseValidity(
       [
         organisation({
@@ -159,7 +159,8 @@ describe('diagnoseValidity', () => {
           ],
           accreditations: [
             accreditation({ validFrom: undefined, validTo: undefined }),
-            accreditation({ id: 'acc-2', validFrom: null, validTo: null })
+            accreditation({ id: 'acc-2', validFrom: null, validTo: null }),
+            accreditation({ id: 'acc-3', validTo: 'TBC' })
           ]
         })
       ],
@@ -169,7 +170,7 @@ describe('diagnoseValidity', () => {
     expect(registrations).toStrictEqual([])
     expect(accreditations).toStrictEqual([])
     expect(summary.scannedRegistrations).toBe(2)
-    expect(summary.scannedAccreditations).toBe(2)
+    expect(summary.scannedAccreditations).toBe(3)
   })
 
   it('counts rows in test organisations', () => {
