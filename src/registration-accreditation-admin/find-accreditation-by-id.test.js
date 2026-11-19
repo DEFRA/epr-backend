@@ -1,67 +1,171 @@
-import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient } from 'mongodb'
-import { beforeEach, describe, it as base } from 'vitest'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { describe, beforeEach, expect, it } from 'vitest'
+import { ObjectId } from 'mongodb'
+import {
+  buildAccreditation,
+  createOrganisationBuilders,
+  prepareOrgUpdate
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { COLLECTION_NAME } from '#repositories/organisations/mongodb-find.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { testFindAccreditationByIdBehaviour } from './find-accreditation-by-id.contract.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { findAccreditationById } from './find-accreditation-by-id.js'
 
-/**
- * @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
- * @import { OrganisationsRepositoryFactory } from '#repositories/organisations/port.js'
- * @typedef {{ mongoClient: MongoClient, organisationsRepository: OrganisationsRepositoryFactory }} MongoFixtures
- */
+const { buildOrganisation } = createOrganisationBuilders()
 
-const DATABASE_NAME = 'epr-backend'
+describe('findAccreditationById', () => {
+  /** @type {import('#repositories/organisations/port.js').OrganisationsRepository} */
+  let repository
 
-const organisationBuilders = async (
-  // eslint-disable-next-line no-empty-pattern
-  /** @type {object} */ {},
-  /** @type {(builders: OrganisationBuilders) => Promise<void>} */ use
-) => {
-  await use(createOrganisationBuilders())
-}
+  beforeEach(() => {
+    repository = createInMemoryOrganisationsRepository([])()
+  })
 
-describe('findAccreditationById over the in-memory organisations repository', () => {
-  testFindAccreditationByIdBehaviour(
-    base.extend({
-      organisationsRepository: async (
-        // eslint-disable-next-line no-empty-pattern
-        /** @type {object} */ {},
-        /** @type {(factory: OrganisationsRepositoryFactory) => Promise<void>} */ use
-      ) => {
-        await use(createInMemoryOrganisationsRepository([]))
-      },
-      organisationBuilders
+  it('returns accreditation when both organisation ID and accreditation ID are valid', async () => {
+    const accreditation1 = buildAccreditation({
+      accreditationNumber: toAccreditationNumber('ACC111111')
     })
-  )
-})
 
-describe('findAccreditationById over the MongoDB organisations repository', () => {
-  const it = /** @type {import('vitest').TestAPI<MongoFixtures>} */ (
-    mongoIt.extend({
-      mongoClient: async ({ db }, use) => {
-        const client = await MongoClient.connect(db)
-        await use(client)
-        await client.close()
-      },
-      organisationsRepository: async ({ mongoClient }, use) => {
-        await use(
-          await createOrganisationsRepository(mongoClient.db(DATABASE_NAME))
-        )
-      }
+    const accreditation2 = buildAccreditation({
+      accreditationNumber: toAccreditationNumber('ACC222222'),
+      material: 'plastic',
+      wasteProcessingType: 'reprocessor',
+      glassRecyclingProcess: undefined
     })
-  )
 
-  beforeEach(
-    /** @param {MongoFixtures} fixture */ async ({ mongoClient }) => {
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection(COLLECTION_NAME)
-        .deleteMany({})
-    }
-  )
+    const org = buildOrganisation({
+      registrations: [],
+      accreditations: [accreditation1, accreditation2]
+    })
 
-  testFindAccreditationByIdBehaviour(it.extend({ organisationBuilders }))
+    await repository.insert(org)
+
+    const result = await findAccreditationById(
+      repository,
+      org.id,
+      accreditation1.id
+    )
+
+    const {
+      formSubmission: _formSubmission,
+      statusHistory: _statusHistory,
+      ...expected
+    } = accreditation1
+    expect(result).toMatchObject(expected)
+  })
+
+  it('throws NotFound when organisation ID does not exist', async () => {
+    const accreditation = buildAccreditation()
+    const org = buildOrganisation({
+      registrations: [],
+      accreditations: [accreditation]
+    })
+
+    await repository.insert(org)
+
+    const nonExistentOrgId = new ObjectId().toString()
+
+    await expect(
+      findAccreditationById(repository, nonExistentOrgId, accreditation.id)
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 404 }
+    })
+  })
+
+  it('throws NotFound when accreditation ID does not exist in the organisation', async () => {
+    const accreditation = buildAccreditation()
+    const org = buildOrganisation({
+      registrations: [],
+      accreditations: [accreditation]
+    })
+
+    await repository.insert(org)
+
+    const nonExistentAccreditationId = new ObjectId().toString()
+
+    await expect(
+      findAccreditationById(repository, org.id, nonExistentAccreditationId)
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 404 }
+    })
+  })
+
+  it('throws NotFound when organisation has no accreditations', async () => {
+    const org = buildOrganisation({
+      registrations: [],
+      accreditations: []
+    })
+
+    await repository.insert(org)
+
+    const nonExistentAccreditationId = new ObjectId().toString()
+
+    await expect(
+      findAccreditationById(repository, org.id, nonExistentAccreditationId)
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 404 }
+    })
+  })
+
+  it('throws 404 for invalid organisation ID format', async () => {
+    await expect(
+      findAccreditationById(repository, 'invalid-id', 'acc-123')
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 404 }
+    })
+  })
+
+  it('throws timeout error when minimumOrgVersion never arrives', async () => {
+    const accreditation = buildAccreditation()
+
+    const org = buildOrganisation({
+      registrations: [],
+      accreditations: [accreditation]
+    })
+
+    await repository.insert(org)
+
+    // Request a version that will never exist
+    await expect(
+      findAccreditationById(repository, org.id, accreditation.id, 999)
+    ).rejects.toMatchObject({
+      isBoom: true,
+      output: { statusCode: 500 },
+      message: 'Consistency timeout waiting for minimum version'
+    })
+  })
+
+  it('waits for minimumOrgVersion and returns accreditation when version arrives', async () => {
+    const accreditation = buildAccreditation()
+
+    const org = buildOrganisation({
+      registrations: [],
+      accreditations: [accreditation]
+    })
+
+    await repository.insert(org)
+
+    // Update to create version 2
+    const orgAfterInsert = await repository.findById(org.id)
+    const updatePayload = prepareOrgUpdate(orgAfterInsert, {
+      wasteProcessingTypes: ['exporter']
+    })
+    await repository.replace(org.id, 1, updatePayload)
+
+    // Request with minimumOrgVersion=2 - should retry until version 2 appears
+    const result = await findAccreditationById(
+      repository,
+      org.id,
+      accreditation.id,
+      2
+    )
+
+    expect(result).toMatchObject({
+      id: accreditation.id,
+      accreditationNumber: accreditation.accreditationNumber,
+      material: accreditation.material
+    })
+  })
 })
