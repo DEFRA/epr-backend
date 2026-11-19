@@ -1,5 +1,6 @@
-import { anotherOrganisationNumber } from '#waste-records/repository/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
+
+import { anotherOrganisationNumber } from '#waste-records/repository/test-data.js'
 
 import { buildLedgerEvent, buildLedgerId } from '../ledger-test-data.js'
 

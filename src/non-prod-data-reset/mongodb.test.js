@@ -248,7 +248,8 @@ const seedDownstreamForOrganisation = async (
   // The ledger and its row states name the organisation by number.
   const ledgerId = {
     ...DEFAULT_LEDGER_ID,
-    organisationNumber: organisation.organisationNumber
+    organisationNumber: organisation.organisationNumber,
+    registrationNumber
   }
 
   await database

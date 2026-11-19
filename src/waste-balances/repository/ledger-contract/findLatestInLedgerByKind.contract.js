@@ -1,5 +1,6 @@
-import { anotherOrganisationNumber } from '#waste-records/repository/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
+
+import { anotherOrganisationNumber } from '#waste-records/repository/test-data.js'
 
 import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
 import {

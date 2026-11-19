@@ -465,16 +465,12 @@ describe('createWasteBalanceService', () => {
     it('returns the PRN catch-up events after the watermark in order', async () => {
       await ledgerRepository.appendEvents([
         buildPrnCreatedEvent({
-          registrationNumber: 'REG-reg-1',
-          accreditationNumber: 'ACC-acc-1',
           number: 1,
           payload: { prnId: 'prn-1', amount: 10 }
         })
       ])
       await ledgerRepository.appendEvents([
         buildPrnIssuedEvent({
-          registrationNumber: 'REG-reg-1',
-          accreditationNumber: 'ACC-acc-1',
           number: 2,
           payload: { prnId: 'prn-1', amount: 10 }
         })
@@ -526,8 +522,8 @@ describe('createWasteBalanceService', () => {
       const balance = await service.currentBalance(ledgerId)
 
       expect(balance).toMatchObject({
-        registrationNumber: 'REG-reg-1',
-        accreditationNumber: 'ACC-acc-1',
+        registrationNumber: ledgerId.registrationNumber,
+        accreditationNumber: ledgerId.accreditationNumber,
         amount: 150,
         availableAmount: 110
       })

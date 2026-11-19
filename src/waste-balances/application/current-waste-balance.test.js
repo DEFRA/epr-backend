@@ -112,8 +112,6 @@ describe('currentWasteBalance', () => {
     const repository = createInMemoryLedgerRepository()()
     await repository.appendEvents([
       buildLedgerEvent({
-        registrationNumber: 'REG-reg-1',
-        accreditationNumber: 'ACC-acc-1',
         number: 1,
         kind: LEDGER_EVENT_KIND.PRN_CREATED,
         payload: { prnId: 'prn-1', amount: 0 },

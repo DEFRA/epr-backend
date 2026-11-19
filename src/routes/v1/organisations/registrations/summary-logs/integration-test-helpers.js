@@ -63,15 +63,13 @@ const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 
 export { asOperator } from '#test/inject-auth.js'
 
-/**
- * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} LedgerEnvironment
- */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * The environment's ledger id.
  *
- * @param {LedgerEnvironment} env
- * @returns {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
+ * @param {WasteBalanceLedgerId} env
+ * @returns {WasteBalanceLedgerId}
  */
 export const ledgerIdOf = ({
   organisationNumber,
@@ -90,7 +88,7 @@ export const ledgerIdOf = ({
  * asserts it is present, so callers can read its fields without a null guard at
  * every assertion site. The ledger id is taken entirely from the environment.
  *
- * @param {LedgerEnvironment & { wasteBalanceService: ReturnType<typeof createWasteBalanceService> }} env
+ * @param {WasteBalanceLedgerId & { wasteBalanceService: ReturnType<typeof createWasteBalanceService> }} env
  */
 export const getWasteBalance = async (env) => {
   const balance = await env.wasteBalanceService.currentBalance(ledgerIdOf(env))

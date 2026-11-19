@@ -89,8 +89,6 @@ describe('registered-only summary-log submitted event — balance neutrality', (
     const ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-1',
-          accreditationNumber: 'ACC-acc-1',
           number: 1,
           payload: { summaryLogId: 'log-acc', creditTotal: 50 },
           closingBalance: { amount: 50, availableAmount: 50 }
