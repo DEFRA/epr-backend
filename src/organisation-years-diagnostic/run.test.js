@@ -1,4 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import {
   approvedStatusFrom,
   buildReadOrganisation,
@@ -69,14 +70,14 @@ describe('runOrganisationYearsDiagnostic', () => {
   it('logs one line per organisation with another year plus the summary', async () => {
     const earlier = buildReadOrganisation({
       registrations: {
-        R1: buildReadReprocessorRegistration({
+        [toRegistrationNumber('R1')]: buildReadReprocessorRegistration({
           status: approvedStatusFrom('2025-11-01')
         })
       }
     })
     const current = buildReadOrganisation({
       registrations: {
-        R2: buildReadReprocessorRegistration({
+        [toRegistrationNumber('R2')]: buildReadReprocessorRegistration({
           status: approvedStatusFrom('2026-02-01')
         })
       }

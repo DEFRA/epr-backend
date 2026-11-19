@@ -7,12 +7,12 @@ import {
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, RegistrationStatus } from '#organisation-read-model/domain/model.js' */
 
 /**
  * @typedef {Object} OtherYearRegistration
  * @property {string} registrationId
- * @property {string} status
+ * @property {RegistrationStatus} status
  * @property {string | undefined} firstApprovedAt
  * @property {Year[]} years
  */
@@ -56,13 +56,12 @@ export const diagnoseOrganisationYears = (organisations, openYear) => {
     years: organisationYears(organisation, openYear)
   }))
 
-  /** @type {Record<string, number>} */
-  const organisationsByYear = {}
-  for (const { years } of scanned) {
-    for (const year of years) {
-      organisationsByYear[year] = (organisationsByYear[year] ?? 0) + 1
-    }
-  }
+  const organisationsByYear = scanned
+    .flatMap(({ years }) => years)
+    .reduce(
+      (counts, year) => ({ ...counts, [year]: (counts[year] ?? 0) + 1 }),
+      /** @type {Record<string, number>} */ ({})
+    )
 
   const rows = scanned
     .filter(({ years }) => years.some((year) => year !== openYear))
