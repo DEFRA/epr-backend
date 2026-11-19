@@ -6,7 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 
 /**

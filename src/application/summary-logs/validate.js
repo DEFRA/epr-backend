@@ -44,7 +44,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
-/** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/index.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */

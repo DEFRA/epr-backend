@@ -33,7 +33,7 @@ export const marketInsightsWasteBalanceGet = {
    *   params: { year: Year, cadence: 'monthly', period: number },
    *   ledgerRepository: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
    *   summaryLogRowStatesRepository: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository,
-   *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
+   *   organisationReadRepository: import('#organisation-read-model/index.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h

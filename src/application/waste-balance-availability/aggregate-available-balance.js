@@ -4,7 +4,7 @@ import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { DecimalValue } from '#common/helpers/decimal-utils.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 

@@ -8,7 +8,7 @@ import { reportResponseFailAction } from './response-fail-action.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
- * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
+ * @import { OrganisationReadRepository } from '#organisation-read-model/index.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  */
 

@@ -7,7 +7,7 @@ import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ExternalAccreditation, OnDrop } from './to-read-model.js' */
-/** @import { ExternalAccreditationsLoader } from './mongodb.js' */
+/** @import { ExternalAccreditationsLoader } from './mongodb-and-reg-accred-api.js' */
 
 /** The only year Reg Accred holds accreditations for. */
 export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)

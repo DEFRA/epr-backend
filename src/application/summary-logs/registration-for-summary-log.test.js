@@ -3,7 +3,7 @@ import {
   buildReadAccreditation,
   buildReadExporterRegistration,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import {
   OPERATOR_CATEGORY,
@@ -11,7 +11,7 @@ import {
 } from '#reports/domain/operator-category.js'
 import { reportingCadenceOf } from './registration-for-summary-log.js'
 
-/** @import {AccreditationCommon, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {AccreditationCommon, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 
 /**

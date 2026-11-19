@@ -13,7 +13,7 @@ import {
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildDraftReport } from '#vite/helpers/build-draft-report.js'
@@ -26,7 +26,7 @@ import {
 import { countOutstandingReturns } from './outstanding-returns.js'
 
 /** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 

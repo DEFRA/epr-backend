@@ -27,7 +27,7 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @typedef {object} SummaryLogHandlerDeps
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
- * @property {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository
+ * @property {import('#organisation-read-model/index.js').OrganisationReadRepository} organisationReadRepository
  * @property {SummaryLogRowStatesRepository} summaryLogRowStatesRepository
  * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {WasteBalanceService} wasteBalanceService

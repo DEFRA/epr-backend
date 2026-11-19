@@ -14,8 +14,8 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   buildReadAccreditation,
   buildReadExporterAccreditation,
@@ -23,7 +23,7 @@ import {
   buildReadOrganisation,
   buildReadReprocessorRegistration,
   withStandingThrough
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
@@ -45,7 +45,7 @@ import {
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
 /** @import { PublishedWasteBalanceFigures } from '#market-insights/domain/waste-balance-figures.js' */
-/** @import { Organisation as ServedOrganisation, Registration, Status } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation as ServedOrganisation, Registration, Status } from '#organisation-read-model/vocabulary.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { WasteBalanceTable } from './waste-balance-table.js' */

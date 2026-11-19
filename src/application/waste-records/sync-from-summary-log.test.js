@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { toYear } from '#common/helpers/dates/year.js'
-import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
+import { accreditationsByYear } from '#organisation-read-model/test-support.js'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -52,7 +52,7 @@ const APPROVED_FROM = '2023-01-01T00:00:00.000Z'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
-/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/vocabulary.js' */
 
 /**
  * @param {AccreditationNumber} accreditationNumber

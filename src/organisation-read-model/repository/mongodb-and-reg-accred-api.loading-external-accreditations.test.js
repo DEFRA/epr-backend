@@ -23,12 +23,12 @@ import {
 import {
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
   createOrganisationReadRepository
-} from './mongodb.js'
+} from './mongodb-and-reg-accred-api.js'
 
 /** @import { MongoClient } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OrganisationReadRepositoryOptions } from './mongodb.js' */
+/** @import { OrganisationReadRepositoryOptions } from './mongodb-and-reg-accred-api.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 

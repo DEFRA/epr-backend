@@ -1,6 +1,6 @@
 import { generateAllPeriodsForYear } from '#reports/domain/generate-reporting-periods.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
+import { accreditationsByYear } from '#organisation-read-model/test-support.js'
 import { ObjectId } from 'mongodb'
 import { partialMock } from '#test/type-helpers.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -40,7 +40,7 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
 
 /**
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
- * @import { ReprocessorAccreditation, ReprocessorRegistration } from '#organisation-read-model/domain/model.js'
+ * @import { ReprocessorAccreditation, ReprocessorRegistration } from '#organisation-read-model/vocabulary.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { RegistrationKey } from '#reports/repository/port.js'

@@ -16,10 +16,12 @@ import {
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+import {
+  reprocessor,
+  createInMemoryOrganisationReadRepository,
+  buildReadOrganisationWithNumbersOf
+} from '#organisation-read-model/test-support.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { buildReadOrganisationWithNumbersOf } from '#organisation-read-model/repository/read-model-test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'

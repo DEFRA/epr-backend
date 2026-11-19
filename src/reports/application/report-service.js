@@ -21,7 +21,7 @@ import {
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
- * @import { UkAddress } from '#organisation-read-model/domain/model.js'
+ * @import { UkAddress } from '#organisation-read-model/vocabulary.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence, CadenceAccreditation } from '#reports/domain/cadence.js'

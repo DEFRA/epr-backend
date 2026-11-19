@@ -1,14 +1,22 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
+  accreditation,
+  approvedOverseasSite,
+  exporter,
+  exporterAccreditation,
+  pendingOverseasSite,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
@@ -25,23 +33,13 @@ import {
   createAndSubmitReport,
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
-import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_ACCREDITATION_NUMBER,
-  accreditation,
-  approvedOverseasSite,
-  exporter,
-  exporterAccreditation,
-  pendingOverseasSite,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {
   emptySummaryLogStores,
   submitSummaryLog
 } from '#vite/helpers/submit-summary-log.js'
 
-/** @import { ExporterAccreditation, ExporterRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { ExporterAccreditation, ExporterRegistration } from '#organisation-read-model/vocabulary.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -93,7 +91,7 @@ const seedRepositories = async (
 /**
  * A registration approved from `validFrom`, as the read model serves it.
  * @param {string} validFrom
- * @returns {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>}
+ * @returns {Partial<import('#organisation-read-model/vocabulary.js').RegistrationCommon>}
  */
 const approvedFrom = (validFrom) => ({
   status: approvedStatusFrom(validFrom)
@@ -164,7 +162,7 @@ const accreditedExporter = ({
 /**
  * @param {{
  *   registration: Record<string, any>,
- *   readRegistration: import('#organisation-read-model/domain/model.js').Registration,
+ *   readRegistration: import('#organisation-read-model/vocabulary.js').Registration,
  *   accreditations?: object[],
  *   wasteRecords?: { type: string, data: object }[],
  *   reportDataValidation?: boolean

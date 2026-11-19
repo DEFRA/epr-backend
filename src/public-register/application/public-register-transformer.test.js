@@ -1,5 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
+import { accreditationsByYear } from '#organisation-read-model/test-support.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import {
   toAccreditationNumber,
@@ -11,7 +11,7 @@ import { partialMock } from '#test/type-helpers.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { transform } from './public-register-transformer.js'
 
-/** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, ExporterRegistration, Organisation, Registration, ReprocessorRegistration, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
 
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000010001PL')
 

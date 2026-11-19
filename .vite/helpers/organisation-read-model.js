@@ -1,6 +1,6 @@
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
  * An organisation read repository that serves no organisations.

@@ -20,11 +20,11 @@ import {
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import {
   createOrganisationReadRepository,
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
-} from '#organisation-read-model/repository/mongodb.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+  buildExternalAccreditation
+} from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -124,7 +124,7 @@ describe('aggregateAvailableBalance - Integration', () => {
   let db
   /** @type {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} */
   let ledgerRepository
-  /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+  /** @type {import('#organisation-read-model/index.js').OrganisationReadRepository} */
   let organisationReadRepository
 
   const aggregate = () =>

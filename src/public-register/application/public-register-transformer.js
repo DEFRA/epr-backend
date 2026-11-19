@@ -3,12 +3,15 @@
  */
 
 /** @import {AppliedForMaterial, Material, TonnageBand} from '#domain/organisations/model.js' */
-/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData, ReportComplianceEntry} from '#reports/application/report-compliance.js' */
 /** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
 
-import { firstApprovedAt } from '#organisation-read-model/domain/status-timeline.js'
+import {
+  firstApprovedAt,
+  accreditationForYear
+} from '#organisation-read-model/vocabulary.js'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
@@ -27,7 +30,6 @@ import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
 const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
