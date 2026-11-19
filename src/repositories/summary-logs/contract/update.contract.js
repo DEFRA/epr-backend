@@ -6,7 +6,12 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
-import { buildFile, buildPendingFile, summaryLogFactory } from './test-data.js'
+import {
+  buildFile,
+  buildPendingFile,
+  buildSummaryLogCommit,
+  summaryLogFactory
+} from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
 export const testUpdateBehaviour = (it) => {
@@ -104,6 +109,26 @@ export const testUpdateBehaviour = (it) => {
         const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog).not.toHaveProperty('organisationId')
         expect(found.summaryLog).not.toHaveProperty('registrationId')
+      })
+
+      it('keeps the commit validation saves', async () => {
+        const id = `contract-update-commit-${randomUUID()}`
+        const commit = buildSummaryLogCommit({
+          contextHash: 'ab'.repeat(32),
+          payload: { creditTotal: 12.5, decemberCreditTotal: 2.5 },
+          counts: { created: 2, updated: 1, decemberWasteRowCount: 1 }
+        })
+
+        await repository.insert(id, summaryLogFactory.validating())
+        const current = await repository.findById(id)
+
+        await repository.update(id, current.version, {
+          ...transitionStatus(current.summaryLog, SUMMARY_LOG_STATUS.VALIDATED),
+          commit
+        })
+
+        const found = await waitForVersion(repository, id, current.version + 1)
+        expect(found.summaryLog.commit).toEqual(commit)
       })
     })
 
