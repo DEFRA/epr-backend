@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    // A module's public interface and test-support entry point are entries
+    // whether or not anything imports them yet (ADR 0027).
+    "src/*/index.js",
+    "src/*/test-support.js",
+    // Run by hand, as each script's header or README says.
+    "scripts/generate-summary-log-rules.mjs",
+    "scripts/mongo-performance-test/*/benchmark-*.js"
+  ],
+  "ignoreDependencies": [
+    // pino loads it by name as a transport target.
+    "pino-pretty",
+    // setup:husky imports it inside a `node -e` string, which knip cannot read.
+    "husky",
+    // Restored in #249 for signing AWS requests in deployed environments.
+    "aws4"
+  ],
+  // lint-staged runs it, and it comes from the system rather than npm.
+  "ignoreBinaries": ["gitleaks"],
+  // An export used in its own file is live code, not dead code.
+  "ignoreExportsUsedInFile": true
+}
