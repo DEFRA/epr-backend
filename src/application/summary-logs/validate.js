@@ -34,6 +34,7 @@ import { transformAndValidateData } from './transform-and-validate-data.js'
 import { ledgerIdFor } from './ledger-id.js'
 import { registrationForSummaryLog } from './registration-for-summary-log.js'
 import { recordValidationMetrics } from './validation-metrics.js'
+import { submissionCommitOf } from './submission-commit.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -55,6 +56,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
+/** @import {SummaryLogCommit} from '#domain/summary-logs/commit.js' */
 
 /**
  * @param {{
@@ -372,6 +374,7 @@ const logServerEvent = (logger, message, action) =>
  *
  * @param {Object} params
  * @param {ValidationIssuesCollector} params.issues
+ * @param {SummaryLogCommit | null} params.commit
  * @param {Loads | null} params.loads
  * @param {LoadsByReportingPeriod | null} params.loadsByReportingPeriod
  * @param {ExtractedMeta | undefined} params.meta
@@ -383,6 +386,7 @@ const logServerEvent = (logger, message, action) =>
  */
 const persistValidationResult = async ({
   issues,
+  commit,
   loads,
   loadsByReportingPeriod,
   meta,
@@ -403,6 +407,7 @@ const persistValidationResult = async ({
     },
     ...(loads && { loads }),
     ...(loadsByReportingPeriod && { loadsByReportingPeriod }),
+    ...(commit && { commit }),
     ...(meta && { meta })
   })
 }
@@ -471,7 +476,7 @@ const classifyAndPersistResult = async ({
     summaryLog
   })
 
-  const { loads, loadsByReportingPeriod } = classifyLoads({
+  const { loads, loadsByReportingPeriod, recordChanges } = classifyLoads({
     status,
     wasteBalanceRecords,
     wasteRecords,
@@ -483,6 +488,13 @@ const classifyAndPersistResult = async ({
 
   await persistValidationResult({
     issues,
+    commit:
+      recordChanges &&
+      submissionCommitOf({
+        wasteRecords,
+        classificationContext,
+        recordChanges
+      }),
     loads,
     loadsByReportingPeriod: await withPeriodsRequiringResubmission({
       loadsByReportingPeriod,
