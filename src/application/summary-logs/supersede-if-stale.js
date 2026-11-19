@@ -20,7 +20,7 @@ import { registrationForSummaryLog } from './registration-for-summary-log.js'
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { SummaryLogCommit } from '#domain/summary-logs/commit.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SubmittedSummaryLog } from './validate-issue-logging.js' */
 

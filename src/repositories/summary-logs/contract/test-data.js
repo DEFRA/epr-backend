@@ -67,7 +67,7 @@ export const buildSummaryLogCommit = (overrides = {}) => ({
  * What validation saves for a summary log, classified against the
  * registration the read model serves for it now.
  *
- * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository
+ * @param {import('#organisation-read-model/index.js').OrganisationReadRepository} organisationReadRepository
  * @param {Parameters<typeof registrationForSummaryLog>[1]} summaryLog
  * @param {Partial<import('#domain/summary-logs/commit.js').SummaryLogCommit>} [overrides]
  */
