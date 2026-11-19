@@ -85,8 +85,8 @@ afterEach(() => {
 
 describe('auditReportStatusTransition', () => {
   const params = {
-    organisationNumber: '500001',
-    registrationNumber: 'R25SR500010912PL',
+    organisationNumber: toOrganisationNumber('500001'),
+    registrationNumber: toRegistrationNumber('R25SR500010912PL'),
     accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,
@@ -138,8 +138,8 @@ describe('auditReportStatusTransition', () => {
   it('strips previous and next from CDP audit event when payload is oversized', async () => {
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
-      organisationNumber: '500001',
-      registrationNumber: 'R25SR500010912PL',
+      organisationNumber: toOrganisationNumber('500001'),
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
       accreditationNumber: ACCREDITATION_NUMBER,
       year: toYear(2025),
       cadence: CADENCE.quarterly,
@@ -170,8 +170,8 @@ describe('auditReportStatusTransition', () => {
           action: 'status-transition'
         },
         context: {
-          organisationNumber: '500001',
-          registrationNumber: 'R25SR500010912PL',
+          organisationNumber: toOrganisationNumber('500001'),
+          registrationNumber: toRegistrationNumber('R25SR500010912PL'),
           accreditationNumber: ACCREDITATION_NUMBER,
           year: toYear(2025),
           cadence: CADENCE.quarterly,
@@ -196,8 +196,8 @@ describe('auditReportStatusTransition', () => {
 
 describe('auditReportDelete', () => {
   const params = {
-    organisationNumber: '500001',
-    registrationNumber: 'R25SR500010912PL',
+    organisationNumber: toOrganisationNumber('500001'),
+    registrationNumber: toRegistrationNumber('R25SR500010912PL'),
     accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,
@@ -244,8 +244,8 @@ describe('auditReportDelete', () => {
   it('strips previous to { status } in CDP audit event when payload is oversized', async () => {
     const veryLongString = randomBytes(1e6).toString('hex')
     const oversizedParams = {
-      organisationNumber: '500001',
-      registrationNumber: 'R25SR500010912PL',
+      organisationNumber: toOrganisationNumber('500001'),
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
       accreditationNumber: ACCREDITATION_NUMBER,
       year: toYear(2025),
       cadence: CADENCE.quarterly,
@@ -270,8 +270,8 @@ describe('auditReportDelete', () => {
           action: 'delete'
         },
         context: {
-          organisationNumber: '500001',
-          registrationNumber: 'R25SR500010912PL',
+          organisationNumber: toOrganisationNumber('500001'),
+          registrationNumber: toRegistrationNumber('R25SR500010912PL'),
           accreditationNumber: ACCREDITATION_NUMBER,
           year: toYear(2025),
           cadence: CADENCE.quarterly,
@@ -425,8 +425,8 @@ describe.each([
 
 describe('auditReportCreate', () => {
   const params = {
-    organisationNumber: '500001',
-    registrationNumber: 'R25SR500010912PL',
+    organisationNumber: toOrganisationNumber('500001'),
+    registrationNumber: toRegistrationNumber('R25SR500010912PL'),
     accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,
@@ -469,8 +469,8 @@ describe('auditReportCreate', () => {
 
 describe('auditReportRequestResubmission', () => {
   const params = {
-    organisationNumber: '500001',
-    registrationNumber: 'R25SR500010912PL',
+    organisationNumber: toOrganisationNumber('500001'),
+    registrationNumber: toRegistrationNumber('R25SR500010912PL'),
     accreditationNumber: ACCREDITATION_NUMBER,
     year: toYear(2025),
     cadence: CADENCE.quarterly,

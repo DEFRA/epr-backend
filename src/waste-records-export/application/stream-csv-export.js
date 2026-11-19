@@ -26,7 +26,7 @@ import {
 import { loadSummaryLogMap } from './load-summary-log-map.js'
 
 /** @import {TypedLogger} from '#common/hapi-types.js' */
-/** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
 /** @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
@@ -451,8 +451,8 @@ const warnOfLeftOutKeys = (logger, year, leftOutKeys) => {
 }
 
 /**
- * @param {string} organisationNumber
- * @param {string} registrationNumber
+ * @param {OrganisationNumber} organisationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @returns {string}
  */
 const registrationKey = (organisationNumber, registrationNumber) =>

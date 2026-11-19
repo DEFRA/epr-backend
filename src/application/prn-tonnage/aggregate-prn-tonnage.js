@@ -11,7 +11,7 @@ import { indexByLedger } from '#waste-balances/application/read-model-accreditat
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { Material, WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { Registration } from '#organisation-read-model/domain/model.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
@@ -34,8 +34,8 @@ import { indexByLedger } from '#waste-balances/application/read-model-accreditat
  * @typedef {Object} AggregatedRow
  * @property {string} organisationName
  * @property {OrganisationNumber} organisationNumber
- * @property {string} registrationNumber
- * @property {string} accreditationNumber
+ * @property {RegistrationNumber} registrationNumber
+ * @property {AccreditationNumber} accreditationNumber
  * @property {Material} material
  * @property {string} tonnageBand
  * @property {WasteBalanceLedgerId} ledgerId

@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { yearCalendar } from '#reports/application/report-calendar.js'
+import { reportResponseFailAction } from './response-fail-action.js'
 import { reportsYearCalendarResponseSchema } from './response.schema.js'
 import { calendarQuerySchema } from './shared.js'
 
@@ -19,7 +20,10 @@ export const reportsYearCalendar = {
     auth: getAuthConfig([SCOPES.organisationRead, SCOPES.adminRead]),
     tags: ['api'],
     validate: { query: calendarQuerySchema },
-    response: { schema: reportsYearCalendarResponseSchema }
+    response: {
+      schema: reportsYearCalendarResponseSchema,
+      failAction: reportResponseFailAction
+    }
   },
   /**
    * @param {ReportRequest & { params: { year: Year }, reportsRepository: ReportsRepository }} request

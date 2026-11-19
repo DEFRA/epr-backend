@@ -26,6 +26,7 @@ import {
   LEDGER_ID_FIELDS,
   pickLedgerId
 } from '#waste-balances/repository/ledger-schema.js'
+import { SummaryLogRowStateConflictError } from './port.js'
 import {
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
@@ -218,6 +219,44 @@ const prepareRowState = (ledgerId, entry, summaryLogId) => {
   return { candidate, contentHash: hashSummaryLogRowState(candidate) }
 }
 
+/** @param {{ wasteRecordType: string, rowId: string }} row */
+const rowKey = ({ wasteRecordType, rowId }) =>
+  JSON.stringify([wasteRecordType, rowId])
+
+/**
+ * @param {Collection} collection
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {{ candidate: SummaryLogRowStateInsert, contentHash: string }[]} prepared
+ * @param {SummaryLogFileId} summaryLogId
+ */
+const assertOneStatePerRow = async (
+  collection,
+  ledgerId,
+  prepared,
+  summaryLogId
+) => {
+  const held = await collection
+    .find(buildSummaryLogFilter(ledgerId, summaryLogId), {
+      projection: { _id: 0, wasteRecordType: 1, rowId: 1, contentHash: 1 }
+    })
+    .toArray()
+  const hashByRow = new Map(
+    held.map(({ wasteRecordType, rowId, contentHash }) => [
+      rowKey({ wasteRecordType, rowId }),
+      contentHash
+    ])
+  )
+
+  for (const { candidate, contentHash } of prepared) {
+    const key = rowKey(candidate)
+    const heldHash = hashByRow.get(key)
+    if (heldHash !== undefined && heldHash !== contentHash) {
+      throw new SummaryLogRowStateConflictError(summaryLogId, candidate)
+    }
+    hashByRow.set(key, contentHash)
+  }
+}
+
 /**
  * Commits a whole submission's row states in one round trip: a single
  * `bulkWrite` of content-addressed upserts, then one `find` to read the
@@ -238,6 +277,7 @@ const performUpsertSummaryLogRowStates =
     const prepared = summaryLogRowStates.map((entry) =>
       prepareRowState(ledgerId, entry, summaryLogId)
     )
+    await assertOneStatePerRow(collection, ledgerId, prepared, summaryLogId)
 
     await collection.bulkWrite(
       prepared.map(({ candidate, contentHash }) =>

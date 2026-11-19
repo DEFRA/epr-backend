@@ -1,4 +1,5 @@
 /** @import { ExporterRegistration, Organisation, OverseasSite } from '#organisation-read-model/domain/model.js' */
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import Boom from '@hapi/boom'
 import Joi from 'joi'
@@ -9,6 +10,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -38,7 +40,7 @@ const nullable = (value) => value ?? null
 
 /**
  * @param {Organisation} organisation
- * @param {string} registrationNumber
+ * @param {RegistrationNumber} registrationNumber
  * @param {ExporterRegistration} registration
  * @param {string} orsId
  * @param {OverseasSite} site
@@ -80,7 +82,7 @@ const buildRows = (organisations) =>
             ? Object.entries(registration.overseasSites).map(([orsId, site]) =>
                 toRow(
                   organisation,
-                  registrationNumber,
+                  toRegistrationNumber(registrationNumber),
                   registration,
                   orsId,
                   site

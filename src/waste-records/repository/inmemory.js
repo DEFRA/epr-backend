@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
 import { isSameLedger } from '#waste-balances/repository/ledger-schema.js'
+import { SummaryLogRowStateConflictError } from './port.js'
 import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
@@ -29,7 +30,7 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
- * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} doc
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
@@ -38,7 +39,7 @@ const matchesRowIdentity = (doc, candidate) =>
   doc.wasteRecordType === candidate.wasteRecordType
 
 /**
- * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} doc
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesCommittedState = (doc, candidate) =>
@@ -118,14 +119,13 @@ const toWasteRecordState = ({
 }) => ({ rowId, wasteRecordType, processingType, data, classification })
 
 /**
- * @param {SummaryLogRowState[]} storage
  * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
  * @param {SummaryLogFileId} summaryLogId
- * @returns {SummaryLogRowState}
+ * @returns {SummaryLogRowStateInsert}
  */
-const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
-  const candidate = validateSummaryLogRowStateInsert({
+const toCandidate = (ledgerId, entry, summaryLogId) =>
+  validateSummaryLogRowStateInsert({
     ...ledgerId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
@@ -135,6 +135,36 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
     summaryLogIds: [summaryLogId]
   })
 
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {SummaryLogRowStateInsert[]} candidates
+ * @param {SummaryLogFileId} summaryLogId
+ */
+const assertOneStatePerRow = (storage, ledgerId, candidates, summaryLogId) => {
+  const held = [
+    ...rowStatesForSummaryLog(storage, ledgerId, summaryLogId),
+    ...candidates
+  ]
+  const conflicting = candidates.find((candidate) =>
+    held.some(
+      (state) =>
+        matchesRowIdentity(state, candidate) &&
+        !matchesCommittedState(state, candidate)
+    )
+  )
+  if (conflicting) {
+    throw new SummaryLogRowStateConflictError(summaryLogId, conflicting)
+  }
+}
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {SummaryLogRowStateInsert} candidate
+ * @param {SummaryLogFileId} summaryLogId
+ * @returns {SummaryLogRowState}
+ */
+const upsertOne = (storage, candidate, summaryLogId) => {
   const match = storage.find((doc) => matchesCommittedState(doc, candidate))
 
   if (match) {
@@ -163,10 +193,15 @@ const repositoryOver = (storage) => ({
     ledgerId,
     summaryLogRowStates,
     summaryLogId
-  ) =>
-    summaryLogRowStates.map((entry) =>
-      upsertOne(storage, ledgerId, entry, summaryLogId)
-    ),
+  ) => {
+    const candidates = summaryLogRowStates.map((entry) =>
+      toCandidate(ledgerId, entry, summaryLogId)
+    )
+    assertOneStatePerRow(storage, ledgerId, candidates, summaryLogId)
+    return candidates.map((candidate) =>
+      upsertOne(storage, candidate, summaryLogId)
+    )
+  },
 
   /**
    * @param {WasteBalanceLedgerId} ledgerId

@@ -35,7 +35,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
@@ -197,7 +197,7 @@ const periodFigures = (cells, months) =>
 
 /**
  * @param {import('#common/hapi-types.js').TypedLogger} logger
- * @param {string} accreditationNumber
+ * @param {AccreditationNumber} accreditationNumber
  * @param {Year} year
  */
 const warnAboutUnmatchedPartition = (logger, accreditationNumber, year) => {

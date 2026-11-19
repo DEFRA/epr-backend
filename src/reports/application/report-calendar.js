@@ -11,7 +11,9 @@ import {
   hasEnded
 } from '#reports/domain/generate-reporting-periods.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import { toPerson } from '#reports/domain/person.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
 import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
 
@@ -23,22 +25,38 @@ import { accreditationForYear } from '#organisation-read-model/domain/accreditat
  * @import { CalendarDateRange } from '#organisation-read-model/domain/status-timeline.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
- * @import { PeriodicReport, ReportListItem, ReportSummary } from '#reports/repository/port.js'
+ * @import { Person } from '#reports/domain/person.js'
+ * @import { PeriodicReport, ReportStatus, ReportSummary } from '#reports/repository/port.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
- * Curates the full report summary down to the list-response shape so the
- * calendar endpoints don't leak heavy activity payloads.
- * @param {ReportSummary | null} current
- * @returns {ReportListItem | null}
+ * @typedef {{
+ *   status: ReportStatus,
+ *   submissionNumber: number,
+ *   submittedAt?: string,
+ *   submittedBy?: Person
+ * }} CalendarReport
  */
-export const toReportListItem = (current) => {
-  if (!current) {
-    return null
-  }
-  const { id, status, submissionNumber, submittedAt, submittedBy } = current
-  return { id, status, submissionNumber, submittedAt, submittedBy }
-}
+
+/**
+ * A report keeps its last submission after it is unsubmitted, so only a
+ * report submitted now serves one.
+ * @param {ReportSummary} report
+ * @returns {CalendarReport}
+ */
+const toCalendarReport = ({
+  status,
+  submissionNumber,
+  submittedAt,
+  submittedBy
+}) => ({
+  status,
+  submissionNumber,
+  ...(status === REPORT_STATUS.SUBMITTED &&
+    submittedAt &&
+    submittedBy && { submittedAt, submittedBy: toPerson(submittedBy) })
+})
 
 /**
  * @param {GeneratedPeriod[]} parts - one period's parts, oldest first
@@ -204,7 +222,7 @@ const mergedPeriods = (
  * @returns {{
  *   registeredOnly: MergedPeriod[],
  *   accredited: MergedPeriod[],
- *   accreditationNumber?: string
+ *   accreditationNumber?: AccreditationNumber
  * }}
  */
 export const reportingPeriodsByKind = ({
@@ -301,10 +319,10 @@ export const yearCalendar = ({
    * @param {MergedPeriod[]} merged
    */
   const calendarPeriods = (cadence, merged) =>
-    buildPeriods(merged, now).map((period) => ({
+    buildPeriods(merged, now).map(({ report, ...period }) => ({
       ...period,
       cadence,
-      report: toReportListItem(period.report)
+      ...(report && { report: toCalendarReport(report) })
     }))
 
   const registeredOnly = calendarPeriods(

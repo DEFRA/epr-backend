@@ -7,7 +7,7 @@ import {
 } from './helpers.js'
 
 /** @import { FindParams, SearchCriteria } from './administration-port.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * How organisations are searched in memory. The in-memory organisations
@@ -24,8 +24,8 @@ import {
  * @typedef {{
  *   organisationNumber: OrganisationNumber
  *   companyDetails: { name: string }
- *   registrations: Array<{ registrationNumber?: string | null }>
- *   accreditations: Array<{ accreditationNumber?: string | null }>
+ *   registrations: Array<{ registrationNumber?: RegistrationNumber | null }>
+ *   accreditations: Array<{ accreditationNumber?: AccreditationNumber | null }>
  * }} Searchable
  */
 

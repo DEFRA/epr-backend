@@ -15,9 +15,10 @@ import {
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
 import { PRN_COMMAND_REJECTION } from '#waste-balances/domain/commands.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 
-const ACCREDITATION_ID = 'acc-1'
+const ACCREDITATION_NUMBER = toAccreditationNumber('A26ER5000000001PA')
 const PRN_ID = 'prn-1'
 
 /**
@@ -89,12 +90,12 @@ describe('toTransitionError', () => {
     expect(
       toTransitionError(
         refusal(PRN_COMMAND_REJECTION.NO_LEDGER),
-        ACCREDITATION_ID
+        ACCREDITATION_NUMBER
       )
     ).toMatchObject({
       isBoom: true,
       output: { statusCode: 400 },
-      message: `No waste balance found for accreditation: ${ACCREDITATION_ID}`
+      message: `No waste balance found for accreditation: ${ACCREDITATION_NUMBER}`
     })
   })
 
@@ -102,7 +103,9 @@ describe('toTransitionError', () => {
     [PRN_COMMAND_REJECTION.INSUFFICIENT_AVAILABLE_BALANCE, 'available'],
     [PRN_COMMAND_REJECTION.INSUFFICIENT_TOTAL_BALANCE, 'total']
   ])('raises a 409 for an exhausted %s balance', (reason, balance) => {
-    expect(toTransitionError(refusal(reason), ACCREDITATION_ID)).toMatchObject({
+    expect(
+      toTransitionError(refusal(reason), ACCREDITATION_NUMBER)
+    ).toMatchObject({
       isBoom: true,
       output: { statusCode: 409 },
       message: `Insufficient ${balance} waste balance`
@@ -111,7 +114,10 @@ describe('toTransitionError', () => {
 
   it('raises a 500 naming the transition when an issued PRN has no ledger', () => {
     expect(
-      toTransitionError(refusal(LEDGER_MISSING_AFTER_ISSUE), ACCREDITATION_ID)
+      toTransitionError(
+        refusal(LEDGER_MISSING_AFTER_ISSUE),
+        ACCREDITATION_NUMBER
+      )
     ).toMatchObject({
       isBoom: true,
       output: { statusCode: 500 },
@@ -124,6 +130,6 @@ describe('toTransitionError', () => {
   it('passes a transition-rule error through untouched, so the routes still map it', () => {
     const error = new StatusConflictError(PRN_STATUS.DRAFT, PRN_STATUS.ACCEPTED)
 
-    expect(toTransitionError(error, ACCREDITATION_ID)).toBe(error)
+    expect(toTransitionError(error, ACCREDITATION_NUMBER)).toBe(error)
   })
 })
