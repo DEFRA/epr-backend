@@ -225,6 +225,7 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
   const { reason } = await supersedeIfStale({
     summaryLogsRepository,
     organisationReadRepository: deps.organisationReadRepository,
+    ledgerRepository: deps.ledgerRepository,
     logger: deps.logger,
     summaryLog: transition.summaryLog,
     summaryLogId,
