@@ -7,8 +7,15 @@ import { ObjectId } from 'mongodb'
 
 import {
   SUMMARY_LOG_STATUS,
+  transitionStatus,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { submitSummaryLog } from '#application/summary-logs/submit.js'
+import { createReportsService } from '#reports/application/report-service.js'
+import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import {
   MONTHLY_PERIODS,
   QUARTERLY_PERIODS
@@ -142,6 +149,42 @@ describe('loadsByReportingPeriod population at validate time', () => {
     await pollWhileStatus(server, summaryLogId, {
       waitWhile: SUMMARY_LOG_STATUS.SUBMITTING,
       maxAttempts: SUBMIT_MAX_POLL_ATTEMPTS
+    })
+  }
+
+  // The environment's submit worker skips the reports handler, so this runs the
+  // real submission, which flags reports from what validation stored.
+  const submitThroughReportsHandler = async (env, summaryLogId) => {
+    const id = toSummaryLogId(summaryLogId)
+    const { version, summaryLog } = await env.summaryLogsRepository.findById(id)
+    await env.summaryLogsRepository.update(
+      id,
+      version,
+      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTING)
+    )
+    await waitForVersion(env.summaryLogsRepository, id, version + 1)
+
+    await submitSummaryLog(id, {
+      logger: env.logger,
+      summaryLogsRepository: env.summaryLogsRepository,
+      organisationReadRepository: env.organisationReadRepository,
+      summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
+      ledgerRepository: env.ledgerRepository,
+      wasteBalanceService: env.wasteBalanceService,
+      reportsService: createReportsService(env.reportsRepository),
+      summaryLogExtractor: {
+        extract: async ({ file }) => env.fileDataMap[file.id]
+      },
+      user: {
+        id: 'user-123',
+        email: 'operator@example.com',
+        scope: [],
+        role: null
+      },
+      onSummaryLogUploaded: createOnSummaryLogUploaded({
+        reportsRepository: env.reportsRepository,
+        systemLogsRepository: createSystemLogsRepository()(env.logger)
+      })
     })
   }
 
@@ -625,22 +668,27 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
   })
 
-  it('places a 2027 load received in December 2026 in no period of 2026, so a submitted December 2026 report is neither its period nor flagged', async () => {
+  it('places a 2027 load received in December 2026 in no period of 2026, so submitting the log leaves the December 2026 report as it was', async () => {
     config.set('openNextYear', true)
     onTestFinished(() => config.reset('openNextYear'))
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       year: toYear(2027)
     })
-    await createAndSubmitReport(env.reportsRepository, {
-      ...env.reportKey,
-      year: toYear(2026),
-      cadence: 'monthly',
-      period: MONTHLY_PERIODS.December,
-      startDate: calendarDate('2026-12-01'),
-      endDate: calendarDate('2026-12-31'),
-      dueDate: calendarDate('2027-01-20')
-    })
+    const december2026ReportId = await createAndSubmitReport(
+      env.reportsRepository,
+      {
+        ...env.reportKey,
+        year: toYear(2026),
+        cadence: 'monthly',
+        period: MONTHLY_PERIODS.December,
+        startDate: calendarDate('2026-12-01'),
+        endDate: calendarDate('2026-12-31'),
+        dueDate: calendarDate('2027-01-20')
+      }
+    )
+    const december2026ReportBefore =
+      await env.reportsRepository.findReportById(december2026ReportId)
 
     const loadsByReportingPeriod = await uploadAndValidate(
       env,
@@ -694,6 +742,12 @@ describe('loadsByReportingPeriod population at validate time', () => {
       adjusted: emptyChange()
     })
     expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+
+    await submitThroughReportsHandler(env, 'sl-2027-received-december-2026')
+
+    expect(
+      await env.reportsRepository.findReportById(december2026ReportId)
+    ).toEqual(december2026ReportBefore)
   })
 
   it('aggregates count and tonnageDelta across multiple loads in the same period', async () => {
