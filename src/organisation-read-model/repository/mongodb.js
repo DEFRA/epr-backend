@@ -40,13 +40,16 @@ export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
  */
 
 /**
- * Whether the year asked for, or every year when none is, includes Reg Accred's.
- *
  * @param {Year | undefined} year
  * @returns {boolean}
  */
-const isRegAccredYear = (year) =>
-  year === undefined || year === REG_ACCRED_ACCREDITATION_YEAR
+const isAllYears = (year) => year === undefined
+
+/**
+ * @param {Year | undefined} year
+ * @returns {boolean}
+ */
+const isRegAccredYear = (year) => year === REG_ACCRED_ACCREDITATION_YEAR
 
 /**
  * Wraps a loader so it loads nothing for a year the service does not serve
@@ -119,12 +122,12 @@ export const createOrganisationReadRepository =
      * @returns {Promise<ExternalAccreditation[]>}
      */
     const findExternalAccreditationsOf = async (stored, year) =>
-      !isRegAccredYear(year)
-        ? []
-        : loadExternalAccreditations(
+      isAllYears(year) || isRegAccredYear(year)
+        ? loadExternalAccreditations(
             REG_ACCRED_ACCREDITATION_YEAR,
             stored.organisationNumber
           )
+        : []
 
     return {
       findByOrganisationNumber: async (organisationNumber, { year } = {}) => {
@@ -156,9 +159,9 @@ export const createOrganisationReadRepository =
         const stored = await findAll(db)
         return toReadModelOrganisations(
           stored,
-          stored.length === 0 || !isRegAccredYear(year)
-            ? []
-            : await loadExternalAccreditations(REG_ACCRED_ACCREDITATION_YEAR),
+          stored.length > 0 && (isAllYears(year) || isRegAccredYear(year))
+            ? await loadExternalAccreditations(REG_ACCRED_ACCREDITATION_YEAR)
+            : [],
           dependencies,
           year
         )

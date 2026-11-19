@@ -66,12 +66,10 @@ export const createInMemoryOrganisationReadRepository = (
     },
 
     findAll: async ({ year } = {}) => {
-      const organisations = structuredClone(held)
-      return year !== undefined
-        ? organisations.map((organisation) =>
-            organisationInYear(organisation, year)
-          )
-        : organisations
+      const served = structuredClone(held)
+      return year === undefined
+        ? served
+        : served.map((organisation) => organisationInYear(organisation, year))
     }
   })
 }
