@@ -2,6 +2,8 @@
 import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
+import { isSameLedger } from '#waste-balances/repository/ledger-schema.js'
+import { SummaryLogRowStateConflictError } from './port.js'
 import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /**
@@ -25,28 +27,19 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
- * @param {SummaryLogRowState} doc
- * @param {RequiredNumbers} ledgerId
- */
-const matchesLedger = (doc, ledgerId) =>
-  doc.organisationNumber === ledgerId.organisationNumber &&
-  doc.registrationNumber === ledgerId.registrationNumber &&
-  doc.accreditationNumber === ledgerId.accreditationNumber
-
-/**
- * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} doc
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesRowIdentity = (doc, candidate) =>
-  matchesLedger(doc, candidate) &&
+  isSameLedger(doc, candidate) &&
   doc.rowId === candidate.rowId &&
   doc.wasteRecordType === candidate.wasteRecordType
 
 /**
- * @param {SummaryLogRowState} doc
+ * @param {SummaryLogRowStateInsert} doc
  * @param {SummaryLogRowStateInsert} candidate
  */
 const matchesCommittedState = (doc, candidate) =>
@@ -57,7 +50,7 @@ const matchesCommittedState = (doc, candidate) =>
 
 /**
  * @param {SummaryLogRowState[]} storage
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogFileId} summaryLogId
  * @returns {SummaryLogRowState[]}
  */
@@ -65,7 +58,7 @@ const rowStatesForSummaryLog = (storage, ledgerId, summaryLogId) =>
   structuredClone(
     storage.filter(
       (doc) =>
-        matchesLedger(doc, ledgerId) && doc.summaryLogIds.includes(summaryLogId)
+        isSameLedger(doc, ledgerId) && doc.summaryLogIds.includes(summaryLogId)
     )
   )
 
@@ -104,26 +97,13 @@ function* submittedRowStatesForSummaryLogs(storage, summaryLogIds) {
         organisationNumber: doc.organisationNumber,
         registrationNumber: doc.registrationNumber,
         accreditationNumber: doc.accreditationNumber,
+        year: doc.year,
         wasteRecordType: doc.wasteRecordType,
         processingType: doc.processingType,
         data: doc.data
       })
     }
   }
-}
-
-/**
- * @param {SummaryLogRowState[]} storage
- * @returns {string[]}
- */
-const distinctDataKeys = (storage) => {
-  const keys = new Set()
-  for (const doc of storage) {
-    for (const key of Object.keys(doc.data)) {
-      keys.add(key)
-    }
-  }
-  return [...keys]
 }
 
 /**
@@ -139,14 +119,13 @@ const toWasteRecordState = ({
 }) => ({ rowId, wasteRecordType, processingType, data, classification })
 
 /**
- * @param {SummaryLogRowState[]} storage
  * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogRowStateEntry} entry
  * @param {SummaryLogFileId} summaryLogId
- * @returns {SummaryLogRowState}
+ * @returns {SummaryLogRowStateInsert}
  */
-const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
-  const candidate = validateSummaryLogRowStateInsert({
+const toCandidate = (ledgerId, entry, summaryLogId) =>
+  validateSummaryLogRowStateInsert({
     ...ledgerId,
     wasteRecordType: entry.wasteRecordType,
     rowId: entry.rowId,
@@ -156,6 +135,36 @@ const upsertOne = (storage, ledgerId, entry, summaryLogId) => {
     summaryLogIds: [summaryLogId]
   })
 
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {SummaryLogRowStateInsert[]} candidates
+ * @param {SummaryLogFileId} summaryLogId
+ */
+const assertOneStatePerRow = (storage, ledgerId, candidates, summaryLogId) => {
+  const held = [
+    ...rowStatesForSummaryLog(storage, ledgerId, summaryLogId),
+    ...candidates
+  ]
+  const conflicting = candidates.find((candidate) =>
+    held.some(
+      (state) =>
+        matchesRowIdentity(state, candidate) &&
+        !matchesCommittedState(state, candidate)
+    )
+  )
+  if (conflicting) {
+    throw new SummaryLogRowStateConflictError(summaryLogId, conflicting)
+  }
+}
+
+/**
+ * @param {SummaryLogRowState[]} storage
+ * @param {SummaryLogRowStateInsert} candidate
+ * @param {SummaryLogFileId} summaryLogId
+ * @returns {SummaryLogRowState}
+ */
+const upsertOne = (storage, candidate, summaryLogId) => {
   const match = storage.find((doc) => matchesCommittedState(doc, candidate))
 
   if (match) {
@@ -184,13 +193,18 @@ const repositoryOver = (storage) => ({
     ledgerId,
     summaryLogRowStates,
     summaryLogId
-  ) =>
-    summaryLogRowStates.map((entry) =>
-      upsertOne(storage, ledgerId, entry, summaryLogId)
-    ),
+  ) => {
+    const candidates = summaryLogRowStates.map((entry) =>
+      toCandidate(ledgerId, entry, summaryLogId)
+    )
+    assertOneStatePerRow(storage, ledgerId, candidates, summaryLogId)
+    return candidates.map((candidate) =>
+      upsertOne(storage, candidate, summaryLogId)
+    )
+  },
 
   /**
-   * @param {RequiredNumbers} ledgerId
+   * @param {WasteBalanceLedgerId} ledgerId
    * @param {SummaryLogFileId} summaryLogId
    */
   findWasteRecordStatesForSummaryLog: async (ledgerId, summaryLogId) =>
@@ -220,9 +234,7 @@ const repositoryOver = (storage) => ({
    */
   streamRowStatesForSummaryLogs: async function* (summaryLogIds) {
     yield* submittedRowStatesForSummaryLogs(storage, summaryLogIds)
-  },
-
-  findDistinctDataKeys: async () => distinctDataKeys(storage)
+  }
 })
 
 /**

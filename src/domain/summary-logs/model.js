@@ -58,25 +58,41 @@
  */
 
 /**
+ * A summary log uploaded for an accredited registration names its
+ * accreditation by number.
+ *
+ * @typedef {{ accreditationNumber: AccreditationNumber }} UploadedForAnAccreditation
+ */
+
+/**
+ * A summary log uploaded for a registration with no accreditation.
+ *
+ * @typedef {{ accreditationNumber: null }} UploadedRegisteredOnly
+ */
+
+/**
+ * Every shape a summary log's accreditation can take.
+ *
+ * @typedef {UploadedForAnAccreditation | UploadedRegisteredOnly} SummaryLogAccreditation
+ */
+
+/**
  * @typedef {{
+ *   commit?: unknown,
  *   createdAt?: string,
  *   expiresAt?: Date | null,
  *   file: SummaryLogFile,
  *   loads?: Loads,
  *   loadsByReportingPeriod?: LoadsByReportingPeriod,
  *   meta?: SummaryLogMeta,
- *   organisationId?: string,
- *   registrationId?: string,
  *   year: Year,
- *   accreditationId?: string | null,
  *   organisationNumber?: OrganisationNumber,
  *   registrationNumber?: RegistrationNumber,
- *   accreditationNumber?: AccreditationNumber | null,
  *   status: SummaryLogStatus,
  *   submittedAt?: string,
  *   validatedAgainstSummaryLogId?: SummaryLogId | typeof import('./status.js').NO_PRIOR_SUBMISSION,
  *   validation?: Validation
- * }} SummaryLog
+ * } & SummaryLogAccreditation} SummaryLog
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

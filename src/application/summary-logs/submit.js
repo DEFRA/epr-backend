@@ -20,7 +20,7 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * @import { SubmitUser } from '#domain/summary-logs/worker/port.js'
  * @import { ReportsService } from '#reports/application/report-service.js'
  * @import { OnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
- * @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js'
+ * @import { OrganisationReadRepository } from '#organisation-read-model/index.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -47,18 +47,17 @@ import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
  * without its numbers, so these fields are always present.
  * @typedef {SummaryLog & {
  *   createdAt: string
- *   organisationId: string
- *   registrationId: string
  *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  * }} SubmittableSummaryLog
  */
 
 /**
- * Fails submission if any report for this registration was submitted since the
- * log's createdAt, closing the validate-to-submit race where a period closes
- * after the operator confirmed the preview. Deliberately blunt: it fires on any
- * submission, not only periods this log touches. See PAE-1686.
+ * Fails submission if any report for this registration and the log's year was
+ * submitted since the log's createdAt, closing the validate-to-submit race
+ * where a period closes after the operator confirmed the preview. Deliberately
+ * blunt within the year: it fires on any submission, not only periods this log
+ * touches.
  *
  * @param {SubmittableSummaryLog} summaryLog
  * @param {SummaryLogId} summaryLogId
@@ -71,15 +70,16 @@ const assertNoReportSubmittedSinceCreation = async (
   reportsService
 ) => {
   const reportSubmittedSinceCreation =
-    await reportsService.hasReportSubmittedSince(
-      summaryLog.organisationNumber,
-      summaryLog.registrationNumber,
-      summaryLog.createdAt
-    )
+    await reportsService.hasReportSubmittedSince({
+      organisationNumber: summaryLog.organisationNumber,
+      registrationNumber: summaryLog.registrationNumber,
+      year: summaryLog.year,
+      since: summaryLog.createdAt
+    })
 
   if (reportSubmittedSinceCreation) {
     throw new PermanentError(
-      `Summary log ${summaryLogId} is stale: a report was submitted for this registration after the summary log was created`
+      `Summary log ${summaryLogId} is stale: a report was submitted for this registration and year after the summary log was created`
     )
   }
 }
@@ -145,21 +145,20 @@ const syncAndFinalise = async (summaryLogId, version, summaryLog, deps) => {
     decemberWasteRowCount
   )
 
-  await onSummaryLogUploaded({
-    organisationNumber: summaryLog.organisationNumber,
-    registrationNumber: summaryLog.registrationNumber,
-    summaryLogId: fileId,
-    periodsRequiringResubmission:
-      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ??
-      summaryLog.loadsByReportingPeriod?.closedPeriods ??
-      []
-  })
-
   await summaryLogsRepository.update(
     summaryLogId,
     version,
     transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
   )
+
+  await onSummaryLogUploaded({
+    organisationNumber: summaryLog.organisationNumber,
+    registrationNumber: summaryLog.registrationNumber,
+    year: summaryLog.year,
+    summaryLogId: fileId,
+    periodsRequiringResubmission:
+      summaryLog.loadsByReportingPeriod?.periodsRequiringResubmission ?? []
+  })
 
   await summaryLogMetrics.recordStatusTransition({
     status: SUMMARY_LOG_STATUS.SUBMITTED,

@@ -3,19 +3,21 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { lastOpenDay } from '#common/helpers/dates/latest-open-year.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
-import { atNaturalKeys } from '#routes/organisations/at-natural-keys.js'
+import {
+  accreditationForYear,
+  approvedYears
+} from '#organisation-read-model/vocabulary.js'
+import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
-  accreditationsForYear,
   findOrganisationAndRegistrationReadModels,
+  findOrganisationReadModel,
   organisationParams,
   organisationPath,
   registrationParams,
-  registrationPath,
-  servedRegistrations
+  registrationPath
 } from '#routes/organisations/natural-keys.js'
 import { naturalKeyLedgerResponseSchema } from '#routes/v1/organisations/registrations/waste-balance-ledger-response.schema.js'
 import { readLedger } from '#waste-balances/application/read-ledger.js'
@@ -23,19 +25,30 @@ import { toBalanceBody } from './balance-body.js'
 import { wasteBalanceSchema } from './response.schema.js'
 
 /**
- * @import { HapiResponseToolkit } from '#common/hapi-types.js'
+ * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { ResolvedParams, ResolvedRecords, ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
- * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { RegistrationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/vocabulary.js'
+ * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
+ * @import { OrganisationParams, RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { LedgerEventResource } from '#waste-balances/application/read-ledger.js'
+ * @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  */
 
 /**
- * @typedef {ResolvedRequest & {
- *   params: { year: Year },
+ * `accreditation` is `null` on a registered-only route.
+ *
+ * @typedef {{
+ *   organisation: Organisation,
+ *   registration: Registration,
+ *   accreditation: AccreditationCommon | null
+ * }} LedgerRecords
+ *
+ * @typedef {HapiRequest & {
+ *   params: RegistrationParams & { year: Year },
+ *   app: LedgerRecords,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository
  * }} LedgerRequest
@@ -52,21 +65,50 @@ const ledgerOptions = {
 }
 
 /**
- * The ledger the path resolved to: the accreditation's, or the registered-only
- * one when the path names no accreditation.
+ * Wraps a route at a registration's or accreditation's path, reading the
+ * organisation, registration and, on an `accredited` route, the accreditation
+ * for {year} from the organisation read model into `request.app`.
  *
- * @param {ResolvedParams & { year: Year }} params
+ * @param {NaturalKeyRoute} route
+ * @param {string} path
+ * @param {{ accredited?: boolean }} [options]
+ */
+const atLedgerKeys = (route, path, { accredited = false } = {}) =>
+  atKeys(route, path, yearParams, async (request) => {
+    const { organisation, registration } =
+      await findOrganisationAndRegistrationReadModels(request)
+
+    const accreditation = accredited
+      ? accreditationForYear(
+          registration,
+          /** @type {Year} */ (request.params.year)
+        )
+      : null
+    if (accreditation === undefined) {
+      throw Boom.notFound('Accreditation not found')
+    }
+
+    /** @type {LedgerRecords} */
+    const records = { organisation, registration, accreditation }
+    Object.assign(request.app, records)
+
+    return /** @type {LedgerRequest} */ (/** @type {unknown} */ (request))
+  })
+
+/**
+ * The ledger the path resolved to for its year: the accreditation's, or the
+ * registered-only one when the path names no accreditation.
+ *
+ * @param {LedgerRequest} request
  * @returns {WasteBalanceLedgerId}
  */
 const ledgerIdOf = ({
-  organisationNumber,
-  registrationNumber,
-  accreditationNumber,
-  year
+  params: { organisationNumber, registrationNumber, year },
+  app: { accreditation }
 }) => ({
   organisationNumber,
   registrationNumber,
-  accreditationNumber: accreditationNumber ?? null,
+  accreditationNumber: accreditation?.accreditationNumber ?? null,
   year
 })
 
@@ -78,15 +120,14 @@ const readLedgerEvents = async (request) => {
   const { events } = await readLedger(
     request.ledgerRepository,
     request.packagingRecyclingNotesRepository,
-    ledgerIdOf(request.params)
+    ledgerIdOf(request)
   )
   return events
 }
 
 /**
- * The registered-only ledger spans a registration's years, so a year narrows
- * it to the events submitted in that year (UTC). A year the registration was
- * not approved in is not found.
+ * The registered-only ledger of the year. A year the registration was not
+ * approved in is not found.
  */
 const registeredOnlyLedgerGet = {
   method: 'GET',
@@ -97,22 +138,17 @@ const registeredOnlyLedgerGet = {
    */
   handler: async (request, h) => {
     const { year } = request.params
-
-    const { registration } =
-      await findOrganisationAndRegistrationReadModels(request)
+    const { registration } = request.app
 
     if (
-      !approvedYears(registration.status.timeline, lastOpenDay()).includes(year)
+      !approvedYears(registration.status.timeline, latestOpenYear()).includes(
+        year
+      )
     ) {
       throw Boom.notFound('Year not found')
     }
-    const events = await readLedgerEvents(request)
     return h
-      .response({
-        events: events.filter(
-          (event) => event.createdAt.getUTCFullYear() === year
-        )
-      })
+      .response({ events: await readLedgerEvents(request) })
       .code(StatusCodes.OK)
   }
 }
@@ -138,63 +174,68 @@ const accreditationWasteBalanceGet = {
     response: { schema: wasteBalanceSchema }
   },
   /**
-   * @param {ResolvedRequest & { params: { year: Year } }} request
+   * @param {LedgerRequest} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const balance = await request.wasteBalanceService.currentBalance(
-      ledgerIdOf(request.params)
+      ledgerIdOf(request)
     )
     return h.response(toBalanceBody(balance)).code(StatusCodes.OK)
   }
 }
 
 /**
- * The balance of each accreditation for the year, keyed by accreditation
- * number. A registration the read model does not serve, or without exactly one
- * accreditation for the year, is left out, as the read model leaves it out.
+ * The balance of each accreditation the read model serves for the year, keyed
+ * by accreditation number.
  */
 const organisationWasteBalancesGet = {
   method: 'GET',
+  path: `${organisationPath}/waste-balances/{year}`,
   options: {
     auth: { scope: [SCOPES.organisationRead, SCOPES.adminRead] },
     tags: ['api'],
+    validate: {
+      params: Joi.object({
+        ...organisationParams,
+        year: yearSchema().required()
+      })
+    },
     response: {
       schema: Joi.object().pattern(Joi.string(), wasteBalanceSchema)
     }
   },
   /**
-   * @param {ResolvedRequest & { params: { year: Year }, app: ResolvedRecords }} request
+   * @param {HapiRequest & { params: OrganisationParams & { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { storedOrganisation: organisation } = request.app
-    const { year } = request.params
+    const { organisationNumber, year } = request.params
+    const organisation = await findOrganisationReadModel(request)
 
-    const accredited = servedRegistrations(organisation).flatMap(
-      (registration) => {
-        const accreditations = accreditationsForYear(
-          organisation,
-          registration,
-          year
-        )
-        return accreditations.length === 1
-          ? [{ registration, accreditation: accreditations[0] }]
+    const accredited = Object.entries(organisation.registrations).flatMap(
+      ([registrationNumber, registration]) => {
+        const accreditation = accreditationForYear(registration, year)
+        return accreditation
+          ? [
+              {
+                registrationNumber: /** @type {RegistrationNumber} */ (
+                  registrationNumber
+                ),
+                accreditationNumber: accreditation.accreditationNumber
+              }
+            ]
           : []
       }
     )
 
     const balances = await Promise.all(
-      accredited.map(async ({ registration, accreditation }) => [
-        accreditation.accreditationNumber,
+      accredited.map(async (numbers) => [
+        numbers.accreditationNumber,
         toBalanceBody(
           await request.wasteBalanceService.currentBalance({
-            organisationNumber: request.params.organisationNumber,
-            // A served registration is found by its number.
-            registrationNumber: /** @type {RegistrationNumber} */ (
-              registration.registrationNumber
-            ),
-            accreditationNumber: accreditation.accreditationNumber,
+            organisationNumber,
+            ...numbers,
             year
           })
         )
@@ -210,28 +251,14 @@ const organisationWasteBalancesGet = {
  * registration number and year (ADR 0053), served beside the id-based routes.
  */
 export const wasteBalanceRoutesByNaturalKey = [
-  atNaturalKeys(
-    registeredOnlyLedgerGet,
-    `${registrationPath}/ledger/{year}`,
-    yearParams
-  ),
-  atNaturalKeys(
-    accreditedLedgerGet,
-    `${accreditationPath}/ledger`,
-    yearParams,
-    {
-      accredited: true
-    }
-  ),
-  atNaturalKeys(
+  atLedgerKeys(registeredOnlyLedgerGet, `${registrationPath}/ledger/{year}`),
+  atLedgerKeys(accreditedLedgerGet, `${accreditationPath}/ledger`, {
+    accredited: true
+  }),
+  atLedgerKeys(
     accreditationWasteBalanceGet,
     `${accreditationPath}/waste-balance`,
-    yearParams,
     { accredited: true }
   ),
-  atNaturalKeys(
-    organisationWasteBalancesGet,
-    `${organisationPath}/waste-balances/{year}`,
-    { ...organisationParams, year: yearSchema().required() }
-  )
+  organisationWasteBalancesGet
 ]

@@ -6,7 +6,7 @@ import {
   toPrnSiteAddress
 } from './issuing-accreditation.js'
 
-/** @import { AccreditationCommon, Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, Registration } from '#organisation-read-model/vocabulary.js' */
 
 const YEAR = toYear(2026)
 
@@ -14,7 +14,12 @@ const YEAR = toYear(2026)
 const accreditation = {
   accreditationNumber: toAccreditationNumber('A26ER5001180114PL'),
   prnIssuance: { tonnageBand: 'up_to_500' },
-  status: { current: 'suspended', timeline: [] }
+  status: {
+    current: 'suspended',
+    lastUpdatedAt: '2025-01-01T00:00:00.000Z',
+    timeline: [{ status: 'suspended', at: '2025-01-01T00:00:00.000Z' }]
+  },
+  year: YEAR
 }
 
 /**
@@ -54,7 +59,7 @@ const fullAddressOnly = reprocessorRegistration({
 describe('toIssuingAccreditation', () => {
   it('states what the PRN rules read about a reprocessor accreditation', () => {
     expect(
-      toIssuingAccreditation(reprocessorRegistration(), accreditation, YEAR)
+      toIssuingAccreditation(reprocessorRegistration(), accreditation)
     ).toStrictEqual({
       accreditationNumber: 'A26ER5001180114PL',
       accreditationYear: YEAR,
@@ -70,8 +75,7 @@ describe('toIssuingAccreditation', () => {
     expect(
       toIssuingAccreditation(
         reprocessorRegistration({ material: 'glass_re_melt' }),
-        accreditation,
-        YEAR
+        accreditation
       )
     ).toMatchObject({
       material: 'glass',
@@ -80,11 +84,7 @@ describe('toIssuingAccreditation', () => {
   })
 
   it('states no reprocessing type for an exporter', () => {
-    const issuing = toIssuingAccreditation(
-      exporterRegistration,
-      accreditation,
-      YEAR
-    )
+    const issuing = toIssuingAccreditation(exporterRegistration, accreditation)
 
     expect(issuing).not.toHaveProperty('reprocessingType')
     expect(issuing.wasteProcessingType).toBe('exporter')
@@ -92,7 +92,7 @@ describe('toIssuingAccreditation', () => {
 
   it('does not read the site, so a reprocessor whose site the read model holds only as a full address can still be ruled on', () => {
     expect(
-      toIssuingAccreditation(fullAddressOnly, accreditation, YEAR)
+      toIssuingAccreditation(fullAddressOnly, accreditation)
     ).toMatchObject({ status: 'suspended', reprocessingType: 'output' })
   })
 })

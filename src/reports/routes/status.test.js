@@ -1,31 +1,30 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
-import { partialMock } from '#test/type-helpers.js'
 import { asOperator } from '#test/inject-auth.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   buildCreateReportParams,
   reportKeyOf
 } from '#reports/repository/contract/test-data.js'
 import { REPORT_STATUS_SLOT } from '#reports/domain/report-status.js'
-import {
-  accreditation,
-  granted,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import * as reportAudit from '#reports/application/audit.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
-const { buildOrganisation } = createOrganisationBuilders()
-
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
 
 vi.mock('#reports/application/audit.js', () => ({
   auditReportStatusTransition: vi.fn().mockResolvedValue(undefined)
@@ -77,7 +76,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   /**
    * @param {{
    *   reportOverrides?: object,
-   *   accreditationStatus?: AccreditationStatus,
+   *   accreditationStatus?: StoredAccreditationStatus,
    *   stream?: { cadence: Cadence, period: number },
    *   withReport?: boolean
    * }} [options]
@@ -88,15 +87,27 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     stream = accreditationStatus ? ACCREDITED : REGISTERED_ONLY,
     withReport = true
   } = {}) => {
-    const accredited = accreditationStatus
-      ? accreditation({ statusHistory: granted(accreditationStatus) })
-      : undefined
-    const registration = reprocessor(
-      accredited ? { accreditationId: accredited.id } : {}
-    )
-    const org = buildOrganisation({
-      registrations: [registration],
-      accreditations: accredited ? [accredited] : []
+    const registration = { registrationNumber: REPROCESSOR_NUMBER }
+    const org = buildReadOrganisation({
+      registrations: {
+        [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+          accreditations: accreditationStatus
+            ? accreditationsByYear(
+                buildReadAccreditation({
+                  year: YEAR,
+                  status: {
+                    current:
+                      /** @type {'approved' | 'suspended' | 'cancelled'} */ (
+                        accreditationStatus
+                      ),
+                    lastUpdatedAt: '2026-07-01T00:00:00.000Z',
+                    timeline: approvedTimelineFrom('2026-07-01')
+                  }
+                })
+              )
+            : {}
+        })
+      }
     })
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
@@ -115,8 +126,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(org)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          org
         ]),
         reportsRepository: reportsRepositoryFactory
       }
@@ -338,7 +349,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it.each(
-      /** @type {AccreditationStatus[]} */ ([
+      /** @type {StoredAccreditationStatus[]} */ ([
         'created',
         'rejected',
         'cancelled',
@@ -535,12 +546,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         registrationNumber
       } = await createServer()
 
-      await reportsRepository.markActiveReportsStaleForSummaryLog(
+      await reportsRepository.markActiveReportsStaleForSummaryLog({
         organisationNumber,
         registrationNumber,
-        toSummaryLogFileId('sl-new'),
-        new Date().toISOString()
-      )
+        year: YEAR,
+        summaryLogId: toSummaryLogFileId('sl-new'),
+        uploadedAt: new Date().toISOString()
+      })
 
       const response = await postStatus({
         status: 'ready_to_submit',

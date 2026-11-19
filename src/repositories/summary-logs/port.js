@@ -5,6 +5,18 @@
 /** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
 
 /**
+ * A summary log document as the collection may hold it, before it is read
+ * into one of the shapes the domain declares. Older ones hold database ids.
+ *
+ * @typedef {Omit<SummaryLog, 'accreditationNumber'> & {
+ *   organisationId?: string,
+ *   registrationId?: string,
+ *   accreditationId?: string | null,
+ *   accreditationNumber?: AccreditationNumber | null
+ * }} StoredSummaryLog
+ */
+
+/**
  * @typedef {Object} SummaryLogVersion
  * @property {number} version
  * @property {SummaryLog} summaryLog
@@ -35,14 +47,11 @@
  */
 
 /**
- * A summary log named by its organisation, registration and accreditation
- * numbers in place of their database ids. The accreditation number is absent
- * when the summary log was stored before its accreditation was recorded.
+ * A summary log named by its organisation and registration numbers.
  *
- * @typedef {Omit<SummaryLog, 'organisationId' | 'registrationId' | 'accreditationId'> & {
+ * @typedef {SummaryLog & {
  *   organisationNumber: OrganisationNumber,
- *   registrationNumber: RegistrationNumber,
- *   accreditationNumber?: AccreditationNumber | null
+ *   registrationNumber: RegistrationNumber
  * }} KeyedSummaryLog
  */
 
@@ -54,10 +63,23 @@
  */
 
 /**
+ * A submitted summary log, which always holds when it was submitted.
+ *
+ * @typedef {KeyedSummaryLog & { submittedAt: string }} KeyedSubmittedSummaryLog
+ */
+
+/**
+ * @typedef {Object} KeyedSubmittedSummaryLogWithId
+ * @property {SummaryLogId} id
+ * @property {number} version
+ * @property {KeyedSubmittedSummaryLog} summaryLog
+ */
+
+/**
  * @typedef {Object} DownloadUrlResult
  * @property {string} url - The download URL
  * @property {string} expiresAt - ISO 8601 timestamp when the URL expires
- * @property {AccreditationNumber | null | undefined} accreditationNumber - The summary log's accreditation, null when it is registered-only
+ * @property {AccreditationNumber | null} accreditationNumber - The summary log's accreditation, null when it is registered-only
  */
 
 /**
@@ -66,7 +88,7 @@
  * @property {(id: SummaryLogId, version: number, summaryLog: Partial<SummaryLog>) => Promise<void>} update
  * @property {(id: SummaryLogId) => Promise<SummaryLogVersion|null>} findById
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records
- * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
+ * @property {(key: SummaryLogKey) => Promise<KeyedSubmittedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
  * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration
  * @property {(logId: SummaryLogId) => Promise<TransitionResult>} transitionToSubmittingExclusive

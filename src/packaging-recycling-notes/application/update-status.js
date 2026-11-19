@@ -22,11 +22,12 @@ import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { toIssuingAccreditation } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
  * @typedef {ReturnType<typeof createWasteBalanceService>} WasteBalanceService
- * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#packaging-recycling-notes/repository/port.js').AccreditationNumbers} AccreditationNumbers
  * @typedef {import('#packaging-recycling-notes/domain/issuing-accreditation.js').IssuingAccreditation} IssuingAccreditation
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
@@ -337,14 +338,14 @@ async function findIssuingAccreditation(organisationReadRepository, prn) {
       organisationNumber
     )
   const registration = organisation?.registrations[registrationNumber]
-  const accreditation = registration?.accreditations[year]
+  const accreditation = registration && accreditationForYear(registration, year)
   if (
     !registration ||
     accreditation?.accreditationNumber !== accreditationNumber
   ) {
     throw Boom.notFound(`Accreditation not found: ${accreditationNumber}`)
   }
-  return toIssuingAccreditation(registration, accreditation, year)
+  return toIssuingAccreditation(registration, accreditation)
 }
 
 /**

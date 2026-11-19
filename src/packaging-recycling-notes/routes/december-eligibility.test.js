@@ -2,50 +2,72 @@ import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  approvedStatusFrom,
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  EXPORTER_ACCREDITATION_NUMBER,
   EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  exporter,
-  exporterAccreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
-const { buildOrganisation } = createOrganisationBuilders()
+const approved = approvedTimelineFrom('2026-07-01')
 
-const cancelledAfterApproval = [
-  { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
-  { status: 'approved', updatedAt: '2026-02-01T09:00:00.000Z' },
-  { status: 'cancelled', updatedAt: '2026-11-01T09:00:00.000Z' }
-]
+/** @type {import('#organisation-read-model/vocabulary.js').Status<import('#organisation-read-model/vocabulary.js').AccreditationStatus>} */
+const cancelledAfterApproval = {
+  current: 'cancelled',
+  lastUpdatedAt: '2026-11-01T09:00:00.000Z',
+  timeline: [
+    ...approved,
+    { status: 'cancelled', at: '2026-11-01T09:00:00.000Z' }
+  ]
+}
 
 /**
- * @param {object} accreditationOverrides
- * @param {{ exporting?: boolean, reprocessingType?: string }} [options]
+ * @param {{
+ *   exporting?: boolean,
+ *   reprocessingType?: 'input' | 'output',
+ *   status?: import('#organisation-read-model/vocabulary.js').Status<import('#organisation-read-model/vocabulary.js').AccreditationStatus>
+ * }} [options]
  */
-const organisationWith = (
-  accreditationOverrides,
-  { exporting = false, reprocessingType = REPROCESSING_TYPE.OUTPUT } = {}
-) => {
-  const accredited = exporting
-    ? exporterAccreditation(accreditationOverrides)
-    : accreditation(accreditationOverrides)
-  const registration = exporting
-    ? exporter({ accreditationId: accredited.id })
-    : reprocessor({ accreditationId: accredited.id, reprocessingType })
-  return buildOrganisation({
-    statusHistory: [
-      { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
-    ],
-    registrations: [registration],
-    accreditations: [accredited]
+const organisationWith = ({
+  exporting = false,
+  reprocessingType = REPROCESSING_TYPE.OUTPUT,
+  status = approvedStatusFrom('2026-07-01')
+} = {}) => {
+  const accredited = buildReadAccreditation({
+    accreditationNumber: toAccreditationNumber(
+      exporting ? EXPORTER_ACCREDITATION_NUMBER : ACCREDITATION_NUMBER
+    ),
+    status
+  })
+  return buildReadOrganisation({
+    registrations: exporting
+      ? {
+          [EXPORTER_NUMBER]: buildReadExporterRegistration({
+            accreditations: accreditationsByYear(
+              buildReadExporterAccreditation(accredited)
+            )
+          })
+        }
+      : {
+          [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+            reprocessingType,
+            accreditations: accreditationsByYear(accredited)
+          })
+        }
   })
 }
 
@@ -65,12 +87,12 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   /** @type {Awaited<ReturnType<typeof createTestServer>>} */
   let server
 
-  /** @param {ReturnType<typeof buildOrganisation>} organisation */
+  /** @param {import('#organisation-read-model/vocabulary.js').Organisation} organisation */
   const startServer = async (organisation) => {
     server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          organisation
         ])
       }
     })
@@ -95,7 +117,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   })
 
   describe('for an output reprocessor', () => {
-    const organisation = organisationWith({})
+    const organisation = organisationWith()
 
     beforeEach(() => startServer(organisation))
 
@@ -124,10 +146,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   it('chooses a pool for an input reprocessor, even when the window is open', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-    const organisation = organisationWith(
-      {},
-      { reprocessingType: REPROCESSING_TYPE.INPUT }
-    )
+    const organisation = organisationWith({
+      reprocessingType: REPROCESSING_TYPE.INPUT
+    })
     await startServer(organisation)
 
     const response = await eligibility(eligibilityUrl(organisation))
@@ -138,7 +159,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   it('chooses a pool for an exporter, even when the window is open', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-    const organisation = organisationWith({}, { exporting: true })
+    const organisation = organisationWith({ exporting: true })
     await startServer(organisation)
 
     const response = await eligibility(
@@ -151,10 +172,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   it('reports the real mode for an accreditation cancelled after approval', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-    const organisation = organisationWith({
-      status: 'cancelled',
-      statusHistory: cancelledAfterApproval
-    })
+    const organisation = organisationWith({ status: cancelledAfterApproval })
     await startServer(organisation)
 
     const response = await eligibility(eligibilityUrl(organisation))

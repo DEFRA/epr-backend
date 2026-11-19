@@ -77,7 +77,7 @@ describe('latestSubmittedSummaryLog', () => {
       partialMock(
         buildLedgerEvent({
           number: 1,
-          accreditationId: null,
+          accreditationNumber: null,
           createdAt: submittedAt,
           payload: { summaryLogId: 'log-1', creditTotal: 100 }
         })
@@ -87,7 +87,7 @@ describe('latestSubmittedSummaryLog', () => {
     expect(
       await latestSubmittedSummaryLog(
         ledgerRepository,
-        buildLedgerId({ accreditationId: null })
+        buildLedgerId({ accreditationNumber: null })
       )
     ).toEqual({ summaryLogId: 'log-1', submittedAt })
   })

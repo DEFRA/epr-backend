@@ -5,8 +5,12 @@ import { RECORD_CHANGE } from './record-change.js'
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const overseasSites = /** @type {any} */ (new Map())
+
+const tableSchemas = tableSchemasOf(toYear(2026), 'REPROCESSOR_REGISTERED_ONLY')
 
 /**
  * @param {Record<string, any>} data
@@ -32,7 +36,11 @@ const buildWasteRecord = (
  */
 const submittedStateOf = (record) => {
   const { rowId, wasteRecordType, processingType, data, classification } =
-    projectSummaryLogRowState(record, null, overseasSites)
+    projectSummaryLogRowState(record, {
+      tableSchemas,
+      accreditation: null,
+      overseasSites
+    })
   return { rowId, wasteRecordType, processingType, data, classification }
 }
 
@@ -45,8 +53,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey: new Map(),
-      accreditation: null,
-      overseasSites
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.ADDED)
@@ -64,8 +75,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
-      accreditation: null,
-      overseasSites
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)
@@ -87,8 +101,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
-      accreditation: null,
-      overseasSites
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(currentRecord.record))).toBe(RECORD_CHANGE.ADJUSTED)
@@ -117,8 +134,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [wasteRecord],
       submittedRowStatesByKey,
-      accreditation: null,
-      overseasSites
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.ADJUSTED)
@@ -134,8 +154,11 @@ describe('classifyRecordChanges', () => {
     const changes = classifyRecordChanges({
       wasteRecords: [currentRecord],
       submittedRowStatesByKey,
-      accreditation: null,
-      overseasSites
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
     })
 
     expect(changes.get(key(currentRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)

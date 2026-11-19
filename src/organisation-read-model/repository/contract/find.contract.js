@@ -1,53 +1,30 @@
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  approvedOverseasSite,
-  exporter,
-  overseasSites,
-  pendingOverseasSite,
-  reprocessor
-} from './organisation-read-test-helpers.js'
-
-const { buildOrganisation, nextOrganisationNumber } =
-  createOrganisationBuilders()
+  nextSeedAccreditationNumber,
+  nextSeedRegistrationNumber,
+  seedNamed
+} from './organisation-seed-test-helpers.js'
 
 /** @import { OrganisationReadRepositoryContractIt } from '../port.contract.js' */
 
-/**
- * Registration and accreditation numbers are unique across organisations.
- *
- * @param {string} name
- * @param {object} [overrides]
- */
-const named = (name, overrides = {}) =>
-  buildOrganisation({
-    companyDetails: { name },
-    registrations: [
-      reprocessor({ registrationNumber: `R26ER${nextOrganisationNumber()}PL` })
-    ],
-    accreditations: [],
-    ...overrides
-  })
+const firstPage = { page: 1, pageSize: 10 }
+
+/** @param {{ items: { name: string }[] }} page */
+const namesOn = ({ items }) => items.map(({ name }) => name)
 
 /**
  * @param {OrganisationReadRepositoryContractIt} it
  */
 export const testFindBehaviour = (it) => {
   describe('find', () => {
-    it('returns the organisations matching the criteria a page at a time, sorted by name', async ({
-      organisationReadRepositoryWith
+    it('returns the organisations matching the search a page at a time, sorted by name', async ({
+      organisationReadRepositoryServing
     }) => {
-      const repository = await organisationReadRepositoryWith({
-        organisations: [
-          named('Zeta Recycling'),
-          named('Acme Recycling'),
-          named('Beta Recycling'),
-          named('Unrelated Ltd')
-        ]
-      })
+      const repository = await organisationReadRepositoryServing([
+        seedNamed('Zeta Recycling'),
+        seedNamed('Acme Recycling'),
+        seedNamed('Beta Recycling'),
+        seedNamed('Unrelated Ltd')
+      ])
 
       const page = await repository.find({
         search: 'recycling',
@@ -61,219 +38,108 @@ export const testFindBehaviour = (it) => {
         totalItems: 3,
         totalPages: 2
       })
-      expect(page.items.map(({ name }) => name)).toEqual([
-        'Acme Recycling',
-        'Beta Recycling'
+      expect(namesOn(page)).toEqual(['Acme Recycling', 'Beta Recycling'])
+    })
+
+    it('treats an empty criterion as absent', async ({
+      organisationReadRepositoryServing
+    }) => {
+      const repository = await organisationReadRepositoryServing([
+        seedNamed('Beta Recycling'),
+        seedNamed('Acme Recycling')
       ])
+
+      const page = await repository.find({ search: '', ...firstPage })
+
+      expect(namesOn(page)).toEqual(['Acme Recycling', 'Beta Recycling'])
     })
 
     it('finds an organisation by its organisation number', async ({
-      organisationReadRepositoryWith
+      organisationReadRepositoryServing
     }) => {
-      const wanted = named('Beta Recycling')
-      const repository = await organisationReadRepositoryWith({
-        organisations: [named('Acme Recycling'), wanted]
-      })
+      const wanted = seedNamed('Beta Recycling')
+      const repository = await organisationReadRepositoryServing([
+        seedNamed('Acme Recycling'),
+        wanted
+      ])
 
-      const { items } = await repository.find({
+      const page = await repository.find({
         organisationNumber: wanted.organisationNumber,
-        page: 1,
-        pageSize: 10
+        ...firstPage
       })
 
-      expect(items.map(({ name }) => name)).toEqual(['Beta Recycling'])
-    })
-
-    it('serves each organisation as the read model does, with only numbered registrations and their accreditations by year', async ({
-      organisationReadRepositoryWith
-    }) => {
-      const granted2026 = accreditation()
-      const stored = named('Acme Recycling', {
-        registrations: [
-          reprocessor({ accreditationId: granted2026.id }),
-          exporter({ registrationNumber: null })
-        ],
-        accreditations: [granted2026]
-      })
-      const repository = await organisationReadRepositoryWith({
-        organisations: [stored]
-      })
-
-      const { items } = await repository.find({ page: 1, pageSize: 10 })
-
-      expect(items).toHaveLength(1)
-      expect(items[0]).toMatchObject({
-        organisationNumber: stored.organisationNumber,
-        name: 'Acme Recycling',
-        submittedToRegulator: { code: 'ea' }
-      })
-      expect(Object.keys(items[0].registrations)).toEqual([REPROCESSOR_NUMBER])
-      expect(
-        items[0].registrations[REPROCESSOR_NUMBER].accreditations[2026]
-      ).toHaveProperty('accreditationNumber', ACCREDITATION_NUMBER)
-    })
-
-    it('gives an exporter on the page the details of its overseas sites', async ({
-      organisationReadRepositoryWith
-    }) => {
-      const repository = await organisationReadRepositoryWith({
-        organisations: [
-          named('Acme Recycling'),
-          named('Beta Exports', { registrations: [exporter()] })
-        ],
-        overseasSites
-      })
-
-      const { items } = await repository.find({
-        search: 'beta',
-        page: 1,
-        pageSize: 10
-      })
-
-      expect(items[0].registrations[EXPORTER_NUMBER]).toHaveProperty(
-        'overseasSites',
-        { '001': approvedOverseasSite, '002': pendingOverseasSite }
-      )
-    })
-
-    it('leaves out and logs an organisation that has no status yet', async ({
-      organisationReadRepositoryWith
-    }) => {
-      const notYet = named('Acme Recycling', {
-        statusHistory: [
-          { status: 'created', updatedAt: new Date('2999-01-01T09:00:00Z') }
-        ]
-      })
-      const logger = { warn: vi.fn() }
-      const repository = await organisationReadRepositoryWith({
-        organisations: [notYet, named('Beta Recycling')],
-        logger
-      })
-
-      const { items } = await repository.find({ page: 1, pageSize: 10 })
-
-      expect(items.map(({ name }) => name)).toEqual(['Beta Recycling'])
-      expect(logger.warn).toHaveBeenCalledWith({
-        message: expect.stringContaining(
-          `Organisation ${notYet.organisationNumber} has status undefined`
-        )
-      })
+      expect(namesOn(page)).toEqual(['Beta Recycling'])
     })
 
     it('finds an organisation by the whole of one of its registration numbers, ignoring case', async ({
-      organisationReadRepositoryWith
+      organisationReadRepositoryServing
     }) => {
-      const repository = await organisationReadRepositoryWith({
-        organisations: [
-          named('Acme Recycling'),
-          named('Beta Recycling', {
-            registrations: [reprocessor({ registrationNumber: 'R26ER777PL' })]
-          })
-        ]
-      })
+      const registrationNumber = nextSeedRegistrationNumber()
+      const repository = await organisationReadRepositoryServing([
+        seedNamed('Acme Recycling'),
+        seedNamed('Beta Recycling', {
+          registrations: [{ registrationNumber }]
+        })
+      ])
 
       const whole = await repository.find({
-        registrationNumber: 'r26er777pl',
-        page: 1,
-        pageSize: 10
+        registrationNumber: registrationNumber.toLowerCase(),
+        ...firstPage
       })
       const part = await repository.find({
-        registrationNumber: 'R26ER777',
-        page: 1,
-        pageSize: 10
+        registrationNumber: registrationNumber.slice(0, -2),
+        ...firstPage
       })
 
-      expect(whole.items.map(({ name }) => name)).toEqual(['Beta Recycling'])
+      expect(namesOn(whole)).toEqual(['Beta Recycling'])
       expect(part.items).toEqual([])
     })
 
     it('finds an organisation by the whole of one of its accreditation numbers, ignoring case', async ({
-      organisationReadRepositoryWith
+      organisationReadRepositoryServing
     }) => {
-      const granted2026 = accreditation()
-      const repository = await organisationReadRepositoryWith({
-        organisations: [
-          named('Acme Recycling'),
-          named('Beta Recycling', {
-            registrations: [reprocessor({ accreditationId: granted2026.id })],
-            accreditations: [granted2026]
-          })
-        ]
+      const accreditationNumber = nextSeedAccreditationNumber()
+      const repository = await organisationReadRepositoryServing([
+        seedNamed('Acme Recycling'),
+        seedNamed('Beta Recycling', {
+          registrations: [
+            {
+              registrationNumber: nextSeedRegistrationNumber(),
+              accreditationNumber
+            }
+          ]
+        })
+      ])
+
+      const whole = await repository.find({
+        accreditationNumber: accreditationNumber.toLowerCase(),
+        ...firstPage
+      })
+      const part = await repository.find({
+        accreditationNumber: accreditationNumber.slice(0, -2),
+        ...firstPage
       })
 
-      const { items } = await repository.find({
-        accreditationNumber: ACCREDITATION_NUMBER.toLowerCase(),
-        page: 1,
-        pageSize: 10
-      })
-
-      expect(items.map(({ name }) => name)).toEqual(['Beta Recycling'])
+      expect(namesOn(whole)).toEqual(['Beta Recycling'])
+      expect(part.items).toEqual([])
     })
 
-    /*
-     * Searching and counting use the organisations as they are stored, before
-     * the read model leaves anything out, so a database can do both. What the
-     * model leaves out still matches a search and still counts.
-     */
-    describe('searches and counts organisations as they are stored', () => {
-      it('counts an organisation the model leaves out, so its page comes back short', async ({
-        organisationReadRepositoryWith
-      }) => {
-        const notYet = named('Acme Recycling', {
-          statusHistory: [
-            { status: 'created', updatedAt: new Date('2999-01-01T09:00:00Z') }
-          ]
-        })
-        const repository = await organisationReadRepositoryWith({
-          organisations: [notYet, named('Beta Recycling')]
-        })
+    it('finds only the organisations matching every criterion given', async ({
+      organisationReadRepositoryServing
+    }) => {
+      const acme = seedNamed('Acme Recycling')
+      const repository = await organisationReadRepositoryServing([
+        acme,
+        seedNamed('Beta Recycling')
+      ])
 
-        const page = await repository.find({ page: 1, pageSize: 10 })
-
-        expect(page).toMatchObject({ totalItems: 2, totalPages: 1 })
-        expect(page.items.map(({ name }) => name)).toEqual(['Beta Recycling'])
+      const page = await repository.find({
+        search: 'beta',
+        registrationNumber: acme.registrations[0].registrationNumber,
+        ...firstPage
       })
 
-      it('finds an organisation by a registration the model leaves out, and serves it without that registration', async ({
-        organisationReadRepositoryWith
-      }) => {
-        const repository = await organisationReadRepositoryWith({
-          organisations: [
-            named('Acme Recycling', {
-              registrations: [reprocessor(), exporter({ validFrom: null })]
-            })
-          ]
-        })
-
-        const { items } = await repository.find({
-          registrationNumber: EXPORTER_NUMBER,
-          page: 1,
-          pageSize: 10
-        })
-
-        expect(items).toHaveLength(1)
-        expect(Object.keys(items[0].registrations)).toEqual([
-          REPROCESSOR_NUMBER
-        ])
-      })
-
-      it('finds an organisation by an accreditation that none of its registrations holds', async ({
-        organisationReadRepositoryWith
-      }) => {
-        const repository = await organisationReadRepositoryWith({
-          organisations: [
-            named('Acme Recycling', { accreditations: [accreditation()] })
-          ]
-        })
-
-        const { items } = await repository.find({
-          accreditationNumber: ACCREDITATION_NUMBER,
-          page: 1,
-          pageSize: 10
-        })
-
-        expect(items.map(({ name }) => name)).toEqual(['Acme Recycling'])
-      })
+      expect(page.items).toEqual([])
     })
   })
 }

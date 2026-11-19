@@ -1,36 +1,39 @@
-import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { partialMock } from '#test/type-helpers.js'
 import { vi } from 'vitest'
+import { REPROCESSOR_NUMBER } from '#organisation-read-model/test-support.js'
+import Joi from 'joi'
 import {
-  REPROCESSOR_NUMBER,
-  accreditation,
-  granted,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import {
-  findAccreditationForYear,
   findOrganisationAndRegistrationReadModels,
   findOrganisationByNumber,
-  findRegistrationByNumber
+  registrationParams
 } from './natural-keys.js'
-import {
-  toOrganisationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/**
- * @param {ReturnType<typeof buildOrganisation>} organisation
- */
-const findIn = (organisation) =>
-  findRegistrationByNumber(
-    createInMemoryOrganisationsRepository([partialMock(organisation)])(),
-    organisation.organisationNumber,
-    toRegistrationNumber(REPROCESSOR_NUMBER)
+describe('registrationParams', () => {
+  const schema = Joi.object(registrationParams)
+
+  it('accepts a registration number', () => {
+    expect(
+      schema.validate({
+        organisationNumber: '500001',
+        registrationNumber: REPROCESSOR_NUMBER
+      }).error
+    ).toBeUndefined()
+  })
+
+  it.each(['constructor', '__proto__', 'toString', 'r26er5001180098pl'])(
+    'rejects a registration number of %s',
+    (registrationNumber) => {
+      expect(
+        schema.validate({ organisationNumber: '500001', registrationNumber })
+          .error
+      ).toBeDefined()
+    }
   )
+})
 
 describe('findOrganisationByNumber', () => {
   it('finds an organisation by its number', async () => {
@@ -58,135 +61,6 @@ describe('findOrganisationByNumber', () => {
   })
 })
 
-describe('findRegistrationByNumber', () => {
-  it('finds a registration by its organisation and registration numbers', async () => {
-    const registration = reprocessor()
-    const organisation = buildOrganisation({ registrations: [registration] })
-
-    const found = await findIn(organisation)
-
-    expect(found.organisation.id).toBe(organisation.id)
-    expect(found.registration.id).toBe(registration.id)
-  })
-
-  it('rejects an unknown organisation', async () => {
-    const organisationAdministrationRepository =
-      createInMemoryOrganisationsRepository([])()
-
-    await expect(
-      findRegistrationByNumber(
-        organisationAdministrationRepository,
-        toOrganisationNumber('1'),
-        toRegistrationNumber(REPROCESSOR_NUMBER)
-      )
-    ).rejects.toMatchObject({ output: { statusCode: 404 } })
-  })
-
-  it.each([
-    [
-      'a registration the read model does not serve',
-      [
-        reprocessor({
-          statusHistory: [{ status: 'created', updatedAt: '2026-01-01' }]
-        })
-      ]
-    ],
-    [
-      'a registration the read model cannot show',
-      [reprocessor({ validFrom: undefined })]
-    ],
-    ['a number two registrations share', [reprocessor(), reprocessor()]]
-  ])('rejects %s', async (_, registrations) => {
-    await expect(
-      findIn(buildOrganisation({ registrations }))
-    ).rejects.toMatchObject({ output: { statusCode: 404 } })
-  })
-
-  it('finds the served registration when an unserved one shares its number', async () => {
-    const served = reprocessor()
-    const organisation = buildOrganisation({
-      registrations: [reprocessor({ validFrom: undefined }), served]
-    })
-
-    const found = await findIn(organisation)
-
-    expect(found.registration.id).toBe(served.id)
-  })
-
-  it("finds a registration beside another the read model can't show", async () => {
-    const registration = reprocessor()
-    const organisation = buildOrganisation({
-      registrations: [
-        registration,
-        reprocessor({
-          registrationNumber: 'R26ER5001180099GL',
-          material: 'glass',
-          glassRecyclingProcess: []
-        })
-      ]
-    })
-
-    const found = await findIn(organisation)
-
-    expect(found.registration.id).toBe(registration.id)
-  })
-})
-
-describe('findAccreditationForYear', () => {
-  /**
-   * @param {Parameters<typeof accreditation>[0]} [overrides]
-   */
-  const accreditedRegistration = async (overrides = {}) => {
-    const accredited = accreditation(overrides)
-    const { organisation, registration } = await findIn(
-      buildOrganisation({
-        registrations: [reprocessor({ accreditationId: accredited.id })],
-        accreditations: [accredited]
-      })
-    )
-    return { accredited, organisation, registration }
-  }
-
-  it("finds a registration's accreditation for a year", async () => {
-    const { accredited, organisation, registration } =
-      await accreditedRegistration()
-
-    expect(
-      findAccreditationForYear(organisation, registration, toYear(2026)).id
-    ).toBe(accredited.id)
-  })
-
-  it.each([
-    ['another year', {}, toYear(2027)],
-    [
-      'an accreditation with no number',
-      { accreditationNumber: undefined },
-      toYear(2026)
-    ],
-    [
-      'an accreditation with no start date',
-      { validFrom: undefined },
-      toYear(2026)
-    ],
-    [
-      'an accreditation the read model does not serve',
-      { statusHistory: granted('rejected') },
-      toYear(2026)
-    ]
-  ])('rejects %s', async (_, overrides, year) => {
-    const { organisation, registration } =
-      await accreditedRegistration(overrides)
-
-    expect(() =>
-      findAccreditationForYear(organisation, registration, year)
-    ).toThrow(
-      expect.objectContaining({
-        output: expect.objectContaining({ statusCode: 404 })
-      })
-    )
-  })
-})
-
 describe('findOrganisationAndRegistrationReadModels', () => {
   const registration = { material: 'plastic' }
   const organisation = { registrations: { R26ER5001180041PL: registration } }
@@ -211,18 +85,21 @@ describe('findOrganisationAndRegistrationReadModels', () => {
     ).resolves.toEqual({ organisation, registration })
   })
 
-  it('is not found when the organisation does not hold the registration', async () => {
-    await expect(
-      findOrganisationAndRegistrationReadModels(
-        requestFor(organisation, 'R26ER5001180098PL')
-      )
-    ).rejects.toMatchObject({
-      output: {
-        statusCode: 404,
-        payload: { message: 'Registration not found' }
-      }
-    })
-  })
+  it.each(['R26ER5001180098PL', 'constructor', '__proto__', 'toString'])(
+    'is not found when the organisation does not hold registration %s',
+    async (registrationNumber) => {
+      await expect(
+        findOrganisationAndRegistrationReadModels(
+          requestFor(organisation, registrationNumber)
+        )
+      ).rejects.toMatchObject({
+        output: {
+          statusCode: 404,
+          payload: { message: 'Registration not found' }
+        }
+      })
+    }
+  )
 
   it('is not found when there is no organisation', async () => {
     await expect(

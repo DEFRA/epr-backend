@@ -7,7 +7,7 @@ import HapiSwagger from 'hapi-swagger'
 import { secureContext } from '@defra/hapi-secure-context'
 
 import { dlqAdminPlugin } from '#plugins/dlq-admin.js'
-import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
+import { s3PublicRegisterRepositoryPlugin } from '#public-register/index.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
@@ -35,7 +35,7 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { router } from '#plugins/router.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
-import { organisationReadRepositoryPlugin } from '#organisation-read-model/repository/mongodb.plugin.js'
+import { organisationReadRepositoryPlugin } from '#organisation-read-model/index.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
@@ -45,11 +45,9 @@ import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
-import { runOrganisationValidationSweep } from '#server/run-organisation-validation-sweep.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
-import { runSummaryLogScopeBackfill } from '#summary-log-scope-backfill/run.js'
-import { runLedgerYearBackfill } from '#ledger-year-backfill/run.js'
+import { runOrganisationYearsDiagnostic } from '#organisation-years-diagnostic/run.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -137,7 +135,7 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    organisationReadRepositoryPlugin,
+    { plugin: organisationReadRepositoryPlugin, options: { config } },
     orsImportsRepositoryPlugin,
     mongoSummaryLogRowStatesRepositoryPlugin
   ]
@@ -211,7 +209,7 @@ async function createServer(options = {}) {
   }
 
   // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
-  // These routes use raw db.collection() access and need refactoring.
+  // These routes reach their collections directly and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
   // See: src/routes/v1/apply/*.js
   if (!options._testOnlyLegacyApplyRoutes) {
@@ -227,10 +225,8 @@ async function createServer(options = {}) {
       /** @type {unknown} */ (server)
     )
     void runFormsDataMigration(startedServer)
-    void runOrganisationValidationSweep(startedServer)
     void runReconcileStalePrnProjections(startedServer)
-    void runSummaryLogScopeBackfill(startedServer)
-    void runLedgerYearBackfill(startedServer)
+    void runOrganisationYearsDiagnostic(startedServer)
   })
 
   return server

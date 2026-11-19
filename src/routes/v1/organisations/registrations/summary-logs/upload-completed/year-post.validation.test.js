@@ -1,11 +1,12 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  buildReadOrganisationWithNumbersOf,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { partialMock } from '#test/type-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { signedCallbackRequest } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -16,10 +17,11 @@ const organisation = buildOrganisation({
   registrations: [reprocessor({ id: 'reg-456' })]
 })
 const organisationId = organisation.id
-const uploadedKey = `/organisations/${organisationId}/registrations/reg-456/upload-1/file-1`
+const registrationPath = `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}`
+const uploadedKey = `${registrationPath}/upload-1/file-1`
 
 const buildPostUrl = (summaryLogId) =>
-  `/organisations/${organisation.organisationNumber}/registrations/${organisation.registrations[0].registrationNumber}/summary-logs/2026/${summaryLogId}/upload-completed`
+  `${registrationPath}/summary-logs/2026/${summaryLogId}/upload-completed`
 
 describe('POST upload-completed validation', () => {
   // Mock OIDC servers needed for server startup, but we inject credentials directly
@@ -31,10 +33,8 @@ describe('POST upload-completed validation', () => {
     server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository(),
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          buildReadOrganisationWithNumbersOf(organisation)
         ])
       }
     })

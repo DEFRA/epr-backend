@@ -68,21 +68,6 @@ export function yearBounds(year) {
 }
 
 /**
- * The last day of `year` when year is before `date`, else `date`, e.g.
- * - `earliestOfYearEndOrDate(2025, '2026-11-10')` // returns '2025-12-31'
- * - `earliestOfYearEndOrDate(2026, '2026-11-10')` // returns '2026-11-10'
- * - `earliestOfYearEndOrDate(2027, '2026-11-10')` // returns '2026-11-10'
- *
- * @param {Year} year
- * @param {CalendarDate} date
- * @returns {CalendarDate}
- */
-export function earliestOfYearEndOrDate(year, date) {
-  const { end } = yearBounds(year)
-  return end.localeCompare(date) < 0 ? end : date
-}
-
-/**
  * @param {Year} year
  * @returns {CalendarDate} last calendar date of the year
  */

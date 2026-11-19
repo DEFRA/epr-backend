@@ -1,8 +1,9 @@
 import Boom from '@hapi/boom'
 import {
-  organisationReadRepositoryOf,
-  organisationReadRepositoryFrom
-} from '#vite/helpers/organisation-read-model.js'
+  createInMemoryOrganisationReadRepository,
+  buildReadOrganisationWithNumbersOf,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 import {
@@ -12,14 +13,16 @@ import {
   beforeAll,
   afterAll,
   afterEach,
+  onTestFinished,
   vi
 } from 'vitest'
+
+import { config } from '#root/config.js'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { reprocessor } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
@@ -58,7 +61,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     vi.restoreAllMocks()
   })
 
-  describe('an active registration', () => {
+  describe('an active registration only the read model holds', () => {
     /** @type {Organisation} */
     const organisation = partialMock(
       buildOrganisation({ registrations: [reprocessor()] })
@@ -71,10 +74,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         repositories: {
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
-          organisationAdministrationRepository:
-            createInMemoryOrganisationsRepository([organisation]),
-          organisationReadRepository: await organisationReadRepositoryOf([
-            organisation
+          organisationReadRepository: createInMemoryOrganisationReadRepository([
+            buildReadOrganisationWithNumbersOf(organisation)
           ]),
           uploadsRepository
         }
@@ -96,6 +97,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
 
       expect(response.statusCode).toBe(StatusCodes.CREATED)
+    })
+
+    it('returns 404 for a registration the read model does not hold', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/organisations/${organisation.organisationNumber}/registrations/R26ER5001189999PL/summary-logs/2026`,
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
     it('re-throws Boom errors from the uploads repository', async () => {
@@ -137,6 +149,20 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 201 for 2027 once it is open', async () => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
+
+      const response = await server.inject({
+        method: 'POST',
+        url: buildUrl(organisation, 2027),
+        ...asOperator(),
+        payload: { redirectUrl: 'https://frontend.test/redirect' }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
 
     it('returns 422 for a non-numeric year', async () => {
@@ -190,8 +216,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
           summaryLogsRepository: () =>
             createInMemorySummaryLogsRepository()(mockLogger),
           organisationAdministrationRepository: organisationsRepositoryFactory,
-          organisationReadRepository:
-            await organisationReadRepositoryFrom(repository),
+          organisationReadRepository: createInMemoryOrganisationReadRepository(
+            [linkedOrganisation, otherOrganisation].map(
+              buildReadOrganisationWithNumbersOf
+            )
+          ),
           uploadsRepository: createInMemoryUploadsRepository()
         }
       })

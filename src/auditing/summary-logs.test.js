@@ -24,8 +24,6 @@ const numbers = {
 
 describe('auditSummaryLogSubmit', () => {
   const summaryLogId = 'summary-log-123'
-  const organisationId = 'org-456'
-  const registrationId = 'reg-789'
   const userId = 'user-abc'
   const userEmail = 'test@example.gov.uk'
   const userScope = ['standardUser']
@@ -65,8 +63,6 @@ describe('auditSummaryLogSubmit', () => {
 
     await auditSummaryLogSubmit(request, {
       summaryLogId,
-      organisationId,
-      registrationId,
       ...numbers
     })
 
@@ -78,8 +74,6 @@ describe('auditSummaryLogSubmit', () => {
       },
       context: {
         summaryLogId,
-        organisationId,
-        registrationId,
         ...numbers
       },
       user: {
@@ -95,8 +89,6 @@ describe('auditSummaryLogSubmit', () => {
 
     await auditSummaryLogSubmit(request, {
       summaryLogId,
-      organisationId,
-      registrationId,
       ...numbers
     })
 
@@ -115,8 +107,6 @@ describe('auditSummaryLogSubmit', () => {
       },
       context: {
         summaryLogId,
-        organisationId,
-        registrationId,
         ...numbers
       }
     })
@@ -144,8 +134,6 @@ describe('auditing a summary log under an accreditation with no database id', ()
 
     await auditSummaryLogSubmit(request, {
       summaryLogId: 'summary-log-2027',
-      organisationId: 'org-456',
-      registrationId: 'reg-789',
       ...numbers
     })
 
@@ -162,8 +150,6 @@ describe('auditing a summary log under an accreditation with no database id', ()
 
 describe('auditSummaryLogDownload', () => {
   const summaryLogId = 'summary-log-123'
-  const organisationId = 'org-456'
-  const registrationId = 'reg-789'
   const userId = 'user-abc'
   const userEmail = 'test@example.gov.uk'
   const userScope = ['serviceMaintainer']
@@ -203,8 +189,6 @@ describe('auditSummaryLogDownload', () => {
 
     await auditSummaryLogDownload(request, {
       summaryLogId,
-      organisationId,
-      registrationId,
       ...numbers
     })
 
@@ -216,8 +200,6 @@ describe('auditSummaryLogDownload', () => {
       },
       context: {
         summaryLogId,
-        organisationId,
-        registrationId,
         ...numbers
       },
       user: {
@@ -233,8 +215,6 @@ describe('auditSummaryLogDownload', () => {
 
     await auditSummaryLogDownload(request, {
       summaryLogId,
-      organisationId,
-      registrationId,
       ...numbers
     })
 
@@ -253,8 +233,6 @@ describe('auditSummaryLogDownload', () => {
       },
       context: {
         summaryLogId,
-        organisationId,
-        registrationId,
         ...numbers
       }
     })

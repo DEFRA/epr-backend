@@ -19,9 +19,14 @@ import { createHash } from 'node:crypto'
  * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} WasteBalanceLedgerId
  */
 
-/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
+import {
+  LEDGER_ID_FIELDS,
+  pickLedgerId
+} from '#waste-balances/repository/ledger-schema.js'
+import { SummaryLogRowStateConflictError } from './port.js'
 import {
   validateSummaryLogRowStateInsert,
   validateSummaryLogRowStateRead
@@ -31,12 +36,21 @@ export const SUMMARY_LOG_ROW_STATES_COLLECTION_NAME = 'summary-log-row-states'
 
 const RETIRED_ROW_HISTORY_INDEX_NAMES = ['row_history', 'row_history_by_number']
 
+const RETIRED_MEMBERSHIP_INDEX_NAME = 'summary_log_membership'
+
+const RETIRED_IDENTITY_INDEX_NAMES = [
+  'summary_log_row_state_identity',
+  'summary_log_row_state_identity_by_number'
+]
+
 /**
  * Ensures the row-states collection exists with the indexes required by the
- * summary-log row state design: a multikey index on `summaryLogIds` for the
- * committed-state membership query, and a unique index on the
- * summary-log-row-state identity (ledger identity + content hash) that makes
- * the content-addressed dedup atomic under concurrent writers.
+ * summary-log row state design: a multikey index on `summaryLogIds` then
+ * `_id` for the committed-state membership query, which reads in `_id` order
+ * so the planner never prefers walking the whole collection by `_id`, and a
+ * unique index on the summary-log-row-state identity (ledger identity and
+ * year + content hash) that makes the content-addressed dedup atomic under
+ * concurrent writers.
  *
  * Safe to call multiple times — MongoDB `createIndex` is idempotent for
  * matching specifications.
@@ -48,13 +62,13 @@ export async function ensureSummaryLogRowStatesCollection(db) {
   const collection = db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
 
   await collection.createIndex(
-    { summaryLogIds: 1 },
-    { name: 'summary_log_membership' }
+    { summaryLogIds: 1, _id: 1 },
+    { name: 'summary_log_membership_by_id' }
   )
 
   await Promise.all(
-    RETIRED_ROW_HISTORY_INDEX_NAMES.map((name) =>
-      dropIndexIfPresent(collection, name)
+    [...RETIRED_ROW_HISTORY_INDEX_NAMES, RETIRED_MEMBERSHIP_INDEX_NAME].map(
+      (name) => dropIndexIfPresent(collection, name)
     )
   )
 
@@ -63,14 +77,19 @@ export async function ensureSummaryLogRowStatesCollection(db) {
       organisationNumber: 1,
       registrationNumber: 1,
       accreditationNumber: 1,
+      year: 1,
       rowId: 1,
       wasteRecordType: 1,
       contentHash: 1
     },
-    { name: 'summary_log_row_state_identity_by_number', unique: true }
+    { name: 'summary_log_row_state_identity_by_year', unique: true }
   )
 
-  await dropIndexIfPresent(collection, 'summary_log_row_state_identity')
+  await Promise.all(
+    RETIRED_IDENTITY_INDEX_NAMES.map((name) =>
+      dropIndexIfPresent(collection, name)
+    )
+  )
 
   return collection
 }
@@ -124,7 +143,7 @@ const hashSummaryLogRowState = (candidate) =>
 
 /**
  * Builds the content-addressed identity filter for a row state — exactly the
- * fields of the unique `summary_log_row_state_identity_by_number` index. Using the unique
+ * fields of the unique `summary_log_row_state_identity_by_year` index. Using the unique
  * key as the upsert filter is what makes concurrent writers converge on a
  * single document: MongoDB retries the upsert against the winning insert
  * instead of surfacing a duplicate-key error.
@@ -133,9 +152,7 @@ const hashSummaryLogRowState = (candidate) =>
  * @param {string} contentHash
  */
 const buildIdentityFilter = (candidate, contentHash) => ({
-  organisationNumber: candidate.organisationNumber,
-  registrationNumber: candidate.registrationNumber,
-  accreditationNumber: candidate.accreditationNumber,
+  ...pickLedgerId(candidate),
   rowId: candidate.rowId,
   wasteRecordType: candidate.wasteRecordType,
   contentHash
@@ -143,9 +160,7 @@ const buildIdentityFilter = (candidate, contentHash) => ({
 
 const identityKey = (fields) =>
   JSON.stringify([
-    fields.organisationNumber,
-    fields.registrationNumber,
-    fields.accreditationNumber,
+    ...LEDGER_ID_FIELDS.map((field) => fields[field]),
     fields.rowId,
     fields.wasteRecordType,
     fields.contentHash
@@ -156,13 +171,11 @@ const identityKey = (fields) =>
  * the read model's query and the write path's read-back. A row state belongs
  * to the ledger that wrote it, so the summary log alone does not identify it.
  *
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  * @param {SummaryLogFileId} summaryLogId
  */
 const buildSummaryLogFilter = (ledgerId, summaryLogId) => ({
-  organisationNumber: ledgerId.organisationNumber,
-  registrationNumber: ledgerId.registrationNumber,
-  accreditationNumber: ledgerId.accreditationNumber,
+  ...pickLedgerId(ledgerId),
   summaryLogIds: summaryLogId
 })
 
@@ -178,7 +191,6 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
     // of $setOnInsert to avoid the filter/setOnInsert path conflict.
     update: {
       $setOnInsert: {
-        year: candidate.year,
         processingType: candidate.processingType,
         data: candidate.data,
         classification: candidate.classification
@@ -207,6 +219,44 @@ const prepareRowState = (ledgerId, entry, summaryLogId) => {
   return { candidate, contentHash: hashSummaryLogRowState(candidate) }
 }
 
+/** @param {{ wasteRecordType: string, rowId: string }} row */
+const rowKey = ({ wasteRecordType, rowId }) =>
+  JSON.stringify([wasteRecordType, rowId])
+
+/**
+ * @param {Collection} collection
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @param {{ candidate: SummaryLogRowStateInsert, contentHash: string }[]} prepared
+ * @param {SummaryLogFileId} summaryLogId
+ */
+const assertOneStatePerRow = async (
+  collection,
+  ledgerId,
+  prepared,
+  summaryLogId
+) => {
+  const held = await collection
+    .find(buildSummaryLogFilter(ledgerId, summaryLogId), {
+      projection: { _id: 0, wasteRecordType: 1, rowId: 1, contentHash: 1 }
+    })
+    .toArray()
+  const hashByRow = new Map(
+    held.map(({ wasteRecordType, rowId, contentHash }) => [
+      rowKey({ wasteRecordType, rowId }),
+      contentHash
+    ])
+  )
+
+  for (const { candidate, contentHash } of prepared) {
+    const key = rowKey(candidate)
+    const heldHash = hashByRow.get(key)
+    if (heldHash !== undefined && heldHash !== contentHash) {
+      throw new SummaryLogRowStateConflictError(summaryLogId, candidate)
+    }
+    hashByRow.set(key, contentHash)
+  }
+}
+
 /**
  * Commits a whole submission's row states in one round trip: a single
  * `bulkWrite` of content-addressed upserts, then one `find` to read the
@@ -227,6 +277,7 @@ const performUpsertSummaryLogRowStates =
     const prepared = summaryLogRowStates.map((entry) =>
       prepareRowState(ledgerId, entry, summaryLogId)
     )
+    await assertOneStatePerRow(collection, ledgerId, prepared, summaryLogId)
 
     await collection.bulkWrite(
       prepared.map(({ candidate, contentHash }) =>
@@ -279,7 +330,7 @@ const toWasteRecordState = ({
  * 40% of the credited tonnage report's read time over 423 summary logs.
  *
  * @param {Collection} collection
- * @returns {(ledgerId: RequiredNumbers, summaryLogId: SummaryLogFileId) => Promise<import('./port.js').WasteRecordState[]>}
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<import('./port.js').WasteRecordState[]>}
  */
 const performFindWasteRecordStatesForSummaryLog =
   (collection) => async (ledgerId, summaryLogId) => {
@@ -293,7 +344,7 @@ const performFindWasteRecordStatesForSummaryLog =
   }
 
 /**
- * Rides the multikey `summary_log_membership` index, as
+ * Rides the multikey `summary_log_membership_by_id` index, as
  * `findWasteRecordStatesForSummaryLog` does — a file id is selective enough
  * that the organisation and registration are a residual filter, not a key
  * prefix.
@@ -319,6 +370,7 @@ const SUBMITTED_ROW_STATE_PROJECTION = {
   organisationNumber: 1,
   registrationNumber: 1,
   accreditationNumber: 1,
+  year: 1,
   wasteRecordType: 1,
   processingType: 1,
   data: 1
@@ -332,6 +384,7 @@ const toSubmittedRowState = ({
   organisationNumber,
   registrationNumber,
   accreditationNumber,
+  year,
   wasteRecordType,
   processingType,
   data
@@ -339,6 +392,7 @@ const toSubmittedRowState = ({
   organisationNumber,
   registrationNumber,
   accreditationNumber,
+  year,
   wasteRecordType,
   processingType,
   data
@@ -362,26 +416,6 @@ const performStreamRowStatesForSummaryLogs = (collection) =>
   }
 
 /**
- * The union of keys observed on `data` across every state document, computed
- * server-side so the CSV export composes its dynamic header without pulling any
- * document into memory. Cost scales with the count of distinct field names
- * (typically <200) rather than the document count.
- *
- * @param {Collection} collection
- * @returns {() => Promise<string[]>}
- */
-const performFindDistinctDataKeys = (collection) => async () => {
-  const docs = await collection
-    .aggregate([
-      { $project: { kv: { $objectToArray: '$data' } } },
-      { $unwind: '$kv' },
-      { $group: { _id: '$kv.k' } }
-    ])
-    .toArray()
-  return docs.map((doc) => /** @type {string} */ (doc._id))
-}
-
-/**
  * Creates a MongoDB-backed summary-log row state repository.
  *
  * @param {Db} db
@@ -397,7 +431,6 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
     findRowStatesForSummaryLogFile:
       performFindRowStatesForSummaryLogFile(collection),
     streamRowStatesForSummaryLogs:
-      performStreamRowStatesForSummaryLogs(collection),
-    findDistinctDataKeys: performFindDistinctDataKeys(collection)
+      performStreamRowStatesForSummaryLogs(collection)
   })
 }

@@ -1,4 +1,7 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
+/**
+ * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
+ * @import {AccreditedRowClassificationContext} from './update-via-ledger.js'
+ */
 import Boom from '@hapi/boom'
 
 import { submitSummaryLog as decideSummaryLog } from '../domain/commands.js'
@@ -217,15 +220,14 @@ export const createWasteBalanceService = (
      * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
      * @param {Object} options
      * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {import('#domain/organisations/accreditation.js').AccreditationValidity} options.accreditation
-     * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} options.overseasSites
+     * @param {AccreditedRowClassificationContext} options.classificationContext
      * @param {SummaryLogFileId} options.summaryLogId
      * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
      * @returns {Promise<void>}
      */
     submitSummaryLog: async (
       wasteRecords,
-      { user, accreditation, overseasSites, summaryLogId, ledgerId }
+      { user, classificationContext, summaryLogId, ledgerId }
     ) => {
       if (wasteRecords.length === 0) {
         return
@@ -233,11 +235,10 @@ export const createWasteBalanceService = (
 
       await performUpdateViaLedger({
         wasteRecords,
-        accreditation,
+        classificationContext,
         commitSummaryLogSubmittedEvent,
         dependencies: { systemLogsRepository },
         user,
-        overseasSites,
         summaryLogId,
         ledgerId
       })
@@ -258,11 +259,12 @@ export const createWasteBalanceService = (
       organisationNumber,
       registrationNumber,
       accreditationNumber,
+      year,
       prnId,
       afterEventNumber
     }) =>
       ledgerRepository.findEventsByPrnIdAfter(
-        { organisationNumber, registrationNumber, accreditationNumber },
+        { organisationNumber, registrationNumber, accreditationNumber, year },
         prnId,
         afterEventNumber
       )

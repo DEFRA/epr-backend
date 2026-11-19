@@ -1,10 +1,14 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 
 const keys = {
-  organisationNumber: '500123',
-  registrationNumber: 'R26ER5001180041PL',
+  organisationNumber: toOrganisationNumber('500123'),
+  registrationNumber: toRegistrationNumber('R26ER5001180041PL'),
   year: toYear(2026),
   summaryLogId: 'log-1'
 }

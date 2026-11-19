@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, expect, onTestFinished } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { it, DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { aggregateAvailableBalance } from './aggregate-available-balance.js'
@@ -14,16 +14,17 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 import {
   createMongoLedgerRepository,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import {
   createOrganisationReadRepository,
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
-} from '#organisation-read-model/repository/mongodb.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+  buildExternalAccreditation
+} from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
@@ -123,7 +124,7 @@ describe('aggregateAvailableBalance - Integration', () => {
   let db
   /** @type {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} */
   let ledgerRepository
-  /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+  /** @type {import('#organisation-read-model/index.js').OrganisationReadRepository} */
   let organisationReadRepository
 
   const aggregate = () =>
@@ -246,6 +247,9 @@ describe('aggregateAvailableBalance - Integration', () => {
   })
 
   it('includes an accreditation held outside re-ex', async () => {
+    // External accreditations are held for 2027, so load only once it is open
+    config.set('openNextYear', true)
+    onTestFinished(() => config.reset('openNextYear'))
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
@@ -255,23 +259,23 @@ describe('aggregateAvailableBalance - Integration', () => {
       )
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
+        organisationNumber: toOrganisationNumber(String(orgId1)),
         registrationNumber: toRegistrationNumber('REG-1'),
-        year: toYear(2026),
+        year: toYear(2027),
         accreditationNumber: toAccreditationNumber('ACC-EXTERNAL'),
         status: {
           current: 'approved',
-          timeline: [
-            {
-              status: 'approved',
-              at: '2026-01-01T00:00:00.000Z',
-              updatedAt: '2026-01-01T00:00:00.000Z'
-            }
-          ]
+          lastUpdatedAt: '2027-01-01T00:00:00.000Z',
+          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
         }
       })
     )
     await ledgerRepository.appendEvents([
-      ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-EXTERNAL'), 1, 80)
+      ledgerEvent(
+        { ...ledgerIdOf(orgId1, '1', 'ACC-EXTERNAL'), year: toYear(2027) },
+        1,
+        80
+      )
     ])
 
     const result = await aggregate()

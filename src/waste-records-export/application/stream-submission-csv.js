@@ -11,15 +11,14 @@ import {
   sortRowStates
 } from './stream-csv-export.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogRowState} from '#waste-records/repository/schema.js' */
 
 /**
  * @typedef {Object} SubmissionCsvInput
- * @property {Organisation} org
- * @property {Registration} registration
+ * @property {Pick<Organisation, 'name'>} org
+ * @property {Pick<Registration, 'submittedToRegulator'>} registration
  * @property {SummaryLogMeta | undefined} meta
  * @property {string} submittedAt
  * @property {SummaryLogRowState[]} rowStates
@@ -65,7 +64,7 @@ export async function* streamSubmissionCsv({
         registration,
         meta,
         submittedAt,
-        data: coerceForExport(rowState),
+        data: coerceForExport(rowState, rowState.year),
         wasteRecordType: rowState.wasteRecordType,
         rowId: rowState.rowId,
         classification: rowState.classification,

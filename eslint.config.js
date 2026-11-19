@@ -21,6 +21,10 @@ const OUTER_LAYERS = [
 const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
+// A module of ADR 0027's modular monolith. Code outside it imports only its
+// public interface: index.js, vocabulary.js, and test-support.js in a test.
+const ORGANISATION_READ_MODEL = './src/organisation-read-model'
+
 const ns = neostandard({
   env: ['node', 'vitest'],
   noJsx: true,
@@ -71,6 +75,26 @@ export default [
               // test data. Nothing else in a repository is available to it.
               except: ['./organisations/contract'],
               message: DOMAIN_LAYERING_MESSAGE
+            },
+            {
+              target: [
+                './src/!(organisation-read-model)/**/*',
+                './src/*.js',
+                './.vite/**/*'
+              ],
+              from: ORGANISATION_READ_MODEL,
+              except: ['./index.js', './vocabulary.js', './test-support.js'],
+              message:
+                'Import the organisation read model through its index.js, its vocabulary.js, or test-support.js in a test.'
+            },
+            {
+              target: [
+                './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-fixtures|test-support).js',
+                './src/!(*.test).js'
+              ],
+              from: `${ORGANISATION_READ_MODEL}/test-support.js`,
+              message:
+                'Only tests import the organisation read model through test-support.js.'
             }
           ]
         }
@@ -118,6 +142,7 @@ export default [
       // These read a year out of a date or string, so mint it.
       'src/common/helpers/dates/year-month.js',
       'src/domain/summary-logs/template-year.js',
+      'src/domain/summary-logs/table-schemas/index.js',
       'src/reports/domain/period-for-date.js',
       'src/routes/organisations/get.organisation.js',
       'src/waste-balances/application/read-model-accreditations.js'

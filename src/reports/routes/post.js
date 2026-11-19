@@ -14,11 +14,12 @@ import { extractChangedBy, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 
 /**
  * @import { HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
- * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { ReportRequest } from './shared.js'
@@ -72,7 +73,7 @@ export const reportsPost = {
   },
   /**
    * @param {ReportRequest & {
-   *   ledgerRepository: WasteBalanceLedgerRepository,
+   *   summaryLogsRepository: SummaryLogsRepository,
    *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
    *   reportsRepository: ReportsRepository
@@ -81,7 +82,7 @@ export const reportsPost = {
    */
   handler: async (request, h) => {
     const {
-      ledgerRepository,
+      summaryLogsRepository,
       summaryLogRowStatesRepository,
       packagingRecyclingNotesRepository,
       reportsRepository,
@@ -103,12 +104,12 @@ export const reportsPost = {
       // registration holds no accreditation for the year.
       const cadenceAccreditation = cadenceAccreditationFor(
         cadence,
-        registration.accreditations[year]?.accreditationNumber
+        accreditationForYear(registration, year)?.accreditationNumber
       )
 
       const createdReport = await createReportForPeriod({
         reportsRepository,
-        ledgerRepository,
+        summaryLogsRepository,
         summaryLogRowStatesRepository,
         packagingRecyclingNotesRepository,
         numbers: {

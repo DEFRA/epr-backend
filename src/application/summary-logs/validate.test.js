@@ -3,7 +3,8 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
-import Boom from '@hapi/boom'
+import { VALIDATION_CODE } from '#common/enums/validation.js'
+import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 
 import {
   createSummaryLogsValidator,
@@ -11,7 +12,6 @@ import {
   MAX_ACTUAL_LENGTH
 } from './validate.js'
 import { createEmptyLoadValidity } from './load-counts.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -26,17 +26,14 @@ import {
 } from '#domain/organisations/numbers.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {RegistrationOrAccreditationId, WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * The ledger the fixture summary log reads.
  *
- * @type {RegistrationOrAccreditationId & WasteBalanceLedgerId}
+ * @type {WasteBalanceLedgerId}
  */
 const FIXTURE_LEDGER = {
-  organisationId: 'org-123',
-  registrationId: 'reg-123',
-  accreditationId: 'acc-123',
   organisationNumber: toOrganisationNumber('500123'),
   registrationNumber: toRegistrationNumber('REG12345'),
   accreditationNumber: toAccreditationNumber('ACC12345'),
@@ -48,7 +45,7 @@ const FIXTURE_LEDGER = {
  * SUMMARY_LOG_SUBMITTED ledger event that resolves it as the head.
  *
  * @param {Object} params
- * @param {RegistrationOrAccreditationId & WasteBalanceLedgerId} params.ledgerId
+ * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
  * @param {number} params.number - the submission's ledger position
  * @param {{ rowId: string, wasteRecordType?: string }[]} params.rows
@@ -124,7 +121,7 @@ const buildMeta = (overrides = {}) => ({
 const buildReceivedLoadRow = (overrides = {}) => ({
   // Waste balance fields (Section 1)
   ROW_ID: 10000,
-  DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
+  DATE_RECEIVED_FOR_REPROCESSING: '2026-05-28T00:00:00.000Z',
   EWC_CODE: '03 03 08',
   DESCRIPTION_WASTE: 'Glass - pre-sorted',
   WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
@@ -181,6 +178,159 @@ const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
 
 // ============================================================================
 
+/**
+ * Every row detail in a loads-by-reporting-period breakdown.
+ *
+ * @param {unknown} value
+ * @returns {{ rowId: string, exclusionReasons: string[] }[]}
+ */
+const rowDetailsIn = (value) => {
+  if (Array.isArray(value)) {
+    return value.flatMap(rowDetailsIn)
+  }
+  if (value && typeof value === 'object') {
+    return 'exclusionReasons' in value
+      ? [/** @type {any} */ (value)]
+      : Object.values(value).flatMap(rowDetailsIn)
+  }
+  return []
+}
+
+const EXPORTER_RECEIVED_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_EXPORT',
+  'EWC_CODE',
+  'DESCRIPTION_WASTE',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  'GROSS_WEIGHT',
+  'TARE_WEIGHT',
+  'PALLET_WEIGHT',
+  'NET_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'TONNAGE_RECEIVED_FOR_EXPORT',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+  'DATE_OF_EXPORT',
+  'BASEL_EXPORT_CODE',
+  'CUSTOMS_CODES',
+  'CONTAINER_NUMBER',
+  'DATE_RECEIVED_BY_OSR',
+  'OSR_ID',
+  'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
+  'INTERIM_SITE_ID',
+  'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
+  'EXPORT_CONTROLS',
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED',
+  'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+  'SUPPLIER_NAME',
+  'SUPPLIER_ADDRESS',
+  'SUPPLIER_POSTCODE',
+  'SUPPLIER_EMAIL',
+  'SUPPLIER_PHONE_NUMBER',
+  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+  'YOUR_REFERENCE',
+  'WEIGHBRIDGE_TICKET',
+  'WASTE_TRANSFER_NOTE',
+  'LOADING_SITE_NAME',
+  'LOADING_SITE_ADDRESS',
+  'LOADING_SITE_POSTCODE',
+  'LOADING_SITE_EMAIL',
+  'LOADING_SITE_PHONE_NUMBER',
+  'CARRIER_NAME',
+  'CBD',
+  'CARRIER_VEHICLE_REGISTRATION_NUMBER',
+  'OSR_NAME',
+  'OSR_COUNTRY',
+  'TONNAGE_RECEIVED_BY_OSR',
+  'BILL_OF_LANDING_REFERENCE_NUMBER',
+  'CUSTOMS_DECLARATION_NUMBER'
+]
+
+// The supplementary columns are not waste-balance fields, so leaving them
+// empty still yields an INCLUDED row.
+const exporterReceivedRow = (rowId, exportDate, receivedDate = '2026-01-01') =>
+  EXPORTER_RECEIVED_HEADERS.map((h) => {
+    if (h === 'ROW_ID') {
+      return rowId
+    }
+    if (h === 'DATE_OF_EXPORT') {
+      return exportDate
+    }
+    if (h === 'DATE_RECEIVED_FOR_EXPORT') {
+      return receivedDate
+    }
+    if (h === 'EWC_CODE') {
+      return '03 03 08'
+    }
+    if (h === 'DESCRIPTION_WASTE') {
+      return 'Paper - other'
+    }
+    if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') {
+      return 'No'
+    }
+    if (h === 'GROSS_WEIGHT') {
+      return 100
+    }
+    if (h === 'TARE_WEIGHT') {
+      return 0
+    }
+    if (h === 'PALLET_WEIGHT') {
+      return 0
+    }
+    if (h === 'NET_WEIGHT') {
+      return 100
+    }
+    if (h === 'BAILING_WIRE_PROTOCOL') {
+      return 'No'
+    }
+    if (h === 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION') {
+      return 'Actual weight (100%)'
+    }
+    if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') {
+      return 0
+    }
+    if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') {
+      return 1
+    }
+    if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') {
+      return 100
+    }
+    if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') {
+      return 100
+    }
+    if (h === 'BASEL_EXPORT_CODE') {
+      return 'B3020'
+    }
+    if (h === 'CUSTOMS_CODES') {
+      return '123456'
+    }
+    if (h === 'CONTAINER_NUMBER') {
+      return 'CONT123'
+    }
+    if (h === 'DATE_RECEIVED_BY_OSR') {
+      return '2026-01-15'
+    }
+    if (h === 'OSR_ID') {
+      return 100
+    }
+    if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') {
+      return 'No'
+    }
+    if (h === 'INTERIM_SITE_ID') {
+      return 100
+    }
+    if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') {
+      return 0
+    }
+    if (h === 'EXPORT_CONTROLS') {
+      return 'Article 18 (Green list)'
+    }
+    return ''
+  })
+
 const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()
 const mockLoggerError = vi.fn()
@@ -214,12 +364,102 @@ vi.mock('#application/summary-logs/metrics.js', () => ({
 describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
-  let organisationAdministrationRepository
   let summaryLogRowStatesRepository
   let ledgerRepository
   let validateSummaryLog
+  let organisationReadRepository
   let summaryLogId
   let summaryLog
+
+  /** The registration the read model serves, keyed by its number. */
+  let served
+
+  const serve = () =>
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue({
+      organisationNumber: FIXTURE_LEDGER.organisationNumber,
+      registrations: { [served.registrationNumber]: served.registration }
+    })
+
+  /**
+   * The registration's accreditations: one for `year`, approved from
+   * `approvedAt` and holding `status` today, listing `overseasSites` when
+   * given, as an exporter's does.
+   *
+   * @param {{ accreditationNumber?: string, year: string, approvedAt: string, status?: string, overseasSites?: Record<string, any> }} params
+   */
+  const accreditationsFor = ({
+    accreditationNumber = 'ACC12345',
+    year,
+    approvedAt,
+    status = 'approved',
+    overseasSites
+  }) => {
+    const at = new Date(approvedAt).toISOString()
+    return {
+      [year]: {
+        accreditationNumber,
+        status: {
+          current: status,
+          timeline: [{ status: 'approved', at, updatedAt: at }]
+        },
+        ...(overseasSites && { overseasSites }),
+        year: toYear(Number(year))
+      }
+    }
+  }
+
+  /**
+   * The read model serves the registration's accreditations as given,
+   * replacing those it served.
+   *
+   * @param {Parameters<typeof accreditationsFor>[0] & { wasteProcessingType?: string }} params
+   */
+  const givenReadModelAccreditation = ({
+    wasteProcessingType = served.registration.wasteProcessingType,
+    ...accreditation
+  }) => {
+    served.registration = {
+      ...served.registration,
+      wasteProcessingType,
+      accreditations: accreditationsFor(accreditation)
+    }
+    serve()
+  }
+
+  /**
+   * The read model serves the registration, and its accreditation for the year
+   * of the accreditation's `validFrom`, approved from then. Glass names its
+   * recycling process, as the read model does.
+   *
+   * @param {Record<string, any>} registration
+   */
+  const givenRegistration = ({
+    registrationNumber,
+    wasteProcessingType,
+    reprocessingType,
+    material,
+    glassRecyclingProcess,
+    accreditation
+  }) => {
+    served = {
+      registrationNumber,
+      registration: {
+        wasteProcessingType,
+        ...(reprocessingType && { reprocessingType }),
+        ...(wasteProcessingType === 'exporter' && { overseasSites: {} }),
+        material: material === 'glass' ? glassRecyclingProcess[0] : material,
+        accreditations: accreditation
+          ? accreditationsFor({
+              accreditationNumber: accreditation.accreditationNumber,
+              year: accreditation.validFrom.slice(0, 4),
+              approvedAt: accreditation.validFrom,
+              ...(wasteProcessingType === 'exporter' && { overseasSites: {} })
+            })
+          : {}
+      }
+    }
+    serve()
+  }
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
@@ -233,33 +473,24 @@ describe('SummaryLogsValidator', () => {
       })
     }
 
-    organisationAdministrationRepository = {
-      findByOrganisationNumber: vi.fn().mockResolvedValue({
-        registrations: [{ registrationNumber: 'REG12345', overseasSites: {} }]
-      }),
-      findRegistrationById: vi.fn().mockResolvedValue({
-        id: 'reg-123',
-        registrationNumber: 'REG12345',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'input',
-        material: 'aluminium',
-        validFrom: '2025-01-01T00:00:00.000Z',
-        accreditation: {
-          accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01T00:00:00.000Z',
-          validTo: '2025-12-31T23:59:59.999Z',
-          statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-          ]
-        }
-      }),
-      findAccreditationById: vi.fn(
-        async () =>
-          (await organisationAdministrationRepository.findRegistrationById())
-            .accreditation
-      )
-    }
+    organisationReadRepository = { findByOrganisationNumber: vi.fn() }
+    givenRegistration({
+      id: 'reg-123',
+      registrationNumber: 'REG12345',
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
+      material: 'aluminium',
+      validFrom: '2026-01-01T00:00:00.000Z',
+      accreditation: {
+        accreditationNumber: 'ACC12345',
+        validFrom: '2026-01-01T00:00:00.000Z',
+        validTo: '2026-12-31T23:59:59.999Z',
+        statusHistory: [
+          { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+        ]
+      }
+    })
 
     summaryLogId = 'summary-log-123'
 
@@ -267,7 +498,6 @@ describe('SummaryLogsValidator', () => {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: 'org-123',
       registrationId: 'reg-123',
-      accreditationId: FIXTURE_LEDGER.accreditationId,
       organisationNumber: FIXTURE_LEDGER.organisationNumber,
       registrationNumber: FIXTURE_LEDGER.registrationNumber,
       accreditationNumber: FIXTURE_LEDGER.accreditationNumber,
@@ -295,15 +525,14 @@ describe('SummaryLogsValidator', () => {
     validateSummaryLog = createSummaryLogsValidator({
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
-      organisationAdministrationRepository: /** @type {any} */ (
-        organisationAdministrationRepository
+      organisationReadRepository: /** @type {any} */ (
+        organisationReadRepository
       ),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
   })
@@ -422,24 +651,22 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should persist ACCREDITATION_NUMBER from spreadsheet when present', async () => {
-    organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-      {
-        id: 'reg-123',
-        registrationNumber: 'REG12345',
-        wasteProcessingType: 'reprocessor',
-        reprocessingType: 'input',
-        material: 'aluminium',
-        accreditation: {
-          accreditationNumber: 'ACC12345',
-          validFrom: '2025-01-01T00:00:00.000Z',
-          validTo: '2025-12-31T23:59:59.999Z',
-          statusHistory: [
-            { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-            { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-          ]
-        }
+    givenRegistration({
+      id: 'reg-123',
+      registrationNumber: 'REG12345',
+      wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
+      material: 'aluminium',
+      accreditation: {
+        accreditationNumber: 'ACC12345',
+        validFrom: '2026-01-01T00:00:00.000Z',
+        validTo: '2026-12-31T23:59:59.999Z',
+        statusHistory: [
+          { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+          { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+        ]
       }
-    )
+    })
 
     summaryLogExtractor.extract.mockResolvedValue(
       buildExtractedData({
@@ -515,12 +742,97 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
-  it('should update status as expected when registration not found', async () => {
-    organisationAdministrationRepository.findRegistrationById.mockRejectedValue(
-      Boom.notFound('Registration with id reg-123 not found')
-    )
+  it('validates against the accreditation holding the summary log number', async () => {
+    summaryLog.accreditationNumber = 'ACC99999'
+    served.registration.accreditations = {
+      ...accreditationsFor({ year: '2025', approvedAt: '2025-01-01' }),
+      ...accreditationsFor({
+        accreditationNumber: 'ACC99999',
+        year: '2026',
+        approvedAt: '2026-01-01'
+      })
+    }
+    serve()
 
-    await validateSummaryLog(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId)
+
+    const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+    expect(updateCall.validation.issues).toContainEqual(
+      expect.objectContaining({
+        code: VALIDATION_CODE.ACCREDITATION_MISMATCH,
+        context: expect.objectContaining({
+          expected: 'ACC99999',
+          actual: 'ACC12345'
+        })
+      })
+    )
+  })
+
+  it.each([
+    {
+      missing: 'organisation',
+      organisation: null,
+      message: 'Organisation with number 500123 not found'
+    },
+    {
+      missing: 'registration',
+      organisation: { organisationNumber: '500123', registrations: {} },
+      message: 'Registration with number REG12345 not found'
+    },
+    {
+      missing: 'accreditation',
+      organisation: {
+        organisationNumber: '500123',
+        registrations: {
+          REG12345: { wasteProcessingType: 'reprocessor', accreditations: {} }
+        }
+      },
+      message: 'Accreditation with number ACC12345 for 2026 not found'
+    }
+  ])(
+    'marks the summary log invalid when the read model does not serve its $missing',
+    async ({ organisation, message }) => {
+      organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
+        organisation
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-log-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.INVALID,
+          validation: expect.objectContaining({
+            issues: [
+              {
+                severity: 'fatal',
+                category: 'technical',
+                message,
+                code: 'VALIDATION_SYSTEM_ERROR'
+              }
+            ]
+          })
+        })
+      )
+    }
+  )
+
+  it('marks the summary log invalid when it has no registration number, rather than matching a record with none', async () => {
+    delete summaryLog.registrationNumber
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue({
+      organisationNumber: '500123',
+      registrations: {
+        undefined: {
+          ...served.registration,
+          accreditations: {
+            2026: { status: { current: 'approved', timeline: [] } }
+          }
+        }
+      }
+    })
+
+    await validateSummaryLog(summaryLogId)
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
@@ -532,11 +844,119 @@ describe('SummaryLogsValidator', () => {
             {
               severity: 'fatal',
               category: 'technical',
-              message: 'Registration with id reg-123 not found',
+              message: 'Summary log has no registration number',
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
         })
+      })
+    )
+  })
+
+  it('ignores rows dated before an approval part-way through the year', async () => {
+    givenReadModelAccreditation({ year: '2026', approvedAt: '2026-03-01' })
+    summaryLogExtractor.extract.mockResolvedValue(
+      buildExtractedData({
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+            rows: [
+              buildReceivedLoadRow({
+                ROW_ID: 10000,
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-15'
+              }),
+              buildReceivedLoadRow({
+                ROW_ID: 10001,
+                DATE_RECEIVED_FOR_REPROCESSING: '2026-03-15'
+              })
+            ]
+          })
+        }
+      })
+    )
+
+    await validateSummaryLog(summaryLogId)
+
+    const { loads } = summaryLogsRepository.update.mock.calls[0][2]
+    expect(loads.added.included.rowIds).toEqual(['10001'])
+    expect(loads.added.excluded.rowIds).toEqual(['10000'])
+  })
+
+  it("checks an exporter's overseas sites against the read model's approval dates", async () => {
+    givenRegistration({
+      registrationNumber: 'REG12345',
+      wasteProcessingType: 'exporter',
+      material: 'paper',
+      accreditation: {
+        accreditationNumber: 'ACC12345',
+        validFrom: '2026-01-01'
+      }
+    })
+    givenReadModelAccreditation({
+      wasteProcessingType: 'exporter',
+      year: '2026',
+      approvedAt: '2026-01-01',
+      overseasSites: { 100: { status: 'approved', approvedOn: '2026-03-01' } }
+    })
+    summaryLogExtractor.extract.mockResolvedValue(
+      buildExtractedData({
+        meta: buildMeta({
+          PROCESSING_TYPE: { value: 'EXPORTER' },
+          MATERIAL: { value: 'Paper_and_board' }
+        }),
+        data: {
+          RECEIVED_LOADS_FOR_EXPORT: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: EXPORTER_RECEIVED_HEADERS,
+            rows: [
+              {
+                rowNumber: 8,
+                values: exporterReceivedRow(3000, '2026-02-01', '2026-01-01')
+              },
+              {
+                rowNumber: 9,
+                values: exporterReceivedRow(3001, '2026-04-01', '2026-01-01')
+              }
+            ]
+          }
+        }
+      })
+    )
+
+    await validateSummaryLog(summaryLogId)
+
+    const { loadsByReportingPeriod } =
+      summaryLogsRepository.update.mock.calls[0][2]
+    const reasonsFor = (rowId) =>
+      rowDetailsIn(loadsByReportingPeriod).find((row) => row.rowId === rowId)
+        ?.exclusionReasons
+    expect(reasonsFor('3000')).toEqual([CLASSIFICATION_REASON.ORS_NOT_APPROVED])
+    expect(reasonsFor('3001')).toEqual([])
+  })
+
+  it('validates a registered-only summary log against no accreditation', async () => {
+    summaryLog.accreditationNumber = null
+
+    await validateSummaryLog(summaryLogId)
+
+    const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+    expect(updateCall.validation.issues).toContainEqual(
+      expect.objectContaining({
+        code: VALIDATION_CODE.ACCREDITATION_UNEXPECTED
+      })
+    )
+  })
+
+  it('validates a summary log that holds numbers but no database ids', async () => {
+    delete summaryLog.organisationId
+    delete summaryLog.registrationId
+
+    await validateSummaryLog(summaryLogId)
+
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.VALIDATED
       })
     )
   })
@@ -630,7 +1050,6 @@ describe('SummaryLogsValidator', () => {
   it('should use error code from SpreadsheetValidationError when provided', async () => {
     const { SpreadsheetValidationError } =
       await import('#adapters/parsers/summary-logs/exceljs-parser.js')
-    const { VALIDATION_CODE } = await import('#common/enums/validation.js')
 
     summaryLogExtractor.extract.mockRejectedValue(
       new SpreadsheetValidationError(
@@ -727,15 +1146,14 @@ describe('SummaryLogsValidator', () => {
     const brokenValidate = createSummaryLogsValidator({
       logger,
       summaryLogsRepository: brokenRepository,
-      organisationAdministrationRepository: /** @type {any} */ (
-        organisationAdministrationRepository
+      organisationReadRepository: /** @type {any} */ (
+        organisationReadRepository
       ),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockResolvedValue([])
       }),
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
 
@@ -775,15 +1193,14 @@ describe('SummaryLogsValidator', () => {
     const validateWithBrokenReports = createSummaryLogsValidator({
       logger,
       summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
-      organisationAdministrationRepository: /** @type {any} */ (
-        organisationAdministrationRepository
+      organisationReadRepository: /** @type {any} */ (
+        organisationReadRepository
       ),
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
         findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
       }),
-      overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
       summaryLogExtractor
     })
 
@@ -811,7 +1228,7 @@ describe('SummaryLogsValidator', () => {
 
       // Should NOT fetch registration (Level 2 meta business validation skipped)
       expect(
-        organisationAdministrationRepository.findRegistrationById
+        organisationReadRepository.findByOrganisationNumber
       ).not.toHaveBeenCalled()
 
       // Should have meta syntax error only
@@ -889,7 +1306,7 @@ describe('SummaryLogsValidator', () => {
 
       // Should fetch registration (Level 2 ran)
       expect(
-        organisationAdministrationRepository.findRegistrationById
+        organisationReadRepository.findByOrganisationNumber
       ).toHaveBeenCalled()
 
       // Should have data syntax errors
@@ -982,25 +1399,23 @@ describe('SummaryLogsValidator', () => {
 
     it('sets IGNORED outcome for Reprocessor Input loads with dates outside accreditation range', async () => {
       // Mock registration with 2025 date range
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
@@ -1010,11 +1425,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow({
                   ROW_ID: 10000,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01' // In range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-06-01' // In range
                 }),
                 buildReceivedLoadRow({
                   ROW_ID: 10001,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' // Out of range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-12-31' // Out of range
                 })
               ]
             })
@@ -1037,25 +1452,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (REPROCESSED_LOADS in REPROCESSOR_INPUT)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const reprocessedHeaders = [
         'ROW_ID',
@@ -1080,11 +1493,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', ''] // In range
+                  values: [4000, '2026-06-01', '', '', 10, '', '', '', '', ''] // In range
                 },
                 {
                   rowNumber: 9,
-                  values: [4001, '2024-12-31', '', '', 20, '', '', '', '', ''] // Out of range
+                  values: [4001, '2025-12-31', '', '', 20, '', '', '', '', ''] // Out of range
                 }
               ]
             }
@@ -1104,25 +1517,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS with dates outside accreditation range', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const sentOnHeaders = [
         'ROW_ID',
@@ -1152,7 +1563,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     5000,
-                    '2025-06-01',
+                    '2026-06-01',
                     10,
                     '',
                     '',
@@ -1170,7 +1581,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 9,
                   values: [
                     5001,
-                    '2024-12-31',
+                    '2025-12-31',
                     20,
                     '',
                     '',
@@ -1199,159 +1610,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for EXPORTER loads with dates outside accreditation range', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'exporter',
-          material: 'paper',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'exporter',
+        material: 'paper',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
-
-      const headers = [
-        'ROW_ID',
-        'DATE_RECEIVED_FOR_EXPORT',
-        'EWC_CODE',
-        'DESCRIPTION_WASTE',
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-        'GROSS_WEIGHT',
-        'TARE_WEIGHT',
-        'PALLET_WEIGHT',
-        'NET_WEIGHT',
-        'BAILING_WIRE_PROTOCOL',
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-        'WEIGHT_OF_NON_TARGET_MATERIALS',
-        'RECYCLABLE_PROPORTION_PERCENTAGE',
-        'TONNAGE_RECEIVED_FOR_EXPORT',
-        'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
-        'DATE_OF_EXPORT',
-        'BASEL_EXPORT_CODE',
-        'CUSTOMS_CODES',
-        'CONTAINER_NUMBER',
-        'DATE_RECEIVED_BY_OSR',
-        'OSR_ID',
-        'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
-        'INTERIM_SITE_ID',
-        'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
-        'EXPORT_CONTROLS',
-        'WAS_THE_WASTE_REFUSED',
-        'WAS_THE_WASTE_STOPPED',
-        'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
-        'SUPPLIER_NAME',
-        'SUPPLIER_ADDRESS',
-        'SUPPLIER_POSTCODE',
-        'SUPPLIER_EMAIL',
-        'SUPPLIER_PHONE_NUMBER',
-        'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
-        'YOUR_REFERENCE',
-        'WEIGHBRIDGE_TICKET',
-        'WASTE_TRANSFER_NOTE',
-        'LOADING_SITE_NAME',
-        'LOADING_SITE_ADDRESS',
-        'LOADING_SITE_POSTCODE',
-        'LOADING_SITE_EMAIL',
-        'LOADING_SITE_PHONE_NUMBER',
-        'CARRIER_NAME',
-        'CBD',
-        'CARRIER_VEHICLE_REGISTRATION_NUMBER',
-        'OSR_NAME',
-        'OSR_COUNTRY',
-        'TONNAGE_RECEIVED_BY_OSR',
-        'BILL_OF_LANDING_REFERENCE_NUMBER',
-        'CUSTOMS_DECLARATION_NUMBER'
-      ]
-
-      // The supplementary columns are not waste-balance fields, so leaving them
-      // empty still yields an INCLUDED row.
-      const buildRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
-        headers.map((h) => {
-          if (h === 'ROW_ID') {
-            return rowId
-          }
-          if (h === 'DATE_OF_EXPORT') {
-            return exportDate
-          }
-          if (h === 'DATE_RECEIVED_FOR_EXPORT') {
-            return receivedDate
-          }
-          if (h === 'EWC_CODE') {
-            return '03 03 08'
-          }
-          if (h === 'DESCRIPTION_WASTE') {
-            return 'Paper - other'
-          }
-          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') {
-            return 'No'
-          }
-          if (h === 'GROSS_WEIGHT') {
-            return 100
-          }
-          if (h === 'TARE_WEIGHT') {
-            return 0
-          }
-          if (h === 'PALLET_WEIGHT') {
-            return 0
-          }
-          if (h === 'NET_WEIGHT') {
-            return 100
-          }
-          if (h === 'BAILING_WIRE_PROTOCOL') {
-            return 'No'
-          }
-          if (h === 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION') {
-            return 'Actual weight (100%)'
-          }
-          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') {
-            return 0
-          }
-          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') {
-            return 1
-          }
-          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') {
-            return 100
-          }
-          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') {
-            return 100
-          }
-          if (h === 'BASEL_EXPORT_CODE') {
-            return 'B3020'
-          }
-          if (h === 'CUSTOMS_CODES') {
-            return '123456'
-          }
-          if (h === 'CONTAINER_NUMBER') {
-            return 'CONT123'
-          }
-          if (h === 'DATE_RECEIVED_BY_OSR') {
-            return '2025-01-15'
-          }
-          if (h === 'OSR_ID') {
-            return 100
-          }
-          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') {
-            return 'No'
-          }
-          if (h === 'INTERIM_SITE_ID') {
-            return 100
-          }
-          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') {
-            return 0
-          }
-          if (h === 'EXPORT_CONTROLS') {
-            return 'Article 18 (Green list)'
-          }
-          return ''
-        })
+      })
 
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
@@ -1362,11 +1636,20 @@ describe('SummaryLogsValidator', () => {
           data: {
             RECEIVED_LOADS_FOR_EXPORT: {
               location: { sheet: 'Received', row: 7, column: 'B' },
-              headers,
+              headers: EXPORTER_RECEIVED_HEADERS,
               rows: [
-                { rowNumber: 8, values: buildRow(3000, '2025-06-01') },
-                { rowNumber: 9, values: buildRow(3001, '2024-12-31') },
-                { rowNumber: 10, values: buildRow(3002, '', '2024-12-31') } // Fallback to DATE_RECEIVED_FOR_EXPORT
+                {
+                  rowNumber: 8,
+                  values: exporterReceivedRow(3000, '2026-06-01')
+                },
+                {
+                  rowNumber: 9,
+                  values: exporterReceivedRow(3001, '2025-12-31')
+                },
+                {
+                  rowNumber: 10,
+                  values: exporterReceivedRow(3002, '', '2025-12-31')
+                } // Fallback to DATE_RECEIVED_FOR_EXPORT
               ]
             }
           }
@@ -1382,24 +1665,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in EXPORTER)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'exporter',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'exporter',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -1431,7 +1712,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     4200,
-                    '2024-12-31',
+                    '2025-12-31',
                     10,
                     'Other',
                     'Other Name',
@@ -1463,25 +1744,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (RECEIVED_LOADS_FOR_REPROCESSING in REPROCESSOR_OUTPUT)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
@@ -1491,11 +1770,11 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow({
                   ROW_ID: 20000,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01' // In range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-06-01' // In range
                 }),
                 buildReceivedLoadRow({
                   ROW_ID: 20001,
-                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' // Out of range
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-12-31' // Out of range
                 })
               ]
             })
@@ -1515,25 +1794,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for REPROCESSED_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const reprocessedHeaders = [
         'ROW_ID',
@@ -1563,7 +1840,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     3000,
-                    '2025-06-01',
+                    '2026-06-01',
                     10,
                     0.5,
                     5,
@@ -1581,7 +1858,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 9,
                   values: [
                     3001,
-                    '2024-12-31',
+                    '2025-12-31',
                     20,
                     0.5,
                     10,
@@ -1610,25 +1887,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('counts non-waste-balance table rows in valid/invalid but not included/excluded (SENT_ON_LOADS in REPROCESSOR_OUTPUT)', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const sentOnHeaders = [
         'ROW_ID',
@@ -1658,7 +1933,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     5000,
-                    '2025-06-01',
+                    '2026-06-01',
                     10,
                     'Other',
                     'Other Name',
@@ -1676,7 +1951,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 9,
                   values: [
                     5001,
-                    '2024-12-31',
+                    '2025-12-31',
                     20,
                     'Other',
                     'Other Name',
@@ -1708,25 +1983,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Input', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -1756,7 +2029,7 @@ describe('SummaryLogsValidator', () => {
                   rowNumber: 8,
                   values: [
                     6000,
-                    '2024-12-31',
+                    '2025-12-31',
                     10,
                     'Other',
                     'Other Name',
@@ -1783,25 +2056,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('does not set IGNORED outcome when no date field is found', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -1858,25 +2129,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('completes validation for REPROCESSOR_OUTPUT when date field is empty', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'output',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
@@ -1899,24 +2168,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('completes validation for EXPORTER sent-on loads when date field is empty', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'exporter',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'exporter',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const headers = [
         'ROW_ID',
@@ -2006,25 +2273,23 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('should not record row outcome metrics for non-waste-balance table rows', async () => {
-      organisationAdministrationRepository.findRegistrationById.mockResolvedValue(
-        {
-          id: 'reg-123',
-          registrationNumber: 'REG12345',
-          validFrom: '2025-01-01',
-          wasteProcessingType: 'reprocessor',
-          reprocessingType: 'input',
-          material: 'aluminium',
-          accreditation: {
-            accreditationNumber: 'ACC12345',
-            validFrom: '2025-01-01',
-            validTo: '2025-12-31',
-            statusHistory: [
-              { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
-            ]
-          }
+      givenRegistration({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2026-01-01',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: {
+          accreditationNumber: 'ACC12345',
+          validFrom: '2026-01-01',
+          validTo: '2026-12-31',
+          statusHistory: [
+            { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
+            { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
+          ]
         }
-      )
+      })
 
       const reprocessedHeaders = [
         'ROW_ID',
@@ -2049,7 +2314,7 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', '']
+                  values: [4000, '2026-06-01', '', '', 10, '', '', '', '', '']
                 }
               ]
             }
@@ -2272,13 +2537,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('resolves the previous submission on the accreditation the summary log was uploaded against', async () => {
-      summaryLog.accreditationId = 'acc-1'
       summaryLog.accreditationNumber = 'ACC-1'
+      givenRegistration({
+        registrationNumber: 'REG12345',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium',
+        accreditation: { accreditationNumber: 'ACC-1', validFrom: '2026-01-01' }
+      })
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: buildMeta({ ACCREDITATION_NUMBER: { value: 'ACC-1' } }),
+        data: {}
+      })
 
       await seedSubmittedSummaryLog({
         ledgerId: {
           ...FIXTURE_LEDGER,
-          accreditationId: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-1')
         },
         summaryLogId: 'previous-log',
@@ -2319,6 +2593,23 @@ describe('SummaryLogsValidator', () => {
       const fatal = sequentialRowRemovedFatal()
       expect(fatal).toBeDefined()
       expect(fatal.context.previousSummaryLog.id).toBe('log-2')
+    })
+
+    it('accepts an upload that leaves out rows submitted for the year before', async () => {
+      await seedSubmittedSummaryLog({
+        ledgerId: { ...FIXTURE_LEDGER, year: toYear(FIXTURE_LEDGER.year - 1) },
+        summaryLogId: 'previous-year-log',
+        number: 1,
+        rows: [{ rowId: 'A' }],
+        summaryLogRowStatesRepository,
+        ledgerRepository
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(sequentialRowRemovedFatal()).toBeUndefined()
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
     })
 
     it('accepts an upload when the registration has never submitted', async () => {

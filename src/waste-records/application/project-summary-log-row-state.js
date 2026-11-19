@@ -2,6 +2,8 @@ import { classifyWasteRecord } from '#waste-balances/application/target-amount.j
 import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
 
 /**
+ * @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
  * @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js'
  */
 
@@ -31,22 +33,12 @@ const normaliseNegativeZero = (value) => (value === 0 ? 0 : value)
  * `classifyWasteRecord` directly and stays at full precision, which the
  * cross-field reconciliation arithmetic requires.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
- * @param {Object} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {WasteRecord} record
+ * @param {RowClassificationContext} classificationContext
  * @returns {SummaryLogRowStateEntry}
  */
-export const projectSummaryLogRowState = (
-  record,
-  accreditation,
-  overseasSites
-) => {
-  const classified = classifyWasteRecord(
-    record,
-    record.data?.processingType,
-    accreditation,
-    overseasSites
-  )
+export const projectSummaryLogRowState = (record, classificationContext) => {
+  const classified = classifyWasteRecord(record, classificationContext)
   const { ROW_ID: _ROW_ID, processingType, ...data } = classified.data
   return {
     ...classified,

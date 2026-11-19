@@ -1,10 +1,10 @@
 import Joi from 'joi'
 
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
-import { accreditedOverseasSitesSchema } from '#common/validation/overseas-site-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
+import { ORGANISATION_NUMBER_PATTERN } from '#domain/organisations/numbers.js'
+import { ACCREDITATION_STATUSES } from '#organisation-read-model/vocabulary.js'
 import {
   normalisedAccreditationNumberSchema,
   normalisedRegistrationNumberSchema
@@ -13,6 +13,9 @@ import {
 const accreditationStatusSchema = Joi.string().valid(...ACCREDITATION_STATUSES)
 
 export const externalAccreditationSchema = Joi.object({
+  organisationNumber: Joi.string()
+    .pattern(ORGANISATION_NUMBER_PATTERN)
+    .required(),
   registrationNumber: normalisedRegistrationNumberSchema.required(),
   year: yearSchema().required(),
   accreditationNumber: normalisedAccreditationNumberSchema.required(),
@@ -21,15 +24,14 @@ export const externalAccreditationSchema = Joi.object({
   }).required(),
   status: Joi.object({
     current: accreditationStatusSchema.required(),
+    lastUpdatedAt: isoDateTimeString().required(),
     timeline: Joi.array()
       .items(
         Joi.object({
           at: isoDateTimeString().required(),
-          updatedAt: isoDateTimeString().required(),
           status: accreditationStatusSchema.required()
         })
       )
       .required()
-  }).required(),
-  overseasSites: accreditedOverseasSitesSchema
+  }).required()
 })

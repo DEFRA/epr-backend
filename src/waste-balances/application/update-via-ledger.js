@@ -1,5 +1,11 @@
-/** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/**
+ * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
+ * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
+ * @import {WasteRecord} from '#domain/waste-records/model.js'
+ * @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js'
+ */
+
+/** @typedef {RowClassificationContext & { accreditation: AccreditationValidity }} AccreditedRowClassificationContext */
 
 import { add, toNumber } from '#common/helpers/decimal-utils.js'
 
@@ -20,23 +26,21 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * state.
  *
  * @param {Object} params
- * @param {Array<import('#domain/waste-records/model.js').WasteRecord>} params.wasteRecords
- * @param {import('#domain/organisations/accreditation.js').AccreditationValidity} params.accreditation
+ * @param {Array<WasteRecord>} params.wasteRecords
+ * @param {AccreditedRowClassificationContext} params.classificationContext
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} params.user
- * @param {OverseasSitesContext} params.overseasSites
  * @param {SummaryLogFileId} params.summaryLogId
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  */
 export const performUpdateViaLedger = async ({
   wasteRecords,
-  accreditation,
+  classificationContext,
   commitSummaryLogSubmittedEvent,
   dependencies = {},
   user,
-  overseasSites,
   summaryLogId,
   ledgerId
 }) => {
@@ -45,12 +49,7 @@ export const performUpdateViaLedger = async ({
   }
 
   const classifiedRows = wasteRecords.map((record) =>
-    classifyWasteRecord(
-      record,
-      record.data?.processingType,
-      accreditation,
-      overseasSites
-    )
+    classifyWasteRecord(record, classificationContext)
   )
 
   let creditTotal = 0
@@ -60,7 +59,7 @@ export const performUpdateViaLedger = async ({
 
   const decemberCreditTotal = decemberCreditTotalFor(
     classifiedRows,
-    accreditation
+    classificationContext.accreditation
   )
 
   const [event] = await commitSummaryLogSubmittedEvent(

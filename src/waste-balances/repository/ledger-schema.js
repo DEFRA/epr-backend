@@ -78,18 +78,6 @@ export const ZERO_BALANCE = Object.freeze({ amount: 0, availableAmount: 0 })
  */
 
 /**
- * Attribution for events with no recoverable real actor. The submitting
- * session for historical summary-log submissions is not persisted on the
- * summary-log document or the waste-record version, so a rebuild supplies the
- * real actor out of band where it can; absent that, events are attributed to
- * the system. Its id is also the marker the submitter recovery rejects, so a
- * placeholder can never masquerade as a recovered real actor.
- *
- * @type {Readonly<LedgerUserSummary>}
- */
-export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
-
-/**
  * `decemberCreditTotal` is optional: it is the December counterpart of
  * `creditTotal`, absent on a submission that credits no December tonnage and on
  * pre-feature events. Readers coalesce a missing value to 0.
@@ -119,20 +107,9 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * The ids of an accreditation, or of a registration in its registered-only
- * phase (`accreditationId` null).
- *
- * @typedef {Object} RegistrationOrAccreditationId
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string | null} accreditationId
- */
-
-/**
  * A waste balance ledger is keyed by the numbers of the registration or
- * accreditation whose balance it records. A registered-only ledger's
- * accreditation number is `null`. The year is the one each event written to
- * the ledger records.
+ * accreditation whose balance it records, and by the year it records it for.
+ * A registered-only ledger's accreditation number is `null`.
  *
  * @typedef {RequiredNumbers & { year: Year }} WasteBalanceLedgerId
  */
@@ -165,10 +142,9 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
 
 /**
  * Shape returned by `WasteBalanceLedgerRepository` reads: exactly what was
- * written. An event written before ledger events recorded their year has
- * none.
+ * written.
  *
- * @typedef {Omit<LedgerEventFields, 'year'> & { year?: Year }} LedgerEvent
+ * @typedef {LedgerEventFields} LedgerEvent
  */
 
 const userSummarySchema = Joi.object({
@@ -190,6 +166,21 @@ const summaryLogPayloadSchema = Joi.object({
   decemberCreditTotal: Joi.number()
 })
 
+/**
+ * A `summary-log-submitted` payload worked out before the summary log is
+ * submitted: every field but `summaryLogId`, each one present.
+ *
+ * @typedef {Required<Omit<SummaryLogSubmittedPayload, 'summaryLogId'>>} SummaryLogSubmittedTotals
+ */
+
+/**
+ * Every field required, so totals saved before a payload field was added fail
+ * here rather than reading the missing field as zero.
+ */
+export const summaryLogSubmittedTotalsSchema = summaryLogPayloadSchema
+  .keys({ summaryLogId: Joi.forbidden() })
+  .options({ presence: 'required' })
+
 const prnPayloadSchema = Joi.object({
   prnId: Joi.string().required(),
   amount: Joi.number().required(),
@@ -200,12 +191,53 @@ const prnAcceptedPayloadSchema = prnPayloadSchema.keys({
   obligationYear: Joi.number().integer()
 })
 
-const ledgerIdKeys = {
+export const ledgerIdKeys = Object.freeze({
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
   accreditationNumber: Joi.string().allow(null).required(),
   year: yearSchema().required()
-}
+})
+
+/**
+ * The fields of a `WasteBalanceLedgerId`, in order. Every filter, grouping and
+ * key that names a ledger is built from this list, so a field added to the
+ * ledger id reaches all of them.
+ *
+ * @type {ReadonlyArray<keyof WasteBalanceLedgerId>}
+ */
+export const LEDGER_ID_FIELDS = Object.freeze(
+  /** @type {(keyof WasteBalanceLedgerId)[]} */ (Object.keys(ledgerIdKeys))
+)
+
+/**
+ * @param {WasteBalanceLedgerId} source
+ * @returns {WasteBalanceLedgerId}
+ */
+export const pickLedgerId = (source) =>
+  /** @type {WasteBalanceLedgerId} */ (
+    Object.fromEntries(LEDGER_ID_FIELDS.map((field) => [field, source[field]]))
+  )
+
+/**
+ * @param {WasteBalanceLedgerId} a
+ * @param {WasteBalanceLedgerId} b
+ */
+export const isSameLedger = (a, b) =>
+  LEDGER_ID_FIELDS.every((field) => a[field] === b[field])
+
+/**
+ * @param {WasteBalanceLedgerId} ledgerId
+ * @returns {string}
+ */
+export const ledgerKey = (ledgerId) =>
+  JSON.stringify(LEDGER_ID_FIELDS.map((field) => ledgerId[field]))
+
+/**
+ * A MongoDB `$group` `_id` naming each document's ledger.
+ */
+export const LEDGER_ID_GROUP_KEY = Object.freeze(
+  Object.fromEntries(LEDGER_ID_FIELDS.map((field) => [field, `$${field}`]))
+)
 
 const ledgerEventBaseSchema = Joi.object({
   number: Joi.number().integer().min(1).required(),
@@ -246,7 +278,4 @@ const ledgerEventBaseSchema = Joi.object({
 
 export const ledgerEventInsertSchema = ledgerEventBaseSchema.keys(ledgerIdKeys)
 
-export const ledgerEventReadSchema = ledgerEventBaseSchema.keys({
-  ...ledgerIdKeys,
-  year: yearSchema()
-})
+export const ledgerEventReadSchema = ledgerEventBaseSchema.keys(ledgerIdKeys)

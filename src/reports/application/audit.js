@@ -8,7 +8,7 @@ import {
 
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
+ * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import {
@@ -44,8 +44,8 @@ export const MARK_STALE_ACTION = Object.freeze({
  * Audits a report status transition via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationNumber
- * @param {string} params.registrationNumber
+ * @param {OrganisationNumber} params.organisationNumber
+ * @param {RegistrationNumber} params.registrationNumber
  * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -119,8 +119,8 @@ export async function auditReportStatusTransition(request, params) {
  * Audits a report deletion via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationNumber
- * @param {string} params.registrationNumber
+ * @param {OrganisationNumber} params.organisationNumber
+ * @param {RegistrationNumber} params.registrationNumber
  * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -287,8 +287,8 @@ export async function auditMarkReportsRequiringResubmission({
  * Audits a report creation via CDP audit and system logs.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationNumber
- * @param {string} params.registrationNumber
+ * @param {OrganisationNumber} params.organisationNumber
+ * @param {RegistrationNumber} params.registrationNumber
  * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence
@@ -340,8 +340,8 @@ export async function auditReportCreate(request, params) {
  * {@link auditMarkReportsRequiringResubmission} uses.
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
  * @param {object} params
- * @param {string} params.organisationNumber
- * @param {string} params.registrationNumber
+ * @param {OrganisationNumber} params.organisationNumber
+ * @param {RegistrationNumber} params.registrationNumber
  * @param {AccreditationNumber | null | undefined} params.accreditationNumber - As the report stores it
  * @param {Year} params.year
  * @param {Cadence} params.cadence

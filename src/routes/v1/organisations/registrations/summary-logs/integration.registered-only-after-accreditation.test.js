@@ -29,7 +29,7 @@ const FIRST_DATA_ROW = TABLE_HEADER_ROW + 1
 
 const registeredOnlyMeta = {
   REGISTRATION_NUMBER: {
-    value: 'REG-123',
+    value: 'REG123',
     location: { sheet: 'Cover', row: 1, column: 'B' }
   },
   PROCESSING_TYPE: {
@@ -92,10 +92,8 @@ describe('an operator accredited in July uploading their registered-only summary
       processingType: 'reprocessor',
       accreditationValidFrom: `${YEAR}-07-01`
     })
-    const { server, organisationId, registrationId } = env
-    const { organisationNumber } =
-      await env.organisationAdministrationRepository.findById(organisationId)
-    const registration = `/organisations/${organisationNumber}/registrations/REG-123`
+    const { server, organisationId, registrationId, organisationNumber } = env
+    const registration = `/organisations/${organisationNumber}/registrations/REG123`
 
     // Close Q1, so the quarterly split shows: January to March closed,
     // April to June open.
@@ -146,10 +144,7 @@ describe('an operator accredited in July uploading their registered-only summary
       2
     )
     expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-    expect(validated.accreditationId).toBeNull()
-    expect(validated.loadsByReportingPeriod.closedPeriods).toEqual([
-      { year: YEAR, cadence: CADENCE.quarterly, period: QUARTERLY_PERIODS.Q1 }
-    ])
+    expect(validated.accreditationNumber).toBeNull()
     expect(
       validated.loadsByReportingPeriod.closedPeriodLoads.added
         .nonBalanceAffecting.count
@@ -170,7 +165,7 @@ describe('an operator accredited in July uploading their registered-only summary
     })
 
     const submittedEvent = await env.ledgerRepository.findLatestInLedgerByKind(
-      ledgerIdOf({ ...env, accreditationId: null, accreditationNumber: null }),
+      ledgerIdOf({ ...env, accreditationNumber: null }),
       LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
     )
     expect(submittedEvent).toMatchObject({

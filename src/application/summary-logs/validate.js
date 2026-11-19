@@ -6,7 +6,6 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/index.js'
-import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -14,16 +13,16 @@ import {
 } from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import { getTemplate } from '#domain/summary-logs/table-schemas/index.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
 import {
   classifyLoads,
   fetchPeriodicReports,
-  filterWasteBalanceRecords,
-  resolveOverseasSitesContext
+  filterWasteBalanceRecords
 } from './classify-and-persist.js'
 import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
@@ -33,6 +32,9 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { capIssuesForStorage } from './cap-issues-for-storage.js'
 import { transformAndValidateData } from './transform-and-validate-data.js'
 import { ledgerIdFor } from './ledger-id.js'
+import { registrationForSummaryLog } from './registration-for-summary-log.js'
+import { recordValidationMetrics } from './validation-metrics.js'
+import { submissionCommitOf } from './submission-commit.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
 export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
@@ -40,13 +42,11 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 /** @import {ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
-/** @import {ProcessingType} from '#domain/summary-logs/meta-fields.js' */
+/** @import {OrganisationReadRepository} from '#organisation-read-model/index.js' */
 /** @import {SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {SummaryLogStatus} from '#domain/summary-logs/status.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
 /** @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
@@ -55,7 +55,8 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
+/** @import {SummaryLogCommit} from '#domain/summary-logs/commit.js' */
 
 /**
  * @param {{
@@ -86,52 +87,24 @@ const extractSummaryLog = async ({
 }
 
 /**
- * The accreditation a summary log is validated against: the one it stored,
- * or none for a registered-only summary log.
- *
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
- * @param {SubmittedSummaryLog} summaryLog
- * @returns {Promise<Registration['accreditation']>}
- */
-const accreditationFor = async (
-  organisationAdministrationRepository,
-  { organisationId, accreditationId }
-) => {
-  return accreditationId === null
-    ? null
-    : organisationAdministrationRepository.findAccreditationById(
-        organisationId,
-        accreditationId
-      )
-}
-
-/**
  * @param {{
- *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLog: SubmittedSummaryLog,
  *   loggingContext: string,
  *   logger: TypedLogger
  * }} params
- * @returns {Promise<Registration>}
+ * @returns {Promise<SummaryLogRegistration>}
  */
 const fetchRegistration = async ({
-  organisationAdministrationRepository,
+  organisationReadRepository,
   summaryLog,
   loggingContext,
   logger
 }) => {
-  const currentRegistration =
-    await organisationAdministrationRepository.findRegistrationById(
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
-  const registration = {
-    ...currentRegistration,
-    accreditation: await accreditationFor(
-      organisationAdministrationRepository,
-      summaryLog
-    )
-  }
+  const registration = await registrationForSummaryLog(
+    organisationReadRepository,
+    summaryLog
+  )
 
   logger.info({
     message: `Fetched registration: ${loggingContext}`,
@@ -154,8 +127,8 @@ const fetchRegistration = async ({
  * @property {ValidationIssuesCollector} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
- * @property {Registration} [registration] - Registration fetched during validation
- * @property {Record<string, TableSchema>} [tableSchemas] - The template's table schemas, once meta syntax has chosen it
+ * @property {SummaryLogRegistration} [registration] - Registration fetched during validation
+ * @property {RowClassificationContext} [classificationContext] - The template's table schemas and the read model's accreditation for classifying rows, once meta syntax has chosen the template and the registration is read
  */
 
 /**
@@ -207,15 +180,14 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
 
 const markIgnoredByDateRange = (
   /** @type ValidatedWasteRecord[] */ wasteRecords,
-  /** @type Registration */ registration,
-  /** @type Record<string, TableSchema> */ tableSchemas
+  /** @type {RowClassificationContext} */ { tableSchemas, accreditation }
 ) => {
   for (const wasteRecord of wasteRecords) {
     const schema = tableSchemas[wasteRecord.tableName]
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation: registration.accreditation,
+      accreditation,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -250,192 +222,123 @@ const markIgnoredByDateRange = (
  *
  * Converts any exceptions to fatal technical issues.
  *
- * @param {{
+ * @param {ValidationCheckParams} params
+ * @returns {Promise<ValidationResult>}
+ */
+const performValidationChecks = async (params) => {
+  /** @type {ValidationResult} */
+  const result = { issues: createValidationIssues(), wasteRecords: null }
+
+  try {
+    await runValidationChecks(params, result)
+  } catch (error) {
+    handleValidationFailure(
+      /** @type {Error & { code?: string }} */ (error),
+      result.issues,
+      params.loggingContext,
+      params.logger
+    )
+  }
+
+  return result
+}
+
+/**
+ * @typedef {{
  *   summaryLog: SubmittedSummaryLog,
  *   loggingContext: string,
  *   logger: TypedLogger,
  *   summaryLogExtractor: SummaryLogExtractor,
- *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
- * }} params
- * @returns {Promise<ValidationResult>}
+ * }} ValidationCheckParams
  */
-const performValidationChecks = async ({
-  summaryLog,
-  loggingContext,
-  logger,
-  summaryLogExtractor,
-  organisationAdministrationRepository,
-  summaryLogRowStatesRepository,
-  ledgerRepository
-}) => {
-  const issues = createValidationIssues()
-  /** @type {ValidatedWasteRecord[] | null} */
-  let wasteRecords = null
-  /** @type {ExtractedMeta | undefined} */
-  let meta
-  /** @type {Registration | undefined} */
-  let registration
-  /** @type {Record<string, TableSchema> | undefined} */
-  let tableSchemas
-
-  try {
-    const parsed = await extractSummaryLog({
-      summaryLogExtractor,
-      summaryLog,
-      loggingContext,
-      logger
-    })
-
-    meta = extractMetaValues(parsed.meta)
-
-    issues.merge(validateMetaSyntax({ parsed, year: summaryLog.year }))
-
-    if (issues.isFatal()) {
-      return { issues, wasteRecords, meta }
-    }
-
-    tableSchemas = getTemplate(
-      summaryLog.year,
-      meta.PROCESSING_TYPE
-    ).tableSchemas
-
-    registration = await fetchRegistration({
-      organisationAdministrationRepository,
-      summaryLog,
-      loggingContext,
-      logger
-    })
-
-    issues.merge(
-      validateMetaBusiness({
-        parsed,
-        registration,
-        loggingContext
-      })
-    )
-
-    if (issues.isFatal()) {
-      return { issues, wasteRecords, meta, registration, tableSchemas }
-    }
-
-    // Data syntax validation returns validated data with issues attached to rows
-    const { issues: dataSyntaxIssues, validatedData } =
-      createDataSyntaxValidator(tableSchemas)(parsed)
-    issues.merge(dataSyntaxIssues)
-
-    if (issues.isFatal()) {
-      return { issues, wasteRecords, meta, registration, tableSchemas }
-    }
-
-    const dataResult = await transformAndValidateData({
-      summaryLog,
-      validatedData,
-      tableSchemas,
-      summaryLogRowStatesRepository,
-      ledgerRepository
-    })
-
-    wasteRecords = dataResult.wasteRecords
-
-    markIgnoredByDateRange(wasteRecords, registration, tableSchemas)
-
-    issues.merge(dataResult.issues)
-  } catch (error) {
-    handleValidationFailure(
-      /** @type {Error & { code?: string }} */ (error),
-      issues,
-      loggingContext,
-      logger
-    )
-  }
-
-  return { issues, wasteRecords, meta, registration, tableSchemas }
-}
 
 /**
- * Records validation issue metrics grouped by severity × category
+ * Runs the checks in order, recording each step's outcome on `result` as it
+ * goes, and stops at the first fatal issue.
  *
- * @param {ValidationIssuesCollector} issues - Validation issues object
- * @param {string} processingType - The processing type for the metric dimension
+ * @param {ValidationCheckParams} params
+ * @param {ValidationResult} result
  */
-const recordValidationIssueMetrics = async (issues, processingType) => {
-  const allIssues = issues.getAllIssues()
-  if (allIssues.length === 0) {
+const runValidationChecks = async (
+  {
+    summaryLog,
+    loggingContext,
+    logger,
+    summaryLogExtractor,
+    organisationReadRepository,
+    summaryLogRowStatesRepository,
+    ledgerRepository
+  },
+  result
+) => {
+  const { issues } = result
+  const parsed = await extractSummaryLog({
+    summaryLogExtractor,
+    summaryLog,
+    loggingContext,
+    logger
+  })
+
+  const meta = extractMetaValues(parsed.meta)
+  result.meta = meta
+
+  issues.merge(validateMetaSyntax({ parsed, year: summaryLog.year }))
+
+  if (issues.isFatal()) {
     return
   }
 
-  // Count issues by severity × category
-  const counts = new Map()
-  for (const issue of allIssues) {
-    const key = `${issue.severity}:${issue.category}`
-    counts.set(key, (counts.get(key) || 0) + 1)
-  }
+  const tableSchemas = tableSchemasOf(summaryLog.year, meta.PROCESSING_TYPE)
 
-  // Record metrics for each combination
-  for (const [key, count] of counts) {
-    const [severity, category] = key.split(':')
-    await summaryLogMetrics.recordValidationIssues(
-      {
-        severity:
-          /** @type {import('#application/summary-logs/metrics.js').ValidationSeverity} */ (
-            severity
-          ),
-        category:
-          /** @type {import('#application/summary-logs/metrics.js').ValidationCategory} */ (
-            category
-          ),
-        processingType: /** @type {ProcessingType} */ (processingType)
-      },
-      count
-    )
+  const registration = await fetchRegistration({
+    organisationReadRepository,
+    summaryLog,
+    loggingContext,
+    logger
+  })
+  result.registration = registration
+  const classificationContext = {
+    tableSchemas,
+    ...classificationContextOf(registration)
   }
-}
+  result.classificationContext = classificationContext
+  issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
-/**
- * Records row outcome metrics grouped by outcome
- *
- * @param {ValidatedWasteRecord[] | null} wasteRecords - Waste records with outcomes
- * @param {string} processingType - The processing type for the metric dimension
- */
-const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
-  if (!wasteRecords || wasteRecords.length === 0) {
+  if (issues.isFatal()) {
     return
   }
 
-  // Count by outcome
-  const counts = {
-    [ROW_OUTCOME.INCLUDED]: 0,
-    [ROW_OUTCOME.EXCLUDED]: 0,
-    [ROW_OUTCOME.REJECTED]: 0,
-    [ROW_OUTCOME.IGNORED]: 0
+  // Data syntax validation returns validated data with issues attached to rows
+  const { issues: dataSyntaxIssues, validatedData } =
+    createDataSyntaxValidator(tableSchemas)(parsed)
+  issues.merge(dataSyntaxIssues)
+
+  if (issues.isFatal()) {
+    return
   }
 
-  for (const { outcome } of wasteRecords) {
-    counts[outcome]++
-  }
+  const dataResult = await transformAndValidateData({
+    summaryLog,
+    validatedData,
+    tableSchemas,
+    summaryLogRowStatesRepository,
+    ledgerRepository
+  })
 
-  // Record metrics for each outcome with non-zero count
-  for (const [outcome, count] of Object.entries(counts)) {
-    if (count > 0) {
-      await summaryLogMetrics.recordRowOutcome(
-        {
-          outcome:
-            /** @type {import('#application/summary-logs/metrics.js').RowOutcome} */ (
-              outcome
-            ),
-          processingType: /** @type {ProcessingType} */ (processingType)
-        },
-        count
-      )
-    }
-  }
+  result.wasteRecords = dataResult.wasteRecords
+
+  markIgnoredByDateRange(dataResult.wasteRecords, classificationContext)
+
+  issues.merge(dataResult.issues)
 }
 
 /**
  * @param {{ summaryLog: SummaryLog, version: number } | null | undefined} result
  * @param {SummaryLogId} summaryLogId
+ * @returns {{ version: number, summaryLog: SubmittedSummaryLog }}
  */
 const assertValidatingStatus = (result, summaryLogId) => {
   if (!result) {
@@ -449,39 +352,29 @@ const assertValidatingStatus = (result, summaryLogId) => {
       `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
     )
   }
+
+  return /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
+    result
+  )
 }
 
 /**
- * Records all validation-related metrics.
- *
- * @param {Object} params
- * @param {ValidationIssuesCollector} params.issues
- * @param {ProcessingType} params.processingType
- * @param {SummaryLogStatus} params.status
- * @param {number} params.validationDurationMs
- * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords
+ * @param {TypedLogger} logger
+ * @param {string} message
+ * @param {string} action
  */
-const recordValidationMetrics = async ({
-  issues,
-  processingType,
-  status,
-  validationDurationMs,
-  wasteBalanceRecords
-}) => {
-  await summaryLogMetrics.recordValidationDuration(
-    { processingType },
-    validationDurationMs
-  )
-  await summaryLogMetrics.recordStatusTransition({ status, processingType })
-  await recordValidationIssueMetrics(issues, processingType)
-  await recordRowOutcomeMetrics(wasteBalanceRecords, processingType)
-}
+const logServerEvent = (logger, message, action) =>
+  logger.info({
+    message,
+    event: { category: LOGGING_EVENT_CATEGORIES.SERVER, action }
+  })
 
 /**
  * Persists the validation result to the summary log document.
  *
  * @param {Object} params
  * @param {ValidationIssuesCollector} params.issues
+ * @param {SummaryLogCommit | null} params.commit
  * @param {Loads | null} params.loads
  * @param {LoadsByReportingPeriod | null} params.loadsByReportingPeriod
  * @param {ExtractedMeta | undefined} params.meta
@@ -493,6 +386,7 @@ const recordValidationMetrics = async ({
  */
 const persistValidationResult = async ({
   issues,
+  commit,
   loads,
   loadsByReportingPeriod,
   meta,
@@ -513,6 +407,7 @@ const persistValidationResult = async ({
     },
     ...(loads && { loads }),
     ...(loadsByReportingPeriod && { loadsByReportingPeriod }),
+    ...(commit && { commit }),
     ...(meta && { meta })
   })
 }
@@ -534,7 +429,7 @@ const loadSubmittedRowStatesByKey = async ({
   summaryLogRowStatesRepository,
   summaryLog
 }) => {
-  const submittedRowStates = await summaryLogRowStatesForRegistration({
+  const submittedRowStates = await summaryLogRowStatesForLedger({
     ...ledgerIdFor(summaryLog),
     ledgerRepository,
     summaryLogRowStatesRepository
@@ -553,13 +448,12 @@ const loadSubmittedRowStatesByKey = async ({
  */
 const classifyAndPersistResult = async ({
   issues,
-  processingType,
-  tableSchemas,
   status,
   summaryLogId,
   wasteBalanceRecords,
   wasteRecords,
   registration,
+  classificationContext,
   meta,
   summaryLog,
   summaryLogsRepository,
@@ -567,8 +461,6 @@ const classifyAndPersistResult = async ({
   ledgerRepository,
   version,
   reportsService,
-  organisationAdministrationRepository,
-  overseasSitesRepository,
   logger
 }) => {
   const periodicReports = await fetchPeriodicReports({
@@ -578,43 +470,41 @@ const classifyAndPersistResult = async ({
     reportsService
   })
 
-  const overseasSites = await resolveOverseasSitesContext({
-    processingType,
-    summaryLog,
-    organisationAdministrationRepository,
-    overseasSitesRepository
-  })
-
   const submittedRowStatesByKey = await loadSubmittedRowStatesByKey({
     ledgerRepository,
     summaryLogRowStatesRepository,
     summaryLog
   })
 
-  const { loads, loadsByReportingPeriod } = classifyLoads({
-    tableSchemas,
+  const { loads, loadsByReportingPeriod, recordChanges } = classifyLoads({
     status,
     wasteBalanceRecords,
     wasteRecords,
     periodicReports,
-    overseasSites,
+    classificationContext,
     registration,
     submittedRowStatesByKey
   })
 
   await persistValidationResult({
     issues,
+    commit:
+      recordChanges &&
+      submissionCommitOf({
+        wasteRecords,
+        classificationContext,
+        recordChanges
+      }),
     loads,
     loadsByReportingPeriod: await withPeriodsRequiringResubmission({
       loadsByReportingPeriod,
       periodicReports,
       wasteRecords,
       registration,
-      overseasSites,
+      classificationContext,
       summaryLog,
       summaryLogId,
       reportsService,
-      overseasSitesRepository,
       summaryLogRowStatesRepository,
       logger
     }),
@@ -633,11 +523,10 @@ const classifyAndPersistResult = async ({
  * @param {{
  *   logger: TypedLogger,
  *   summaryLogsRepository: SummaryLogsRepository,
- *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   reportsService: ReportsService,
- *   overseasSitesRepository: OverseasSitesRepository,
  *   summaryLogExtractor: SummaryLogExtractor
  * }} params
  * @returns {(summaryLogId: SummaryLogId) => Promise<void>}
@@ -645,39 +534,34 @@ const classifyAndPersistResult = async ({
 export const createSummaryLogsValidator = ({
   logger,
   summaryLogsRepository,
-  organisationAdministrationRepository,
+  organisationReadRepository,
   summaryLogRowStatesRepository,
   ledgerRepository,
   reportsService,
-  overseasSitesRepository,
   summaryLogExtractor
 }) => {
   return async (summaryLogId) => {
-    const result = await summaryLogsRepository.findById(summaryLogId)
-    assertValidatingStatus(result, summaryLogId)
-    const { version, summaryLog } =
-      /** @type {{ version: number, summaryLog: SubmittedSummaryLog }} */ (
-        result
-      )
+    const { version, summaryLog } = assertValidatingStatus(
+      await summaryLogsRepository.findById(summaryLogId),
+      summaryLogId
+    )
     const { id: fileId, name: filename } = summaryLog.file
     const loggingContext = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
-    logger.info({
-      message: `Summary log validation started: ${loggingContext}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.START_SUCCESS
-      }
-    })
+    logServerEvent(
+      logger,
+      `Summary log validation started: ${loggingContext}`,
+      LOGGING_EVENT_ACTIONS.START_SUCCESS
+    )
 
     const validationStart = Date.now()
-    const { issues, wasteRecords, meta, registration, tableSchemas } =
+    const { issues, wasteRecords, meta, registration, classificationContext } =
       await performValidationChecks({
         summaryLog,
         loggingContext,
         logger,
         summaryLogExtractor,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository
       })
@@ -690,7 +574,7 @@ export const createSummaryLogsValidator = ({
       : SUMMARY_LOG_STATUS.VALIDATED
     const wasteBalanceRecords = filterWasteBalanceRecords(
       wasteRecords,
-      tableSchemas
+      classificationContext?.tableSchemas
     )
 
     await recordValidationMetrics({
@@ -703,13 +587,12 @@ export const createSummaryLogsValidator = ({
 
     await classifyAndPersistResult({
       issues,
-      processingType,
-      tableSchemas,
       status,
       summaryLogId,
       wasteBalanceRecords,
       wasteRecords,
       registration,
+      classificationContext,
       meta,
       summaryLog,
       summaryLogsRepository,
@@ -717,17 +600,13 @@ export const createSummaryLogsValidator = ({
       ledgerRepository,
       version,
       reportsService,
-      organisationAdministrationRepository,
-      overseasSitesRepository,
       logger
     })
 
-    logger.info({
-      message: `Summary log updated: ${loggingContext}, status=${status}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-      }
-    })
+    logServerEvent(
+      logger,
+      `Summary log updated: ${loggingContext}, status=${status}`,
+      LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    )
   }
 }

@@ -1,10 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
@@ -13,23 +11,27 @@ import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { granted } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  buildReadExporterRegistration,
+  buildReadOrganisation as buildServedOrganisation
+} from '#organisation-read-model/test-support.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-
-const { buildReadOrganisation } = createOrganisationBuilders()
+import { toYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
 const ORGANISATION_ID = 'org-1'
 const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 const REGISTRATION_ID = 'reg-1'
-const REGISTRATION_NUMBER = 'R26ER5000000002PA'
+const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000000002PA')
 const FILE_ID = 'file-1'
+const FILE_ID_2027 = 'file-2027'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
 
 const REGISTERED_ONLY_LEDGER = {
@@ -42,20 +44,9 @@ const REGISTERED_ONLY_LEDGER = {
   year: DEFAULT_YEAR
 }
 
-const buildRegistration = () => {
-  const [, exporterRegistration] = buildReadOrganisation().registrations
-  return {
-    ...exporterRegistration,
-    id: REGISTRATION_ID,
-    material: 'plastic',
-    submittedToRegulator: 'ea',
-    registrationNumber: REGISTRATION_NUMBER,
-    accreditation: null,
-    overseasSites: {},
-    status: REGISTRATION_STATUS.APPROVED,
-    statusHistory: granted('approved'),
-    validFrom: '2026-02-01'
-  }
+const REGISTERED_ONLY_LEDGER_2027 = {
+  ...REGISTERED_ONLY_LEDGER,
+  year: toYear(2027)
 }
 
 // The export reads the organisation read model alone.
@@ -67,11 +58,11 @@ const legacyOrganisationsRepository = {
   findByOrganisationNumber: readsLegacy
 }
 
-const receivedRowState = () => ({
-  rowId: '1001',
+const receivedRowState = (rowId = '1001', dateReceived = '2026-02-01') => ({
+  rowId,
   wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
   processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-  data: { DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01' },
+  data: { DATE_RECEIVED_FOR_REPROCESSING: dateReceived },
   classification: {
     outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
     reasons: [],
@@ -100,15 +91,21 @@ const createServer = async ({
     buildLedgerEvent({
       ...REGISTERED_ONLY_LEDGER,
       payload: { summaryLogId: FILE_ID, creditTotal: 0 }
+    }),
+    buildLedgerEvent({
+      ...REGISTERED_ONLY_LEDGER_2027,
+      payload: { summaryLogId: FILE_ID_2027, creditTotal: 0 }
     })
   ])
 } = {}) => {
-  const organisation = buildReadOrganisation({
-    id: ORGANISATION_ID,
+  const organisation = buildServedOrganisation({
     organisationNumber: ORGANISATION_NUMBER,
-    companyDetails: { name: 'Acme Ltd' },
-    submittedToRegulator: 'ea',
-    registrations: [/** @type {any} */ (buildRegistration())]
+    name: 'Acme Ltd',
+    registrations: {
+      [REGISTRATION_NUMBER]: buildReadExporterRegistration({
+        material: 'plastic'
+      })
+    }
   })
 
   const summaryLogRowStatesRepository =
@@ -118,11 +115,16 @@ const createServer = async ({
     [receivedRowState()],
     toSummaryLogFileId(FILE_ID)
   )
+  await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
+    REGISTERED_ONLY_LEDGER_2027,
+    [receivedRowState('2001', '2027-02-01')],
+    toSummaryLogFileId(FILE_ID_2027)
+  )
 
   return createTestServer({
     repositories: {
       organisationAdministrationRepository: () => legacyOrganisationsRepository,
-      organisationReadRepository: await organisationReadRepositoryOf([
+      organisationReadRepository: createInMemoryOrganisationReadRepository([
         organisation
       ]),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
@@ -130,17 +132,31 @@ const createServer = async ({
       summaryLogsRepository: () => ({
         findAll: vi
           .fn()
-          .mockResolvedValue([submittedLog(FILE_ID, SUBMITTED_AT)])
+          .mockResolvedValue([
+            submittedLog(FILE_ID, SUBMITTED_AT),
+            submittedLog(FILE_ID_2027, SUBMITTED_AT)
+          ])
       })
     }
   })
 }
 
 const registrations = `/organisations/${ORGANISATION_NUMBER}/registrations`
-const url = `${registrations}/${REGISTRATION_NUMBER}/waste-records/export.csv`
+const path = `${registrations}/${REGISTRATION_NUMBER}/waste-records/export.csv`
+const url = `${path}?year=2026`
 
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/waste-records/export.csv', () => {
   setupAuthContext()
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-16') })
+    config.set('openNextYear', true)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    config.reset('openNextYear')
+  })
 
   it('streams the latest records of the registration as CSV', async () => {
     const server = await createServer()
@@ -159,20 +175,77 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     expect(lines[0]).toContain('Organisation Name')
     expect(lines[1]).toContain('Acme Ltd')
     expect(lines[1]).toContain('1001')
+    expect(response.payload).not.toContain('2001')
   })
 
-  it('names the download by registration number and the moment of export', async () => {
+  it('names the download by registration number, year and the moment of export', async () => {
     const server = await createServer()
 
     const response = await server.inject({
       method: 'GET',
-      url,
+      url: `${path}?year=2027`,
       ...asServiceMaintainer()
     })
 
     expect(response.headers['content-disposition']).toMatch(
-      /^attachment; filename="R26ER5000000002PA-\d{4}-\d{2}-\d{2}-\d{6}\.csv"$/
+      /^attachment; filename="R26ER5000000002PA-2027-\d{4}-\d{2}-\d{2}-\d{6}\.csv"$/
     )
+  })
+
+  it('returns 422 when no year is given', async () => {
+    const server = await createServer()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: path,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  it("serves only the given year's records", async () => {
+    const server = await createServer()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${path}?year=2027`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const lines = response.payload.split('\n').filter((line) => line !== '')
+    expect(lines).toHaveLength(2)
+    expect(lines[1]).toContain('2001')
+    expect(response.payload).not.toContain('1001')
+  })
+
+  it.each(['2023', '2024', '2025', '2028', '2101', 'next'])(
+    'returns 422 for year %s, which the service does not serve',
+    async (year) => {
+      const server = await createServer()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${path}?year=${year}`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    }
+  )
+
+  it('returns 422 for next year while it is not open', async () => {
+    config.set('openNextYear', false)
+    const server = await createServer()
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `${path}?year=2027`,
+      ...asServiceMaintainer()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
   it('serves a header-only CSV for a registration that has never submitted', async () => {
@@ -193,11 +266,11 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   it.each([
     [
       'an unknown organisation number',
-      `/organisations/999999/registrations/${REGISTRATION_NUMBER}/waste-records/export.csv`
+      `/organisations/999999/registrations/${REGISTRATION_NUMBER}/waste-records/export.csv?year=2026`
     ],
     [
       'a registration number the organisation does not serve',
-      `${registrations}/R26XX0000000000PL/waste-records/export.csv`
+      `${registrations}/R26XX0000000000PL/waste-records/export.csv?year=2026`
     ]
   ])('returns 404 for %s', async (_, exportUrl) => {
     const server = await createServer()

@@ -5,18 +5,18 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
+  buildReadOrganisationWithNumbersOf,
   REPROCESSOR_NUMBER,
   reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { asServiceMaintainer, asUnscopedAdminUser } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
@@ -28,8 +28,10 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   const registration = reprocessor()
   const organisation = buildOrganisation({ registrations: [registration] })
   const summaryLogId = toSummaryLogId(new ObjectId().toString())
-  const organisationId = organisation.id
-  const registrationId = registration.id
+  const numbers = {
+    organisationNumber: organisation.organisationNumber,
+    registrationNumber: registration.registrationNumber
+  }
   const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${REPROCESSOR_NUMBER}/summary-logs`
 
   const meta = {
@@ -95,8 +97,9 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     const server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          buildReadOrganisationWithNumbersOf(organisation)
+        ]),
         summaryLogsRepository: summaryLogsRepositoryFactory,
         ...options.repositories
       }
@@ -124,7 +127,12 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
       const { server, summaryLogsRepository } = await createServer()
       await summaryLogsRepository.insert(
         summaryLogId,
-        summaryLogFactory.submitted({ organisationId, registrationId, meta })
+        summaryLogFactory.submitted({
+          organisationId: organisation.id,
+          registrationId: registration.id,
+          ...numbers,
+          meta
+        })
       )
       // loadsByReportingPeriod is added by update at validation time, not at
       // insert, so seed it the same way it reaches a real document.

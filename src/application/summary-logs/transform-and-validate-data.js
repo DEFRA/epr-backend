@@ -8,7 +8,7 @@ import { ledgerIdFor } from './ledger-id.js'
 /** @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js' */
 /** @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {TableSchemas} from '#domain/summary-logs/table-schemas/index.js' */
 
 /**
  * Transforms the upload's validated rows into waste records and runs data
@@ -18,7 +18,7 @@ import { ledgerIdFor } from './ledger-id.js'
  * @param {{
  *   summaryLog: SubmittedSummaryLog,
  *   validatedData: ValidatedSummaryLog,
- *   tableSchemas: Record<string, TableSchema>,
+ *   tableSchemas: TableSchemas,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository
  * }} params

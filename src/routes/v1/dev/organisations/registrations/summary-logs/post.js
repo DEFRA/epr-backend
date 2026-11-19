@@ -16,7 +16,9 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { templateForRegistration } from '#domain/summary-logs/template-for-registration.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
+import { checkSummaryLogUploadEligibility } from '#domain/summary-logs/upload-eligibility.js'
+import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 import { toSummaryLogResponse } from '#routes/v1/organisations/registrations/summary-logs/summary-log-response.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { buildSummaryLogHandlerDeps } from '#server/queue-consumer/summary-log-handler-deps.js'
@@ -32,12 +34,11 @@ import {
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Registration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationApproved } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { ParsedSummaryLog } from '#domain/summary-logs/extractor/port.js' */
-/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
@@ -124,32 +125,49 @@ const naming = (error, summaryLogId) => {
  */
 
 /**
- * Reads every number a summary log is stored with, refusing where the
- * registration or its live accreditation lacks one.
+ * The numbers a summary log for the year is stored with: the registration's,
+ * and its accreditation's for the year as the organisation read model holds
+ * it. Refuses a year the upload route would refuse.
  *
+ * @param {SubmitRequest} request
  * @param {OrganisationNumber} organisationNumber
- * @param {Registration} registration
- * @returns {RequiredNumbers}
+ * @param {Registration} storedRegistration
+ * @param {Year} year
+ * @returns {Promise<RequiredNumbers>}
  */
-const requiredNumbersOf = (organisationNumber, registration) => {
-  const { registrationNumber } = registration
+const numbersForYear = async (
+  { organisationReadRepository },
+  organisationNumber,
+  { registrationNumber },
+  year
+) => {
   if (!registrationNumber) {
     throw new Error(
       'Cannot store summary logs without their numbers: the registration has no registration number'
     )
   }
-  if (!isRegistrationAccredited(registration)) {
-    return { organisationNumber, registrationNumber, accreditationNumber: null }
-  }
-  const { accreditationNumber } = /** @type {AccreditationApproved} */ (
-    registration.accreditation
-  )
-  if (!accreditationNumber) {
-    throw new Error(
-      'Cannot store summary logs without their numbers: its accreditation has no accreditation number'
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
     )
+  const registration = organisation?.registrations[registrationNumber]
+  if (!registration) {
+    throw Boom.notFound('Registration not found')
   }
-  return { organisationNumber, registrationNumber, accreditationNumber }
+  const eligibility = checkSummaryLogUploadEligibility({
+    registration,
+    year,
+    latestOpenYear: latestOpenYear()
+  })
+  if (!eligibility.eligible) {
+    throw Boom.badData(eligibility.reason)
+  }
+  return {
+    organisationNumber,
+    registrationNumber,
+    accreditationNumber:
+      accreditationForYear(registration, year)?.accreditationNumber ?? null
+  }
 }
 
 /**
@@ -159,31 +177,18 @@ const requiredNumbersOf = (organisationNumber, registration) => {
  * @param {SubmitRequest} request
  * @param {SummaryLogId} summaryLogId
  * @param {Year} year
- * @param {Registration} registration
+ * @param {RequiredNumbers} numbers
  */
-const insertValidatingLog = async (
-  request,
-  summaryLogId,
-  year,
-  registration
-) => {
-  const { summaryLogsRepository, organisationAdministrationRepository } =
-    request
-  const { organisationId, registrationId } = request.params
+const insertValidatingLog = async (request, summaryLogId, year, numbers) => {
+  const { summaryLogsRepository } = request
 
-  const { organisationNumber } =
-    await organisationAdministrationRepository.findById(organisationId)
-  const numbers = requiredNumbersOf(organisationNumber, registration)
   /** @type {SummaryLog} */
   const summaryLog = {
     status: SUMMARY_LOG_STATUS.VALIDATING,
     expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
     createdAt: new Date().toISOString(),
     file: { id: toSummaryLogFileId(randomUUID()), name: 'summary-log.json' },
-    organisationId,
-    registrationId,
     year,
-    accreditationId: accreditationIdFor(registration),
     ...numbers
   }
   const latestSubmitted = await summaryLogsRepository.findLatestSubmitted(
@@ -206,7 +211,6 @@ const insertValidatingLog = async (
  */
 const submitValidatedLog = async (request, submitPayload, deps) => {
   const { summaryLogsRepository } = request
-  const { organisationId, registrationId } = request.params
   const { summaryLogId } = submitPayload
 
   const transition =
@@ -229,8 +233,6 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     summaryLogKeyOf(transition.summaryLog)
   await auditSummaryLogSubmit(request, {
     summaryLogId,
-    organisationId,
-    registrationId,
     organisationNumber,
     registrationNumber,
     accreditationNumber
@@ -256,32 +258,23 @@ export const devSummaryLogsSubmitPath =
  *
  * @param {SummaryLogContentPayload} payload
  * @param {Registration} registration
+ * @param {Year} year
  * @returns {ReturnType<typeof templateForRegistration>}
  */
-const templateFor = (payload, registration) =>
-  templateForRegistration({
-    ...registration,
-    accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
-      ? {
-          accreditationNumber: toAccreditationNumber(
-            String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
-          )
-        }
-      : null
-  })
-
-/**
- * @param {Registration} registration
- * @returns {string | null}
- */
-const accreditationIdFor = (registration) => {
-  if (!isRegistrationAccredited(registration)) {
-    return null
-  }
-
-  return /** @type {{ accreditation: { id: string } }} */ (registration)
-    .accreditation.id
-}
+const templateFor = (payload, registration, year) =>
+  templateForRegistration(
+    {
+      ...registration,
+      accreditation: payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+        ? {
+            accreditationNumber: toAccreditationNumber(
+              String(payload.meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER])
+            )
+          }
+        : null
+    },
+    year
+  )
 
 export const devSummaryLogsSubmit = {
   method: 'POST',
@@ -315,12 +308,20 @@ export const devSummaryLogsSubmit = {
         organisationId,
         registrationId
       )
+    const { organisationNumber } =
+      await organisationAdministrationRepository.findById(organisationId)
+    const numbers = await numbersForYear(
+      request,
+      organisationNumber,
+      registration,
+      year
+    )
     const parsed = toParsedSummaryLog(
       payload,
-      templateFor(payload, registration)
+      templateFor(payload, registration, year)
     )
 
-    await insertValidatingLog(request, summaryLogId, year, registration)
+    await insertValidatingLog(request, summaryLogId, year, numbers)
 
     const deps = {
       logger,

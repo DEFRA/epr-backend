@@ -39,26 +39,22 @@ const mapStatus = (status) => {
 }
 
 /**
- * @param {{ id: string; name: string; tradingName?: string; registrationType?: string }} org
+ * @template {{ id: string } | { organisationNumber: import('#domain/organisations/numbers.js').OrganisationNumber }} K
+ * @param {K} key
+ * @param {{ name: string; tradingName?: string; registrationType?: string }} org
  */
-const mapOrganisation = (org) => {
-  const mapped = { id: org.id, name: org.name }
-  if (org.tradingName) {
-    mapped.tradingName = org.tradingName
-  }
-  if (org.registrationType) {
-    mapped.registrationType = org.registrationType
-  }
-  return mapped
-}
+const mapOrganisation = (key, { name, tradingName, registrationType }) => ({
+  ...key,
+  name,
+  ...(tradingName && { tradingName }),
+  ...(registrationType && { registrationType })
+})
 
 /**
  * @param {PackagingRecyclingNote['accreditation']} accreditation
- * @param {string} accreditationId
  */
-const mapAccreditation = (accreditation, accreditationId) => {
+const mapAccreditation = (accreditation) => {
   const mapped = {
-    id: accreditationId,
     accreditationNumber: accreditation.accreditationNumber,
     accreditationYear: accreditation.accreditationYear,
     material: accreditation.material,
@@ -77,29 +73,24 @@ const mapAccreditation = (accreditation, accreditationId) => {
 }
 
 /**
- * The database ids the external API states for a PRN's issuing organisation
- * and accreditation. A PRN does not store them.
- *
- * @typedef {{ organisationId: string, accreditationId: string }} ExternalPrnIds
- */
-
-/**
  * Maps an internal PackagingRecyclingNote to the external API schema
  * defined in external-manage-prns.yaml.
  *
  * @param {PackagingRecyclingNote} prn
- * @param {ExternalPrnIds} ids
  */
-export function mapToExternalPrn(prn, { organisationId, accreditationId }) {
+export function mapToExternalPrn(prn) {
   const mapped = {
     id: prn.id,
     status: mapStatus(prn.status),
-    issuedByOrganisation: mapOrganisation({
-      ...prn.organisation,
-      id: organisationId
-    }),
-    issuedToOrganisation: mapOrganisation(prn.issuedToOrganisation),
-    accreditation: mapAccreditation(prn.accreditation, accreditationId),
+    issuedByOrganisation: mapOrganisation(
+      { organisationNumber: prn.organisation.organisationNumber },
+      prn.organisation
+    ),
+    issuedToOrganisation: mapOrganisation(
+      { id: prn.issuedToOrganisation.id },
+      prn.issuedToOrganisation
+    ),
+    accreditation: mapAccreditation(prn.accreditation),
     isDecemberWaste: prn.isDecemberWaste,
     isExport: prn.isExport,
     obligationYear: prn.obligationYear,

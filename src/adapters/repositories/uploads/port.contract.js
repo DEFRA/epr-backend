@@ -4,6 +4,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { toUploadCallbackSignature } from '#common/helpers/auth/upload-callback-signature.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { waitForCallback } from './test-helpers/callback-receiver.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -51,12 +55,12 @@ export const testUploadsRepositoryContract = (it) => {
 
     it('initiates upload and returns upload details', async () => {
       const result = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId: 'org-123',
-        registrationId: 'reg-456',
+        organisationNumber: toOrganisationNumber('500123'),
+        registrationNumber: toRegistrationNumber('R26ER5001180456PL'),
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
-          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed`,
           signature: toUploadCallbackSignature('signature-123')
         }
       })
@@ -96,12 +100,12 @@ export const testUploadsRepositoryContract = (it) => {
 
       // 1. Initiate upload
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId: 'org-123',
-        registrationId: 'reg-456',
+        organisationNumber: toOrganisationNumber('500123'),
+        registrationNumber: toRegistrationNumber('R26ER5001180456PL'),
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
-          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed`,
           signature: toUploadCallbackSignature('signature-123')
         }
       })
@@ -127,18 +131,18 @@ export const testUploadsRepositoryContract = (it) => {
       expect(retrievedFile.length).toBe(testFileBuffer.length)
     })
 
-    it('delivers the file under the registration upload path in the summary-log bucket', async () => {
+    it('delivers the file under the registration numbers in the summary-log bucket', async () => {
       const testFileBuffer = await fs.readFile(TEST_FILE_PATH)
 
       callbackReceiver.clear()
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId: 'org-loc',
-        registrationId: 'reg-loc',
+        organisationNumber: toOrganisationNumber('500777'),
+        registrationNumber: toRegistrationNumber('R26ER5001180777PL'),
         summaryLogId: 'sl-loc',
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
-          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-loc/registrations/reg-loc/summary-logs/sl-loc/upload-completed`,
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/500777/registrations/R26ER5001180777PL/summary-logs/2026/sl-loc/upload-completed`,
           signature: toUploadCallbackSignature('signature-123')
         }
       })
@@ -152,7 +156,7 @@ export const testUploadsRepositoryContract = (it) => {
 
       expect(s3Bucket).toBe('re-ex-summary-logs')
       expect(s3Key).toMatch(
-        /^\/organisations\/org-loc\/registrations\/reg-loc\//
+        /^\/organisations\/500777\/registrations\/R26ER5001180777PL\//
       )
     })
 
@@ -184,12 +188,12 @@ export const testUploadsRepositoryContract = (it) => {
       callbackReceiver.clear()
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId: 'org-del',
-        registrationId: 'reg-del',
+        organisationNumber: toOrganisationNumber('500888'),
+        registrationNumber: toRegistrationNumber('R26ER5001180888PL'),
         summaryLogId: 'sl-del',
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
-          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-del/registrations/reg-del/summary-logs/sl-del/upload-completed`,
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/500888/registrations/R26ER5001180888PL/summary-logs/2026/sl-del/upload-completed`,
           signature: toUploadCallbackSignature('signature-123')
         }
       })
@@ -218,12 +222,12 @@ export const testUploadsRepositoryContract = (it) => {
 
       // Initiate upload
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId: 'org-123',
-        registrationId: 'reg-456',
+        organisationNumber: toOrganisationNumber('500123'),
+        registrationNumber: toRegistrationNumber('R26ER5001180456PL'),
         summaryLogId: 'sl-789',
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
-          url: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`,
+          url: `${callbackReceiver.callbackUrl}/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed`,
           signature: toUploadCallbackSignature('signature-123')
         }
       })
@@ -236,7 +240,7 @@ export const testUploadsRepositoryContract = (it) => {
 
       // Verify callback contents
       expect(callback).toMatchObject({
-        path: '/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed',
+        path: '/v1/organisations/500123/registrations/R26ER5001180456PL/summary-logs/2026/sl-789/upload-completed',
         payload: {
           metadata: { summaryLogId: 'sl-789', signature: 'signature-123' },
           form: {

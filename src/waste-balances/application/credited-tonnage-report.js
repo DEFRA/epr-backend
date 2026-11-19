@@ -2,7 +2,7 @@ import chunk from 'lodash.chunk'
 
 import { creditedTonnageByMonth } from '#waste-balances/domain/credited-tonnage.js'
 import { reclassifyWasteRecordStates } from '#waste-records/application/reclassify-waste-record-states.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
   overseasSitesOf,
@@ -16,8 +16,10 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
  * @typedef {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} SummaryLogRowStatesRepository
- * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#domain/organisations/model.js').Material} Material
+ * @typedef {import('#domain/organisations/numbers.js').AccreditationNumber} AccreditationNumber
+ * @typedef {import('#waste-balances/repository/ledger-port.js').LatestSubmittedSummaryLogPerLedger} LatestSubmittedSummaryLogPerLedger
  * @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger
  */
 
@@ -43,7 +45,7 @@ const READ_CONCURRENCY = 10
  * @typedef {Object} CreditedTonnageRow
  * @property {string} month - `YYYY-MM`
  * @property {{ reference: string }} organisation - external reference
- * @property {{ accreditationNumber: string, processingType: string, material: Material }} accreditation
+ * @property {{ accreditationNumber: AccreditationNumber, processingType: string, material: Material }} accreditation
  * @property {{ totalCredited: number, eligibleForWasteBalance: number, sentOnDeductions: number }} tonnage
  */
 
@@ -135,6 +137,10 @@ export const buildCreditedTonnageReport = async ({
   // (accreditationNumber null) carry zero-delta submissions and never appear in
   // this report.
   const creditedEntries = entries.filter(
+    /**
+     * @param {LatestSubmittedSummaryLogPerLedger} entry
+     * @returns {entry is LatestSubmittedSummaryLogPerLedger & { ledgerId: { accreditationNumber: AccreditationNumber } }}
+     */
     (entry) => entry.ledgerId.accreditationNumber !== null
   )
 
@@ -148,13 +154,12 @@ export const buildCreditedTonnageReport = async ({
    * @returns {Promise<CreditedTonnageRow[]>}
    */
   const rowsForEntry = async ({ ledgerId, summaryLogId }) => {
-    // creditedEntries holds accredited partitions only.
-    const accreditationNumber = String(ledgerId.accreditationNumber)
+    const { accreditationNumber } = ledgerId
     const ledgerAccreditation = index.get(ledgerKey(ledgerId))
     if (!ledgerAccreditation) {
       if (!TEST_ORGANISATION_NUMBERS.has(ledgerId.organisationNumber)) {
         logger.warn({
-          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber}`,
+          message: `Credited tonnage report skipped a ledger entry with no matching accreditation: ${accreditationNumber} for ${ledgerId.year}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: 'credited_tonnage_ledger_entry_unmatched',
@@ -165,16 +170,17 @@ export const buildCreditedTonnageReport = async ({
       return []
     }
 
-    const { registration } = ledgerAccreditation
+    const { registration, accreditation } = ledgerAccreditation
 
     const rowStates = reclassifyWasteRecordStates(
       await summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
         ledgerId,
         summaryLogId
       ),
+      accreditation.year,
       {
-        accreditation: validityOf(ledgerAccreditation),
-        overseasSites: overseasSitesOf(ledgerAccreditation)
+        accreditation: validityOf(accreditation),
+        overseasSites: overseasSitesOf(accreditation)
       }
     )
 

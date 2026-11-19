@@ -4,7 +4,8 @@ import {
 } from '#waste-balances/domain/waste-balance-classification.js'
 
 /**
- * @import {WasteBalanceClassification} from '#waste-balances/domain/waste-balance-classification.js'
+ * @import {WasteRecord, WasteRecordType} from '#domain/waste-records/model.js'
+ * @import {RowClassificationContext, WasteBalanceClassification} from '#waste-balances/domain/waste-balance-classification.js'
  */
 
 /**
@@ -14,7 +15,7 @@ import {
  *
  * @typedef {Object} ClassifiedRow
  * @property {string} rowId
- * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
+ * @property {WasteRecordType} wasteRecordType
  * @property {Record<string, any>} data
  * @property {WasteBalanceClassification} classification
  */
@@ -23,27 +24,15 @@ import {
  * Pairs a waste record with its waste-balance classification, retaining the
  * row identity and data alongside.
  *
- * @param {import('#domain/waste-records/model.js').WasteRecord} record
- * @param {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
- * @param {import('#domain/organisations/accreditation.js').AccreditationValidity | null} accreditation
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @param {WasteRecord} record
+ * @param {RowClassificationContext} classificationContext
  * @returns {ClassifiedRow}
  */
-export const classifyWasteRecord = (
-  record,
-  processingType,
-  accreditation,
-  overseasSites
-) => ({
+export const classifyWasteRecord = (record, classificationContext) => ({
   rowId: record.rowId,
   wasteRecordType: record.type,
   data: record.data,
-  classification: classifyRecordForWasteBalance(
-    record,
-    processingType,
-    accreditation,
-    overseasSites
-  )
+  classification: classifyRecordForWasteBalance(record, classificationContext)
 })
 
 /**

@@ -1,4 +1,4 @@
-/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
+/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {Object} SummaryLogUploadReportRow
@@ -6,8 +6,8 @@
  * @property {string} type - Type of registration (Reprocessor/Exporter)
  * @property {string} businessName - Organisation business name
  * @property {OrganisationNumber} organisationNumber - Organisation number
- * @property {string} registrationNumber - Registration number (empty string if not set)
- * @property {string} accreditationNumber - Accreditation number (empty string if not set)
+ * @property {RegistrationNumber} registrationNumber - Registration number
+ * @property {AccreditationNumber | ''} accreditationNumber - Accreditation number (empty string if not set)
  * @property {string} reprocessingSite - Registered reprocessing site address (if applicable)
  * @property {string} packagingWasteCategory - Material type
  * @property {string} lastSuccessfulUpload - ISO timestamp of last successful upload or empty string if never succeeded
@@ -16,4 +16,4 @@
  * @property {number} failedUploads - Count of failed (rejected/invalid) uploads
  */
 
-export default {}
+export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

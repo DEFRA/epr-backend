@@ -1,32 +1,59 @@
-/** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
+/** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
 import Boom from '@hapi/boom'
 
 /**
- * @import { ResolvedRequest } from '#routes/organisations/at-natural-keys.js'
- * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
+ * @import { SummaryLogKeyedRequest } from './at-summary-log-keys.js'
+ * @import { SummaryLogsRepository, SummaryLogVersion } from '#repositories/summary-logs/port.js'
+ * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  */
 
 /**
- * A summary log is read only under the organisation and registration it
- * belongs to. One not stored yet passes: its upload is still in progress.
- *
- * @param {ResolvedRequest & {
- *   params: { summaryLogId: SummaryLogId },
- *   summaryLogsRepository: SummaryLogsRepository
- * }} request
+ * @param {SummaryLogVersion | null} stored
+ * @param {RegistrationParams} params
  */
-export const assertSummaryLogMatchesPath = async (request) => {
-  const { organisationId, registrationId, summaryLogId } = request.params
-  const stored = await request.summaryLogsRepository.findById(summaryLogId)
+const assertStoredUnderPath = (
+  stored,
+  { organisationNumber, registrationNumber }
+) => {
   if (!stored) {
     return
   }
 
   const { summaryLog } = stored
   if (
-    summaryLog.organisationId !== organisationId ||
-    summaryLog.registrationId !== registrationId
+    summaryLog.organisationNumber !== organisationNumber ||
+    summaryLog.registrationNumber !== registrationNumber
   ) {
     throw Boom.notFound('Summary log not found')
   }
 }
+
+/**
+ * A summary log is read only under the organisation and registration numbers
+ * it is stored with. One not stored yet passes: its upload is still in progress.
+ *
+ * @param {SummaryLogKeyedRequest & {
+ *   params: { summaryLogId: SummaryLogId },
+ *   summaryLogsRepository: SummaryLogsRepository
+ * }} request
+ */
+export const assertSummaryLogMatchesPath = async (request) =>
+  assertStoredUnderPath(
+    await request.summaryLogsRepository.findById(request.params.summaryLogId),
+    request.params
+  )
+
+/**
+ * The same rule for a file addressed by its id. A file no summary log holds
+ * passes, and its download is not found.
+ *
+ * @param {SummaryLogKeyedRequest & {
+ *   params: { fileId: SummaryLogFileId },
+ *   summaryLogsRepository: SummaryLogsRepository
+ * }} request
+ */
+export const assertSummaryLogFileMatchesPath = async (request) =>
+  assertStoredUnderPath(
+    await request.summaryLogsRepository.findByFileId(request.params.fileId),
+    request.params
+  )

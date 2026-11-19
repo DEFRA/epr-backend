@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
 import {
   toOrganisationNumber,
   toRegistrationNumber
@@ -11,13 +10,16 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
-/** @import { RegistrationApproved } from '#domain/organisations/registration.js' */
+/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  buildReadExporterRegistration,
+  buildReadOrganisation
+} from '#organisation-read-model/test-support.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
@@ -27,59 +29,27 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { getWasteRecordsExportPath, wasteRecordsExportRoute } from './export.js'
 import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
-
-const { buildReadOrganisation } = createOrganisationBuilders()
+import { toYear } from '#common/helpers/dates/year.js'
+import { config } from '#root/config.js'
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 
 /**
- * Vary a complete approved registration, so a fixture stays one however few of
- * its fields a test cares about and the read model serves it. The exporter arm
- * of the contract sample carries no accreditation link, so a fixture built on
- * it inherits no identifier pointing at an accreditation this organisation does
- * not hold.
+ * An organisation the read model serves with one approved, registered-only
+ * exporter for plastic.
  *
- * @param {Partial<RegistrationApproved>} [overrides]
- * @returns {RegistrationApproved}
- */
-const buildRegistration = (overrides = {}) => {
-  const [, exporterRegistration] = buildReadOrganisation().registrations
-  return {
-    ...exporterRegistration,
-    id: 'reg-1',
-    registrationNumber: toRegistrationNumber(`REG-${overrides.id ?? 'reg-1'}`),
-    material: 'plastic',
-    submittedToRegulator: 'ea',
-    accreditation: null,
-    overseasSites: {},
-    status: REGISTRATION_STATUS.APPROVED,
-    statusHistory: [
-      {
-        status: REGISTRATION_STATUS.CREATED,
-        updatedAt: '2026-01-01T09:00:00.000Z'
-      },
-      {
-        status: REGISTRATION_STATUS.APPROVED,
-        updatedAt: '2026-02-01T09:00:00.000Z'
-      }
-    ],
-    validFrom: '2026-02-01',
-    ...overrides
-  }
-}
-
-/**
- * @param {Partial<Organisation>} [overrides]
+ * @param {string} [registrationNumber]
  * @returns {Organisation}
  */
-const buildOrganisation = (overrides = {}) =>
+const organisationWith = (registrationNumber = 'REG-1') =>
   buildReadOrganisation({
-    id: 'org-1',
     organisationNumber: ORGANISATION_NUMBER,
-    companyDetails: { name: 'Acme Ltd' },
-    submittedToRegulator: 'ea',
-    registrations: [],
-    ...overrides
+    name: 'Acme Ltd',
+    registrations: {
+      [registrationNumber]: buildReadExporterRegistration({
+        material: 'plastic'
+      })
+    }
   })
 
 /**
@@ -108,6 +78,7 @@ const DEFAULT_SUMMARY_LOG_ID = 'sl-1'
  * @typedef {Object} LedgerSeed
  * @property {string} [registrationNumber] - defaults to `buildRegistration`'s
  * @property {string} [summaryLogId]
+ * @property {Year} [year]
  * @property {SummaryLogRowStateEntry[]} [rows]
  */
 
@@ -132,10 +103,10 @@ const createServerWithRepos = async ({
   const ledgerIdOf = (seed) => ({
     organisationNumber: ORGANISATION_NUMBER,
     registrationNumber: toRegistrationNumber(
-      seed.registrationNumber ?? 'REG-reg-1'
+      seed.registrationNumber ?? 'REG-1'
     ),
     accreditationNumber: null,
-    year: DEFAULT_YEAR
+    year: seed.year ?? DEFAULT_YEAR
   })
 
   const ledgerRepository = createInMemoryLedgerRepository(
@@ -175,7 +146,7 @@ const createServerWithRepos = async ({
     repositories: {
       organisationAdministrationRepository: () => ({ findAll: readsLegacy }),
       organisationReadRepository:
-        await organisationReadRepositoryOf(organisations),
+        createInMemoryOrganisationReadRepository(organisations),
       summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
       ledgerRepository: () => ledgerRepository,
       summaryLogsRepository: () => summaryLogsRepository
@@ -202,7 +173,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asServiceMaintainer()
       })
 
@@ -211,7 +182,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(response.headers['content-type']).toBe('text/csv; charset=utf-8')
       expect(response.headers['content-disposition']).toMatch(
-        /^attachment; filename="waste-records-.+\.csv"$/
+        /^attachment; filename="waste-records-2026-.+\.csv"$/
       )
 
       const lines = response.payload.split('\n').filter((line) => line !== '')
@@ -222,13 +193,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
     })
 
     it('streams a header row plus one data row for a single waste record', async () => {
-      const organisation = buildOrganisation({
-        registrations: [
-          buildRegistration({
-            registrationNumber: toRegistrationNumber('R26ER5000000002PA')
-          })
-        ]
-      })
+      const organisation = organisationWith('R26ER5000000002PA')
       const server = await createServerWithRepos({
         organisations: [organisation],
         seeds: [
@@ -253,7 +218,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asServiceMaintainer()
       })
 
@@ -271,6 +236,113 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
     })
   })
 
+  describe('year', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-16') })
+      config.set('openNextYear', true)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      config.reset('openNextYear')
+    })
+
+    it('names the download by the year', async () => {
+      const server = await createServerWithRepos()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${getWasteRecordsExportPath}?year=2027`,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.headers['content-disposition']).toMatch(
+        /^attachment; filename="waste-records-2027-.+\.csv"$/
+      )
+    })
+
+    it("serves only the given year's records", async () => {
+      const server = await createServerWithRepos({
+        organisations: [organisationWith()],
+        seeds: [
+          { rows: [receivedRowState()] },
+          {
+            summaryLogId: 'sl-2027',
+            year: toYear(2027),
+            rows: [
+              receivedRowState({
+                rowId: '2001',
+                data: { DATE_RECEIVED_FOR_REPROCESSING: '2027-02-01' }
+              })
+            ]
+          }
+        ]
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${getWasteRecordsExportPath}?year=2027`,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const lines = response.payload.split('\n').filter((line) => line !== '')
+      expect(lines).toHaveLength(2)
+      expect(lines[1]).toContain('2001')
+      expect(response.payload).not.toContain('1001')
+    })
+
+    it('returns 422 when no year is given', async () => {
+      const server = await createServerWithRepos()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: getWasteRecordsExportPath,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it.each(['2023', '2024', '2025', '2028', '2101', 'next'])(
+      'returns 422 for year %s, which the service does not serve',
+      async (year) => {
+        const server = await createServerWithRepos()
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${getWasteRecordsExportPath}?year=${year}`,
+          ...asServiceMaintainer()
+        })
+
+        await server.stop()
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      }
+    )
+
+    it('returns 422 for next year while it is not open', async () => {
+      config.set('openNextYear', false)
+      const server = await createServerWithRepos()
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${getWasteRecordsExportPath}?year=2027`,
+        ...asServiceMaintainer()
+      })
+
+      await server.stop()
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+  })
+
   describe('scoping', () => {
     it.each([
       ['an organisationId', 'organisationId=org-1'],
@@ -283,7 +355,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `${getWasteRecordsExportPath}?${query}`,
+        url: `${getWasteRecordsExportPath}?year=2026&${query}`,
         ...asServiceMaintainer()
       })
 
@@ -295,9 +367,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
   describe('streaming response shape', () => {
     it('returns a body composed of multiple CSV-encoded lines from the underlying stream', async () => {
-      const organisation = buildOrganisation({
-        registrations: [buildRegistration()]
-      })
+      const organisation = organisationWith()
       const server = await createServerWithRepos({
         organisations: [organisation],
         seeds: [{ rows: [receivedRowState()] }]
@@ -305,7 +375,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asServiceMaintainer()
       })
 
@@ -326,7 +396,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath
+        url: `${getWasteRecordsExportPath}?year=2026`
       })
 
       await server.stop()
@@ -339,7 +409,7 @@ describe(`GET ${getWasteRecordsExportPath}`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: getWasteRecordsExportPath,
+        url: `${getWasteRecordsExportPath}?year=2026`,
         ...asOperator()
       })
 

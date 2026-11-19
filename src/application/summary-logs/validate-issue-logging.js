@@ -9,21 +9,17 @@ export const MAX_VALIDATION_ISSUES = 100
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {StoredFile, SummaryLog} from '#domain/summary-logs/model.js' */
-/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * SummaryLog after the validator has confirmed it's past PREPROCESSING. The
- * base typedef leaves org/reg/accreditation optional and admits the pending
+ * base typedef leaves org/reg optional and admits the pending
  * file shape to cover PREPROCESSING; this narrows them to the guarantees
  * upstream business logic provides by the VALIDATING state.
  *
  * @typedef {SummaryLog & {
- *   organisationId: string,
- *   registrationId: string,
  *   organisationNumber: OrganisationNumber,
  *   registrationNumber: RegistrationNumber,
- *   accreditationId: string | null,
- *   accreditationNumber: AccreditationNumber | null,
  *   file: StoredFile
  * }} SubmittedSummaryLog
  */
@@ -74,8 +70,8 @@ const buildIssueLogPayload = (issue, summaryLogId) => {
  *   counts: ValidationIssueCounts,
  *   logged: number,
  *   summaryLogId: string,
- *   organisationId: string,
- *   registrationId: string
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber
  * }} params
  * @returns {IndexedLogProperties}
  */
@@ -83,10 +79,10 @@ const buildSummaryLogPayload = ({
   counts,
   logged,
   summaryLogId,
-  organisationId,
-  registrationId
+  organisationNumber,
+  registrationNumber
 }) => ({
-  message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} total=${counts.total} logged=${logged} org=${organisationId} reg=${registrationId}`,
+  message: `Summary log validation completed: fatal=${counts.fatal} error=${counts.error} warning=${counts.warning} total=${counts.total} logged=${logged} organisationNumber=${organisationNumber} registrationNumber=${registrationNumber}`,
   event: {
     kind: 'event',
     category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -127,8 +123,8 @@ export const logValidationIssues = ({
       counts: issues.getCounts(),
       logged: issuesToLog.length,
       summaryLogId,
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId
+      organisationNumber: summaryLog.organisationNumber,
+      registrationNumber: summaryLog.registrationNumber
     })
   )
 }

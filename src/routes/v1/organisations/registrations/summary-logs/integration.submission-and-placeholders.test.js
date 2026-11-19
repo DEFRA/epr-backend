@@ -9,15 +9,12 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -26,7 +23,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -41,23 +38,16 @@ import {
   buildSubmitUrl,
   createUploadPayload,
   pollForValidation,
-  servedTestAccreditation,
-  servedTestRegistration,
+  servedTestReadOrganisation,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
-
-const { buildReadOrganisation } = createOrganisationBuilders()
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 describe('Submission and placeholder tests', () => {
   let organisationId
   let registrationId
-  const VALID_FROM = '2026-01-01'
   const VALID_TO = '2026-12-31'
 
   const { getServer } = setupAuthContext()
@@ -68,7 +58,7 @@ describe('Submission and placeholder tests', () => {
 
     getServer().use(
       http.post(
-        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
+        'http://localhost:3001/v1/organisations/:organisationNumber/registrations/:registrationNumber/accreditations/:year/summary-log/:summaryLogId/upload-completed',
         () => HttpResponse.json({ success: true }, { status: 200 })
       )
     )
@@ -83,7 +73,6 @@ describe('Submission and placeholder tests', () => {
     const secondFilename = 'waste-data-2.xlsx'
     let summaryLogRowStatesRepository
     let ledgerRepository
-    let accreditationId
     let submitResponse
     let server
 
@@ -92,44 +81,6 @@ describe('Submission and placeholder tests', () => {
       const mockLogger = createMockLogger()
       const uploadsRepository = createInMemoryUploadsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
-      accreditationId = new ObjectId().toString()
-      const testOrg = buildReadOrganisation({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrations: [
-          servedTestRegistration({
-            id: registrationId,
-            status: 'approved',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            submittedToRegulator: 'ea',
-            validFrom: VALID_FROM,
-            accreditationId
-          })
-        ],
-        accreditations: [
-          servedTestAccreditation({
-            id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-2026-001'),
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            validFrom: VALID_FROM,
-            validTo: VALID_TO,
-            submittedToRegulator: 'ea',
-            statusHistory: [
-              { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
-            ]
-          })
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          { ...testOrg, status: 'active' }
-        ])()
 
       const sharedMeta = {
         REGISTRATION_NUMBER: {
@@ -372,18 +323,25 @@ describe('Submission and placeholder tests', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper',
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
+          })
+        ])()
 
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor: validationExtractor,
         logger: mockLogger,
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
-        ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        )
       })
 
       const syncWasteRecords = syncFromSummaryLog({
@@ -391,9 +349,7 @@ describe('Submission and placeholder tests', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: organisationReadRepositoryOver(
-          organisationAdministrationRepository
-        ),
+        organisationReadRepository,
         logger: mockLogger
       })
 
@@ -428,12 +384,7 @@ describe('Submission and placeholder tests', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            organisationReadRepositoryOver(
-              organisationAdministrationRepository
-            ),
+          organisationReadRepository: () => organisationReadRepository,
           systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
@@ -488,9 +439,9 @@ describe('Submission and placeholder tests', () => {
     })
 
     it('should commit the submission rows as row states', async () => {
-      const rowStates = await summaryLogRowStatesForRegistration({
+      const rowStates = await summaryLogRowStatesForLedger({
         organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+        registrationNumber: TEST_REGISTRATION_NUMBER,
         accreditationNumber: toAccreditationNumber('ACC-2026-001'),
         year: UPLOAD_YEAR,
         ledgerRepository,
@@ -588,7 +539,7 @@ describe('Submission and placeholder tests', () => {
       const worksheet = workbook.addWorksheet('Data')
 
       worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
-      worksheet.getCell('B1').value = 'REG-123'
+      worksheet.getCell('B1').value = 'REG123'
 
       worksheet.getCell('A2').value = '__EPR_META_PROCESSING_TYPE'
       worksheet.getCell('B2').value = 'REPROCESSOR_INPUT'
@@ -754,52 +705,17 @@ describe('Submission and placeholder tests', () => {
       uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-      const accreditationId = 'acc-placeholder-test'
-      const testOrg = buildReadOrganisation({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrations: [
-          servedTestRegistration({
-            id: registrationId,
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            submittedToRegulator: 'ea',
-            accreditationId
-          })
-        ],
-        accreditations: [
-          servedTestAccreditation({
-            id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-PLACEHOLDER-001'),
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            submittedToRegulator: 'ea',
-            statusHistory: [
-              { status: 'created', updatedAt: '2025-01-01' },
-              { status: 'approved', updatedAt: '2025-02-01' }
-            ]
-          })
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          { ...testOrg, status: 'active' }
-        ])()
-
       const excelBuffer = /** @type {Buffer<ArrayBufferLike>} */ (
         /** @type {unknown} */ (await createExcelWithPlaceholders())
       )
 
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
-        organisationId,
-        registrationId,
+        organisationNumber: TEST_ORGANISATION_NUMBER,
+        registrationNumber: TEST_REGISTRATION_NUMBER,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
         callback: {
-          url: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+          url: `http://localhost:3001/v1/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
           signature: 'signature'
         }
       })
@@ -814,9 +730,17 @@ describe('Submission and placeholder tests', () => {
         uploadsRepository
       })
 
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper',
+            accreditationNumber: toAccreditationNumber('ACC-PLACEHOLDER-001')
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
@@ -824,17 +748,13 @@ describe('Submission and placeholder tests', () => {
         logger: mockLogger,
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
-        ),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository()()
+        )
       })
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }

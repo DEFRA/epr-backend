@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { toYear } from '#common/helpers/dates/year.js'
+import { accreditationsByYear } from '#organisation-read-model/test-support.js'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -46,39 +49,41 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('ACC-1')
 
 const APPROVED_FROM = '2023-01-01T00:00:00.000Z'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
-/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, ExporterRegistration, ReprocessorRegistration } from '#organisation-read-model/vocabulary.js' */
 
 /**
  * @param {AccreditationNumber} accreditationNumber
+ * @param {Year} [year]
  * @returns {AccreditationCommon}
  */
-const accreditationNumbered = (accreditationNumber) => ({
+const accreditationNumbered = (accreditationNumber, year = YEAR) => ({
   accreditationNumber,
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {
     current: 'approved',
-    timeline: [
-      { status: 'approved', at: APPROVED_FROM, updatedAt: APPROVED_FROM }
-    ]
-  }
+    lastUpdatedAt: APPROVED_FROM,
+    timeline: [{ status: 'approved', at: APPROVED_FROM }]
+  },
+  year
 })
 
 /**
- * The validity the waste balance reads for ACC-1, held for 2023.
+ * The validity the waste balance reads for ACC-1, held for 2026.
  *
  * @type {AccreditationValidity}
  */
 const ACCREDITATION_VALIDITY = {
-  statusHistory: [{ status: 'approved', updatedAt: APPROVED_FROM }],
-  validFrom: '2023-01-01',
-  validTo: '2023-12-31'
+  timeline: [{ status: 'approved', at: APPROVED_FROM }],
+  validFrom: '2026-01-01',
+  validTo: '2026-12-31'
 }
 
 /**
  * An organisation as the read model serves it, holding REG-1 and REG-2. REG-1
- * holds ACC-1 for 2023 unless `registration` replaces its accreditations.
+ * holds ACC-1 for 2026 unless `registration` replaces its accreditations.
  *
  * @param {{ registration?: Partial<ReprocessorRegistration | ExporterRegistration> }} [options]
  */
@@ -88,12 +93,15 @@ const organisationWith = ({ registration = {} } = {}) => ({
     'REG-2': {
       wasteProcessingType: 'reprocessor',
       accreditations: {
-        2022: accreditationNumbered(toAccreditationNumber('ACC-2'))
+        2022: accreditationNumbered(
+          toAccreditationNumber('ACC-2'),
+          toYear(2022)
+        )
       }
     },
     'REG-1': {
       wasteProcessingType: 'reprocessor',
-      accreditations: { 2023: accreditationNumbered(ACCREDITATION_NUMBER) },
+      accreditations: { [YEAR]: accreditationNumbered(ACCREDITATION_NUMBER) },
       ...registration
     }
   }
@@ -208,6 +216,15 @@ describe('syncFromSummaryLog', () => {
       exporterInput([
         receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
       ])
+    )
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
+      organisationWith({
+        registration: {
+          accreditations: accreditationsByYear(
+            accreditationNumbered(ACCREDITATION_NUMBER)
+          )
+        }
+      })
     )
 
     await makeSync({ extractor })(
@@ -423,8 +440,11 @@ describe('syncFromSummaryLog', () => {
       ]),
       {
         user: TEST_USER,
-        accreditation: ACCREDITATION_VALIDITY,
-        overseasSites: {},
+        classificationContext: {
+          tableSchemas: tableSchemasOf(YEAR, PROCESSING_TYPES.EXPORTER),
+          accreditation: ACCREDITATION_VALIDITY,
+          overseasSites: {}
+        },
         summaryLogId: fileId,
         ledgerId: {
           organisationNumber: '500001',
@@ -434,6 +454,32 @@ describe('syncFromSummaryLog', () => {
         }
       }
     )
+  })
+
+  it('throws when the accreditation with the number is for another year', async () => {
+    const fileId = 'file-other-year'
+    const extractor = extractorFor(
+      fileId,
+      exporterInput([
+        receivedRow(2, 'row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5)
+      ])
+    )
+    organisationReadRepository.findByOrganisationNumber.mockResolvedValue(
+      organisationWith({
+        registration: {
+          accreditations: accreditationsByYear(
+            accreditationNumbered(ACCREDITATION_NUMBER, toYear(2027))
+          )
+        }
+      })
+    )
+
+    await expect(
+      makeSync({ extractor })(
+        summaryLogFor(fileId, ACCREDITATION_NUMBER, toYear(2026)),
+        TEST_USER
+      )
+    ).rejects.toThrow('Accreditation with number ACC-1 for 2026 not found')
   })
 
   it('resolves overseas sites for exporter waste balance validation', async () => {
@@ -450,7 +496,7 @@ describe('syncFromSummaryLog', () => {
         registration: {
           wasteProcessingType: 'exporter',
           accreditations: {
-            2023: {
+            [YEAR]: {
               ...accreditationNumbered(ACCREDITATION_NUMBER),
               overseasSites: {
                 '001': { status: 'approved', approvedOn: '2024-01-01' },
@@ -470,10 +516,12 @@ describe('syncFromSummaryLog', () => {
     expect(wasteBalanceService.submitSummaryLog).toHaveBeenCalledWith(
       expect.any(Array),
       expect.objectContaining({
-        overseasSites: {
-          '001': { validFrom: new Date('2024-01-01') },
-          '002': { validFrom: null }
-        }
+        classificationContext: expect.objectContaining({
+          overseasSites: {
+            '001': { validFrom: new Date('2024-01-01') },
+            '002': { validFrom: null }
+          }
+        })
       })
     )
   })
@@ -509,7 +557,7 @@ describe('syncFromSummaryLog', () => {
 
     await expect(
       makeSync({ extractor })(summaryLogFor(fileId), TEST_USER)
-    ).rejects.toThrow('Organisation not found: 500001')
+    ).rejects.toThrow('Organisation with number 500001 not found')
   })
 
   it('throws when the organisation holds no registration with the number', async () => {
@@ -524,7 +572,7 @@ describe('syncFromSummaryLog', () => {
         },
         TEST_USER
       )
-    ).rejects.toThrow('Registration not found: REG-MISSING')
+    ).rejects.toThrow('Registration with number REG-MISSING not found')
   })
 
   it('throws when the organisation holds no accreditation with the number', async () => {
@@ -541,7 +589,9 @@ describe('syncFromSummaryLog', () => {
         summaryLogFor(fileId, toAccreditationNumber('ACC-MISSING')),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-MISSING')
+    ).rejects.toThrow(
+      'Accreditation with number ACC-MISSING for 2026 not found'
+    )
   })
 
   it('throws when the accreditation belongs to another of the organisation’s registrations', async () => {
@@ -558,7 +608,7 @@ describe('syncFromSummaryLog', () => {
         summaryLogFor(fileId, toAccreditationNumber('ACC-2')),
         TEST_USER
       )
-    ).rejects.toThrow('Accreditation not found: ACC-2')
+    ).rejects.toThrow('Accreditation with number ACC-2 for 2026 not found')
   })
 
   describe('return value (created/updated counts against the committed head)', () => {

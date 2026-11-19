@@ -7,8 +7,12 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { toYear } from '#common/helpers/dates/year.js'
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
 /**
  * @param {{ rowId: string, tonnage: number }} args
@@ -64,17 +68,19 @@ const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
 
 const overseasSites = /** @type {any} */ (new Map())
 
-const registeredOnlyLedgerId = withNumbers({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: null
-})
+const registeredOnlyLedgerId = {
+  ...DEFAULT_LEDGER_ID,
+  accreditationNumber: null
+}
 
-const accreditedLedgerId = withNumbers({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: 'acc-1'
-})
+const accreditedLedgerId = DEFAULT_LEDGER_ID
+
+/** @type {AccreditationValidity} */
+const accreditation = {
+  validFrom: '2023-01-01',
+  validTo: '2030-12-31',
+  timeline: [{ status: 'approved', at: '2022-12-15T00:00:00.000Z' }]
+}
 
 describe('writeSummaryLogRowStates', () => {
   let summaryLogRowStatesRepository
@@ -91,10 +97,16 @@ describe('writeSummaryLogRowStates', () => {
         buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 }),
         buildRegisteredOnlyRecord({ rowId: '2', tonnage: 20 })
       ],
-      accreditation: null,
-      ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      ledgerId: registeredOnlyLedgerId,
+      summaryLogId: toSummaryLogFileId('log-A'),
+      classificationContext: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const committed =
@@ -117,10 +129,16 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
-      accreditation: null,
-      ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      ledgerId: registeredOnlyLedgerId,
+      summaryLogId: toSummaryLogFileId('log-A'),
+      classificationContext: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const [committed] =
@@ -135,10 +153,16 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
-      accreditation: null,
-      ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      ledgerId: registeredOnlyLedgerId,
+      summaryLogId: toSummaryLogFileId('log-A'),
+      classificationContext: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const [committed] =
@@ -157,10 +181,16 @@ describe('writeSummaryLogRowStates', () => {
         buildReceivedRecord({ rowId: '2', tonnage: 1.005 }),
         buildReceivedRecord({ rowId: '3', tonnage: 1.005 })
       ],
-      accreditation: null,
-      ledgerId: withNumbers(registeredOnlyLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      ledgerId: registeredOnlyLedgerId,
+      summaryLogId: toSummaryLogFileId('log-A'),
+      classificationContext: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation: null,
+        overseasSites
+      }
     })
 
     const committed =
@@ -182,13 +212,16 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-      accreditation: {
-        validFrom: '2023-01-01',
-        validTo: '2030-12-31'
-      },
-      ledgerId: withNumbers(accreditedLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      ledgerId: accreditedLedgerId,
+      summaryLogId: toSummaryLogFileId('log-A'),
+      classificationContext: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+        ),
+        accreditation,
+        overseasSites
+      }
     })
 
     expect(
@@ -209,13 +242,16 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
-      accreditation: {
-        validFrom: '2023-01-01',
-        validTo: '2030-12-31'
-      },
-      ledgerId: withNumbers(accreditedLedgerId),
-      overseasSites,
-      summaryLogId: toSummaryLogFileId('log-A')
+      ledgerId: accreditedLedgerId,
+      summaryLogId: toSummaryLogFileId('log-A'),
+      classificationContext: {
+        tableSchemas: tableSchemasOf(
+          toYear(2026),
+          PROCESSING_TYPES.REPROCESSOR_INPUT
+        ),
+        accreditation,
+        overseasSites
+      }
     })
 
     const [committed] =
@@ -238,10 +274,16 @@ describe('writeSummaryLogRowStates', () => {
       writeSummaryLogRowStates({
         summaryLogRowStatesRepository,
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-        accreditation: null,
-        ledgerId: withNumbers(registeredOnlyLedgerId),
-        overseasSites,
-        summaryLogId: toSummaryLogFileId('log-A')
+        ledgerId: registeredOnlyLedgerId,
+        summaryLogId: toSummaryLogFileId('log-A'),
+        classificationContext: {
+          tableSchemas: tableSchemasOf(
+            toYear(2026),
+            PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+          ),
+          accreditation: null,
+          overseasSites
+        }
       })
 
     await submit()

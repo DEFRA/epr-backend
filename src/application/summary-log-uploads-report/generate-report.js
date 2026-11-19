@@ -1,7 +1,7 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
-/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
-/** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {OrganisationNumber, RegistrationNumber, AccreditationNumber} from '#domain/organisations/numbers.js' */
 
 import {
   capitalize,
@@ -17,6 +17,7 @@ import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 
@@ -35,8 +36,8 @@ function buildLookupKey(organisationNumber, registrationNumber) {
  *   type: string;
  *   businessName: string;
  *   organisationNumber: OrganisationNumber;
- *   registrationNumber: string;
- *   accreditationNumber: string;
+ *   registrationNumber: RegistrationNumber;
+ *   accreditationNumber: AccreditationNumber | '';
  *   reprocessingSite: string;
  *   packagingWasteCategory: string;
  * }} FormattedRegistrationInfo
@@ -58,11 +59,14 @@ function transformRow(formattedInfo, summaryLogStats) {
 }
 
 /**
- * @param {Registration['accreditations']} accreditations
- * @returns {string}
+ * @param {Registration} registration
+ * @returns {AccreditationNumber | ''}
  */
-function accreditationNumberOf(accreditations) {
-  return accreditations[currentUtcYear()]?.accreditationNumber ?? ''
+function accreditationNumberOf(registration) {
+  return (
+    accreditationForYear(registration, currentUtcYear())?.accreditationNumber ??
+    ''
+  )
 }
 
 /**
@@ -84,12 +88,10 @@ function buildRegistrationLookup(organisations) {
     organisations
       .filter((org) => !isTestOrganisation(org))
       .flatMap((org) =>
-        Object.entries(org.registrations).map(
-          ([registrationNumber, registration]) => [
-            buildLookupKey(
-              org.organisationNumber,
-              toRegistrationNumber(registrationNumber)
-            ),
+        Object.entries(org.registrations).map(([number, registration]) => {
+          const registrationNumber = toRegistrationNumber(number)
+          return [
+            buildLookupKey(org.organisationNumber, registrationNumber),
             {
               appropriateAgency: uppercaseString(
                 registration.submittedToRegulator.code
@@ -98,16 +100,14 @@ function buildRegistrationLookup(organisations) {
               businessName: org.name,
               organisationNumber: org.organisationNumber,
               registrationNumber,
-              accreditationNumber: accreditationNumberOf(
-                registration.accreditations
-              ),
+              accreditationNumber: accreditationNumberOf(registration),
               reprocessingSite: reprocessingSiteOf(registration),
               packagingWasteCategory: formatResolvedMaterial(
                 registration.material
               )
             }
           ]
-        )
+        })
       )
   )
 }
@@ -145,7 +145,7 @@ async function transform(summaryLogsStatsList, registrationLookup) {
 }
 
 /**
- * @param {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
+ * @param {import('#organisation-read-model/index.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepo - Summary logs repository
  * @returns {Promise<{summaryLogUploads: SummaryLogUploadReportRow[], generatedAt: string}>} Report data with generation timestamp
  */

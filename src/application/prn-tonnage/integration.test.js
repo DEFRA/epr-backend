@@ -15,14 +15,15 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildPrn,
-  buildAccreditationSnapshot
+  buildAccreditationSnapshot,
+  PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import {
   createOrganisationReadRepository,
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME
-} from '#organisation-read-model/repository/mongodb.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+  buildExternalAccreditation
+} from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
@@ -55,7 +56,8 @@ const approvedStatusHistory = [
 const ledgerId = {
   organisationNumber: toOrganisationNumber(String(orgId)),
   registrationNumber: toRegistrationNumber('REG-1'),
-  accreditationNumber: toAccreditationNumber('ACC-1')
+  accreditationNumber: toAccreditationNumber('ACC-1'),
+  year: PRN_YEAR
 }
 const otherLedgerId = {
   ...ledgerId,
@@ -186,7 +188,7 @@ describe('aggregatePrnTonnage - Integration', () => {
   let db
   /** @type {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} */
   let ledgerRepository
-  /** @type {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} */
+  /** @type {import('#organisation-read-model/index.js').OrganisationReadRepository} */
   let organisationReadRepository
   /** @type {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} */
   let prnRepository
@@ -275,7 +277,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -296,7 +298,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -423,7 +425,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -442,7 +444,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -475,7 +477,7 @@ describe('aggregatePrnTonnage - Integration', () => {
         ledgerRepository
       )
     ).rejects.toThrow(
-      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234'
+      'No organisation in the read model holds accreditation ACC-1 under registration REG-1 of organisation 100234 for 2026'
     )
   })
 
@@ -636,6 +638,10 @@ describe('aggregatePrnTonnage - Integration', () => {
   })
 
   it('reports an accreditation known only by its number', async () => {
+    // External accreditations are held for 2027, so load only once it is open
+    config.set('openNextYear', true)
+    onTestFinished(() => config.reset('openNextYear'))
+    const externalLedgerId = { ...ledgerId, year: toYear(2027) }
     const { accreditationId: _, ...registration } = reprocessorRegistration(
       REPROCESSING_TYPE.INPUT
     )
@@ -645,28 +651,29 @@ describe('aggregatePrnTonnage - Integration', () => {
     })
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
-        registrationNumber: ledgerId.registrationNumber,
-        year: toYear(2026),
-        accreditationNumber: ledgerId.accreditationNumber,
+        organisationNumber: externalLedgerId.organisationNumber,
+        registrationNumber: externalLedgerId.registrationNumber,
+        year: externalLedgerId.year,
+        accreditationNumber: externalLedgerId.accreditationNumber,
         prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_5000 },
         status: {
           current: 'approved',
-          timeline: [
-            {
-              status: 'approved',
-              at: '2026-01-01T00:00:00.000Z',
-              updatedAt: '2026-01-01T00:00:00.000Z'
-            }
-          ]
+          lastUpdatedAt: '2027-01-01T00:00:00.000Z',
+          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
         }
       })
     )
-    await db
-      .collection(PRNS_COLLECTION)
-      .insertOne(prnWithStatus(PRN_STATUS.ACCEPTED, 40))
+    const prn = prnWithStatus(PRN_STATUS.ACCEPTED, 40)
+    await db.collection(PRNS_COLLECTION).insertOne({
+      ...prn,
+      accreditation: {
+        ...prn.accreditation,
+        accreditationYear: externalLedgerId.year
+      }
+    })
     await ledgerRepository.appendEvents([
       buildLedgerEvent({
-        ...ledgerId,
+        ...externalLedgerId,
         closingBalance: { amount: 250, availableAmount: 125 }
       })
     ])
@@ -687,26 +694,23 @@ describe('aggregatePrnTonnage - Integration', () => {
     onTestFinished(() => config.reset('openNextYear'))
     const laterLedgerId = {
       ...ledgerId,
-      accreditationNumber: toAccreditationNumber('ACC-2027')
+      accreditationNumber: toAccreditationNumber('ACC-2027'),
+      year: toYear(2027)
     }
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(organisationWithRegistration())
     await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
       buildExternalAccreditation({
+        organisationNumber: ledgerId.organisationNumber,
         registrationNumber: ledgerId.registrationNumber,
-        year: toYear(2027),
+        year: laterLedgerId.year,
         accreditationNumber: laterLedgerId.accreditationNumber,
         prnIssuance: { tonnageBand: TONNAGE_BAND.UP_TO_10000 },
         status: {
           current: 'approved',
-          timeline: [
-            {
-              status: 'approved',
-              at: '2027-01-01T00:00:00.000Z',
-              updatedAt: '2027-01-01T00:00:00.000Z'
-            }
-          ]
+          lastUpdatedAt: '2027-01-01T00:00:00.000Z',
+          timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
         }
       })
     )
@@ -717,7 +721,8 @@ describe('aggregatePrnTonnage - Integration', () => {
         ...laterPrn,
         accreditation: {
           ...laterPrn.accreditation,
-          accreditationNumber: laterLedgerId.accreditationNumber
+          accreditationNumber: laterLedgerId.accreditationNumber,
+          accreditationYear: laterLedgerId.year
         }
       }
     ])

@@ -9,7 +9,8 @@ import {
 import {
   generateFileId,
   buildPendingFile,
-  summaryLogFactory
+  summaryLogFactory,
+  withoutAccreditationId
 } from './test-data.js'
 
 export const testInsertBehaviour = (it) => {
@@ -30,45 +31,44 @@ export const testInsertBehaviour = (it) => {
       it('inserts a summary log without error', async () => {
         const id = `contract-insert-${randomUUID()}`
 
-        await repository.insert(
-          id,
-          summaryLogFactory.validating({
-            organisationId: 'org-123',
-            registrationId: 'reg-456'
-          })
-        )
+        await repository.insert(id, summaryLogFactory.validating())
 
         const found = await repository.findById(id)
         expect(found).toBeTruthy()
       })
 
-      it('stores the summary log so it can be retrieved', async () => {
-        const id = `contract-retrievable-${randomUUID()}`
+      it('stores a summary log by its numbers, without organisation, registration or accreditation ids', async () => {
+        const id = `contract-without-ids-${randomUUID()}`
 
-        await repository.insert(
-          id,
-          summaryLogFactory.validating({
-            organisationId: 'org-456',
-            registrationId: 'reg-789'
-          })
-        )
+        await repository.insert(id, {
+          ...summaryLogFactory.validating({
+            organisationNumber: '500456',
+            registrationNumber: 'R25SR500010789PL',
+            accreditationNumber: 'ACC500456'
+          }),
+          organisationId: 'org-456',
+          registrationId: 'reg-789',
+          accreditationId: 'acc-456'
+        })
         const found = await repository.findById(id)
 
-        expect(found).toBeTruthy()
-        expect(found.summaryLog.organisationId).toBe('org-456')
-        expect(found.summaryLog.registrationId).toBe('reg-789')
+        expect(found.summaryLog).toMatchObject({
+          organisationNumber: '500456',
+          registrationNumber: 'R25SR500010789PL',
+          accreditationNumber: 'ACC500456'
+        })
+        expect(found.summaryLog).not.toHaveProperty('organisationId')
+        expect(found.summaryLog).not.toHaveProperty('registrationId')
+        expect(found.summaryLog).not.toHaveProperty('accreditationId')
       })
 
-      it('stores the numbers beside the ids', async () => {
+      it('stores the numbers', async () => {
         const id = `contract-numbers-${randomUUID()}`
 
         await repository.insert(
           id,
           summaryLogFactory.validating({
-            organisationId: 'org-456',
-            registrationId: 'reg-789',
             year: toYear(2026),
-            accreditationId: 'acc-123',
             organisationNumber: '500123',
             registrationNumber: 'R25SR500010912PL',
             accreditationNumber: 'ACC500123'
@@ -100,10 +100,10 @@ export const testInsertBehaviour = (it) => {
       it('rejects one of two concurrent inserts with same ID', async () => {
         const id = `contract-concurrent-insert-${randomUUID()}`
         const summaryLogA = summaryLogFactory.validating({
-          organisationId: 'org-A'
+          organisationNumber: 'org-A'
         })
         const summaryLogB = summaryLogFactory.validating({
-          organisationId: 'org-B'
+          organisationNumber: 'org-B'
         })
 
         const results = await Promise.allSettled([
@@ -123,7 +123,9 @@ export const testInsertBehaviour = (it) => {
 
         const final = await repository.findById(id)
         expect(final).toBeTruthy()
-        expect(['org-A', 'org-B']).toContain(final.summaryLog.organisationId)
+        expect(['org-A', 'org-B']).toContain(
+          final.summaryLog.organisationNumber
+        )
       })
     })
 
@@ -171,47 +173,29 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
-        it('rejects an accredited insert without an accreditation number', async () => {
+        it('rejects an empty accreditation number', async () => {
           const id = `contract-validation-${randomUUID()}`
 
           await expect(
             repository.insert(
               id,
-              summaryLogFactory.validating({
-                accreditationId: 'acc-1',
-                accreditationNumber: null
-              })
+              summaryLogFactory.validating({ accreditationNumber: '' })
             )
           ).rejects.toThrow(
-            /Invalid summary log data.*"accreditationNumber" must be a string/
+            /Invalid summary log data.*"accreditationNumber" cannot be empty/
           )
         })
 
-        it('rejects an accreditation number on a registered-only insert', async () => {
+        it('rejects insert without an accreditation number', async () => {
           const id = `contract-validation-${randomUUID()}`
 
           await expect(
             repository.insert(
               id,
-              summaryLogFactory.validating({
-                accreditationId: null,
-                accreditationNumber: 'ACC-1'
-              })
+              withoutAccreditationId(summaryLogFactory.validating())
             )
           ).rejects.toThrow(
-            /Invalid summary log data.*"accreditationNumber" must be one of \[null\]/
-          )
-        })
-
-        it('rejects an accreditation number without an accreditation id', async () => {
-          const id = `contract-validation-${randomUUID()}`
-          const { accreditationId: _a, ...withoutAccreditationId } =
-            summaryLogFactory.validating({ accreditationNumber: 'ACC-1' })
-
-          await expect(
-            repository.insert(id, withoutAccreditationId)
-          ).rejects.toThrow(
-            /Invalid summary log data.*"accreditationNumber" is not allowed/
+            /Invalid summary log data.*"accreditationNumber" is required/
           )
         })
 
@@ -315,13 +299,7 @@ export const testInsertBehaviour = (it) => {
         it('accepts preprocessing status without file data', async () => {
           const id = `contract-preprocessing-no-file-${randomUUID()}`
 
-          await repository.insert(
-            id,
-            summaryLogFactory.preprocessing({
-              organisationId: 'org-123',
-              registrationId: 'reg-456'
-            })
-          )
+          await repository.insert(id, summaryLogFactory.preprocessing())
 
           const found = await repository.findById(id)
           expect(found.summaryLog.status).toBe(SUMMARY_LOG_STATUS.PREPROCESSING)
@@ -333,9 +311,7 @@ export const testInsertBehaviour = (it) => {
           // Inline object needed to test schema rejection - factory would auto-add file
           const validatingLogWithoutFile = {
             status: SUMMARY_LOG_STATUS.VALIDATING,
-            expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
-            organisationId: 'org-123',
-            registrationId: 'reg-456'
+            expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING)
           }
 
           await expect(

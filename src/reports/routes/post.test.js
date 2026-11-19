@@ -1,16 +1,26 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  approvedStatusFrom,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  accreditation,
+  exporter,
+  exporterAccreditation,
+  granted,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
-import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -29,13 +39,6 @@ import {
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
-  accreditation,
-  exporter,
-  exporterAccreditation,
-  granted,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
@@ -43,6 +46,10 @@ import { reportsPostFailureMessage } from './post.js'
 import { MAX_ISSUES_REPORTED } from '#reports/application/report-mandatory/assert-report-data-complete.js'
 import * as reportAudit from '#reports/application/audit.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+import {
+  emptySummaryLogStores,
+  submitSummaryLog
+} from '#vite/helpers/submit-summary-log.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -56,6 +63,58 @@ vi.mock('#reports/application/audit.js', () => ({
 }))
 
 const YEAR = toYear(2026)
+
+/**
+ * The organisation as the read model serves the stored one built here: its
+ * registration from its validFrom, and its accreditation, when it has a number,
+ * from July.
+ *
+ * @param {any} org
+ * @param {any} registration
+ * @param {any} accreditationRecord
+ */
+const readOrganisationOf = (org, registration, accreditationRecord) => {
+  const isExporter = registration.wasteProcessingType === 'exporter'
+  const approved = accreditationRecord?.status !== 'cancelled'
+  const served = accreditationRecord?.accreditationNumber
+    ? buildReadAccreditation({
+        accreditationNumber: accreditationRecord.accreditationNumber,
+        status: approved
+          ? approvedStatusFrom('2026-07-01')
+          : {
+              current: /** @type {const} */ ('cancelled'),
+              lastUpdatedAt: '2026-02-01T09:00:00.000Z',
+              timeline: [
+                {
+                  status: /** @type {const} */ ('approved'),
+                  at: '2026-02-01T00:00:00.000Z'
+                },
+                {
+                  status: /** @type {const} */ ('cancelled'),
+                  at: '2026-02-01T09:00:00.000Z'
+                }
+              ]
+            }
+      })
+    : undefined
+  const status = approvedStatusFrom(registration.validFrom)
+  return buildReadOrganisation({
+    organisationNumber: org.organisationNumber,
+    registrations: {
+      [registration.registrationNumber]: isExporter
+        ? buildReadExporterRegistration({
+            status,
+            accreditations: served
+              ? accreditationsByYear(buildReadExporterAccreditation(served))
+              : {}
+          })
+        : buildReadReprocessorRegistration({
+            status,
+            accreditations: served ? accreditationsByYear(served) : {}
+          })
+    }
+  })
+}
 const QUARTER = 1
 // The accreditation from the read-model fixtures starts in July.
 const MONTH = 7
@@ -64,13 +123,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   setupAuthContext()
 
   const SUMMARY_LOG_ID = 'sl-1'
-  const SUBMITTED_AT = new Date('2024-01-15T00:00:00.000Z')
+  const SUBMITTED_AT = '2024-01-15T00:00:00.000Z'
 
-  /**
-   * Seeds the summary-log row states and the waste balance ledger so the report
-   * routes resolve one committed row at the latest submitted summary log for the
-   * registration in the report year.
-   */
   const DEFAULT_ROWS = [
     buildSummaryLogRowStateEntry({
       rowId: 'row-0',
@@ -91,14 +145,10 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     accreditationRecord,
     rows = DEFAULT_ROWS
   ) => {
-    const summaryLogRowStatesRepository =
-      createInMemorySummaryLogRowStatesRepository()()
-    // An accreditation without its number holds no ledger.
+    const stores = emptySummaryLogStores()
+    // An accreditation without its number holds no summary log.
     if (accreditationRecord && !accreditationRecord.accreditationNumber) {
-      return {
-        ledgerRepository: createInMemoryLedgerRepository()(),
-        summaryLogRowStatesRepository
-      }
+      return stores
     }
     const ledgerId = {
       organisationId: org.id,
@@ -108,22 +158,12 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       accreditationNumber: accreditationRecord?.accreditationNumber ?? null,
       year: YEAR
     }
-    await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      ledgerId,
-      rows,
-      toSummaryLogFileId(SUMMARY_LOG_ID)
-    )
-    const ledgerRepository = createInMemoryLedgerRepository([
-      partialMock(
-        buildLedgerEvent({
-          ...ledgerId,
-          number: 1,
-          createdAt: SUBMITTED_AT,
-          payload: { summaryLogId: SUMMARY_LOG_ID, creditTotal: 100 }
-        })
-      )
-    ])()
-    return { ledgerRepository, summaryLogRowStatesRepository }
+    await submitSummaryLog(stores, ledgerId, {
+      fileId: SUMMARY_LOG_ID,
+      submittedAt: SUBMITTED_AT,
+      entries: rows
+    })
+    return stores
   }
 
   /**
@@ -162,16 +202,16 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       ...(accreditationRecord && { accreditations: [accreditationRecord] })
     })
 
-    const { ledgerRepository, summaryLogRowStatesRepository } =
+    const { summaryLogsRepository, summaryLogRowStatesRepository } =
       await seedRepositories(org, registration, accreditationRecord, rows)
     const reportsRepositoryFactory = createInMemoryReportsRepository()
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(org)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          readOrganisationOf(org, registration, accreditationRecord)
         ]),
-        ledgerRepository,
+        summaryLogsRepository,
         summaryLogRowStatesRepository,
         reportsRepository: reportsRepositoryFactory,
         packagingRecyclingNotesRepository:

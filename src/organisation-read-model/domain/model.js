@@ -1,6 +1,8 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { TonnageBand } from '#domain/organisations/model.js' */
 
 /**
  * The organisation read model (ADR-0052).
@@ -19,8 +21,8 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   name: string
  *   organisationNumber: OrganisationNumber
  *   registeredAddress?: OrganisationAddress
- *   registrations: Record<string, Registration>
- *   status: Status<'created' | 'approved' | 'active' | 'rejected'>
+ *   registrations: Record<RegistrationNumber, Registration>
+ *   status: Status<OrganisationStatus>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
  *   tradingName?: string
@@ -38,21 +40,20 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   material: 'aluminium' | 'fibre' | 'glass_re_melt' | 'glass_other' | 'paper' | 'plastic'
  *     | 'steel' | 'wood'
  *   standingByDate: StandingByYear
- *   status: Status<'approved' | 'cancelled'>
+ *   status: Status<RegistrationStatus>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
- *   validFrom: string
  * }} RegistrationCommon
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ReprocessorAccreditation>
+ *   accreditations: Record<Year, ReprocessorAccreditation>
  *   reprocessingType: 'input' | 'output'
  *   site: { address: UkAddress }
  *   wasteProcessingType: 'reprocessor'
  * }} ReprocessorRegistration
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ExporterAccreditation>
+ *   accreditations: Record<Year, ExporterAccreditation>
  *   overseasSites: Record<string, OverseasSite>
  *   wasteProcessingType: 'exporter'
  * }} ExporterRegistration
@@ -61,12 +62,14 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   address: OverseasAddress
  *   coordinates?: string
  *   name: string
+ *   validFrom?: string
  * }} OverseasSite
  *
  * @typedef {{
  *   accreditationNumber: AccreditationNumber
- *   prnIssuance: { tonnageBand: string }
- *   status: Status<'approved' | 'suspended' | 'cancelled'>
+ *   prnIssuance: { tonnageBand: TonnageBand }
+ *   status: Status<AccreditationStatus>
+ *   year: Year
  * }} AccreditationCommon
  *
  * @typedef {AccreditationCommon} ReprocessorAccreditation
@@ -77,7 +80,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *
  * @typedef {
  *   | { status: 'pending' }
- *   | { approvedOn: string, status: 'approved' }
+ *   | { approvedOn: CalendarDate, status: 'approved' }
  * } AccreditedOverseasSite
  *
  * @typedef {{ country?: string, region?: string } & (
@@ -120,21 +123,30 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * Every status change, oldest first, each `at` the ISO 8601 datetime it takes
- * effect and `updatedAt` the one it was recorded. Nothing requires two changes
- * to happen at different times, so changes that share a time keep the order
- * they were recorded in.
+ * effect. Nothing requires two changes to happen at different times, so
+ * changes that share a time keep the order they were recorded in.
  *
- * @typedef {{ status: string, at: string, updatedAt: string }[]} StatusTimeline
+ * @template {string} S
+ * @typedef {{ status: S, at: string }[]} StatusTimeline
  */
 
 /**
- * The status today, and the timeline it is read from.
+ * The status today, the timeline it is read from, and when the timeline's
+ * last change was recorded.
  *
  * @template {string} S
- * @typedef {{ current: S, timeline: StatusTimeline }} Status
+ * @typedef {{ current: S, lastUpdatedAt: string, timeline: StatusTimeline<S> }} Status
  */
 
-/** @type {readonly Organisation['status']['current'][]} */
+/**
+ * The statuses the read model serves for each record.
+ *
+ * @typedef {'created' | 'approved' | 'active' | 'rejected'} OrganisationStatus
+ * @typedef {'approved' | 'cancelled'} RegistrationStatus
+ * @typedef {'approved' | 'suspended' | 'cancelled'} AccreditationStatus
+ */
+
+/** @type {readonly OrganisationStatus[]} */
 export const ORGANISATION_STATUSES = Object.freeze([
   'created',
   'approved',
@@ -142,10 +154,10 @@ export const ORGANISATION_STATUSES = Object.freeze([
   'rejected'
 ])
 
-/** @type {readonly Registration['status']['current'][]} */
+/** @type {readonly RegistrationStatus[]} */
 export const REGISTRATION_STATUSES = Object.freeze(['approved', 'cancelled'])
 
-/** @type {readonly AccreditationCommon['status']['current'][]} */
+/** @type {readonly AccreditationStatus[]} */
 export const ACCREDITATION_STATUSES = Object.freeze([
   'approved',
   'suspended',
@@ -160,7 +172,7 @@ export const ACCREDITATION_STATUSES = Object.freeze([
  * By year, the date each standing starts. A standing holds until the next date,
  * or the end of the year.
  *
- * @typedef {Record<string, Record<string, { standing: Standing }>>} StandingByYear
+ * @typedef {Partial<Record<Year, Record<CalendarDate, { standing: Standing }>>>} StandingByYear
  */
 
 export const STANDING = Object.freeze({
@@ -172,16 +184,17 @@ export const STANDING = Object.freeze({
 /**
  * A suspended accreditation is still accredited.
  *
- * @type {ReadonlySet<string>}
+ * @type {ReadonlySet<AccreditationStatus>}
  */
 export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
 
 /**
  * The status at the end of the latest day on or before `date`.
  *
- * @param {StatusTimeline} timeline
+ * @template {string} S
+ * @param {StatusTimeline<S>} timeline
  * @param {CalendarDate} date - ISO 8601 date
- * @returns {string | undefined}
+ * @returns {S | undefined}
  */
 export const statusOn = (timeline, date) =>
   timeline.findLast(({ at }) => calendarDate(at).localeCompare(date) <= 0)

@@ -94,44 +94,6 @@ export function generateAddress() {
   }
 }
 
-function generateCompanyNumber() {
-  const number = Math.floor(Math.random() * 999999) + 100000
-  return 'SC' + number.toString()
-}
-
-export function generateCompanyDetails() {
-  const companyTypes = ['Ltd', 'Limited', 'plc', 'LLP']
-  const names = [
-    'Acme',
-    'Globex',
-    'Soylent',
-    'Initech',
-    'Umbrella',
-    'Weyland',
-    'Cyberdyne',
-    'OsCorp'
-  ]
-  const adjectives = [
-    'Advanced',
-    'Innovative',
-    'Global',
-    'Premier',
-    'Elite',
-    'Dynamic',
-    'Superior'
-  ]
-
-  const baseName = `${randomChoice(adjectives)} ${randomChoice(names)} ${randomChoice(companyTypes)}`
-
-  return {
-    name: baseName,
-    tradingName:
-      Math.random() > 0.3 ? baseName : `${randomChoice(names)} Trading`,
-    registrationNumber: generateCompanyNumber(),
-    registeredAddress: generateAddress()
-  }
-}
-
 export function generatePartnership() {
   const partnerCount = randomInt(2, 5)
   const partners = []

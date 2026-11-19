@@ -2,7 +2,7 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { toYear } from '#common/helpers/dates/year.js'
+import { nextYear, toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS,
@@ -22,7 +22,6 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
@@ -30,7 +29,16 @@ import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation as buildServedOrganisation,
+  buildReadReprocessorRegistration,
+  withStandingThrough
+} from '#organisation-read-model/test-support.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 
@@ -48,38 +56,26 @@ const { buildReadOrganisation } = createOrganisationBuilders()
 const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { AppliedForMaterial, RegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { AppliedForMaterial, Material, StoredRegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
-/**
- * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers & {
- *   organisationId: string,
- *   registrationId: string,
- *   accreditationId: string | null,
- *   year: import('#common/helpers/dates/year.js').Year
- * }} LedgerEnvironment
- */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
- * The ids and numbers of the environment's ledger.
+ * The environment's ledger id.
  *
- * @param {LedgerEnvironment} env
- * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
+ * @param {WasteBalanceLedgerId} env
+ * @returns {WasteBalanceLedgerId}
  */
 export const ledgerIdOf = ({
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber,
   registrationNumber,
   accreditationNumber,
   year
 }) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber,
   registrationNumber,
   accreditationNumber,
@@ -91,7 +87,7 @@ export const ledgerIdOf = ({
  * asserts it is present, so callers can read its fields without a null guard at
  * every assertion site. The ledger id is taken entirely from the environment.
  *
- * @param {LedgerEnvironment & { wasteBalanceService: ReturnType<typeof createWasteBalanceService> }} env
+ * @param {WasteBalanceLedgerId & { wasteBalanceService: ReturnType<typeof createWasteBalanceService> }} env
  */
 export const getWasteBalance = async (env) => {
   const balance = await env.wasteBalanceService.currentBalance(ledgerIdOf(env))
@@ -221,7 +217,7 @@ const VALID_TO = '2026-12-31'
 // A registered overseas site whose approval starts after the default export
 // date, so OSR_ID 200 resolves to found-but-unapproved (ORS_NOT_APPROVED).
 const UNAPPROVED_VALID_FROM = '2026-06-01'
-/** @type {StatusHistoryEntryOf<RegistrationStatus>[]} */
+/** @type {StatusHistoryEntryOf<StoredRegistrationStatus>[]} */
 const APPROVED_HISTORY = [
   { status: 'created', updatedAt: '2024-12-01T00:00:00.000Z' },
   { status: 'approved', updatedAt: '2024-12-15T00:00:00.000Z' }
@@ -491,7 +487,7 @@ export const createUploadPayload = (
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       ...(includeS3 && {
         s3Bucket: 're-ex-summary-logs',
-        s3Key: `/organisations/${organisationId}/registrations/${registrationId}/${fileId}/${filename}`
+        s3Key: `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/${fileId}/${filename}`
       })
     }
   },
@@ -500,7 +496,7 @@ export const createUploadPayload = (
 
 /** The natural keys every organisation these helpers build is served under. */
 export const TEST_ORGANISATION_NUMBER = toOrganisationNumber('500999')
-export const TEST_REGISTRATION_NUMBER = 'REG-123'
+export const TEST_REGISTRATION_NUMBER = toRegistrationNumber('REG123')
 export const UPLOAD_YEAR = toYear(2026)
 
 export const registrationUrl = `/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}`
@@ -512,13 +508,16 @@ export const buildGetUrl = (summaryLogId) =>
 
 /**
  * @param {string} summaryLogId
- * @param {{ accredited?: boolean }} [options]
+ * @param {{ accredited?: boolean, year?: Year }} [options]
  */
-export const buildPostUrl = (summaryLogId, { accredited = true } = {}) =>
+export const buildPostUrl = (
+  summaryLogId,
+  { accredited = true, year = UPLOAD_YEAR } = {}
+) =>
   uploadCompletedPath({
     organisationNumber: TEST_ORGANISATION_NUMBER,
     registrationNumber: TEST_REGISTRATION_NUMBER,
-    year: UPLOAD_YEAR,
+    year,
     accredited,
     summaryLogId
   })
@@ -575,7 +574,7 @@ export const pollForValidation = (server, summaryLogId) =>
 
 export const createStandardMeta = (processingType) => ({
   REGISTRATION_NUMBER: {
-    value: 'REG-123',
+    value: 'REG123',
     location: { sheet: 'Cover', row: 1, column: 'B' }
   },
   PROCESSING_TYPE: {
@@ -598,7 +597,7 @@ export const createStandardMeta = (processingType) => ({
 
 export const createWasteBalanceMeta = (processingType) => ({
   REGISTRATION_NUMBER: {
-    value: 'REG-123',
+    value: 'REG123',
     location: { sheet: 'Data', row: 1, column: 'B' }
   },
   PROCESSING_TYPE: {
@@ -673,9 +672,11 @@ export const createRegisteredOnlyReceivedRow = (
   ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
 })
 
+/**
+ * @param {Parameters<typeof createInMemorySummaryLogExtractor>[0]} extractorData
+ * @param {{ reprocessingType?: ReprocessingType }} [options]
+ */
 export const createTestInfrastructure = async (
-  organisationId,
-  registrationId,
   extractorData,
   { reprocessingType = 'input' } = {}
 ) => {
@@ -685,32 +686,27 @@ export const createTestInfrastructure = async (
   const uploadsRepository = createInMemoryUploadsRepository()
   const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-  const testOrg = buildComplexTestOrg({
-    registrationId,
-    accreditationId: 'ACC-123',
-    processingType: 'reprocessor',
-    reprocessingType,
-    material: 'paper'
-  })
-  testOrg.id = organisationId
+  const organisationReadRepository = createInMemoryOrganisationReadRepository([
+    buildComplexTestReadOrg({
+      processingType: 'reprocessor',
+      reprocessingType,
+      material: 'paper'
+    })
+  ])()
 
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
   const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
-  const overseasSitesRepository = createInMemoryOverseasSitesRepository([])()
   const ledgerRepository = createInMemoryLedgerRepository()()
   const summaryLogRowStatesRepository =
     createInMemorySummaryLogRowStatesRepository()()
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
-    organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
       findPeriodicReports: async () => []
     }),
-    overseasSitesRepository,
     summaryLogExtractor,
     logger: mockLogger
   })
@@ -718,12 +714,7 @@ export const createTestInfrastructure = async (
   const server = await createTestServer({
     repositories: {
       summaryLogsRepository: summaryLogsRepositoryFactory,
-      organisationAdministrationRepository: () =>
-        organisationAdministrationRepository,
-      organisationReadRepository: () =>
-        organisationReadRepositoryOver(organisationAdministrationRepository, {
-          overseasSitesRepository
-        }),
+      organisationReadRepository: () => organisationReadRepository,
       uploadsRepository
     },
     workers: {
@@ -737,13 +728,14 @@ export const createTestInfrastructure = async (
 /**
  * @typedef {{
  *   processingType?: string,
- *   reprocessingType?: string,
- *   material?: string,
+ *   reprocessingType?: ReprocessingType,
+ *   material?: Material,
  *   organisationId?: string,
  *   registrationId?: string,
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
+ *   year?: Year,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
  */
@@ -757,7 +749,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   registrationId = new ObjectId().toString(),
   reportsRepository = createInMemoryReportsRepository()(),
   accredited = true,
-  accreditationValidFrom = VALID_FROM,
+  year = UPLOAD_YEAR,
+  accreditationValidFrom = `${year}-01-01`,
   config
 } = {}) => {
   const accreditationId = 'ACC-123'
@@ -773,9 +766,19 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     reprocessingType,
     material,
     accredited,
-    accreditationValidFrom
+    accreditationValidFrom,
+    accreditationValidTo: `${year}-12-31`
   })
   testOrg.id = organisationId
+  const organisationReadRepository = createInMemoryOrganisationReadRepository([
+    buildComplexTestReadOrg({
+      processingType,
+      reprocessingType,
+      material,
+      accredited,
+      accreditationValidFrom
+    })
+  ])()
 
   const organisationAdministrationRepository =
     createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
@@ -809,33 +812,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     }
   }
 
-  const overseasSitesRepository = createInMemoryOverseasSitesRepository([
-    {
-      id: TEST_OVERSEAS_SITE_ID,
-      name: 'Test Overseas Site',
-      address: {
-        line1: '1 Test Road',
-        townOrCity: 'Berlin'
-      },
-      country: 'Germany',
-      validFrom: new Date(VALID_FROM),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      id: TEST_UNAPPROVED_OVERSEAS_SITE_ID,
-      name: 'Test Unapproved Overseas Site',
-      address: {
-        line1: '2 Test Road',
-        townOrCity: 'Hamburg'
-      },
-      country: 'Germany',
-      validFrom: new Date(UNAPPROVED_VALID_FROM),
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ])()
-
   const packagingRecyclingNotesRepositoryFactory =
     createInMemoryPackagingRecyclingNotesRepository()
   const packagingRecyclingNotesRepository =
@@ -843,11 +819,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
-    organisationAdministrationRepository,
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: createReportsService(reportsRepository),
-    overseasSitesRepository,
     summaryLogExtractor: dynamicExtractor,
     logger: mockLogger
   })
@@ -855,10 +830,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   const syncWasteRecords = syncFromSummaryLog({
     extractor: dynamicExtractor,
     wasteBalanceService,
-    organisationReadRepository: organisationReadRepositoryOver(
-      organisationAdministrationRepository,
-      { overseasSitesRepository }
-    ),
+    organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
     logger: mockLogger
@@ -875,10 +847,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         packagingRecyclingNotesRepository,
       organisationAdministrationRepository: () =>
         organisationAdministrationRepository,
-      organisationReadRepository: () =>
-        organisationReadRepositoryOver(organisationAdministrationRepository, {
-          overseasSitesRepository
-        })
+      organisationReadRepository: () => organisationReadRepository
     },
     workers: {
       summaryLogsWorker: createTestSubmitterWorker({
@@ -895,15 +864,15 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     wasteBalanceService,
     packagingRecyclingNotesRepository,
     organisationAdministrationRepository,
-    overseasSitesRepository,
+    organisationReadRepository,
     organisationId,
     registrationId,
     reportKey: reportKeyOf(testOrg, testOrg.registrations[0]),
     accreditationId,
     organisationNumber: TEST_ORGANISATION_NUMBER,
-    registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+    registrationNumber: TEST_REGISTRATION_NUMBER,
     accreditationNumber: accredited ? TEST_ACCREDITATION_NUMBER : null,
-    year: UPLOAD_YEAR,
+    year,
     accredited,
     fileDataMap,
     ledgerRepository,
@@ -953,7 +922,7 @@ export const servedTestRegistration = (overrides) => {
   })
   return partialMock({
     ...fixture,
-    registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+    registrationNumber: TEST_REGISTRATION_NUMBER,
     status: 'approved',
     statusHistory: APPROVED_HISTORY,
     validFrom: VALID_FROM,
@@ -988,6 +957,7 @@ export const servedTestAccreditation = (overrides) =>
  * @param {string} options.material
  * @param {boolean} [options.accredited] - When false, builds a registered-only registration (no accreditation, quarterly cadence)
  * @param {string} [options.accreditationValidFrom] - The date the accreditation's window opens
+ * @param {string} [options.accreditationValidTo] - The date the accreditation's window closes
  * @returns {Object} Test organisation with registrations and accreditations
  */
 export const TEST_OVERSEAS_SITE_ID = 'test-overseas-site-100'
@@ -1000,7 +970,8 @@ const buildComplexTestOrg = ({
   reprocessingType,
   material,
   accredited = true,
-  accreditationValidFrom = VALID_FROM
+  accreditationValidFrom = VALID_FROM,
+  accreditationValidTo = VALID_TO
 }) => {
   const registration = {
     id: registrationId,
@@ -1031,7 +1002,7 @@ const buildComplexTestOrg = ({
             id: accreditationId,
             accreditationNumber: TEST_ACCREDITATION_NUMBER,
             validFrom: accreditationValidFrom,
-            validTo: VALID_TO,
+            validTo: accreditationValidTo,
             material,
             submittedToRegulator: 'ea',
             site: {
@@ -1046,3 +1017,134 @@ const buildComplexTestOrg = ({
       : []
   })
 }
+
+/**
+ * The organisation `buildComplexTestOrg` builds, as the read model serves it:
+ * its registration under the test keys, approved from `VALID_FROM`, and its
+ * accreditation for the year of `accreditationValidFrom` when accredited,
+ * approved from `accreditationValidFrom`.
+ *
+ * @param {{
+ *   processingType: string,
+ *   reprocessingType: ReprocessingType,
+ *   material: Material,
+ *   accredited?: boolean,
+ *   accreditationValidFrom?: string,
+ *   withOverseasSites?: boolean,
+ *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
+ * }} options
+ * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
+ */
+const buildComplexTestReadOrg = ({
+  processingType,
+  reprocessingType,
+  material,
+  accredited = true,
+  accreditationValidFrom = VALID_FROM,
+  withOverseasSites = true,
+  accreditationNumber = TEST_ACCREDITATION_NUMBER
+}) => {
+  const isExporter = processingType === 'exporter'
+  /** @param {string} approvedAt */
+  const approvedFrom = (approvedAt) => ({
+    current: /** @type {const} */ ('approved'),
+    lastUpdatedAt: '2023-12-15T00:00:00.000Z',
+    timeline: [
+      {
+        status: /** @type {const} */ ('approved'),
+        at: `${approvedAt}T00:00:00.000Z`
+      }
+    ]
+  })
+  const accreditationYear = utcYearOf(accreditationValidFrom)
+  const followingYear = nextYear(accreditationYear)
+  const accreditation = buildReadAccreditation({
+    accreditationNumber,
+    status: approvedFrom(accreditationValidFrom),
+    year: accreditationYear
+  })
+  const common = {
+    material,
+    status: approvedFrom(VALID_FROM)
+  }
+  const registration = isExporter
+    ? buildReadExporterRegistration({
+        ...common,
+        overseasSites: withOverseasSites
+          ? {
+              100: {
+                name: 'Test Overseas Site',
+                address: {
+                  line1: '1 Test Road',
+                  townOrCity: 'Berlin',
+                  country: 'Germany'
+                }
+              },
+              200: {
+                name: 'Test Unapproved Overseas Site',
+                address: {
+                  line1: '2 Test Road',
+                  townOrCity: 'Hamburg',
+                  country: 'Germany'
+                }
+              }
+            }
+          : {},
+        accreditations: accredited
+          ? accreditationsByYear(
+              buildReadExporterAccreditation({
+                ...accreditation,
+                overseasSites: {
+                  100: { status: 'approved', approvedOn: VALID_FROM },
+                  200: {
+                    status: 'approved',
+                    approvedOn: UNAPPROVED_VALID_FROM
+                  }
+                }
+              })
+            )
+          : {}
+      })
+    : buildReadReprocessorRegistration({
+        ...common,
+        reprocessingType,
+        accreditations: accredited ? accreditationsByYear(accreditation) : {}
+      })
+  return buildServedOrganisation({
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    registrations: {
+      [TEST_REGISTRATION_NUMBER]: withStandingThrough(
+        registration,
+        followingYear
+      )
+    }
+  })
+}
+
+/**
+ * The organisation `servedTestRegistration` builds, as the read model serves
+ * it under the test keys: registered only, or accredited for `UPLOAD_YEAR` from
+ * `VALID_FROM` when given an `accreditationNumber`, as
+ * `servedTestAccreditation` builds it.
+ *
+ * @param {{
+ *   wasteProcessingType: string,
+ *   material?: Material,
+ *   reprocessingType?: ReprocessingType,
+ *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
+ * }} options
+ */
+export const servedTestReadOrganisation = ({
+  wasteProcessingType,
+  material = wasteProcessingType === 'exporter' ? 'plastic' : 'glass_re_melt',
+  reprocessingType = 'input',
+  accreditationNumber
+}) =>
+  buildComplexTestReadOrg({
+    processingType: wasteProcessingType,
+    reprocessingType,
+    material,
+    accredited: accreditationNumber !== undefined,
+    accreditationNumber,
+    withOverseasSites: false
+  })

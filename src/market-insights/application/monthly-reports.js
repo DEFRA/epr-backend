@@ -7,11 +7,6 @@ import {
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
-import { storedRegistrationKey } from '#reports/domain/registration-key.js'
-import {
-  accreditationWindow,
-  getStatusHistoryDateTimes
-} from '#common/helpers/dates/accreditation.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
@@ -19,11 +14,9 @@ import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Accreditation } from '#domain/organisations/accreditation.js' */
-/** @import { Organisation } from '#domain/organisations/model.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
-/** @import { StatusHistoryDateTime } from '#common/helpers/dates/accreditation.js' */
-/** @import { CoversRegistration } from '#market-insights/application/accredited-months.js' */
+/** @import { CoversRegistration, GrantedRegistration } from '#market-insights/application/accredited-months.js' */
 
 /**
  * The monthly reports owed and how many of them have been submitted.
@@ -47,13 +40,13 @@ import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
  * latest status change dated in or before the month decides it.
  *
  * @param {YearMonth} month
- * @param {StatusHistoryDateTime[]} history - descending
+ * @param {StatusTimeline<AccreditationStatus>} timeline
  */
-const isCancelledByEndOf = (month, history) =>
-  history.find(
-    ({ updatedAt }) =>
+const isCancelledByEndOf = (month, timeline) =>
+  timeline.findLast(
+    ({ at }) =>
       toYearMonth(
-        formatLocalDateTime(new Date(updatedAt), UK_TIME_ZONE)
+        formatLocalDateTime(new Date(at), UK_TIME_ZONE)
       ).localeCompare(month) <= 0
   )?.status === ACCREDITATION_STATUS.CANCELLED
 
@@ -67,35 +60,27 @@ const isCancelledByEndOf = (month, history) =>
  *
  * @param {Set<YearMonth>} served
  * @param {Year[]} years
- * @param {Accreditation} accreditation
+ * @param {Pick<GrantedRegistration, 'window' | 'accreditation'>} granted
  */
-const owedPeriods = (served, years, accreditation) => {
-  const window = accreditationWindow(accreditation)
-  if (window === null) {
-    return []
-  }
-  const history = getStatusHistoryDateTimes(accreditation.statusHistory)
-  return filterPeriodsFromDate(
+const owedPeriods = (served, years, { window, accreditation }) =>
+  filterPeriodsFromDate(
     years.flatMap((year) => generateAllPeriodsForYear(CADENCE.monthly, year)),
     window.validFrom,
     window.validTo
   ).filter(
     (period) =>
       served.has(toYearMonth(period.startDate)) &&
-      !isCancelledByEndOf(toYearMonth(period.startDate), history)
+      !isCancelledByEndOf(toYearMonth(period.startDate), accreditation.timeline)
   )
-}
 
 /**
  * One monthly report an accreditation owed for a month served, and whether it
  * has been submitted.
  *
- * @typedef {Object} OwedReport
- * @property {YearMonth} month
- * @property {Organisation} org
- * @property {import('#domain/organisations/registration.js').Registration} registration
- * @property {Accreditation} accreditation
- * @property {boolean} submitted
+ * @typedef {import('#market-insights/application/accredited-months.js').AccreditationOfRegistration & {
+ *   month: YearMonth,
+ *   submitted: boolean
+ * }} OwedReport
  */
 
 /**
@@ -106,7 +91,7 @@ const owedPeriods = (served, years, accreditation) => {
  * one since cancelled yields the months before the one it was cancelled in.
  *
  * @param {Object} params
- * @param {import('#domain/organisations/model.js').Organisation[]} params.organisations
+ * @param {Organisation[]} params.organisations - as the organisation read model serves them
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
  * @param {YearMonth[]} params.months - the reporting months served
  * @param {CoversRegistration} [params.covers] - narrows the walk to the registrations a caller publishes
@@ -122,14 +107,18 @@ export function* owedMonthlyReports({
   const years = [...new Set(months.map(yearOf))]
   const reportsByRegistration = groupByRegistration(periodicReports)
 
-  for (const { org, registration, accreditation } of grantedRegistrations(
-    organisations,
-    covers
-  )) {
-    const owed = owedPeriods(served, years, accreditation)
+  for (const {
+    organisationNumber,
+    registrationNumber,
+    registration,
+    year,
+    key,
+    accreditation,
+    window
+  } of grantedRegistrations(organisations, years, covers)) {
+    const owed = owedPeriods(served, years, { window, accreditation })
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
-    const reports =
-      reportsByRegistration.get(storedRegistrationKey(org, registration)) ?? []
+    const reports = reportsByRegistration.get(key) ?? []
 
     // The merge also appends any report the operator submitted for a month it
     // does not owe, and those count for nothing.
@@ -148,9 +137,10 @@ export function* owedMonthlyReports({
       })
       yield {
         month,
-        org,
+        organisationNumber,
+        registrationNumber,
         registration,
-        accreditation,
+        year,
         submitted: submissions.length > 0
       }
     }

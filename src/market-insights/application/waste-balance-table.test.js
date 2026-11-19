@@ -1,4 +1,4 @@
-import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { describe, it, expect, vi } from 'vitest'
 import {
   ACCREDITATION_STATUS,
@@ -14,10 +14,18 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  withStandingThrough
+} from '#organisation-read-model/test-support.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
@@ -31,9 +39,16 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
+/** @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue, ReprocessingType, StoredAccreditationStatus, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
+/** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
+/** @import { PublishedWasteBalanceFigures } from '#market-insights/domain/waste-balance-figures.js' */
+/** @import { Organisation as ServedOrganisation, Registration, Status } from '#organisation-read-model/vocabulary.js' */
+/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
+/** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
+/** @import { WasteBalanceTable } from './waste-balance-table.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
 const TEST_ORG_ID = 999999
@@ -66,6 +81,126 @@ const SITE_ADDRESS = {
 }
 
 /**
+ * The read model's view of each stored organisation a test builds, so the
+ * read repository is seeded with what the read model serves for it.
+ *
+ * @type {WeakMap<object, ServedOrganisation>}
+ */
+const servedFor = new WeakMap()
+
+/**
+ * The organisation with `change` applied to each of its registrations.
+ *
+ * @param {ServedOrganisation} organisation
+ * @param {(registration: Registration) => Registration} change
+ * @returns {ServedOrganisation}
+ */
+const changingRegistrations = (organisation, change) => ({
+  ...organisation,
+  registrations: Object.fromEntries(
+    Object.entries(organisation.registrations).map(([number, registration]) => [
+      number,
+      change(registration)
+    ])
+  )
+})
+
+/**
+ * The registration with its standing worked out from its timelines, as the
+ * read model serves it while 2026 is open.
+ *
+ * @param {Registration} registration
+ * @returns {Registration}
+ */
+const withOpenYearStanding = (registration) =>
+  withStandingThrough(registration, toYear(2026))
+
+/**
+ * Records `served` as the read model's view of `stored`, each registration's
+ * standing worked out from its timelines as the read model does while 2026 is
+ * open.
+ *
+ * @template {object} T
+ * @param {T} stored
+ * @param {ServedOrganisation} served
+ * @returns {T}
+ */
+const serving = (stored, served) => {
+  servedFor.set(stored, changingRegistrations(served, withOpenYearStanding))
+  return stored
+}
+
+/**
+ * @param {object} stored
+ * @returns {ServedOrganisation}
+ */
+const servedOf = (stored) => {
+  const served = servedFor.get(stored)
+  if (!served) {
+    throw new Error(
+      'No read model organisation was built for this organisation'
+    )
+  }
+  return structuredClone(served)
+}
+
+/**
+ * A status change as the read model times it.
+ *
+ * @template {string} S
+ * @param {S} status
+ * @param {string} day - `YYYY-MM-DD` or an ISO date-time
+ */
+const changed = (status, day) => ({ status, at: new Date(day).toISOString() })
+
+/** @type {Status<'approved'>} */
+const APPROVED_STATUS = {
+  current: 'approved',
+  lastUpdatedAt: '2025-12-01T00:00:00.000Z',
+  timeline: [changed('approved', ACCREDITED_FROM)]
+}
+
+/**
+ * The served organisation with each registration's accreditations changed by
+ * `change`, its standing worked out afresh from the changed timelines.
+ *
+ * @param {object} stored
+ * @param {(registration: any) => object} change
+ */
+const servedWith = (stored, change) =>
+  changingRegistrations(servedOf(stored), (registration) =>
+    withOpenYearStanding({ ...registration, ...change(registration) })
+  )
+
+/** The served registration with no accreditation, registered only all year. */
+const asRegisteredOnly = () => ({ accreditations: {} })
+
+/**
+ * The served registration's accreditation in `status`, with `transitions`
+ * added to its timeline.
+ *
+ * @param {string} status
+ * @param {Array<{ status: string, updatedAt: string }>} transitions
+ */
+const accreditationNow = (status, transitions) => (registration) => ({
+  accreditations: Object.fromEntries(
+    Object.entries(registration.accreditations).map(([year, held]) => [
+      year,
+      {
+        ...held,
+        status: {
+          current: status,
+          timeline: [
+            ...held.status.timeline,
+            ...transitions.map((t) => changed(t.status, t.updatedAt))
+          ]
+        }
+      }
+    ])
+  )
+})
+
+/**
  * A 24-hex id the reports store accepts, distinct per prefix and operator.
  *
  * @param {string} prefix - one hex character
@@ -79,14 +214,15 @@ const objectIdFor = (prefix, orgId) => `${prefix}${orgId}`.padStart(24, '0')
  *
  * @param {{
  *   orgId: number,
- *   material?: string,
- *   glassRecyclingProcess?: string[],
- *   wasteProcessingType?: string,
- *   reprocessingType?: string,
+ *   material?: AppliedForMaterial,
+ *   glassRecyclingProcess?: GlassRecyclingProcess[],
+ *   wasteProcessingType?: WasteProcessingTypeValue,
+ *   reprocessingType?: ReprocessingType,
  *   overseasSites?: Record<string, { overseasSiteId: string }>,
  *   validFrom?: string,
  *   validTo?: string,
- *   regulator?: import('#domain/organisations/model.js').RegulatorValue
+ *   regulator?: RegulatorValue,
+ *   siteApproved?: boolean
  * }} options
  */
 const makeOperator = ({
@@ -98,56 +234,131 @@ const makeOperator = ({
   overseasSites,
   validFrom = ACCREDITED_FROM,
   validTo = ACCREDITED_TO,
-  regulator = REGULATOR.EA
+  regulator = REGULATOR.EA,
+  siteApproved = true
 }) => {
   const id = objectIdFor('a', orgId)
   const registrationId = objectIdFor('b', orgId)
   const accreditationId = `acc-${orgId}`
+  const accreditation = buildReadAccreditation({
+    accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
+    prnIssuance: { tonnageBand: 'up_to_500' },
+    status: {
+      current: 'approved',
+      lastUpdatedAt: '2025-12-01T00:00:00.000Z',
+      timeline: [changed('approved', validFrom)]
+    }
+  })
+  const siteNumbers = Object.keys(overseasSites ?? {})
+  const registrationFields = {
+    applicationContactDetails: CONTACT,
+    approvedPersons: [],
+    submitterContactDetails: CONTACT,
+    material: resolveMaterial({
+      id: registrationId,
+      material,
+      glassRecyclingProcess
+    }),
+    status: APPROVED_STATUS,
+    submittedToRegulator: { code: regulator }
+  }
+  const served = buildReadOrganisation({
+    organisationNumber: toOrganisationNumber(String(orgId)),
+    name: `Operator ${orgId}`,
+    status: APPROVED_STATUS,
+    submittedToRegulator: { code: regulator },
+    submitterContactDetails: CONTACT,
+    registrations: {
+      [toRegistrationNumber(`REG-${orgId}`)]:
+        wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+          ? buildReadExporterRegistration({
+              ...registrationFields,
+              overseasSites: Object.fromEntries(
+                siteNumbers.map((number) => [
+                  number,
+                  {
+                    name: 'Site 1',
+                    address: {
+                      line1: '1 Dock Road',
+                      townOrCity: 'Rotterdam',
+                      country: 'Netherlands'
+                    }
+                  }
+                ])
+              ),
+              accreditations: accreditationsByYear(
+                buildReadExporterAccreditation({
+                  ...accreditation,
+                  overseasSites: Object.fromEntries(
+                    siteNumbers.map((number) => [
+                      number,
+                      siteApproved
+                        ? {
+                            status: 'approved',
+                            approvedOn: calendarDate(ACCREDITED_FROM)
+                          }
+                        : { status: 'pending' }
+                    ])
+                  )
+                })
+              )
+            })
+          : buildReadReprocessorRegistration({
+              ...registrationFields,
+              reprocessingType,
+              site: { address: SITE_ADDRESS },
+              accreditations: accreditationsByYear(accreditation)
+            })
+    }
+  })
 
   return {
-    organisation: {
-      id,
-      organisationNumber: toOrganisationNumber(String(orgId)),
-      companyDetails: { name: `Operator ${orgId}` },
-      statusHistory: approvedHistory,
-      submittedToRegulator: regulator,
-      submitterContactDetails: CONTACT,
-      users: [],
-      registrations: [
-        {
-          id: registrationId,
-          registrationNumber: `REG-${orgId}`,
-          accreditationId,
-          statusHistory: approvedHistory,
-          validFrom: ACCREDITED_FROM,
-          applicationContactDetails: CONTACT,
-          approvedPersons: [],
-          submitterContactDetails: CONTACT,
-          site: { address: SITE_ADDRESS },
-          material,
-          glassRecyclingProcess,
-          wasteProcessingType,
-          reprocessingType,
-          overseasSites,
-          submittedToRegulator: regulator
-        }
-      ],
-      accreditations: [
-        {
-          id: accreditationId,
-          accreditationNumber: `ACC-${orgId}`,
-          status: 'approved',
-          prnIssuance: { tonnageBand: 'up_to_500' },
-          statusHistory: approvedHistory,
-          validFrom,
-          validTo,
-          material,
-          wasteProcessingType,
-          reprocessingType,
-          submittedToRegulator: regulator
-        }
-      ]
-    },
+    organisation: serving(
+      {
+        id,
+        organisationNumber: toOrganisationNumber(String(orgId)),
+        companyDetails: { name: `Operator ${orgId}` },
+        statusHistory: approvedHistory,
+        submittedToRegulator: regulator,
+        submitterContactDetails: CONTACT,
+        users: [],
+        registrations: [
+          {
+            id: registrationId,
+            registrationNumber: `REG-${orgId}`,
+            accreditationId,
+            statusHistory: approvedHistory,
+            validFrom: ACCREDITED_FROM,
+            applicationContactDetails: CONTACT,
+            approvedPersons: [],
+            submitterContactDetails: CONTACT,
+            site: { address: SITE_ADDRESS },
+            material,
+            glassRecyclingProcess,
+            wasteProcessingType,
+            reprocessingType,
+            overseasSites,
+            submittedToRegulator: regulator
+          }
+        ],
+        accreditations: [
+          {
+            id: accreditationId,
+            accreditationNumber: `ACC-${orgId}`,
+            status: 'approved',
+            prnIssuance: { tonnageBand: 'up_to_500' },
+            statusHistory: approvedHistory,
+            validFrom,
+            validTo,
+            material,
+            wasteProcessingType,
+            reprocessingType,
+            submittedToRegulator: regulator
+          }
+        ]
+      },
+      served
+    ),
     ledgerId: {
       organisationId: id,
       registrationId,
@@ -155,7 +366,7 @@ const makeOperator = ({
       organisationNumber: toOrganisationNumber(String(orgId)),
       registrationNumber: toRegistrationNumber(`REG-${orgId}`),
       accreditationNumber: toAccreditationNumber(`ACC-${orgId}`),
-      year: utcYearOf(validFrom)
+      year: toYear(2026)
     },
     summaryLogId: `log-${orgId}`
   }
@@ -270,17 +481,50 @@ const sentOnRow = (rowId, date, tonnage) => ({
  *
  * @param {ReturnType<typeof makeOperator>} operator
  */
-const registeredOnly = ({ organisation }) => ({
-  ...organisation,
-  registrations: organisation.registrations.map((registration) => ({
-    ...registration,
-    accreditationId: null
-  })),
-  accreditations: []
-})
+const registeredOnly = ({ organisation }) =>
+  serving(
+    {
+      ...organisation,
+      registrations: organisation.registrations.map((registration) => ({
+        ...registration,
+        accreditationId: null
+      })),
+      accreditations: []
+    },
+    servedWith(organisation, asRegisteredOnly)
+  )
 
 /**
- * @typedef {Pick<import('#reports/repository/port.js').CreateReportParams, 'organisationNumber' | 'registrationNumber' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
+ * The same operator whose accreditation is held outside re-ex: the stored
+ * organisation holds only its registration, and the read model serves the
+ * accreditation, approved on `approvedOn`.
+ *
+ * @param {ReturnType<typeof makeOperator>} operator
+ * @param {AccreditationNumber} accreditationNumber
+ * @param {string} approvedOn - `YYYY-MM-DD`
+ */
+const heldOutside = (operator, accreditationNumber, approvedOn) => {
+  const stored = registeredOnly(operator)
+  return serving(
+    stored,
+    servedWith(stored, () => ({
+      accreditations: {
+        2026: {
+          accreditationNumber,
+          prnIssuance: { tonnageBand: 'up_to_500' },
+          status: {
+            current: 'approved',
+            timeline: [changed('approved', approvedOn)]
+          },
+          year: toYear(2026)
+        }
+      }
+    }))
+  )
+}
+
+/**
+ * @typedef {Pick<CreateReportParams, 'organisationNumber' | 'registrationNumber' | 'year' | 'cadence' | 'period'>} MonthlyReportRef
  */
 
 /**
@@ -289,17 +533,33 @@ const registeredOnly = ({ organisation }) => ({
  *
  * @template {{ accreditations: { statusHistory: StatusHistoryEntry[] }[] }} Organisation
  * @param {Organisation} organisation
- * @param {AccreditationStatus} status
+ * @param {StoredAccreditationStatus} status
  * @param {StatusHistoryEntry[]} transitions
+ * @param {ServedOrganisation} [served] - what the read model serves after the change, the transitions added to the served timeline unless given
  */
-const withAccreditationStatus = (organisation, status, transitions) => ({
-  ...organisation,
-  accreditations: organisation.accreditations.map((accreditation) => ({
-    ...accreditation,
-    status,
-    statusHistory: [...accreditation.statusHistory, ...transitions]
-  }))
-})
+const withAccreditationStatus = (
+  organisation,
+  status,
+  transitions,
+  served = servedWith(
+    organisation,
+    accreditationNow(
+      status,
+      transitions.map((t) => ({ ...t, updatedAt: String(t.updatedAt) }))
+    )
+  )
+) =>
+  serving(
+    {
+      ...organisation,
+      accreditations: organisation.accreditations.map((accreditation) => ({
+        ...accreditation,
+        status,
+        statusHistory: [...accreditation.statusHistory, ...transitions]
+      }))
+    },
+    served
+  )
 
 /**
  * The organisation with its accreditation cancelled on the given day. The
@@ -337,16 +597,20 @@ const reinstatedOn = (organisation, day) =>
  *
  * @param {ReturnType<typeof makeOperator>} operator
  */
-const neverAccredited = ({ organisation }) => ({
-  ...organisation,
-  accreditations: organisation.accreditations.map(
-    ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) => ({
-      ...accreditation,
-      status: ACCREDITATION_STATUS.CREATED,
-      statusHistory: [approvedHistory[0]]
-    })
+const neverAccredited = ({ organisation }) =>
+  serving(
+    {
+      ...organisation,
+      accreditations: organisation.accreditations.map(
+        ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) => ({
+          ...accreditation,
+          status: ACCREDITATION_STATUS.CREATED,
+          statusHistory: [approvedHistory[0]]
+        })
+      )
+    },
+    servedWith(organisation, asRegisteredOnly)
   )
-})
 
 /**
  * The same operator whose approval was reverted, which leaves the validity
@@ -354,17 +618,21 @@ const neverAccredited = ({ organisation }) => ({
  *
  * @param {ReturnType<typeof makeOperator>} operator
  */
-const approvalReverted = ({ organisation }) => ({
-  ...organisation,
-  accreditations: organisation.accreditations.map((accreditation) => ({
-    ...accreditation,
-    status: ACCREDITATION_STATUS.CREATED,
-    statusHistory: [
-      ...accreditation.statusHistory,
-      { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
-    ]
-  }))
-})
+const approvalReverted = ({ organisation }) =>
+  serving(
+    {
+      ...organisation,
+      accreditations: organisation.accreditations.map((accreditation) => ({
+        ...accreditation,
+        status: ACCREDITATION_STATUS.CREATED,
+        statusHistory: [
+          ...accreditation.statusHistory,
+          { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' }
+        ]
+      }))
+    },
+    servedWith(organisation, asRegisteredOnly)
+  )
 
 /**
  * The monthly report an operator submitted for one period of 2026.
@@ -393,10 +661,8 @@ const monthlyReport = ({ organisation }, period) => ({
  *   submissions: any[],
  *   reports?: MonthlyReportRef[],
  *   unsubmittedReports?: MonthlyReportRef[],
- *   overseasSites?: import('#overseas-sites/repository/port.js').OverseasSite[],
- *   externalAccreditations?: ExternalAccreditation[],
  *   readModelOrganisations?: any[],
- *   months?: import('#common/helpers/dates/year-month.js').YearMonth[],
+ *   months?: YearMonth[],
  *   now?: Date
  * }} options
  */
@@ -405,8 +671,6 @@ const run = async ({
   submissions,
   reports = [],
   unsubmittedReports = [],
-  overseasSites = [],
-  externalAccreditations = [],
   readModelOrganisations = organisations,
   months = JANUARY_TO_JUNE_2026,
   now = NOW
@@ -418,7 +682,7 @@ const run = async ({
   for (const report of unsubmittedReports) {
     await buildUnsubmittedReport(seededReports, report)
   }
-  /** @type {import('#reports/repository/port.js').ReportsRepository} */
+  /** @type {ReportsRepository} */
   const reportsRepository = {
     ...seededReports,
     findAllPeriodicReports: async () => {
@@ -450,27 +714,13 @@ const run = async ({
   )()
 
   const logger = { info: vi.fn(), warn: vi.fn() }
-  const readModelLogger = { warn: vi.fn() }
-
-  const organisationAdministrationRepository =
-    createInMemoryOrganisationsRepository(
-      organisations.map((organisation) => partialMock(organisation))
-    )()
 
   const table = await buildWasteBalanceTable({
     ledgerRepository,
     summaryLogRowStatesRepository,
-    organisationAdministrationRepository,
     organisationReadRepository: createInMemoryOrganisationReadRepository(
-      await createInMemoryOrganisationsRepository(
-        readModelOrganisations.map((organisation) => partialMock(organisation))
-      )().findAll(),
-      externalAccreditations
-    )({
-      overseasSitesRepository:
-        createInMemoryOverseasSitesRepository(overseasSites)(),
-      logger: readModelLogger
-    }),
+      readModelOrganisations.map(servedOf)
+    )(),
     reportsRepository,
     logger: partialMock(logger),
     year: yearOf(months[0]),
@@ -478,10 +728,10 @@ const run = async ({
     now
   })
 
-  return { table, logger, readModelLogger }
+  return { table, logger }
 }
 
-/** @type {import('#market-insights/domain/waste-balance-figures.js').PublishedWasteBalanceFigures & import('#market-insights/application/operator-counts.js').OperatorCounts} */
+/** @type {PublishedWasteBalanceFigures & OperatorCounts} */
 const NO_ACTIVITY = {
   totalCredited: 0,
   eligibleForWasteBalance: 0,
@@ -496,7 +746,7 @@ const NO_ACTIVITY = {
  * their operator counts. The table carries a zero cell for every other
  * combination, which these tests are not about.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const reported = (table) =>
   Object.entries(table.data.months).flatMap(([month, { figures }]) =>
@@ -522,7 +772,7 @@ const reported = (table) =>
  * One of the operator counts of every cell where it is not zero, keyed
  * `month material type`.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  * @param {'operatorCount' | 'submittingOperatorCount'} [count]
  */
 const operatorCounts = (table, count = 'operatorCount') =>
@@ -540,7 +790,7 @@ const operatorCounts = (table, count = 'operatorCount') =>
   )
 
 /**
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const submittingOperatorCounts = (table) =>
   operatorCounts(table, 'submittingOperatorCount')
@@ -549,7 +799,7 @@ const submittingOperatorCounts = (table) =>
  * The operator counts of every row's whole-period total that any operator
  * was accredited for, keyed `material type`.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const periodOperatorCounts = (table) =>
   Object.fromEntries(
@@ -568,7 +818,7 @@ const periodOperatorCounts = (table) =>
  * The monthly report counts the table carries, one pair per month served and
  * one for the period.
  *
- * @param {import('./waste-balance-table.js').WasteBalanceTable} table
+ * @param {WasteBalanceTable} table
  */
 const monthlyReports = ({ data: { months, period } }) => ({
   byMonth: Object.fromEntries(
@@ -677,23 +927,6 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('expects no report after the accreditation ends', async () => {
-      const operator = makeOperator({
-        orgId: 500026,
-        validFrom: '2026-01-01',
-        validTo: '2026-03-31'
-      })
-
-      const { table } = await run({
-        organisations: [operator.organisation],
-        submissions: []
-      })
-
-      expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0])
-      )
-    })
-
     it('expects reports for the months before the accreditation was cancelled, not the month it was cancelled in, and counts those it filed', async () => {
       const operator = makeOperator({ orgId: 500027 })
 
@@ -747,7 +980,7 @@ describe('buildWasteBalanceTable', () => {
       )
     })
 
-    it('keeps expecting reports across the window after an approval is reverted', async () => {
+    it('expects nothing of an accreditation whose approval was reverted', async () => {
       const operator = makeOperator({ orgId: 500029 })
 
       const { table } = await run({
@@ -756,7 +989,7 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(monthlyReports(table)).toEqual(
-        perMonth([1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0])
+        perMonth([0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0])
       )
     })
 
@@ -835,11 +1068,27 @@ describe('buildWasteBalanceTable', () => {
      * @param {ReturnType<typeof makeOperator>} first
      * @param {ReturnType<typeof makeOperator>} second
      */
-    const oneBusiness = ({ organisation }, { organisation: other }) => ({
-      ...organisation,
-      registrations: [...organisation.registrations, ...other.registrations],
-      accreditations: [...organisation.accreditations, ...other.accreditations]
-    })
+    const oneBusiness = ({ organisation }, { organisation: other }) =>
+      serving(
+        {
+          ...organisation,
+          registrations: [
+            ...organisation.registrations,
+            ...other.registrations
+          ],
+          accreditations: [
+            ...organisation.accreditations,
+            ...other.accreditations
+          ]
+        },
+        {
+          ...servedOf(organisation),
+          registrations: {
+            ...servedOf(organisation).registrations,
+            ...servedOf(other).registrations
+          }
+        }
+      )
 
     it('counts every operator owed a report for the month, whether or not the figure includes its tonnage', async () => {
       const crediting = makeOperator({ orgId: 500030 })
@@ -1119,13 +1368,16 @@ describe('buildWasteBalanceTable', () => {
         makeOperator({ orgId: 500050 }).organisation,
         '2026-02-10'
       )
-      const withoutWindow = {
-        ...cancelled,
-        accreditations: cancelled.accreditations.map(
-          ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) =>
-            accreditation
-        )
-      }
+      const withoutWindow = serving(
+        {
+          ...cancelled,
+          accreditations: cancelled.accreditations.map(
+            ({ validFrom: _validFrom, validTo: _validTo, ...accreditation }) =>
+              accreditation
+          )
+        },
+        servedWith(cancelled, asRegisteredOnly)
+      )
 
       const { table } = await run({
         organisations: [withoutWindow],
@@ -1133,21 +1385,6 @@ describe('buildWasteBalanceTable', () => {
       })
 
       expect(operatorCounts(table)).toEqual({})
-    })
-
-    it('counts an operator in the month its accreditation window ends', async () => {
-      const ending = makeOperator({ orgId: 500048, validTo: '2026-03-10' })
-
-      const { table } = await run({
-        organisations: [ending.organisation],
-        submissions: []
-      })
-
-      expect(operatorCounts(table)).toEqual({
-        '2026-01 plastic reprocessor': 1,
-        '2026-02 plastic reprocessor': 1,
-        '2026-03 plastic reprocessor': 1
-      })
     })
 
     it('counts an operator in each material it reports', async () => {
@@ -1301,23 +1538,8 @@ describe('buildWasteBalanceTable', () => {
       const accreditationNumber = toAccreditationNumber('ACC-EXT-500061')
 
       const { table } = await run({
-        organisations: [registeredOnly(operator)],
-        externalAccreditations: [
-          buildExternalAccreditation({
-            registrationNumber: operator.ledgerId.registrationNumber,
-            year: operator.ledgerId.year,
-            accreditationNumber,
-            status: {
-              current: 'approved',
-              timeline: [
-                {
-                  status: 'approved',
-                  at: '2026-03-01T00:00:00.000Z',
-                  updatedAt: '2026-03-01T00:00:00.000Z'
-                }
-              ]
-            }
-          })
+        organisations: [
+          heldOutside(operator, accreditationNumber, '2026-03-01')
         ],
         submissions: [
           {
@@ -1349,25 +1571,25 @@ describe('buildWasteBalanceTable', () => {
         table.data.period.operatorCounts[MATERIAL.PLASTIC][
           WASTE_PROCESSING_TYPE.REPROCESSOR
         ]
-      ).toEqual({ operatorCount: 0, submittingOperatorCount: 1 })
+      ).toEqual({ operatorCount: 1, submittingOperatorCount: 1 })
     })
   })
 
   describe('an exported load', () => {
     /**
-     * @param {import('#overseas-sites/repository/port.js').OverseasSite} site
+     * @param {OverseasSite} site
      */
     const eligibleExportTo = async (site) => {
       const exporter = makeOperator({
         orgId: 500064,
         wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
         reprocessingType: undefined,
-        overseasSites: { '099': { overseasSiteId: site.id } }
+        overseasSites: { '099': { overseasSiteId: site.id } },
+        siteApproved: site.validFrom !== undefined
       })
 
       const { table } = await run({
         organisations: [exporter.organisation],
-        overseasSites: [site],
         submissions: [
           { ...exporter, rows: [exportedRow('row-1', '2026-02-10', 30)] }
         ]
@@ -1395,23 +1617,8 @@ describe('buildWasteBalanceTable', () => {
       const accreditationNumber = toAccreditationNumber('ACC-EXT-500063')
 
       const { table } = await run({
-        organisations: [registeredOnly(operator)],
-        externalAccreditations: [
-          buildExternalAccreditation({
-            registrationNumber: operator.ledgerId.registrationNumber,
-            year: operator.ledgerId.year,
-            accreditationNumber,
-            status: {
-              current: 'approved',
-              timeline: [
-                {
-                  status: 'approved',
-                  at: '2025-12-01T00:00:00.000Z',
-                  updatedAt: '2025-12-01T00:00:00.000Z'
-                }
-              ]
-            }
-          })
+        organisations: [
+          heldOutside(operator, accreditationNumber, '2025-12-01')
         ],
         submissions: [
           {
@@ -1447,7 +1654,8 @@ describe('buildWasteBalanceTable', () => {
             [
               { status: ACCREDITATION_STATUS.CREATED, updatedAt: '2026-02-01' },
               { status: ACCREDITATION_STATUS.APPROVED, updatedAt: '2026-04-20' }
-            ]
+            ],
+            servedOf(operator.organisation)
           )
         ],
         submissions: [
@@ -1471,39 +1679,6 @@ describe('buildWasteBalanceTable', () => {
         sentOnDeductions: 0,
         netCredit: 70
       })
-    })
-  })
-
-  describe('a registration the stored organisations do not hold yet', () => {
-    it('publishes its figures without counting its operator as submitting, and names the registration', async () => {
-      const operator = makeOperator({ orgId: 500062 })
-
-      const { table, logger } = await run({
-        organisations: [],
-        readModelOrganisations: [operator.organisation],
-        submissions: [
-          { ...operator, rows: [receivedRow('row-1', '2026-02-10', 40)] }
-        ]
-      })
-
-      expect(
-        table.data.months[toYearMonth('2026-02')].figures[MATERIAL.PLASTIC][
-          WASTE_PROCESSING_TYPE.REPROCESSOR
-        ]
-      ).toEqual({
-        ...NO_ACTIVITY,
-        totalCredited: 40,
-        eligibleForWasteBalance: 40,
-        netCredit: 40
-      })
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          event: expect.objectContaining({
-            action: 'market_insights_registration_uncounted',
-            reference: operator.ledgerId.registrationNumber
-          })
-        })
-      )
     })
   })
 
@@ -1707,6 +1882,29 @@ describe('buildWasteBalanceTable', () => {
     })
   })
 
+  describe('a row whose processing type has no template', () => {
+    const operator = makeOperator({ orgId: 500012 })
+
+    it('fails rather than leaving the row out', async () => {
+      await expect(
+        run({
+          organisations: [operator.organisation],
+          submissions: [
+            {
+              ...operator,
+              rows: [
+                {
+                  ...receivedRow('row-1', '2026-03-10', 50),
+                  processingType: 'UNKNOWN'
+                }
+              ]
+            }
+          ]
+        })
+      ).rejects.toThrow('No UNKNOWN summary log template for 2026')
+    })
+  })
+
   describe('a month after the window', () => {
     const operator = makeOperator({ orgId: 500012 })
 
@@ -1757,7 +1955,6 @@ describe('buildWasteBalanceTable', () => {
         plasticExporter.organisation,
         paperReprocessor.organisation
       ],
-      overseasSites: [approvedOverseasSite],
       submissions: [
         {
           ...paperReprocessor,
@@ -1831,7 +2028,7 @@ describe('buildWasteBalanceTable', () => {
     expect(reported(table)).toEqual([])
     expect(logger.warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining('ACC-500009'),
+        message: expect.stringContaining('ACC-500009 for 2026'),
         event: expect.objectContaining({
           action: 'market_insights_partition_unmatched',
           reference: 'ACC-500009'

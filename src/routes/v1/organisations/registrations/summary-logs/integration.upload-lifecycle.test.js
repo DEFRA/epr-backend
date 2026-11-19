@@ -19,7 +19,9 @@ import {
   buildPostUrl,
   pollForValidation,
   createStandardMeta,
-  createTestInfrastructure
+  createTestInfrastructure,
+  TEST_ORGANISATION_NUMBER,
+  TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
 
 describe('Summary logs upload lifecycle', () => {
@@ -34,16 +36,12 @@ describe('Summary logs upload lifecycle', () => {
     organisationId = new ObjectId().toString()
     registrationId = new ObjectId().toString()
 
-    const result = await createTestInfrastructure(
-      organisationId,
-      registrationId,
-      {
-        'file-123': {
-          meta: createStandardMeta('REPROCESSOR_INPUT'),
-          data: {}
-        }
+    const result = await createTestInfrastructure({
+      'file-123': {
+        meta: createStandardMeta('REPROCESSOR_INPUT'),
+        data: {}
       }
-    )
+    })
     server = result.server
     summaryLogsRepository = result.summaryLogsRepository
   })
@@ -100,7 +98,7 @@ describe('Summary logs upload lifecycle', () => {
     it('should log completion with file location', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=re-ex-summary-logs, s3Key=/organisations/${organisationId}/registrations/${registrationId}/${fileId}/${filename}`,
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=re-ex-summary-logs, s3Key=/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/${fileId}/${filename}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,

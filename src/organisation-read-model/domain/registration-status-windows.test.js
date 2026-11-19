@@ -3,11 +3,13 @@ import { standingByDate } from './registration-standing.js'
 import { registrationStatusWindows } from './registration-status-windows.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Registration, StatusTimeline } from './model.js' */
+/** @import { AccreditationStatus, RegistrationStatus, StatusTimeline } from './model.js' */
+/** @import { StandingSource } from './registration-standing.js' */
 
 /**
- * @param {string} status
- * @returns {(date: string, time?: string) => StatusTimeline[number]}
+ * @template {string} S
+ * @param {S} status
+ * @returns {(date: string, time?: string) => StatusTimeline<S>[number]}
  */
 const changeTo =
   (status) =>
@@ -16,7 +18,6 @@ const changeTo =
     return { status, at, updatedAt: at }
   }
 
-const createdOn = changeTo('created')
 const approvedOn = changeTo('approved')
 const suspendedOn = changeTo('suspended')
 const cancelledOn = changeTo('cancelled')
@@ -26,8 +27,8 @@ const REGISTERED_LAST_YEAR = [approvedOn('2025-06-02')]
 /**
  * @param {{
  *   year?: Year,
- *   registration?: StatusTimeline,
- *   accreditations?: Record<number, StatusTimeline>
+ *   registration?: StatusTimeline<RegistrationStatus>,
+ *   accreditations?: Record<number, StatusTimeline<AccreditationStatus>>
  * }} params
  */
 const windows = ({
@@ -35,23 +36,19 @@ const windows = ({
   registration = REGISTERED_LAST_YEAR,
   accreditations = {}
 }) => {
-  const source = /** @type {Registration} */ (
-    /** @type {unknown} */ ({
-      status: { timeline: registration },
-      accreditations: Object.fromEntries(
-        Object.entries(accreditations).map(([accreditationYear, timeline]) => [
-          accreditationYear,
-          { status: { timeline } }
-        ])
-      )
-    })
-  )
+  /** @type {StandingSource} */
+  const source = {
+    status: { timeline: registration },
+    accreditations: Object.fromEntries(
+      Object.entries(accreditations).map(([accreditationYear, timeline]) => [
+        accreditationYear,
+        { status: { timeline }, year: toYear(Number(accreditationYear)) }
+      ])
+    )
+  }
 
   return registrationStatusWindows(
-    {
-      ...source,
-      standingByDate: { [year]: standingByDate(source, year) }
-    },
+    { standingByDate: { [year]: standingByDate(source, year) } },
     year
   )
 }
@@ -116,18 +113,11 @@ describe('registrationStatusWindows', () => {
       })
     })
 
-    it('stays registered-only while an accreditation is not yet approved', () => {
-      expect(
-        windows({ accreditations: { 2026: [createdOn('2026-03-01')] } })
-      ).toEqual({
-        registeredOnly: [WHOLE_YEAR],
-        accredited: []
-      })
-    })
-
     it('stays registered-only when accredited only in another year', () => {
       expect(
-        windows({ accreditations: { 2025: [approvedOn('2025-07-01')] } })
+        windows({
+          accreditations: { 2025: [approvedOn('2025-07-01')] }
+        })
       ).toEqual({
         registeredOnly: [WHOLE_YEAR],
         accredited: []
@@ -138,7 +128,9 @@ describe('registrationStatusWindows', () => {
   describe('registered and accredited', () => {
     it('is accredited across the full year', () => {
       expect(
-        windows({ accreditations: { 2026: [approvedOn('2026-01-01')] } })
+        windows({
+          accreditations: { 2026: [approvedOn('2026-01-01')] }
+        })
       ).toEqual({
         registeredOnly: [],
         accredited: [WHOLE_YEAR]
@@ -148,7 +140,9 @@ describe('registrationStatusWindows', () => {
     describe('accredited from mid-year', () => {
       it('is registered-only until the accreditation starts', () => {
         expect(
-          windows({ accreditations: { 2026: [approvedOn('2026-07-01')] } })
+          windows({
+            accreditations: { 2026: [approvedOn('2026-07-01')] }
+          })
         ).toEqual({
           registeredOnly: [range('2026-01-01', '2026-06-30')],
           accredited: [range('2026-07-01', '2026-12-31')]
@@ -157,7 +151,9 @@ describe('registrationStatusWindows', () => {
 
       it('is registered-only for exactly the first quarter when accredited on 1 April', () => {
         expect(
-          windows({ accreditations: { 2026: [approvedOn('2026-04-01')] } })
+          windows({
+            accreditations: { 2026: [approvedOn('2026-04-01')] }
+          })
         ).toEqual({
           registeredOnly: [range('2026-01-01', '2026-03-31')],
           accredited: [range('2026-04-01', '2026-12-31')]
@@ -166,7 +162,9 @@ describe('registrationStatusWindows', () => {
 
       it('splits a quarter when accredited part way through it', () => {
         expect(
-          windows({ accreditations: { 2026: [approvedOn('2026-02-15')] } })
+          windows({
+            accreditations: { 2026: [approvedOn('2026-02-15')] }
+          })
         ).toEqual({
           registeredOnly: [range('2026-01-01', '2026-02-14')],
           accredited: [range('2026-02-15', '2026-12-31')]
@@ -399,11 +397,9 @@ describe('registrationStatusWindows', () => {
   })
 
   it('has no windows for a year with no status dates', () => {
-    const registration = /** @type {Registration} */ (
-      /** @type {unknown} */ ({ standingByDate: {} })
-    )
-
-    expect(registrationStatusWindows(registration, toYear(2026))).toEqual({
+    expect(
+      registrationStatusWindows({ standingByDate: {} }, toYear(2026))
+    ).toEqual({
       registeredOnly: [],
       accredited: []
     })

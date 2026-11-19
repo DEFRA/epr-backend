@@ -2,6 +2,7 @@ import Boom from '@hapi/boom'
 
 import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 
 /**
  * @import Joi from 'joi'
@@ -40,7 +41,10 @@ export const atReportKeys = (
         await findOrganisationAndRegistrationReadModels(request)
 
       const accreditation = accredited
-        ? registration.accreditations[/** @type {Year} */ (request.params.year)]
+        ? accreditationForYear(
+            registration,
+            /** @type {Year} */ (request.params.year)
+          )
         : null
       if (accreditation === undefined) {
         throw Boom.notFound('Accreditation not found')

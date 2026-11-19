@@ -4,19 +4,11 @@ import {
   materialFromSpreadsheet,
   metaText
 } from '#domain/summary-logs/stored-meta.js'
+import { everyTemplateTable } from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
-import * as exporter from '#domain/summary-logs/table-schemas/exporter/fields.js'
-import * as exporterRegisteredOnly from '#domain/summary-logs/table-schemas/exporter-registered-only/fields.js'
-import * as reprocessorInput from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
-import * as reprocessorOutput from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
-import * as reprocessorRegisteredOnly from '#domain/summary-logs/table-schemas/reprocessor-registered-only/fields.js'
-import * as shared from '#domain/summary-logs/table-schemas/shared/fields.js'
-
 /** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
+/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */
@@ -84,45 +76,21 @@ export const METADATA_COL_INDEX = Object.freeze(
 // Both fields are already rendered in the metadata prefix:
 //   ROW_ID            -> 'Row ID'
 //   processingType    -> 'Operator Processing Type'
-// `findDistinctDataKeys` surfaces every key on `record.data`, including
-// `processingType`, so exclude them here to avoid duplicate columns.
+// A row's `data` carries both, so exclude them here to avoid duplicate columns.
 const FIELDS_NEVER_EXPORTED = new Set(['ROW_ID', 'processingType'])
 
-const collectFieldNames = (mod) =>
-  Object.values(mod)
-    .filter((v) => v && typeof v === 'object')
-    .flatMap((v) => Object.values(v))
-    .filter((v) => typeof v === 'string')
-
-/**
- * Field names declared in any summary-log table-schema's *_FIELDS constant.
- * Used as the baseline column set; runtime-observed keys are unioned on top
- * to capture template columns that have no FIELD constant in code.
- */
+/** Every column of every year's templates. */
 export const SCHEMA_FIELD_NAMES = Object.freeze(
   Array.from(
     new Set(
-      [
-        exporter,
-        exporterRegisteredOnly,
-        reprocessorInput,
-        reprocessorOutput,
-        reprocessorRegisteredOnly,
-        shared
-      ].flatMap(collectFieldNames)
+      everyTemplateTable().flatMap(({ schema }) => schema.requiredHeaders)
     )
   ).filter((f) => !FIELDS_NEVER_EXPORTED.has(f))
 )
 
 /**
- * Compute the data-field column list by unioning the schema-declared FIELD
- * constants with any keys observed at runtime on actual `record.data` objects.
- *
- * The schema baseline ensures all known templates have stable columns even
- * when no records exist for them yet. The observed-keys union picks up
- * template columns that exist in spreadsheets but are not declared in any
- * `*_FIELDS` constant (e.g. `WASTE_TRANSFER_NOTE`,
- * `BILL_OF_LANDING_REFERENCE_NUMBER`).
+ * Every template column plus any other key observed on the given rows' `data`,
+ * alphabetically.
  *
  * @param {Iterable<string>} observedKeys
  * @returns {string[]}
@@ -136,6 +104,22 @@ export const buildDataFieldColumns = (observedKeys) => {
   }
   return Array.from(all).sort((a, b) => a.localeCompare(b))
 }
+
+/** Every template column, alphabetically. */
+export const TEMPLATE_DATA_FIELD_COLUMNS = buildDataFieldColumns([])
+
+const TEMPLATE_COLUMNS = new Set(SCHEMA_FIELD_NAMES)
+
+/**
+ * The keys of a row's `data` that no template declares, so no column carries.
+ *
+ * @param {Record<string, unknown>} data
+ * @returns {string[]}
+ */
+export const undeclaredDataKeys = (data) =>
+  Object.keys(data).filter(
+    (key) => !TEMPLATE_COLUMNS.has(key) && !FIELDS_NEVER_EXPORTED.has(key)
+  )
 
 /**
  * Compose the full header row from the fixed metadata prefix and the dynamic
@@ -281,8 +265,8 @@ export const buildSubmissionHeaderRow = (dataFieldColumns) => [
 
 /**
  * @typedef {Object} BuildSubmissionDataRowInput
- * @property {Organisation} org
- * @property {Registration} registration
+ * @property {Pick<ReadModelOrganisation, 'name'>} org
+ * @property {Pick<ReadModelRegistration, 'submittedToRegulator'>} registration
  * @property {SummaryLogMeta | undefined} meta - The submission's stored cover sheet.
  * @property {string} submittedAt
  * @property {Record<string, any>} data - Coerced committed row data, carrying `processingType`.
@@ -311,8 +295,8 @@ export const buildSubmissionDataRow = ({
   dataFieldColumns
 }) => {
   const metadata = [
-    uppercaseString(registration.submittedToRegulator),
-    org.companyDetails.name,
+    uppercaseString(registration.submittedToRegulator.code),
+    org.name,
     metaText(meta?.REGISTRATION_NUMBER),
     materialFromSpreadsheet(meta?.MATERIAL) ?? '',
     data.processingType,

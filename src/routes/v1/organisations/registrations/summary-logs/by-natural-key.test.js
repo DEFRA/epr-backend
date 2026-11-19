@@ -1,5 +1,15 @@
 import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  REPROCESSOR_NUMBER,
+  accreditation,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -12,25 +22,15 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
-  toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import {
-  summaryLogFactory,
-  withoutAccreditationId
-} from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { auditSummaryLogDownload } from '#root/auditing/summary-logs.js'
 import { config } from '#root/config.js'
-import {
-  ACCREDITATION_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -51,7 +51,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
   auditSummaryLogDownload: vi.fn()
 }))
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const REGISTERED_ONLY_NUMBER = toRegistrationNumber('R26ER5001180099PL')
 const YEAR = toYear(2026)
 
 const accredited = accreditation()
@@ -65,19 +65,35 @@ const organisation = buildOrganisation({
 })
 
 const { organisationNumber } = organisation
+
+/** The organisation as the read model serves it. */
+const servedOrganisation = buildReadOrganisation({
+  organisationNumber,
+  registrations: {
+    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      accreditations: accreditationsByYear(
+        buildReadAccreditation({
+          year: YEAR,
+          accreditationNumber: ACCREDITATION_NUMBER
+        })
+      )
+    })
+  }
+})
 const registeredOnlyLog = {
   registrationId: registeredOnlyRegistration.id,
   accreditationId: null,
   organisationNumber,
-  registrationNumber: toRegistrationNumber(REGISTERED_ONLY_NUMBER),
+  registrationNumber: REGISTERED_ONLY_NUMBER,
   accreditationNumber: null
 }
 const accreditedLog = {
   registrationId: accreditedRegistration.id,
   accreditationId: accredited.id,
   organisationNumber,
-  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  registrationNumber: REPROCESSOR_NUMBER,
+  accreditationNumber: ACCREDITATION_NUMBER
 }
 
 const registrations = `/organisations/${organisationNumber}/registrations`
@@ -87,21 +103,21 @@ const uploadAddresses = [
   {
     kind: 'registered-only',
     uploads: `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${YEAR}`,
-    registration: registeredOnlyRegistration,
-    accreditationId: null
+    registrationNumber: REGISTERED_ONLY_NUMBER,
+    accreditationNumber: null
   },
   {
     kind: 'accredited',
     uploads: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`,
-    registration: accreditedRegistration,
-    accreditationId: accredited.id
+    registrationNumber: REPROCESSOR_NUMBER,
+    accreditationNumber: ACCREDITATION_NUMBER
   }
 ]
 
 const redirect = { redirectUrl: 'https://frontend.test/redirect' }
 
-/** @param {string} uploadRegistrationId */
-const uploadCompletedFor = (uploadRegistrationId) => ({
+/** @param {string} uploadRegistrationNumber */
+const uploadCompletedFor = (uploadRegistrationNumber) => ({
   uploadStatus: 'ready',
   form: {
     summaryLogUpload: {
@@ -109,7 +125,7 @@ const uploadCompletedFor = (uploadRegistrationId) => ({
       filename: 'summary-log.xlsx',
       fileStatus: 'complete',
       s3Bucket: 're-ex-summary-logs',
-      s3Key: `/organisations/${organisation.id}/registrations/${uploadRegistrationId}/upload-1/file-uploaded`
+      s3Key: `/organisations/${organisationNumber}/registrations/${uploadRegistrationNumber}/upload-1/file-uploaded`
     }
   },
   numberOfRejectedFiles: 0
@@ -125,17 +141,11 @@ describe('summary-log routes by natural key', () => {
   /** @type {SummaryLogsRepository} */
   let summaryLogsRepository
 
-  beforeEach(async () => {
-    uploadsRepository = createInMemoryUploadsRepository()
-    summaryLogsRepository =
-      createInMemorySummaryLogsRepository()(createMockLogger())
-
-    server = await createTestServer({
+  const startServer = () =>
+    createTestServer({
       repositories: {
-        organisationAdministrationRepository:
-          createInMemoryOrganisationsRepository([partialMock(organisation)]),
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          servedOrganisation
         ]),
         summaryLogsRepository: () => summaryLogsRepository,
         uploadsRepository
@@ -147,6 +157,13 @@ describe('summary-log routes by natural key', () => {
         }
       }
     })
+
+  beforeEach(async () => {
+    uploadsRepository = createInMemoryUploadsRepository()
+    summaryLogsRepository =
+      createInMemorySummaryLogsRepository()(createMockLogger())
+
+    server = await startServer()
   })
 
   afterEach(async () => {
@@ -160,8 +177,7 @@ describe('summary-log routes by natural key', () => {
    */
 
   /**
-   * Stores a summary log under its ids and the numbers an upload stores
-   * beside them.
+   * Stores a summary log under the numbers an upload stores.
    *
    * @param {SeedOverrides} overrides
    * @param {(overrides: object) => object} build
@@ -200,8 +216,8 @@ describe('summary-log routes by natural key', () => {
 
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
-    ({ uploads, registration, accreditationId }) => {
-      it('starts the upload with its callback under the same address', async () => {
+    ({ uploads, registrationNumber, accreditationNumber }) => {
+      it('starts the upload under the registration numbers, with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
           url: uploads,
@@ -212,8 +228,8 @@ describe('summary-log routes by natural key', () => {
         expect(response.statusCode).toBe(StatusCodes.CREATED)
         const { summaryLogId } = JSON.parse(response.payload)
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber,
           callback: {
             url: `${config.get('appBaseUrl')}${uploads}/${summaryLogId}/upload-completed`,
             signature: expect.stringMatching(/^[0-9a-f]{64}$/)
@@ -227,7 +243,7 @@ describe('summary-log routes by natural key', () => {
         const response = await server.inject(
           signedCallbackRequest(
             `${uploads}/${summaryLogId}/upload-completed`,
-            uploadCompletedFor(registration.id)
+            uploadCompletedFor(registrationNumber)
           )
         )
 
@@ -238,11 +254,13 @@ describe('summary-log routes by natural key', () => {
           1
         )
         expect(stored.summaryLog).toMatchObject({
-          organisationId: organisation.id,
-          registrationId: registration.id,
+          organisationNumber,
+          registrationNumber,
           year: YEAR,
-          accreditationId
+          accreditationNumber
         })
+        expect(stored.summaryLog).not.toHaveProperty('organisationId')
+        expect(stored.summaryLog).not.toHaveProperty('registrationId')
       })
     }
   )
@@ -291,50 +309,21 @@ describe('summary-log routes by natural key', () => {
     })
   })
 
-  it('reads a summary log that holds no accreditation id without a ledger accreditation', async () => {
-    const summaryLogId = toSummaryLogId(randomUUID())
-    await summaryLogsRepository.insert(
-      summaryLogId,
-      partialMock(
-        withoutAccreditationId(
-          summaryLogFactory.validated({
-            organisationId: organisation.id,
-            ...accreditedLog,
-            year: YEAR,
-            meta: { PROCESSING_TYPE: PROCESSING_TYPES.REPROCESSOR_INPUT }
-          })
-        )
-      )
-    )
-    await waitForVersion(summaryLogsRepository, summaryLogId, 1)
-
-    const response = await server.inject({
-      method: 'GET',
-      url: `${summaryLogs}/${summaryLogId}`,
-      ...asOperator()
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-    expect(JSON.parse(response.payload)).not.toHaveProperty(
-      'ledgerAccreditation'
-    )
-  })
-
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
     const summaryLogId = toSummaryLogId(randomUUID())
 
     const response = await server.inject(
       signedCallbackRequest(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
-        uploadCompletedFor(accreditedRegistration.id)
+        uploadCompletedFor(REPROCESSOR_NUMBER)
       )
     )
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog).toMatchObject({
-      registrationId: accreditedRegistration.id,
-      accreditationId: null
+      registrationNumber: REPROCESSOR_NUMBER,
+      accreditationNumber: null
     })
   })
 
@@ -345,7 +334,7 @@ describe('summary-log routes by natural key', () => {
     await server.inject(
       signedCallbackRequest(
         `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
-        uploadCompletedFor(accreditedRegistration.id)
+        uploadCompletedFor(REPROCESSOR_NUMBER)
       )
     )
 
@@ -427,19 +416,14 @@ describe('summary-log routes by natural key', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
       expect(body).toMatchObject({ year: YEAR, status: 'validated' })
-      expect(body).not.toHaveProperty('organisationId')
-      expect(body).not.toHaveProperty('registrationId')
       expect(body).not.toHaveProperty('accreditationId')
     })
 
     it.each([
-      ['another organisation', { organisationId: 'another-organisation' }],
+      ['another organisation', { organisationNumber: '999999' }],
       [
         'another registration',
-        {
-          registrationId: registeredOnlyLog.registrationId,
-          registrationNumber: registeredOnlyLog.registrationNumber
-        }
+        { registrationNumber: registeredOnlyLog.registrationNumber }
       ]
     ])('is not found when it belongs to %s', async (_, overrides) => {
       const summaryLogId = toSummaryLogId(await seedOwn(overrides))
@@ -463,8 +447,53 @@ describe('summary-log routes by natural key', () => {
         Array(4).fill(StatusCodes.NOT_FOUND)
       )
     })
+
+    it.each([
+      [
+        'another organisation',
+        { organisationNumber: toOrganisationNumber('999999') }
+      ],
+      [
+        'another registration',
+        { registrationNumber: registeredOnlyLog.registrationNumber }
+      ]
+    ])(
+      'has no file downloaded by its file id when it belongs to %s',
+      async (_, overrides) => {
+        const fileId = `file-${randomUUID()}`
+        await seed(
+          { ...accreditedLog, ...overrides, file: { id: fileId } },
+          summaryLogFactory.submitted
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `${summaryLogs}/files/${fileId}`,
+          ...asServiceMaintainer()
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      }
+    )
+
+    it('has a file downloaded by its file id', async () => {
+      const fileId = `file-${randomUUID()}`
+      await seed(
+        { ...accreditedLog, file: { id: fileId } },
+        summaryLogFactory.submitted
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `${summaryLogs}/files/${fileId}`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.MOVED_TEMPORARILY)
+    })
   })
 
+  const unknownRegistrationCompletedPath = `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}/${randomUUID()}/upload-completed`
   const unaccreditedCompletedPath = `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
 
   it.each([
@@ -487,12 +516,21 @@ describe('summary-log routes by natural key', () => {
       redirect
     ],
     [
+      'completing an upload under an unknown registration',
+      'POST',
+      unknownRegistrationCompletedPath,
+      signedCallbackPayload(
+        unknownRegistrationCompletedPath,
+        uploadCompletedFor('R26XX0000000000PL')
+      )
+    ],
+    [
       'completing an upload under a registration with no accreditation',
       'POST',
       unaccreditedCompletedPath,
       signedCallbackPayload(
         unaccreditedCompletedPath,
-        uploadCompletedFor(registeredOnlyRegistration.id)
+        uploadCompletedFor(REGISTERED_ONLY_NUMBER)
       )
     ],
     [
@@ -591,8 +629,6 @@ describe('summary-log routes by natural key', () => {
 
       expect(auditSummaryLogDownload).toHaveBeenCalledWith(expect.anything(), {
         summaryLogId: fileId,
-        organisationId: organisation.id,
-        registrationId: registeredOnlyRegistration.id,
         organisationNumber,
         registrationNumber: registeredOnlyLog.registrationNumber,
         accreditationNumber: null

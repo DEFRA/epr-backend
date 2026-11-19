@@ -3,12 +3,8 @@ import {
   PRN_YEAR,
   buildAccreditationSnapshot
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { ObjectId } from 'mongodb'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -19,14 +15,17 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
 import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  approvedStatusFrom,
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
   ACCREDITATION_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  granted,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { PrnNumberConflictError } from '#packaging-recycling-notes/repository/port.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -48,9 +47,6 @@ vi.mock('@defra/cdp-auditing', () => ({
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-const organisationId = new ObjectId().toString()
-const registrationId = new ObjectId().toString()
-const accreditationId = new ObjectId().toString()
 const prnId = '507f1f77bcf86cd799439011'
 
 const { organisationNumber } = buildOrganisation()
@@ -58,7 +54,7 @@ const { organisationNumber } = buildOrganisation()
 const LEDGER = {
   organisationNumber,
   registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+  accreditationNumber: ACCREDITATION_NUMBER,
   year: PRN_YEAR
 }
 const prns = `/organisations/${organisationNumber}/registrations/${REPROCESSOR_NUMBER}/accreditations/2026/packaging-recycling-notes`
@@ -67,30 +63,40 @@ const prns = `/organisations/${organisationNumber}/registrations/${REPROCESSOR_N
  * The read model serving the organisation with its one accreditation,
  * approved and submitted to the EA unless overridden.
  *
- * @param {object} [overrides]
+ * @param {{
+ *   submittedToRegulator?: { code: 'ea' | 'nrw' | 'sepa' | 'niea' },
+ *   laterStatus?: 'approved' | 'suspended' | 'cancelled'
+ * }} [options]
  */
-const organisationReadRepositoryWith = async (overrides = {}) => {
-  const accredited = accreditation({
-    id: accreditationId,
-    submittedToRegulator: REGULATOR.EA,
-    ...overrides
-  })
-  const organisation = buildOrganisation({
-    id: organisationId,
+const organisationReadRepositoryWith = async ({
+  submittedToRegulator = { code: 'ea' },
+  laterStatus
+} = {}) => {
+  const timeline = approvedTimelineFrom('2026-07-01')
+  const organisation = buildReadOrganisation({
     organisationNumber,
-    statusHistory: [
-      { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
-    ],
-    registrations: [
-      reprocessor({
-        id: registrationId,
-        accreditationId,
-        submittedToRegulator: accredited.submittedToRegulator
+    registrations: {
+      [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+        submittedToRegulator,
+        accreditations: accreditationsByYear(
+          buildReadAccreditation({
+            accreditationNumber: ACCREDITATION_NUMBER,
+            status: laterStatus
+              ? {
+                  current: laterStatus,
+                  lastUpdatedAt: '2026-08-01T09:00:00.000Z',
+                  timeline: [
+                    ...timeline,
+                    { status: laterStatus, at: '2026-08-01T09:00:00.000Z' }
+                  ]
+                }
+              : approvedStatusFrom('2026-07-01')
+          })
+        )
       })
-    ],
-    accreditations: [accredited]
+    }
   })
-  return (await organisationReadRepositoryOf([partialMock(organisation)]))()
+  return createInMemoryOrganisationReadRepository([organisation])()
 }
 
 const SEED_BALANCE = { amount: 500, availableAmount: 500 }
@@ -357,7 +363,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         )
 
         organisationReadRepository = await organisationReadRepositoryWith({
-          submittedToRegulator: REGULATOR.NRW
+          submittedToRegulator: { code: REGULATOR.NRW }
         })
 
         await server.inject({
@@ -688,7 +694,6 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-        expect(response.payload).not.toContain(accreditationId)
       })
 
       it('returns 404 when PRN belongs to different organisation', async () => {
@@ -856,10 +861,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
             awaitingAuthPrn
           )
           organisationReadRepository = await organisationReadRepositoryWith({
-            statusHistory: [
-              ...granted('approved'),
-              { status, updatedAt: '2026-08-01T09:00:00.000Z' }
-            ]
+            laterStatus: /** @type {'suspended' | 'cancelled'} */ (status)
           })
 
           const response = await server.inject({
@@ -1231,10 +1233,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       it('authorises a draft while the accreditation is suspended, then refuses to issue it', async () => {
         organisationReadRepository = await organisationReadRepositoryWith({
-          statusHistory: [
-            ...granted('approved'),
-            { status: 'suspended', updatedAt: '2026-08-01T09:00:00.000Z' }
-          ]
+          laterStatus: 'suspended'
         })
 
         const authorised = await transitionTo(PRN_STATUS.AWAITING_AUTHORISATION)

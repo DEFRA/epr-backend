@@ -6,11 +6,11 @@ import { createWasteBalanceService } from '#waste-balances/application/waste-bal
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildSummaryLogRowStateEntry,
-  withNumbers
+  DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
-import { summaryLogRowStatesForRegistration } from './read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from './read-summary-log-row-states.js'
 
 /**
  * The reg-only summary-log submitted event migration closes the gap where
@@ -19,23 +19,22 @@ import { summaryLogRowStatesForRegistration } from './read-summary-log-row-state
  * against the event — a zero-delta balance event — surfacing a spurious balance.
  */
 
-const registeredOnlyLedgerId = withNumbers({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: null
-})
+const registeredOnlyLedgerId = {
+  ...DEFAULT_LEDGER_ID,
+  accreditationNumber: null
+}
 const createdBy = { id: 'system', name: 'backfill' }
 
 const seedMembership = async (summaryLogRowStatesRepository, summaryLogId) =>
   summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-    withNumbers(registeredOnlyLedgerId),
+    registeredOnlyLedgerId,
     [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
     summaryLogId
   )
 
 const emitRegOnlyEvent = (ledgerRepository, summaryLogId) =>
   createWasteBalanceService(ledgerRepository).commitSummaryLogSubmittedEvent(
-    withNumbers(registeredOnlyLedgerId),
+    registeredOnlyLedgerId,
     { summaryLogId, creditTotal: 0 },
     createdBy
   )
@@ -46,7 +45,7 @@ describe('registered-only summary-log submitted event — read-through', () => {
       createInMemorySummaryLogRowStatesRepository()()
     await seedMembership(summaryLogRowStatesRepository, 'log-1')
 
-    const states = await summaryLogRowStatesForRegistration({
+    const states = await summaryLogRowStatesForLedger({
       ledgerRepository: createInMemoryLedgerRepository()(),
       summaryLogRowStatesRepository,
       ...registeredOnlyLedgerId
@@ -63,7 +62,7 @@ describe('registered-only summary-log submitted event — read-through', () => {
 
     await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
-    const states = await summaryLogRowStatesForRegistration({
+    const states = await summaryLogRowStatesForLedger({
       ledgerRepository,
       summaryLogRowStatesRepository,
       ...registeredOnlyLedgerId
@@ -90,8 +89,6 @@ describe('registered-only summary-log submitted event — balance neutrality', (
     const ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
         buildLedgerEvent({
-          registrationId: 'reg-1',
-          accreditationId: 'acc-1',
           number: 1,
           payload: { summaryLogId: 'log-acc', creditTotal: 50 },
           closingBalance: { amount: 50, availableAmount: 50 }
@@ -101,15 +98,10 @@ describe('registered-only summary-log submitted event — balance neutrality', (
 
     await emitRegOnlyEvent(ledgerRepository, 'log-1')
 
-    const accreditedBalance = await createWasteBalanceService(
-      ledgerRepository
-    ).currentBalance(
-      withNumbers({
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
-        organisationId: 'org-1'
-      })
-    )
+    const accreditedBalance =
+      await createWasteBalanceService(ledgerRepository).currentBalance(
+        DEFAULT_LEDGER_ID
+      )
     expect(accreditedBalance).toMatchObject({ amount: 50, availableAmount: 50 })
   })
 })

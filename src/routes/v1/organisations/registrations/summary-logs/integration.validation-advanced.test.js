@@ -5,16 +5,13 @@ import {
 } from '#domain/summary-logs/status.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { ObjectId } from 'mongodb'
@@ -34,14 +31,10 @@ import {
   tableOf,
   REPROCESSED_LOADS_HEADERS,
   createReprocessedRowValues,
-  servedTestRegistration,
+  servedTestReadOrganisation,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER
 } from './integration-test-helpers.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
-
-/** @import {Organisation} from '#domain/organisations/model.js' */
 
 describe('Advanced validation scenarios', () => {
   let server
@@ -68,8 +61,6 @@ describe('Advanced validation scenarios', () => {
 
         beforeEach(async () => {
           const result = await createTestInfrastructure(
-            organisationId,
-            registrationId,
             {
               [fileId]: {
                 meta: createStandardMeta('REPROCESSOR_OUTPUT'),
@@ -206,24 +197,20 @@ describe('Advanced validation scenarios', () => {
     let uploadResponse
 
     beforeEach(async () => {
-      const result = await createTestInfrastructure(
-        organisationId,
-        registrationId,
-        {
-          [fileId]: {
-            meta: createStandardMeta('REPROCESSOR_INPUT'),
-            data: {
-              RECEIVED_LOADS_FOR_REPROCESSING: {
-                location: { sheet: 'Received', row: 7, column: 'B' },
-                headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
-                rows: [
-                  { rowNumber: 8, values: [1000, '2026-05-28T00:00:00.000Z'] }
-                ]
-              }
+      const result = await createTestInfrastructure({
+        [fileId]: {
+          meta: createStandardMeta('REPROCESSOR_INPUT'),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
+              rows: [
+                { rowNumber: 8, values: [1000, '2026-05-28T00:00:00.000Z'] }
+              ]
             }
           }
         }
-      )
+      })
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
@@ -329,8 +316,6 @@ describe('Advanced validation scenarios', () => {
       )
 
       const result = await createTestInfrastructure(
-        organisationId,
-        registrationId,
         {
           [fileId]: {
             meta: createStandardMeta('REPROCESSOR_OUTPUT'),
@@ -404,26 +389,6 @@ describe('Advanced validation scenarios', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-      const testOrg = buildOrganisation({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrations: [
-          servedTestRegistration({
-            id: registrationId,
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            formSubmission: { id: registrationId, time: new Date() },
-            submittedToRegulator: 'ea'
-          })
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          /** @type {Organisation} */ (testOrg)
-        ])()
-
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
@@ -481,13 +446,19 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'paper'
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
@@ -498,10 +469,7 @@ describe('Advanced validation scenarios', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -606,25 +574,6 @@ describe('Advanced validation scenarios', () => {
       const uploadsRepository = createInMemoryUploadsRepository()
       testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-      const testOrg = buildOrganisation({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrations: [
-          servedTestRegistration({
-            id: registrationId,
-            material: 'aluminium',
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            accreditation: null
-          })
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          /** @type {Organisation} */ (testOrg)
-        ])()
-
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
@@ -666,13 +615,19 @@ describe('Advanced validation scenarios', () => {
         }
       })
 
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'aluminium'
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository:
           createInMemorySummaryLogRowStatesRepository()(),
         ledgerRepository: createInMemoryLedgerRepository()(),
-        overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
@@ -683,10 +638,7 @@ describe('Advanced validation scenarios', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
@@ -785,25 +737,21 @@ describe('Advanced validation scenarios', () => {
     let uploadResponse
 
     beforeEach(async () => {
-      const result = await createTestInfrastructure(
-        organisationId,
-        registrationId,
-        {
-          [fileId]: {
-            meta: createStandardMeta('REPROCESSOR_INPUT'),
-            data: {
-              UNKNOWN_FUTURE_TABLE: {
-                location: { sheet: 'Unknown', row: 1, column: 'A' },
-                headers: ['ANYTHING', 'GOES', 'HERE'],
-                rows: [
-                  { rowNumber: 2, values: ['foo', 'bar', 'baz'] },
-                  { rowNumber: 3, values: ['invalid', 123, true] }
-                ]
-              }
+      const result = await createTestInfrastructure({
+        [fileId]: {
+          meta: createStandardMeta('REPROCESSOR_INPUT'),
+          data: {
+            UNKNOWN_FUTURE_TABLE: {
+              location: { sheet: 'Unknown', row: 1, column: 'A' },
+              headers: ['ANYTHING', 'GOES', 'HERE'],
+              rows: [
+                { rowNumber: 2, values: ['foo', 'bar', 'baz'] },
+                { rowNumber: 3, values: ['invalid', 123, true] }
+              ]
             }
           }
         }
-      )
+      })
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
@@ -886,36 +834,20 @@ describe('Advanced validation scenarios', () => {
       await summaryLogsRepository.insert(
         summaryLogId,
         summaryLogFactory.validated({
-          organisationId,
-          registrationId,
+          organisationNumber: TEST_ORGANISATION_NUMBER,
+          registrationNumber: TEST_REGISTRATION_NUMBER,
           validation: {},
           meta: { PROCESSING_TYPE: 'EXPORTER' }
         })
       )
 
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          /** @type {Organisation} */ (
-            buildOrganisation({
-              id: organisationId,
-              organisationNumber: TEST_ORGANISATION_NUMBER,
-              registrations: [
-                servedTestRegistration({
-                  id: registrationId,
-                  wasteProcessingType: 'exporter'
-                })
-              ]
-            })
-          )
-        ])()
-
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
           organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+            createInMemoryOrganisationReadRepository([
+              servedTestReadOrganisation({ wasteProcessingType: 'exporter' })
+            ])()
         }
       })
     })

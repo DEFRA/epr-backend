@@ -2,6 +2,10 @@ import { afterEach, describe, it, expect, vi } from 'vitest'
 import { assertPresent, partialMock } from '#test/type-helpers.js'
 import { toUploadCallbackSignature } from '#common/helpers/auth/upload-callback-signature.js'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createUploadsRepository } from './cdp-uploader.js'
 
 const callback = {
@@ -93,14 +97,17 @@ describe('bucket routing', () => {
     })
 
     await repository.initiateSummaryLogUpload({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
+      organisationNumber: toOrganisationNumber('500001'),
+      registrationNumber: toRegistrationNumber('R26ER5001180001PL'),
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
       callback
     })
 
-    expect(parseFetchBody().s3Bucket).toBe('test-summary-logs-bucket')
+    expect(parseFetchBody()).toMatchObject({
+      s3Bucket: 'test-summary-logs-bucket',
+      s3Path: '/organisations/500001/registrations/R26ER5001180001PL'
+    })
   })
 
   it('sends the callback signature in the ORS import metadata, not the callback url', async () => {
@@ -132,8 +139,8 @@ describe('bucket routing', () => {
     })
 
     await repository.initiateSummaryLogUpload({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
+      organisationNumber: toOrganisationNumber('500001'),
+      registrationNumber: toRegistrationNumber('R26ER5001180001PL'),
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
       callback

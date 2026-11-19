@@ -3,7 +3,16 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -15,9 +24,7 @@ import {
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn,
@@ -36,15 +43,7 @@ import {
   buildPrnCreationCancelledEvent,
   buildPrnIssuedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  ACCREDITATION_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { body } from '#routes/organisations/organisation-view-test-helpers.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
@@ -53,20 +52,24 @@ const { buildOrganisation } = createOrganisationBuilders()
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
-const accredited = accreditation()
-const registration = reprocessor({ accreditationId: accredited.id })
-const organisation = buildOrganisation({
-  statusHistory: [
-    { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
-  ],
-  registrations: [registration],
-  accreditations: [accredited]
+const accredited = buildReadAccreditation({
+  accreditationNumber: ACCREDITATION_NUMBER
+})
+const registration = {
+  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+}
+const organisation = buildReadOrganisation({
+  registrations: {
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      accreditations: accreditationsByYear(accredited)
+    })
+  }
 })
 
 const ownNumbers = {
   organisationNumber: organisation.organisationNumber,
   registrationNumber: registration.registrationNumber,
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  accreditationNumber: ACCREDITATION_NUMBER
 }
 const otherNumbers = {
   ...ownNumbers,
@@ -188,8 +191,8 @@ describe('PRN routes by natural key', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          organisation
         ]),
         packagingRecyclingNotesRepository: prnRepositoryFactory,
         ledgerRepository: () => ledgerRepository,
@@ -587,7 +590,7 @@ describe('PRN routes by natural key', () => {
             accreditation: expect.objectContaining({
               accreditationNumber: accredited.accreditationNumber,
               wasteProcessingType: 'reprocessor',
-              material: resolveMaterial(accredited)
+              material: 'glass_re_melt'
             })
           }
         }),
@@ -620,6 +623,28 @@ describe('PRN routes by natural key', () => {
         by: { name: 'Operator User' }
       })
       expect(body(response)).not.toHaveProperty('prnNumber')
+    })
+
+    it('draws a raised PRN from the ledger of an accreditation that has no database id', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `${prns}/${draft.id}/status`,
+        payload: { status: PRN_STATUS.AWAITING_AUTHORISATION },
+        ...asOperator()
+      })
+
+      const latest = await ledgerRepository.findLatestInLedger({
+        ...ownNumbers,
+        year: toYear(2026)
+      })
+      expect(latest).toMatchObject({
+        kind: 'prn-created',
+        payload: { prnId: draft.id },
+        closingBalance: {
+          amount: 500,
+          availableAmount: 500 - draft.tonnage
+        }
+      })
     })
 
     it("refuses a status change to another accreditation's PRN", async () => {

@@ -59,8 +59,8 @@ describe('summary-log-row-states repository registration', () => {
       indexes.map((index) => [index.name, index])
     )
 
-    expect(indexesByName).toHaveProperty('summary_log_membership')
-    expect(indexesByName.summary_log_row_state_identity_by_number.unique).toBe(
+    expect(indexesByName).toHaveProperty('summary_log_membership_by_id')
+    expect(indexesByName.summary_log_row_state_identity_by_year.unique).toBe(
       true
     )
 

@@ -1,10 +1,10 @@
 import { formatMaterialResults } from '#application/common/material-aggregation.js'
 import { add } from '#common/helpers/decimal-utils.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { DecimalValue } from '#common/helpers/decimal-utils.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 
@@ -28,7 +28,8 @@ export const aggregateAvailableBalance = async (
       ({ organisation, registrationNumber, accreditation }) => ({
         organisationNumber: organisation.organisationNumber,
         registrationNumber,
-        accreditationNumber: accreditation.accreditationNumber
+        accreditationNumber: accreditation.accreditationNumber,
+        year: accreditation.year
       })
     )
   )
@@ -50,7 +51,7 @@ export const aggregateAvailableBalance = async (
 
   const { materials, total } = formatMaterialResults(
     [...totals].map(([material, availableAmount]) => ({
-      _id: material,
+      material,
       availableAmount
     })),
     'availableAmount'

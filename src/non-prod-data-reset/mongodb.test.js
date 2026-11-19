@@ -7,8 +7,8 @@ import { describe, expect, vi } from 'vitest'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/mongodb.js'
+import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
@@ -33,7 +33,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildSummaryLogRowStateEntry,
-  withNumbers
+  DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 
@@ -195,9 +195,7 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
   return {
     organisation,
     organisationId: organisation.id,
-    registrationId: organisation.registrations[0].id,
     registrationNumber: organisation.registrations[0].registrationNumber,
-    accreditationId: organisation.accreditations[0].id,
     siteA,
     siteB
   }
@@ -206,16 +204,13 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
 const seedDownstreamForOrganisation = async (
   database,
   repositories,
-  {
-    organisation,
-    organisationId,
-    registrationId,
-    registrationNumber,
-    accreditationId
-  }
+  { organisation, organisationId, registrationNumber }
 ) => {
   await repositories.externalAccreditations.upsert(
-    buildExternalAccreditation({ registrationNumber })
+    buildExternalAccreditation({
+      organisationNumber: organisation.organisationNumber,
+      registrationNumber
+    })
   )
 
   await repositories.prns.create(
@@ -239,7 +234,9 @@ const seedDownstreamForOrganisation = async (
 
   await repositories.summaryLogs.insert(
     `summary-log-${randomUUID()}`,
-    summaryLogFactory.validating({ organisationId, registrationId })
+    summaryLogFactory.validating({
+      organisationNumber: organisation.organisationNumber
+    })
   )
 
   await repositories.systemLogs.insert(buildSystemLog({ organisationId }))
@@ -250,8 +247,9 @@ const seedDownstreamForOrganisation = async (
 
   // The ledger and its row states name the organisation by number.
   const ledgerId = {
-    ...withNumbers({ organisationId, registrationId, accreditationId }),
-    organisationNumber: organisation.organisationNumber
+    ...DEFAULT_LEDGER_ID,
+    organisationNumber: organisation.organisationNumber,
+    registrationNumber
   }
 
   await database
@@ -412,9 +410,9 @@ describe('non-prod data reset (mongo)', () => {
         })
       ).toBe(1)
       expect(
-        await database
-          .collection('summary-logs')
-          .countDocuments({ organisationId: other.organisationId })
+        await database.collection('summary-logs').countDocuments({
+          organisationNumber: other.organisation.organisationNumber
+        })
       ).toBe(1)
       expect(
         await database.collection('overseas-sites').countDocuments({
@@ -465,7 +463,9 @@ describe('non-prod data reset (mongo)', () => {
       expect(
         await database
           .collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME)
-          .countDocuments({ registrationNumber: other.registrationNumber })
+          .countDocuments({
+            organisationNumber: other.organisation.organisationNumber
+          })
       ).toBe(1)
     })
 

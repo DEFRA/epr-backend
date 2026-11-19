@@ -1,5 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import ExcelJS from 'exceljs'
 import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
@@ -183,9 +184,12 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     let seededServer
 
     beforeAll(async () => {
-      const { reportKey } = await insertAccreditedOperator(
-        register.organisationAdministrationRepository
+      const organisationAdministrationRepository =
+        createInMemoryOrganisationsRepository([])()
+      const { reportKey, servedOrganisation } = await insertAccreditedOperator(
+        organisationAdministrationRepository
       )
+      register.served.add(servedOrganisation)
       await buildSubmittedReport(register.reportsRepository, {
         ...reportKey,
         year: toYear(2026),
@@ -196,8 +200,6 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
         repositories: {
           ledgerRepository: register.ledgerRepository,
           summaryLogRowStatesRepository: register.summaryLogRowStatesRepository,
-          organisationAdministrationRepository:
-            register.organisationAdministrationRepository,
           organisationReadRepository: register.organisationReadRepository,
           reportsRepository: register.reportsRepository
         }

@@ -1,18 +1,19 @@
 import Joi from 'joi'
+import { yearSchema } from '#common/validation/year-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { ledgerKey } from '#waste-balances/application/accreditation-index.js'
+import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { indexByLedger } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { Material, WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
-/** @import { Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
+/** @import { Registration } from '#organisation-read-model/vocabulary.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 
@@ -33,11 +34,11 @@ import { indexByLedger } from '#waste-balances/application/read-model-accreditat
  * @typedef {Object} AggregatedRow
  * @property {string} organisationName
  * @property {OrganisationNumber} organisationNumber
- * @property {string} registrationNumber
- * @property {string} accreditationNumber
+ * @property {RegistrationNumber} registrationNumber
+ * @property {AccreditationNumber} accreditationNumber
  * @property {Material} material
  * @property {string} tonnageBand
- * @property {RequiredNumbers} ledgerId
+ * @property {WasteBalanceLedgerId} ledgerId
  * @property {RegistrationProcessingTypes} registration
  * @property {number} awaitingAuthorisationTonnage
  * @property {number} awaitingAcceptanceTonnage
@@ -100,7 +101,8 @@ const aggregatedRowSchema = Joi.object({
   ledgerId: Joi.object({
     organisationNumber: Joi.string().required(),
     registrationNumber: Joi.string().required(),
-    accreditationNumber: Joi.string().required()
+    accreditationNumber: Joi.string().required(),
+    year: yearSchema().required()
   }).required(),
   registration: Joi.object().required(),
   awaitingAuthorisationTonnage: Joi.number().required(),
@@ -149,14 +151,14 @@ const toAggregatedRow = (
  * regulator cannot tell apart from an operator holding nothing.
  *
  * @param {Map<string, LedgerAccreditation>} index
- * @param {RequiredNumbers} numbers
+ * @param {WasteBalanceLedgerId} numbers
  * @returns {LedgerAccreditation}
  */
 const ledgerAccreditationFor = (index, numbers) => {
   const ledgerAccreditation = index.get(ledgerKey(numbers))
   if (!ledgerAccreditation) {
     throw new Error(
-      `No organisation in the read model holds accreditation ${numbers.accreditationNumber} under registration ${numbers.registrationNumber} of organisation ${numbers.organisationNumber}`
+      `No organisation in the read model holds accreditation ${numbers.accreditationNumber} under registration ${numbers.registrationNumber} of organisation ${numbers.organisationNumber} for ${numbers.year}`
     )
   }
   return ledgerAccreditation
@@ -193,7 +195,7 @@ const registrationTypeFor = ({ wasteProcessingType, reprocessingType }) => {
  * accreditation whose ledger has no events yet holds nothing.
  *
  * @param {WasteBalanceLedgerRepository} ledgerRepository
- * @param {RequiredNumbers} ledgerId
+ * @param {WasteBalanceLedgerId} ledgerId
  */
 const balancesFor = async (ledgerRepository, ledgerId) => {
   const latest = await ledgerRepository.findLatestInLedger(ledgerId)

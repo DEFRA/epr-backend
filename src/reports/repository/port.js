@@ -137,6 +137,20 @@
  */
 
 /**
+ * Parameters for {@link ReportsRepository.markActiveReportsStaleForSummaryLog}.
+ * @typedef {RegistrationKey & {
+ *   year: Year,
+ *   summaryLogId: SummaryLogFileId,
+ *   uploadedAt: string
+ * }} MarkActiveReportsStaleForSummaryLogParams
+ */
+
+/**
+ * Parameters for {@link ReportsRepository.hasReportSubmittedSince}.
+ * @typedef {RegistrationKey & { year: Year, since: string }} HasReportSubmittedSinceParams
+ */
+
+/**
  * Parameters for {@link ReportsRepository.markActiveReportsStaleForPrnCancellation}.
  * @typedef {Object} MarkActiveReportsStaleForPrnCancellationParams
  * @property {OrganisationNumber} organisationNumber
@@ -280,12 +294,6 @@
  */
 
 /**
- * Curated subset of ReportSummary used for list-style responses
- * (e.g. the reports calendar). Excludes heavy activity payloads.
- * @typedef {Pick<ReportSummary, 'id' | 'status' | 'submissionNumber' | 'submittedAt' | 'submittedBy'>} ReportListItem
- */
-
-/**
  * @typedef {Object} ReportPerPeriod
  * @property {CalendarDate} startDate - Bare calendar date (YYYY-MM-DD), no timezone. Use
  *   startOfDay()/endOfDay() from #common/helpers/date-formatter.js to derive
@@ -392,8 +400,8 @@
  *   The periodic reports of every org/registration for one reporting year, shaped
  *   as findAllPeriodicReports shapes them.
  * @property {(reportId: string) => Promise<Report>} findReportById
- * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, summaryLogId: SummaryLogFileId, uploadedAt: string) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
- *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg,
+ * @property {(params: MarkActiveReportsStaleForSummaryLogParams) => Promise<MarkReportStaleResult[]>} markActiveReportsStaleForSummaryLog
+ *   Marks all active (in_progress / ready_to_submit) reports as stale for the given org/reg/year,
  *   skipping any report already built from `summaryLogId` or already stale from it.
  *   Sets `stale.summaryLogChanged`, leaving `stale.prnCancelled` untouched if present.
  *   Returns the per-report stale details for auditing.
@@ -412,8 +420,8 @@
  *   resubmission at the operator's own request, conditional on it still
  *   being `submitted` and not already flagged this way. Returns `null` when
  *   the write matched nothing.
- * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, since: string) => Promise<boolean>} hasReportSubmittedSince
- *   Returns true when any report for the org/reg was submitted strictly after
+ * @property {(params: HasReportSubmittedSinceParams) => Promise<boolean>} hasReportSubmittedSince
+ *   Returns true when any report for the org/reg/year was submitted strictly after
  *   `since` (a canonical ISO timestamp, as produced by toISOString throughout),
  *   read from the denormalised `status.submitted` slot. Used to detect a period
  *   closing during the summary log validate-to-submit window.

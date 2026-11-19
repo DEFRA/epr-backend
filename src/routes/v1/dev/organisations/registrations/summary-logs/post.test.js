@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { toYear } from '#common/helpers/dates/year.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
@@ -20,13 +21,17 @@ import {
 
 import { devSummaryLogsSubmitPath } from './post.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
-const ACCREDITED_YEAR = 2026
+const ACCREDITED_YEAR = toYear(2026)
 
 const DEV_ENDPOINTS_ON = { featureFlags: { devEndpoints: true } }
 
 const META = {
-  REGISTRATION_NUMBER: 'REG-123',
+  REGISTRATION_NUMBER: 'REG123',
   MATERIAL: 'Paper_and_board',
   ACCREDITATION_NUMBER: 'ACC-123'
 }
@@ -35,6 +40,7 @@ const { ACCREDITATION_NUMBER: _accreditationNumber, ...REGISTERED_ONLY_META } =
   META
 
 /** @typedef {Awaited<ReturnType<typeof createEnvironment>>} Environment */
+/** @import { Registration as ReadRegistration } from '#organisation-read-model/vocabulary.js' */
 
 // Cell values are the parsed forms, not a sheet's: a row id is a string and a
 // date is a calendar date.
@@ -178,7 +184,57 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     expect(balance?.amount ?? 0).toBe(0)
   })
 
-  it('stores the year given in the URL, resolves accreditationId from the payload, and stores the numbers', async () => {
+  it('refuses 2025, which has no templates, as the upload route would, storing nothing', async () => {
+    const env = await createEnvironment()
+    const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
+    const { organisationReadRepository } = env
+    const findByOrganisationNumber =
+      organisationReadRepository.findByOrganisationNumber
+    vi.spyOn(
+      organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockImplementation(async (...args) => {
+      const organisation = await findByOrganisationNumber(...args)
+      for (const registration of Object.values(
+        organisation?.registrations ?? {}
+      )) {
+        registration.status = {
+          ...registration.status,
+          timeline: [{ status: 'approved', at: '2025-01-01T00:00:00.000Z' }]
+        }
+      }
+      return organisation
+    })
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }]),
+      { year: 2025 }
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(JSON.parse(response.payload).message).toBe(
+      'There are no summary log templates for 2025'
+    )
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('answers not found when the read model has no such registration', async () => {
+    const env = await createEnvironment()
+    vi.spyOn(
+      env.organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockResolvedValue(null)
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+  })
+
+  it('stores the year given in the URL, resolves the accreditation from the payload, and stores the numbers', async () => {
     const env = await createEnvironment()
 
     const response = await submit(
@@ -191,14 +247,13 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     const body = JSON.parse(response.payload)
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
     expect(stored?.summaryLog.year).toBe(ACCREDITED_YEAR)
-    expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
     const { organisationNumber } =
       await env.organisationAdministrationRepository.findById(
         env.organisationId
       )
     expect(stored?.summaryLog).toMatchObject({
       organisationNumber,
-      registrationNumber: 'REG-123',
+      registrationNumber: 'REG123',
       accreditationNumber: 'ACC-123'
     })
   })
@@ -232,16 +287,16 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
     // for — validateProcessingType reports that mismatch, and the
     // registered-only template uses a different table shape from the
     // fixture above besides, so this always lands on invalid. The
-    // assertions below are only about which template and accreditationId
+    // assertions below are only about which template and accreditation
     // were resolved.
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
     expect(body.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
-    expect(stored?.summaryLog.accreditationId).toBe(env.accreditationId)
+    expect(stored?.summaryLog.accreditationNumber).toBe('ACC-123')
   })
 
-  it('stores a null accreditationId and accreditation number for a registration with no accreditation', async () => {
+  it('stores a registration with no accreditation as registered-only', async () => {
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       reprocessingType: 'input',
@@ -272,42 +327,92 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
 
     const body = JSON.parse(response.payload)
     const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
-    expect(stored?.summaryLog.accreditationId).toBeNull()
     expect(stored?.summaryLog.accreditationNumber).toBeNull()
   })
 
-  it.each([
-    { number: 'registrationNumber', owner: (/** @type {*} */ r) => r },
-    {
-      number: 'accreditationNumber',
-      owner: (/** @type {*} */ r) => r.accreditation
-    }
-  ])(
-    'refuses a summary log, storing nothing, when the $number is missing',
-    async ({ number, owner }) => {
-      const env = await createEnvironment()
-      const { organisationAdministrationRepository } = env
-      const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
-      const findRegistrationById =
-        organisationAdministrationRepository.findRegistrationById
-      vi.spyOn(
-        organisationAdministrationRepository,
-        'findRegistrationById'
-      ).mockImplementation(async (...args) => {
-        const registration = await findRegistrationById(...args)
-        delete owner(registration)[number]
-        return registration
-      })
-
-      const response = await submit(
-        env,
-        payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+  it('refuses a summary log, storing nothing, when the registrationNumber is missing', async () => {
+    const env = await createEnvironment()
+    const { organisationAdministrationRepository } = env
+    const insert = vi.spyOn(env.summaryLogsRepository, 'insert')
+    const findRegistrationById =
+      organisationAdministrationRepository.findRegistrationById
+    vi.spyOn(
+      organisationAdministrationRepository,
+      'findRegistrationById'
+    ).mockImplementation(async (...args) => {
+      const registration = /** @type {{ registrationNumber?: string }} */ (
+        await findRegistrationById(...args)
       )
+      delete registration.registrationNumber
+      return /** @type {*} */ (registration)
+    })
 
-      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-      expect(insert).not.toHaveBeenCalled()
-    }
-  )
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  /**
+   * Serves the organisation as the read model would with the registration's
+   * accreditations for each year replaced, as when they are held outside
+   * this service.
+   *
+   * @param {Environment} env
+   * @param {(registration: ReadRegistration) => ReadRegistration['accreditations']} accreditationsOf
+   */
+  const withReadModelAccreditations = (env, accreditationsOf) => {
+    const { organisationReadRepository } = env
+    const findByOrganisationNumber =
+      organisationReadRepository.findByOrganisationNumber
+    vi.spyOn(
+      organisationReadRepository,
+      'findByOrganisationNumber'
+    ).mockImplementation(async (...args) => {
+      const organisation = await findByOrganisationNumber(...args)
+      assert(organisation)
+      const registration =
+        organisation.registrations[toRegistrationNumber('REG123')]
+      registration.accreditations = accreditationsOf(registration)
+      return organisation
+    })
+  }
+
+  it("stores the number of the read model's accreditation for the year", async () => {
+    const env = await createEnvironment()
+    withReadModelAccreditations(env, (registration) => ({
+      [ACCREDITED_YEAR]: {
+        ...registration.accreditations[ACCREDITED_YEAR],
+        accreditationNumber: toAccreditationNumber('ACC-HELD-ELSEWHERE')
+      }
+    }))
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.accreditationNumber).toBe('ACC-HELD-ELSEWHERE')
+  })
+
+  it('stores a summary log as registered-only when the read model holds no accreditation for the year', async () => {
+    const env = await createEnvironment()
+    withReadModelAccreditations(env, () => ({}))
+
+    const response = await submit(
+      env,
+      payloadWithReceived([{ rowId: '1001', tonnageReceived: 100 }])
+    )
+
+    const body = JSON.parse(response.payload)
+    const stored = await env.summaryLogsRepository.findById(body.summaryLogId)
+    expect(stored?.summaryLog.accreditationNumber).toBeNull()
+  })
 
   it('returns 422 for an invalid year', async () => {
     const env = await createEnvironment()
@@ -423,7 +528,10 @@ describe(`${devSummaryLogsSubmitPath} route`, () => {
   it('answers 500 and leaves the log submission-failed when the submit step throws', async () => {
     const env = await createEnvironment()
     const minted = beforeTransitionToSubmitting(env, () =>
-      createAndSubmitReport(env.server.app.reportsRepository, env.reportKey)
+      createAndSubmitReport(env.server.app.reportsRepository, {
+        ...env.reportKey,
+        year: ACCREDITED_YEAR
+      })
     )
 
     const response = await submit(

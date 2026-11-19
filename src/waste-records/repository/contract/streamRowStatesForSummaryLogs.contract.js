@@ -4,8 +4,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 import {
   buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID,
-  withNumbers
+  DEFAULT_LEDGER_ID
 } from '../test-data.js'
 
 const collect = async (rowStates) => {
@@ -32,7 +31,7 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
 
     it('yields nothing when asked for no summary logs at all', async () => {
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         [buildSummaryLogRowStateEntry()],
         'log-1'
       )
@@ -44,7 +43,7 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
 
     it('yields the ledger identity and the row as submitted, and nothing else', async () => {
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         [
           buildSummaryLogRowStateEntry({
             wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
@@ -55,8 +54,12 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
         'log-1'
       )
 
-      const { organisationNumber, registrationNumber, accreditationNumber } =
-        withNumbers(DEFAULT_LEDGER_ID)
+      const {
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber,
+        year
+      } = DEFAULT_LEDGER_ID
       expect(
         await collect(repository.streamRowStatesForSummaryLogs(['log-1']))
       ).toEqual([
@@ -64,6 +67,7 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
           organisationNumber,
           registrationNumber,
           accreditationNumber,
+          year,
           wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
           processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
           data: { tonnage: 7 }
@@ -73,17 +77,17 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
 
     it('yields the union across every summary log asked for', async () => {
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         [buildSummaryLogRowStateEntry({ rowId: 'row-1' })],
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        withNumbers({ ...DEFAULT_LEDGER_ID, registrationId: 'reg-2' }),
+        { ...DEFAULT_LEDGER_ID, registrationNumber: 'REG-2' },
         [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
         'log-2'
       )
       await repository.upsertSummaryLogRowStates(
-        withNumbers({ ...DEFAULT_LEDGER_ID, registrationId: 'reg-3' }),
+        { ...DEFAULT_LEDGER_ID, registrationNumber: 'REG-3' },
         [buildSummaryLogRowStateEntry({ rowId: 'row-3' })],
         'log-3'
       )
@@ -94,19 +98,19 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
 
       expect(
         yielded.map((rowState) => rowState.registrationNumber).sort()
-      ).toEqual(['REG-reg-1', 'REG-reg-3'])
+      ).toEqual(['REG-1', 'REG-3'])
     })
 
     it('yields a row state only once however many of the asked-for logs share it', async () => {
       const entry = buildSummaryLogRowStateEntry()
 
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         [entry],
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         [entry],
         'log-2'
       )
@@ -120,14 +124,14 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
 
     it('yields each submission separately when the row changed between them', async () => {
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 1 } })
         ],
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        withNumbers(DEFAULT_LEDGER_ID),
+        DEFAULT_LEDGER_ID,
         [
           buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 2 } })
         ],

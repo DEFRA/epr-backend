@@ -1,15 +1,12 @@
-import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import {
+  toCalendarDate,
+  utcCalendarDate
+} from '#common/helpers/date-formatter.js'
+import { isOneOf } from '#common/helpers/is-one-of.js'
 import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
-import {
-  earliestOfYearEndOrDate,
-  lastDayOfYear
-} from '#common/helpers/dates/year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import {
-  accreditationsForRegistration,
-  resolveMaterial
-} from '#domain/organisations/registration-utils.js'
+import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
@@ -17,16 +14,21 @@ import {
   statusOn
 } from '#organisation-read-model/domain/model.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
-import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
+import { accreditationsForRegistration } from './accreditations-for-registration.js'
+import {
+  toAccreditationStatusTimeline,
+  toOrganisationStatusTimeline,
+  toRegistrationStatusTimeline
+} from './to-status-timeline.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
-/** @import { Accreditation as StoredAccreditation, StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { Accreditation as StoredAccreditation } from '#domain/organisations/accreditation.js' */
 /** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, StatusTimeline, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -42,63 +44,72 @@ import { approvedYears } from '#organisation-read-model/domain/status-timeline.j
  */
 
 /**
- * A registration's accreditation for a year, held outside the REEX database.
+ * A registration's accreditation for a year, held outside the REEX database,
+ * in the read model's shape, with the registration and year it is for. It
+ * holds no overseas sites: an exporter's are lifted from its registration, as
+ * a stored accreditation's are.
  *
- * @typedef {(ReprocessorAccreditation | ExporterAccreditation) & {
+ * @typedef {AccreditationCommon & {
+ *   organisationNumber: OrganisationNumber
  *   registrationNumber: RegistrationNumber
  *   year: Year
  * }} ExternalAccreditation
  */
 
 /**
- * @typedef {Map<RegistrationNumber, Record<string, ReprocessorAccreditation | ExporterAccreditation>>} ExternalAccreditationsByRegistration
+ * @typedef {Map<RegistrationNumber, Record<Year, AccreditationCommon>>} ExternalAccreditationsByRegistration
  */
 
 /**
+ * An external accreditation with no status changes is dropped.
+ *
  * @param {ExternalAccreditation} externalAccreditation
- * @returns {ReprocessorAccreditation | ExporterAccreditation}
+ * @param {OnDrop} onDrop
+ * @returns {[Year, AccreditationCommon] | null}
  */
-const toAccreditationCommon = ({
-  registrationNumber: _registrationNumber,
-  year: _year,
-  ...accreditation
-}) => accreditation
+const toAccreditationEntryOfYear = (
+  {
+    organisationNumber: _organisationNumber,
+    registrationNumber,
+    year,
+    ...accreditation
+  },
+  onDrop
+) => {
+  if (accreditation.status.timeline.length === 0) {
+    onDrop(
+      `Registration ${registrationNumber} external accreditation year ${year} has no status changes`
+    )
+    return null
+  }
+  return [year, { ...accreditation, year }]
+}
 
 /**
  * Each registration's external accreditations, keyed by year.
  *
  * @param {ExternalAccreditation[]} externalAccreditations
+ * @param {OnDrop} onDrop
  * @returns {ExternalAccreditationsByRegistration}
  */
-const byRegistrationAndYear = (externalAccreditations) =>
+const byRegistrationAndYear = (externalAccreditations, onDrop) =>
   new Map(
     [...Map.groupBy(externalAccreditations, (a) => a.registrationNumber)].map(
       ([registrationNumber, held]) => [
         registrationNumber,
         Object.fromEntries(
-          held.map((a) => [String(a.year), toAccreditationCommon(a)])
+          held
+            .map((a) => toAccreditationEntryOfYear(a, onDrop))
+            .filter((entry) => entry !== null)
         )
       ]
     )
   )
 
 /**
- * The registration numbers granted across the stored organisations.
- *
- * @param {StoredOrganisation[]} stored
- * @returns {RegistrationNumber[]}
- */
-export const registrationNumbersOf = (stored) =>
-  stored.flatMap(({ registrations }) =>
-    registrations.flatMap(({ registrationNumber }) => registrationNumber ?? [])
-  )
-
-/**
  * The stored organisations as the read model shows them, with the external
  * accreditations held for their registrations. An organisation the model
- * cannot represent is left out and reported through `logger.warn`. Without
- * `year`, each organisation is given in every year; with it, as it stood in
- * that year.
+ * cannot represent is left out and reported through `logger.warn`.
  *
  * @param {StoredOrganisation[]} stored
  * @param {ExternalAccreditation[]} externalAccreditations
@@ -106,14 +117,12 @@ export const registrationNumbersOf = (stored) =>
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }} dependencies
- * @param {Year} [year]
  * @returns {Promise<Organisation[]>}
  */
 export async function toReadModelOrganisations(
   stored,
   externalAccreditations,
-  { overseasSitesRepository, logger },
-  year
+  { overseasSitesRepository, logger }
 ) {
   const siteIds = stored.flatMap(({ registrations }) =>
     registrations.flatMap((registration) =>
@@ -130,97 +139,26 @@ export async function toReadModelOrganisations(
     overseasSitesById: new Map(sites.map((site) => [site.id, site])),
     today: toCalendarDate(new Date())
   }
-  const externalByRegistration = byRegistrationAndYear(externalAccreditations)
+  const externalByRegistration = byRegistrationAndYear(
+    externalAccreditations,
+    context.onDrop
+  )
   return stored
     .map((organisation) =>
       toOrganisation(organisation, context, externalByRegistration)
     )
     .filter((organisation) => organisation !== null)
-    .map((organisation) =>
-      year === undefined
-        ? organisation
-        : organisationInYear(organisation, year, context)
-    )
 }
 
 /**
- * The entry of `byYear` for `year`, or none when it has none for it.
- * @template T
- * @param {Record<string, T>} byYear
- * @param {Year} year
- * @returns {Record<string, T>}
- */
-const onlyYear = (byYear, year) =>
-  Object.hasOwn(byYear, year) ? { [year]: byYear[year] } : {}
-
-/**
- * The registration's status on `date`, or its current status when it had no
- * served status then, as with one approved later in the year asked for.
- *
- * @param {Registration} registration
- * @param {CalendarDate} date
- * @returns {Registration['status']['current']}
- */
-const registrationStatusOn = (registration, date) => {
-  const status = statusOn(registration.status.timeline, date)
-  return isOneOf(REGISTRATION_STATUSES, status)
-    ? status
-    : registration.status.current
-}
-
-/**
- * The organisation as it stood in `year`: registrations approved at any point
- * in it, each with only that year's accreditation and status dates.
- * Organisation and registration statuses are those on the earlier of the end
- * of `year` and `context.today`.
- *
- * @param {Organisation} organisation
- * @param {Year} year
- * @param {Context} context
- * @returns {Organisation}
- */
-const organisationInYear = (organisation, year, context) => {
-  const statusesAsOfDate = earliestOfYearEndOrDate(year, context.today)
-  const endOfYear = lastDayOfYear(year)
-  const registrations = Object.entries(organisation.registrations)
-    .filter(([, registration]) =>
-      approvedYears(registration.status.timeline, endOfYear).includes(year)
-    )
-    .map(([number, registration]) => [
-      number,
-      {
-        ...registration,
-        status: {
-          ...registration.status,
-          current: registrationStatusOn(registration, statusesAsOfDate)
-        },
-        accreditations: onlyYear(registration.accreditations, year),
-        standingByDate: onlyYear(registration.standingByDate, year)
-      }
-    ])
-
-  return {
-    ...organisation,
-    status: {
-      ...organisation.status,
-      current: /** @type {Organisation['status']['current']} */ (
-        statusOn(organisation.status.timeline, statusesAsOfDate) ??
-          organisation.status.current
-      )
-    },
-    registrations: Object.fromEntries(registrations)
-  }
-}
-
-/**
- * @param {StoredOrganisation} stored
+ * @param {Pick<StoredOrganisation, 'statusHistory'>} stored
  * @param {CalendarDate} date
  * @returns {boolean}
  */
 export function servesOrganisationOn(stored, date) {
   return isOneOf(
     ORGANISATION_STATUSES,
-    statusOn(toStatusTimeline(stored.statusHistory), date)
+    statusOn(toOrganisationStatusTimeline(stored.statusHistory).timeline, date)
   )
 }
 
@@ -234,8 +172,8 @@ export function servesOrganisationOn(stored, date) {
  * @returns {Organisation | null}
  */
 function toOrganisation(stored, context, externalByRegistration) {
-  const timeline = toStatusTimeline(stored.statusHistory)
-  const status = statusOn(timeline, context.today)
+  const statusTimeline = toOrganisationStatusTimeline(stored.statusHistory)
+  const status = statusOn(statusTimeline.timeline, context.today)
   if (!isOneOf(ORGANISATION_STATUSES, status)) {
     context.onDrop(
       `Organisation ${stored.organisationNumber} has status ${status} on ${context.today}`
@@ -256,7 +194,7 @@ function toOrganisation(stored, context, externalByRegistration) {
       ),
       tradingName: companyDetails.tradingName
     }),
-    status: { current: status, timeline },
+    status: { current: status, ...statusTimeline },
     submittedToRegulator: { code: stored.submittedToRegulator },
     submitterContactDetails: toContact(stored.submitterContactDetails),
     users: stored.users.map(({ contactId, email, fullName, roles }) => ({
@@ -299,13 +237,56 @@ export function toLinkedDefraOrganisation(linked) {
 }
 
 /**
+ * A registration's stored and external accreditations by year, up to the open
+ * year. An external accreditation replaces a stored one for the same year.
+ *
+ * @param {{
+ *   openYear: Year
+ *   registration: StoredRegistration
+ *   organisation: StoredOrganisation
+ *   context: Context
+ *   externalAccreditations: Record<Year, AccreditationCommon>
+ * }} options
+ * @returns {Record<Year, AccreditationCommon>}
+ */
+function accreditationsUpTo({
+  openYear,
+  registration,
+  organisation,
+  context,
+  externalAccreditations
+}) {
+  const { registrationNumber } = registration
+  const storedAccreditations = keyedRecords(
+    accreditationsForRegistration(registration, organisation),
+    (accreditation) => toAccreditationEntry(accreditation, context),
+    `Registration ${registrationNumber} accreditation year`,
+    context.onDrop
+  )
+  Object.values(externalAccreditations)
+    .map(({ year }) => year)
+    .filter((year) => Object.hasOwn(storedAccreditations, year))
+    .forEach((year) =>
+      context.onDrop(
+        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
+      )
+    )
+  return Object.fromEntries(
+    Object.entries({
+      ...storedAccreditations,
+      ...externalAccreditations
+    }).filter(([, { year }]) => year <= openYear)
+  )
+}
+
+/**
  * @param {StoredRegistration} registration
  * @param {StoredOrganisation} organisation
  * @param {Context} context
  * @param {ExternalAccreditationsByRegistration} [externalByRegistration]
- * @returns {[string, Registration] | null}
+ * @returns {[RegistrationNumber, Registration] | null}
  */
-export function toRegistrationEntry(
+function toRegistrationEntry(
   registration,
   organisation,
   context,
@@ -322,9 +303,16 @@ export function toRegistrationEntry(
     onDrop(`Registration ${registration.id} has no registration number`)
     return null
   }
-  const timeline = toStatusTimeline(registration.statusHistory, validFrom)
   if (!validFrom) {
     onDrop(`Registration ${registrationNumber} has no validFrom`)
+    return null
+  }
+  const statusTimeline = toRegistrationStatusTimeline(
+    registration.statusHistory,
+    validFrom
+  )
+  if (!statusTimeline) {
+    onDrop(`Registration ${registrationNumber} has no served status changes`)
     return null
   }
   if (!applicationContactDetails) {
@@ -334,29 +322,15 @@ export function toRegistrationEntry(
     return null
   }
 
-  const storedAccreditations = keyedRecords(
-    accreditationsForRegistration(registration, organisation),
-    (accreditation) => toAccreditationEntry(accreditation, context),
-    `Registration ${registrationNumber} accreditation year`,
-    onDrop
-  )
-  const externalAccreditations =
-    externalByRegistration.get(registrationNumber) ?? {}
-  Object.keys(externalAccreditations)
-    .filter((year) => Object.hasOwn(storedAccreditations, year))
-    .forEach((year) =>
-      onDrop(
-        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
-      )
-    )
   const openYear = latestOpenYear(new Date(context.today))
-  const accreditations = Object.fromEntries(
-    Object.entries({
-      ...storedAccreditations,
-      ...externalAccreditations
-    }).filter(([year]) => Number(year) <= openYear)
-  )
-  const registrationStatus = { current: status, timeline }
+  const accreditations = accreditationsUpTo({
+    openYear,
+    registration,
+    organisation,
+    context,
+    externalAccreditations: externalByRegistration.get(registrationNumber) ?? {}
+  })
+  const registrationStatus = { current: status, ...statusTimeline }
 
   /** @type {RegistrationCommon} */
   const common = {
@@ -365,12 +339,11 @@ export function toRegistrationEntry(
     material: resolveMaterial(registration),
     standingByDate: standingByYear(
       { status: registrationStatus, accreditations },
-      lastDayOfYear(openYear)
+      openYear
     ),
     status: registrationStatus,
     submittedToRegulator: { code: registration.submittedToRegulator },
-    submitterContactDetails: toContact(registration.submitterContactDetails),
-    validFrom
+    submitterContactDetails: toContact(registration.submitterContactDetails)
   }
 
   const converted =
@@ -384,7 +357,7 @@ export function toRegistrationEntry(
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<Year, AccreditationCommon>} accreditations
  * @param {Context} context
  * @returns {ExporterRegistration}
  */
@@ -406,7 +379,7 @@ function toExporterRegistration(registration, common, accreditations, context) {
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<Year, ReprocessorAccreditation>} accreditations
  * @param {OnDrop} onDrop
  * @returns {ReprocessorRegistration | null}
  */
@@ -432,46 +405,21 @@ function toReprocessorRegistration(
     wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
     reprocessingType,
     site: { address },
-    accreditations: withoutOverseasSites(
-      accreditations,
-      registrationNumber,
-      onDrop
-    )
+    accreditations
   }
 }
 
 /**
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
- * @param {StoredRegistration['registrationNumber']} registrationNumber
- * @param {OnDrop} onDrop
- * @returns {Record<string, ReprocessorAccreditation>}
- */
-function withoutOverseasSites(accreditations, registrationNumber, onDrop) {
-  return Object.fromEntries(
-    Object.entries(accreditations).map(([year, accreditation]) => {
-      if (!('overseasSites' in accreditation)) {
-        return [year, accreditation]
-      }
-      onDrop(
-        `Registration ${registrationNumber} accreditation year ${year} lists overseas sites, but a reprocessor has none`
-      )
-      const { overseasSites: _overseasSites, ...reprocessorAccreditation } =
-        accreditation
-      return [year, reprocessorAccreditation]
-    })
-  )
-}
-
-/**
- * Until per-year approvals come from the registration service, an exporter's
- * accreditation without its own sites lists every registration site with the
- * site's stored approval.
+ * Neither a stored nor an external accreditation holds overseas sites, so
+ * until per-year approvals come from the registration service an exporter's
+ * accreditation lists every registration site with the site's stored
+ * approval.
  *
- * @param {Record<string, ReprocessorAccreditation | ExporterAccreditation>} accreditations
+ * @param {Record<Year, AccreditationCommon>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {StoredRegistration} registration
  * @param {OnDrop} onDrop
- * @returns {Record<string, ExporterAccreditation>}
+ * @returns {Record<Year, ExporterAccreditation>}
  */
 function withAccreditedSites(
   accreditations,
@@ -485,44 +433,50 @@ function withAccreditedSites(
       year,
       {
         ...accreditation,
-        overseasSites:
-          'overseasSites' in accreditation
-            ? ownSites(accreditation, year, registration, overseasSites, onDrop)
-            : registrationSites
+        overseasSites: sitesHeldByRegistration(
+          registrationSites,
+          year,
+          registration,
+          onDrop
+        )
       }
     ])
   )
 }
 
 /**
- * @param {ExporterAccreditation} accreditation
+ * The accreditation's sites the registration holds. One it does not hold is
+ * dropped. While every accreditation's sites are lifted from its registration
+ * none is.
+ *
+ * @param {Record<string, AccreditedOverseasSite>} sites
  * @param {string} year
  * @param {StoredRegistration} registration
- * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {OnDrop} onDrop
  * @returns {Record<string, AccreditedOverseasSite>}
  */
-function ownSites(accreditation, year, registration, overseasSites, onDrop) {
-  Object.keys(accreditation.overseasSites)
-    .filter((orsId) => !Object.hasOwn(registration.overseasSites ?? {}, orsId))
-    .forEach((orsId) =>
-      onDrop(
-        `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
-      )
-    )
+function sitesHeldByRegistration(sites, year, registration, onDrop) {
+  const held = registration.overseasSites ?? {}
   return Object.fromEntries(
-    Object.entries(accreditation.overseasSites).filter(([orsId]) =>
-      Object.hasOwn(overseasSites, orsId)
-    )
+    Object.entries(sites).filter(([orsId]) => {
+      const isHeld = Object.hasOwn(held, orsId)
+      /* v8 ignore if -- unreachable while sites are lifted from the registration */
+      if (!isHeld) {
+        onDrop(
+          `Registration ${registration.registrationNumber} accreditation year ${year} lists overseas site ${orsId}, which the registration does not hold`
+        )
+      }
+      return isHeld
+    })
   )
 }
 
 /**
  * @param {StoredAccreditation} accreditation
  * @param {Context} context
- * @returns {[string, AccreditationCommon] | null}
+ * @returns {[Year, AccreditationCommon] | null}
  */
-export function toAccreditationEntry(accreditation, { onDrop }) {
+function toAccreditationEntry(accreditation, { onDrop }) {
   const { accreditationNumber, prnIssuance, status } = accreditation
   // Not served by design, so not logged
   if (!isOneOf(ACCREDITATION_STATUSES, status)) {
@@ -532,69 +486,30 @@ export function toAccreditationEntry(accreditation, { onDrop }) {
     onDrop(`Accreditation ${accreditation.id} has no accreditation number`)
     return null
   }
-  const timeline = toStatusTimeline(
-    accreditation.statusHistory,
-    accreditation.validFrom
-  )
   if (!accreditation.validFrom) {
     onDrop(`Accreditation ${accreditationNumber} has no validFrom`)
     return null
   }
+  const statusTimeline = toAccreditationStatusTimeline(
+    accreditation.statusHistory,
+    accreditation.validFrom
+  )
+  if (!statusTimeline) {
+    onDrop(`Accreditation ${accreditationNumber} has no served status changes`)
+    return null
+  }
 
+  const year = deriveAccreditationYear(accreditation)
   return [
-    String(deriveAccreditationYear(accreditation)),
+    year,
     {
       accreditationNumber,
       prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
-      status: { current: status, timeline }
+      status: { current: status, ...statusTimeline },
+      year
     }
   ]
 }
-
-/**
- * Until ADR-0051's events exist, the approval after the last `created` takes
- * effect from the record's validFrom, anything recorded before it no later than
- * that, and every other change when it was recorded.
- *
- * @param {StatusHistoryEntryOf<string>[]} statusHistory
- * @param {string} [validFrom]
- * @returns {StatusTimeline}
- */
-export function toStatusTimeline(statusHistory, validFrom) {
-  const recorded = statusHistory
-    .map(({ status, updatedAt }) => ({
-      status,
-      at: new Date(updatedAt),
-      updatedAt: new Date(updatedAt).toISOString()
-    }))
-    .toSorted(byDate)
-  const lastCreated = recorded.findLastIndex(
-    ({ status }) => status === 'created'
-  )
-  const approvalAfterLastCreated = recorded.findIndex(
-    ({ status }, index) => index > lastCreated && status === 'approved'
-  )
-  if (approvalAfterLastCreated >= 0 && validFrom) {
-    const approvedFrom = new Date(validFrom)
-    for (const entry of recorded.slice(0, approvalAfterLastCreated)) {
-      entry.at = entry.at < approvedFrom ? entry.at : approvedFrom
-    }
-    recorded[approvalAfterLastCreated].at = approvedFrom
-  }
-  // A stable sort keeps recorded order among equal times
-  return recorded.toSorted(byDate).map(({ status, at, updatedAt }) => ({
-    status,
-    at: at.toISOString(),
-    updatedAt
-  }))
-}
-
-/**
- * @param {{ at: Date }} one
- * @param {{ at: Date }} other
- * @returns {number}
- */
-const byDate = (one, other) => one.at.getTime() - other.at.getTime()
 
 /**
  * @param {StoredRegistration} registration
@@ -631,7 +546,10 @@ function toOverseasSite(site) {
       country: site.country,
       ...omitNullish({ line2, stateOrRegion, postcode })
     },
-    ...omitNullish({ coordinates: site.coordinates })
+    ...omitNullish({
+      coordinates: site.coordinates,
+      validFrom: site.validFrom && new Date(site.validFrom).toISOString()
+    })
   }
 }
 
@@ -643,7 +561,7 @@ function toAccreditedOverseasSite(site) {
   return site.validFrom
     ? {
         status: 'approved',
-        approvedOn: new Date(site.validFrom).toISOString().slice(0, 10)
+        approvedOn: utcCalendarDate(new Date(site.validFrom))
       }
     : { status: 'pending' }
 }
@@ -718,11 +636,12 @@ function toContact({ email, fullName, phone }) {
  * right.
  *
  * @template T, V
+ * @template {string | number} K
  * @param {T[]} items
- * @param {(item: T) => [string, V] | null} toEntry
+ * @param {(item: T) => [K, V] | null} toEntry
  * @param {string} keyName
  * @param {OnDrop} onDrop
- * @returns {Record<string, V>}
+ * @returns {Record<K, V>}
  */
 function keyedRecords(items, toEntry, keyName, onDrop) {
   const entries = items.map(toEntry).filter((entry) => entry !== null)
@@ -731,28 +650,23 @@ function keyedRecords(items, toEntry, keyName, onDrop) {
   for (const key of clashes) {
     onDrop(`${keyName} ${key} is shared by more than one record`)
   }
-  return Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
-}
-
-/**
- * @template {string} T
- * @param {readonly T[]} values
- * @param {string | undefined} value
- * @returns {value is T}
- */
-function isOneOf(values, value) {
-  return /** @type {readonly (string | undefined)[]} */ (values).includes(value)
+  return /** @type {Record<K, V>} */ (
+    Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
+  )
 }
 
 /**
  * @template T, V
- * @param {Record<string, T>} record
+ * @template {string} K
+ * @param {Record<K, T>} record
  * @param {(value: T) => V} map
- * @returns {Record<string, V>}
+ * @returns {Record<K, V>}
  */
 function mapValues(record, map) {
-  return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => [key, map(value)])
+  return /** @type {Record<K, V>} */ (
+    Object.fromEntries(
+      Object.entries(record).map(([key, value]) => [key, map(value)])
+    )
   )
 }
 

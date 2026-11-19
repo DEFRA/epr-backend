@@ -1,12 +1,8 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { isRegistrationAccredited } from '#domain/organisations/registration-utils.js'
-import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { resolveOverseasSites } from '#application/waste-records/resolve-overseas-sites.js'
-import { CADENCE } from '#reports/domain/cadence.js'
-import { getOperatorCategory } from '#reports/domain/operator-category.js'
 import { classifyByPeriodStatus } from './period-status.js'
+import { reportOperatorCategory } from '#reports/domain/operator-category.js'
+import { reportingCadenceOf } from './registration-for-summary-log.js'
 import { classifyRecordChanges } from './classify-record-changes.js'
 import {
   countByValidity,
@@ -16,21 +12,20 @@ import {
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 /** @import {SubmittedSummaryLog} from './validate-issue-logging.js' */
 /** @import {Loads} from '#domain/summary-logs/loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @typedef {string} ProcessingType */
+/** @import {TableSchemas} from '#domain/summary-logs/table-schemas/index.js' */
+/** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
+/** @import {RecordChange} from './record-change.js' */
 /** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 
 /**
  * Filters waste records to only those from tables that participate in waste balance.
  *
  * @param {ValidatedWasteRecord[] | null} wasteRecords
- * @param {Record<string, TableSchema> | undefined} tableSchemas - The template's table schemas, absent when validation stopped before choosing it
+ * @param {TableSchemas | undefined} tableSchemas - absent when validation stopped before choosing the template
  * @returns {ValidatedWasteRecord[]}
  */
 export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
@@ -45,39 +40,38 @@ export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
  * @param {string} params.status - Summary log status after validation
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {Record<string, TableSchema> | undefined} params.tableSchemas - The template's table schemas
  * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
- * @param {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} params.overseasSites
- * @param {Registration} [params.registration]
+ * @param {RowClassificationContext} [params.classificationContext] - absent when validation stopped before reading the registration
+ * @param {SummaryLogRegistration} [params.registration]
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
- * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
+ * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null, recordChanges: Map<string, RecordChange> | null }}
  */
 export const classifyLoads = ({
-  tableSchemas,
   status,
   wasteBalanceRecords,
   wasteRecords,
   periodicReports,
-  overseasSites,
+  classificationContext,
   registration,
   submittedRowStatesByKey
 }) => {
   if (
     status !== SUMMARY_LOG_STATUS.VALIDATED ||
     !wasteRecords ||
-    !submittedRowStatesByKey
+    !submittedRowStatesByKey ||
+    !classificationContext
   ) {
     return {
       loads: null,
-      loadsByReportingPeriod: null
+      loadsByReportingPeriod: null,
+      recordChanges: null
     }
   }
 
   const recordChanges = classifyRecordChanges({
     wasteRecords,
     submittedRowStatesByKey,
-    accreditation: registration?.accreditation ?? null,
-    overseasSites
+    classificationContext
   })
 
   const loads = mergeLoads(
@@ -88,28 +82,21 @@ export const classifyLoads = ({
     })
   )
 
-  /* v8 ignore start -- defensive guard: registration and tableSchemas are always set when status is VALIDATED */
-  const loadsByReportingPeriod =
-    registration && tableSchemas
-      ? classifyByPeriodStatus({
-          wasteRecords,
-          submittedRowStatesByKey,
-          recordChanges,
-          periodicReports,
-          cadence: isRegistrationAccredited(registration)
-            ? CADENCE.monthly
-            : CADENCE.quarterly,
-          tableSchemas,
-          operatorCategory: getOperatorCategory(registration),
-          classificationContext: {
-            accreditation: registration.accreditation ?? null,
-            overseasSites
-          }
-        })
-      : null
+  /* v8 ignore start -- defensive guard: registration is always set when status is VALIDATED */
+  const loadsByReportingPeriod = registration
+    ? classifyByPeriodStatus({
+        wasteRecords,
+        submittedRowStatesByKey,
+        recordChanges,
+        periodicReports,
+        cadence: reportingCadenceOf(registration),
+        operatorCategory: reportOperatorCategory(registration),
+        classificationContext
+      })
+    : null
   /* v8 ignore stop */
 
-  return { loads, loadsByReportingPeriod }
+  return { loads, loadsByReportingPeriod, recordChanges }
 }
 
 /**
@@ -121,7 +108,7 @@ export const classifyLoads = ({
  * misclassified as open.
  *
  * @param {Object} params
- * @param {Registration} [params.registration]
+ * @param {SummaryLogRegistration} [params.registration]
  * @param {string} params.status
  * @param {SubmittedSummaryLog} params.summaryLog
  * @param {ReportsService} params.reportsService
@@ -141,33 +128,3 @@ export const fetchPeriodicReports = async ({
   }
   return []
 }
-
-/**
- * Resolves the overseas-sites context for ORS validation (VAL014). Only
- * exporters carry overseas sites, so other processing types skip the lookup
- * and disable the check, mirroring the submit-time path in
- * sync-from-summary-log.js. Without this, loads requiring ORS approval would
- * be misclassified in the predicted waste-balance delta shown on the check
- * page.
- *
- * @param {Object} params
- * @param {ProcessingType} params.processingType
- * @param {SubmittedSummaryLog} params.summaryLog
- * @param {OrganisationAdministrationRepository} params.organisationAdministrationRepository
- * @param {OverseasSitesRepository} params.overseasSitesRepository
- * @returns {Promise<import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext>}
- */
-export const resolveOverseasSitesContext = async ({
-  processingType,
-  summaryLog,
-  organisationAdministrationRepository,
-  overseasSitesRepository
-}) =>
-  processingType === PROCESSING_TYPES.EXPORTER
-    ? resolveOverseasSites(
-        organisationAdministrationRepository,
-        overseasSitesRepository,
-        summaryLog.organisationNumber,
-        summaryLog.registrationNumber
-      )
-    : ORS_VALIDATION_DISABLED

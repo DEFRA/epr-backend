@@ -14,11 +14,13 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/common/hapi-types.js',
   'src/non-prod-data-reset/mongodb.plugin.js',
   'src/repositories/form-submissions/mongodb.plugin.js',
+  'src/server/queue-consumer/queue-consumer.plugin.js',
 
   // Registration and accreditation administration
   'src/overseas-sites/application/process-import-file.js',
   'src/overseas-sites/application/process-import.js',
-  'src/overseas-sites/routes/admin-list.js',
+  'src/overseas-sites/routes/accreditation-list.js',
+  'src/overseas-sites/routes/registration-list.js',
   'src/routes/v1/organisations/accreditation-status-history.js',
   'src/routes/v1/organisations/get-by-id.js',
   'src/routes/v1/organisations/put-by-id.js',
@@ -31,38 +33,13 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/forms-submission-data/migration/migration-orchestrator.js',
   'src/forms-submission-data/migration/organisation-persistence.js',
   'src/non-prod-data-reset/mongodb.js',
+  'src/organisation-years-diagnostic/run.js',
   'src/repositories/form-submissions/mongodb.js',
   'src/routes/v1/dev/form-submissions/migrate/post.js',
   'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
   'src/server/run-forms-data-migration.js',
   'src/server/seed/create-seed-data.js',
-  'src/server/seed/seed-scenarios.js',
-  'src/summary-log-scope-backfill/application/backfill.js',
-  'src/summary-log-scope-backfill/run.js',
-
-  // Domain code that still reads the legacy organisation shape. Each leaves
-  // this list once it reads through the organisation read repository.
-  'src/application/summary-logs/classify-and-persist.js',
-  'src/application/summary-logs/validate.js',
-  'src/application/waste-records/resolve-overseas-sites.js',
-  'src/market-insights/application/outstanding-returns.js',
-  'src/market-insights/application/read-figures.js',
-  'src/market-insights/application/reprocessor-exporter-table.js',
-  'src/market-insights/application/waste-balance-table.js',
-  'src/market-insights/routes/export-zip-get.js',
-  'src/market-insights/routes/outstanding-returns-get.js',
-  'src/market-insights/routes/reprocessor-exporter-figures-get.js',
-  'src/market-insights/routes/waste-balance-get.js',
-  'src/market-insights/routes/workbook-get.js',
-  'src/overseas-sites/routes/accreditation-list.js',
-  'src/overseas-sites/routes/registration-list.js',
-  'src/packaging-recycling-notes/routes/list.js',
-  'src/routes/organisations/at-natural-keys.js',
-  'src/routes/organisations/natural-keys.js',
-  'src/routes/v1/organisations/registrations/summary-logs/list/get.js',
-  'src/routes/v1/organisations/registrations/summary-logs/records/get.js',
-  'src/server/queue-consumer/summary-log-commands.js',
-  'src/server/queue-consumer/summary-log-handler-deps.js'
+  'src/server/seed/seed-scenarios.js'
 ]
 
 const productionModules = () =>

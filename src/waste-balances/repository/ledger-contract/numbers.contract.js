@@ -12,7 +12,7 @@ const NUMBERS = Object.freeze({
 const LEDGER_ID = Object.freeze(buildLedgerId())
 
 const REGISTERED_ONLY_LEDGER_ID = Object.freeze(
-  buildLedgerId({ accreditationId: null })
+  buildLedgerId({ accreditationNumber: null })
 )
 
 export const testNumbersBehaviour = (it) => {
@@ -24,9 +24,7 @@ export const testNumbersBehaviour = (it) => {
     })
 
     it('stores the numbers it is given', async () => {
-      const [event] = await repository.appendEvents([
-        buildLedgerEvent({ ...LEDGER_ID, ...NUMBERS })
-      ])
+      const [event] = await repository.appendEvents([buildLedgerEvent(NUMBERS)])
 
       expect(event).toMatchObject(NUMBERS)
       expect(await repository.findLatestInLedger(NUMBERS)).toMatchObject(
@@ -37,7 +35,7 @@ export const testNumbersBehaviour = (it) => {
     it('does not store the ids of the ledger', async () => {
       const [event] = await repository.appendEvents([
         {
-          ...buildLedgerEvent({ ...LEDGER_ID, ...NUMBERS }),
+          ...buildLedgerEvent(NUMBERS),
           organisationId: 'org-1',
           registrationId: 'reg-1',
           accreditationId: 'acc-1'

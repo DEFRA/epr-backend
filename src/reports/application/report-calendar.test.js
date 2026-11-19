@@ -1,6 +1,6 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { toYear } from '#common/helpers/dates/year.js'
-import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
+import { standingByYear } from '#organisation-read-model/vocabulary.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
@@ -11,31 +11,24 @@ import {
 } from './report-calendar.js'
 
 /**
- * @import { Registration, StatusTimeline } from '#organisation-read-model/domain/model.js'
+ * @import { AccreditationStatus, Registration, StatusTimeline } from '#organisation-read-model/vocabulary.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
- * @param {string} status
- * @returns {(date: string) => StatusTimeline[number]}
+ * @template {string} S
+ * @param {S} status
+ * @returns {(date: string) => StatusTimeline<S>[number]}
  */
-const changeTo = (status) => (date) => {
-  const at = `${date}T00:00:00.000Z`
-  return { status, at, updatedAt: at }
-}
+const changeTo = (status) => (date) => ({ status, at: `${date}T00:00:00.000Z` })
 
 const approvedOn = changeTo('approved')
-const createdOn = changeTo('created')
 
 /**
  * Approved, sent back to created, and approved again from its validFrom in
- * July, as the read model dates it.
+ * July, as the read model serves it: only the approval since the re-creation.
  */
-const recreatedAccreditation = () => [
-  approvedOn('2026-02-01'),
-  createdOn('2026-03-01'),
-  approvedOn('2026-07-01')
-]
+const recreatedAccreditation = () => [approvedOn('2026-07-01')]
 const suspendedOn = changeTo('suspended')
 const cancelledOn = changeTo('cancelled')
 
@@ -54,13 +47,13 @@ const withStanding = (fields) => {
     ...registration,
     standingByDate: standingByYear(
       registration,
-      utcCalendarDate(AFTER_YEAR_END)
+      utcYearOf(utcCalendarDate(AFTER_YEAR_END))
     )
   }
 }
 
 /**
- * @param {StatusTimeline} [accreditation]
+ * @param {StatusTimeline<AccreditationStatus>} [accreditation]
  * @returns {Registration}
  */
 const registeredSinceLastYear = (accreditation) =>
@@ -242,7 +235,12 @@ describe('yearCalendar', () => {
       status: REPORT_STATUS.SUBMITTED,
       submissionNumber: 1,
       submittedAt: '2026-04-10T09:00:00.000Z',
-      submittedBy: null,
+      submittedBy: {
+        id: 'user-1',
+        name: 'Test User',
+        email: 'test.user@example.com',
+        position: 'Officer'
+      },
       resubmissionRequired: null
     }
 
@@ -269,18 +267,17 @@ describe('yearCalendar', () => {
         })
       )
 
-    it('shows a stored report on its period', () => {
+    it("shows a stored report on its period, without its id or the submitter's", () => {
       const result = calendar({
         registration: registeredSinceLastYear(),
         storedReports: [storedQuarterOne(2026)]
       })
 
       expect(result.registeredOnly?.reportingPeriods[0].report).toEqual({
-        id: 'report-1',
         status: REPORT_STATUS.SUBMITTED,
         submissionNumber: 1,
         submittedAt: '2026-04-10T09:00:00.000Z',
-        submittedBy: null
+        submittedBy: { name: 'Test User', position: 'Officer' }
       })
     })
 
@@ -371,8 +368,10 @@ describe('yearCalendar', () => {
       })
 
       expect(
-        result.registeredOnly?.reportingPeriods.map(({ report }) => report)
-      ).toEqual([null, null, null, null])
+        result.registeredOnly?.reportingPeriods.map(
+          (period) => 'report' in period
+        )
+      ).toEqual([false, false, false, false])
     })
   })
 })

@@ -1,9 +1,10 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
-import { getIssuedTonnage } from '#packaging-recycling-notes/application/get-issued-tonnage.js'
-import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
+/** @import {KeyedSubmittedSummaryLog, SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
+import { getIssuedTonnage } from '#packaging-recycling-notes/index.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
 import { reportOperatorCategory } from '#reports/domain/operator-category.js'
+import { orsDetailsOf } from '#reports/domain/ors-details.js'
 import { assertPeriodRequired } from './assert-period-required.js'
 import {
   assertNoExistingReport,
@@ -20,15 +21,13 @@ import {
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Material } from '#domain/organisations/model.js'
- * @import { ExporterAccreditation, UkAddress } from '#organisation-read-model/domain/model.js'
- * @import { OrsDetails } from '#overseas-sites/application/get-ors-details-map.js'
+ * @import { UkAddress } from '#organisation-read-model/vocabulary.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { AggregatedReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
  * @import { Cadence, CadenceAccreditation } from '#reports/domain/cadence.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
- * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
+ * @import { HasReportSubmittedSinceParams, PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
  */
 
 /**
@@ -37,7 +36,7 @@ import {
  * service rather than the repository port directly. See PAE-1686.
  *
  * @typedef {object} ReportsService
- * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, since: string) => Promise<boolean>} hasReportSubmittedSince
+ * @property {(params: HasReportSubmittedSinceParams) => Promise<boolean>} hasReportSubmittedSince
  * @property {(params: RegistrationKey) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
@@ -47,12 +46,8 @@ import {
  * @returns {ReportsService}
  */
 export const createReportsService = (reportsRepository) => ({
-  hasReportSubmittedSince: (organisationNumber, registrationNumber, since) =>
-    reportsRepository.hasReportSubmittedSince(
-      organisationNumber,
-      registrationNumber,
-      since
-    ),
+  hasReportSubmittedSince: (params) =>
+    reportsRepository.hasReportSubmittedSince(params),
 
   findPeriodicReports: (params) =>
     reportsRepository.findPeriodicReports(params),
@@ -112,38 +107,6 @@ function formatSiteAddress(address) {
     [address.line1, address.line2, address.town, address.postcode]
       .filter(Boolean)
       .join(', ')
-  )
-}
-
-/**
- * Each of an exporter's overseas sites by ORS key, approved from the day the
- * accreditation reported under approved it. A reprocessor has none.
- *
- * @param {ReportRegistration} reportRegistration
- * @returns {Map<string, OrsDetails>}
- */
-function orsDetailsOf({ registration, accreditation }) {
-  if (!('overseasSites' in registration)) {
-    return new Map()
-  }
-  const approvals =
-    /** @type {ExporterAccreditation | null} */ (accreditation)
-      ?.overseasSites ?? {}
-  return new Map(
-    Object.entries(registration.overseasSites).map(([orsKey, site]) => {
-      const approval = approvals[orsKey]
-      return [
-        orsKey,
-        {
-          siteName: site.name,
-          country: site.address.country,
-          validFrom:
-            approval?.status === 'approved'
-              ? new Date(approval.approvedOn)
-              : null
-        }
-      ]
-    })
   )
 }
 
@@ -209,7 +172,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {RegistrationKey} params.key
@@ -224,7 +187,7 @@ function buildStoredReportResult(storedReport, periodicReports) {
  */
 export async function fetchOrGenerateReportForPeriod({
   reportsRepository,
-  ledgerRepository,
+  summaryLogsRepository,
   summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
   key: { organisationNumber, registrationNumber },
@@ -262,7 +225,7 @@ export async function fetchOrGenerateReportForPeriod({
 
   const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
     {
-      ledgerRepository,
+      summaryLogsRepository,
       summaryLogRowStatesRepository,
       key: { organisationNumber, registrationNumber },
       accreditation: reportRegistration.accreditation,
@@ -286,7 +249,8 @@ export async function fetchOrGenerateReportForPeriod({
   // a not-yet-ended period never gets here, as it is not a required period.
   const incompleteSummaryLogRows = summariseIncompleteDataIfEnabled(
     reportDataValidationEnabled,
-    wasteRecordStates
+    wasteRecordStates,
+    year
   )
 
   return {
@@ -298,36 +262,36 @@ export async function fetchOrGenerateReportForPeriod({
 
 /**
  * The report source — which submission produced the current state, and when
- * it was submitted. A ledger with no submission yet has a null source.
+ * it was submitted. A year with no submission yet has a null source.
  *
- * @param {{ summaryLogId: SummaryLogFileId, submittedAt: Date } | null} latestSubmission
+ * @param {KeyedSubmittedSummaryLog | null} latestSubmission
  * @returns {{ summaryLogId: SummaryLogFileId | null, lastUploadedAt: string|null }}
  */
 function toSource(latestSubmission) {
   return latestSubmission === null
     ? { summaryLogId: null, lastUploadedAt: null }
     : {
-        summaryLogId: latestSubmission.summaryLogId,
-        lastUploadedAt: latestSubmission.submittedAt.toISOString()
+        summaryLogId: latestSubmission.file.id,
+        lastUploadedAt: latestSubmission.submittedAt
       }
 }
 
 /**
  * Reads a registration's waste-record states at its latest submitted summary
- * log, in one head resolution so the row states and their submission metadata
+ * log for the year, in one head resolution so the row states and their submission metadata
  * describe the same submission — a submission committing mid-read cannot skew
  * them apart. Callers pass the result to the completeness gate and the
  * aggregation so both see identical data.
  *
  * @param {object} params
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {RegistrationKey} params.key
  * @param {ReportRegistration['accreditation']} params.accreditation
  * @param {Year} params.year
  */
 async function readSubmissionRowStates({
-  ledgerRepository,
+  summaryLogsRepository,
   summaryLogRowStatesRepository,
   key: { organisationNumber, registrationNumber },
   accreditation,
@@ -340,14 +304,12 @@ async function readSubmissionRowStates({
     year
   }
 
-  const latestSubmission = await latestSubmittedSummaryLog(
-    ledgerRepository,
-    ledgerId
-  )
+  const found = await summaryLogsRepository.findLatestSubmitted(ledgerId)
+  const latestSubmission = found === null ? null : found.summaryLog
   const wasteRecordStates = await wasteRecordStatesForHead(
     summaryLogRowStatesRepository,
     ledgerId,
-    latestSubmission === null ? null : latestSubmission.summaryLogId
+    latestSubmission === null ? null : latestSubmission.file.id
   )
 
   return { latestSubmission, wasteRecordStates }
@@ -366,7 +328,7 @@ async function readSubmissionRowStates({
  * @param {CadenceAccreditation} params.cadenceAccreditation
  * @param {number} params.period
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} params.wasteRecordStates
- * @param {Awaited<ReturnType<typeof latestSubmittedSummaryLog>>} params.latestSubmission
+ * @param {KeyedSubmittedSummaryLog | null} params.latestSubmission
  * @returns {Promise<import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail & { prn: { issuedTonnage: number } | null }>}
  */
 async function getAggregatedReportDetail({
@@ -457,16 +419,18 @@ async function assertReportCreationAllowed({
  *
  * @param {boolean | undefined} reportDataValidationEnabled
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {Year} year
  * @param {string} reference
  * @returns {void}
  */
 function assertReportDataCompleteIfEnabled(
   reportDataValidationEnabled,
   wasteRecordStates,
+  year,
   reference
 ) {
   if (reportDataValidationEnabled) {
-    assertReportDataComplete(wasteRecordStates, reference)
+    assertReportDataComplete(wasteRecordStates, year, reference)
   }
 }
 
@@ -479,16 +443,18 @@ function assertReportDataCompleteIfEnabled(
  *
  * @param {boolean | undefined} reportDataValidationEnabled
  * @param {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState[]} wasteRecordStates
+ * @param {Year} year
  * @returns {{ total: number, issues: import('./report-mandatory/assert-report-data-complete.js').Issue[] } | null}
  */
 function summariseIncompleteDataIfEnabled(
   reportDataValidationEnabled,
-  wasteRecordStates
+  wasteRecordStates,
+  year
 ) {
   if (!reportDataValidationEnabled) {
     return null
   }
-  return summariseIncompleteData(wasteRecordStates)
+  return summariseIncompleteData(wasteRecordStates, year)
 }
 
 /**
@@ -497,7 +463,7 @@ function summariseIncompleteDataIfEnabled(
  *
  * @param {object} params
  * @param {import('#reports/repository/port.js').ReportsRepository} params.reportsRepository
- * @param {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} params.ledgerRepository
+ * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
  * @param {RegistrationKey} params.numbers
@@ -513,7 +479,7 @@ function summariseIncompleteDataIfEnabled(
  */
 export async function createReportForPeriod({
   reportsRepository,
-  ledgerRepository,
+  summaryLogsRepository,
   summaryLogRowStatesRepository,
   packagingRecyclingNotesRepository,
   numbers,
@@ -544,7 +510,7 @@ export async function createReportForPeriod({
 
   const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
     {
-      ledgerRepository,
+      summaryLogsRepository,
       summaryLogRowStatesRepository,
       key: numbers,
       accreditation: reportRegistration.accreditation,
@@ -555,6 +521,7 @@ export async function createReportForPeriod({
   assertReportDataCompleteIfEnabled(
     reportDataValidationEnabled,
     wasteRecordStates,
+    year,
     numbers.registrationNumber
   )
 

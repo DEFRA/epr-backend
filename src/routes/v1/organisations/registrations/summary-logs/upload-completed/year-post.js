@@ -17,15 +17,13 @@ import {
 } from '#domain/uploads/upload-locations.js'
 import { config } from '#root/config.js'
 import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
-import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 import { updateStatusBasedOnUpload } from './update-status-based-on-upload.js'
 import { uploadCompletedPayloadSchema } from './year-post.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
-/** @import { AccreditationCommon } from '#organisation-read-model/domain/model.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
@@ -34,7 +32,7 @@ import { uploadCompletedPayloadSchema } from './year-post.schema.js'
  * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
  *
  * @typedef {HapiRequest<UploadCompletedPayload> & {
- *   params: RegistrationParams & { organisationId: string, registrationId: string, year: Year, summaryLogId: SummaryLogId, accreditationId: string | null },
+ *   params: RegistrationParams & { year: Year, summaryLogId: SummaryLogId, accreditationNumber: AccreditationNumber | null },
  *   summaryLogsRepository: SummaryLogsRepository,
  *   summaryLogsWorker: SummaryLogsCommandExecutor
  * }} UploadCompletedRequest
@@ -60,35 +58,24 @@ const asRejected = ({ fileId, filename }) => ({
  * A registered-only upload has no accreditation number, whatever the
  * registration's accreditation for the year.
  *
- * @param {UploadCompletedRequest} request
- * @returns {Promise<RequiredNumbers>}
+ * @param {UploadCompletedRequest['params']} params
+ * @returns {RequiredNumbers}
  */
-const numbersFromPath = async (request) => {
-  const { organisationNumber, registrationNumber, year, accreditationId } =
-    request.params
-  const { registration } =
-    await findOrganisationAndRegistrationReadModels(request)
-
-  return {
-    organisationNumber,
-    registrationNumber,
-    accreditationNumber:
-      accreditationId === null
-        ? null
-        : /** @type {AccreditationCommon} */ (registration.accreditations[year])
-            .accreditationNumber
-  }
-}
+const numbersFromPath = ({
+  organisationNumber,
+  registrationNumber,
+  accreditationNumber
+}) => ({ organisationNumber, registrationNumber, accreditationNumber })
 
 /**
  * @param {SummaryLogUpload} upload
- * @param {{ organisationId: string, registrationId: string }} ids
+ * @param {UploadCompletedRequest['params']} params
  * @returns {boolean}
  */
-const isUploadedForRegistration = (upload, ids) =>
+const isUploadedForRegistration = (upload, params) =>
   isInUploadLocation(upload, {
     bucket: config.get('cdpUploader.summaryLogsBucket'),
-    path: summaryLogUploadPath(ids)
+    path: summaryLogUploadPath(params)
   })
 
 /**
@@ -131,18 +118,9 @@ export const summaryLogsUploadCompletedYear = {
       logger
     } = request
 
-    const {
-      summaryLogId,
-      organisationId,
-      registrationId,
-      year,
-      accreditationId
-    } = params
+    const { summaryLogId, year } = params
     const { summaryLogUpload } = payload.form
-    const isInLocation = isUploadedForRegistration(summaryLogUpload, {
-      organisationId,
-      registrationId
-    })
+    const isInLocation = isUploadedForRegistration(summaryLogUpload, params)
 
     try {
       if (!isInLocation) {
@@ -154,13 +132,7 @@ export const summaryLogsUploadCompletedYear = {
         summaryLogId,
         isInLocation ? summaryLogUpload : asRejected(summaryLogUpload),
         logger,
-        {
-          organisationId,
-          registrationId,
-          year,
-          accreditationId,
-          numbers: await numbersFromPath(request)
-        }
+        { year, numbers: numbersFromPath(params) }
       )
 
       await summaryLogMetrics.recordStatusTransition({ status })

@@ -1,5 +1,16 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  buildReadAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  EXPORTER_ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -10,9 +21,7 @@ import {
   asServiceMaintainer,
   asServiceMaintainerWrite
 } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
@@ -24,18 +33,8 @@ import {
   REPORT_STATUS_SLOT
 } from '#reports/domain/report-status.js'
 import { fetchReportBySubmissionNumber } from '#reports/application/report-service.js'
-import {
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  exporter,
-  exporterAccreditation,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-
-const { buildOrganisation } = createOrganisationBuilders()
 
 /**
  * @import { Cadence } from '#reports/domain/cadence.js'
@@ -49,23 +48,30 @@ vi.mock('#reports/application/audit.js', () => ({
   auditReportRequestResubmission: vi.fn().mockResolvedValue(undefined)
 }))
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const REGISTERED_ONLY_NUMBER = toRegistrationNumber('R26ER5001180099PL')
 const YEAR = toYear(2026)
 
-const accredited = accreditation()
-const registeredOnlyRegistration = reprocessor({
+const accredited = buildReadAccreditation()
+const registeredOnlyRegistration = {
   registrationNumber: REGISTERED_ONLY_NUMBER
-})
-const accreditedRegistration = reprocessor({ accreditationId: accredited.id })
-const accreditedExport = exporterAccreditation()
-const accreditedExporter = exporter({ accreditationId: accreditedExport.id })
-const organisation = buildOrganisation({
-  registrations: [
-    registeredOnlyRegistration,
-    accreditedRegistration,
-    accreditedExporter
-  ],
-  accreditations: [accredited, accreditedExport]
+}
+const accreditedRegistration = { registrationNumber: REPROCESSOR_NUMBER }
+const accreditedExporter = { registrationNumber: EXPORTER_NUMBER }
+const organisation = buildReadOrganisation({
+  registrations: {
+    [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
+    [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+      accreditations: accreditationsByYear(accredited)
+    }),
+    [EXPORTER_NUMBER]: buildReadExporterRegistration({
+      accreditations: accreditationsByYear({
+        ...buildReadAccreditation({
+          accreditationNumber: EXPORTER_ACCREDITATION_NUMBER
+        }),
+        overseasSites: {}
+      })
+    })
+  }
 })
 
 const registrations = `/organisations/${organisation.organisationNumber}/registrations`
@@ -73,11 +79,12 @@ const registrations = `/organisations/${organisation.organisationNumber}/registr
 /** @param {{ registrationNumber?: string }} registration */
 const numbersOf = (registration) => reportKeyOf(organisation, registration)
 
-const OTHER_ORGANISATION_REGISTRATION_NUMBER = 'R26ER5001180098PL'
-const otherOrganisation = buildOrganisation({
-  registrations: [
-    reprocessor({ registrationNumber: OTHER_ORGANISATION_REGISTRATION_NUMBER })
-  ]
+const OTHER_ORGANISATION_REGISTRATION_NUMBER =
+  toRegistrationNumber('R26ER5001180098PL')
+const otherOrganisation = buildReadOrganisation({
+  registrations: {
+    [OTHER_ORGANISATION_REGISTRATION_NUMBER]: buildReadReprocessorRegistration()
+  }
 })
 
 const streams = [
@@ -161,9 +168,9 @@ describe('report routes by natural key', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([
-          partialMock(organisation),
-          partialMock(otherOrganisation)
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          organisation,
+          otherOrganisation
         ]),
         reportsRepository: reportsRepositoryFactory
       }
@@ -342,12 +349,13 @@ describe('report routes by natural key', () => {
       })
 
       it('says a stale report is stale, without ids', async () => {
-        await reportsRepository.markActiveReportsStaleForSummaryLog(
-          numbersOf(registration).organisationNumber,
-          numbersOf(registration).registrationNumber,
-          toSummaryLogFileId('sl-2'),
-          '2026-05-01T00:00:00.000Z'
-        )
+        await reportsRepository.markActiveReportsStaleForSummaryLog({
+          organisationNumber: numbersOf(registration).organisationNumber,
+          registrationNumber: numbersOf(registration).registrationNumber,
+          year: YEAR,
+          summaryLogId: toSummaryLogFileId('sl-2'),
+          uploadedAt: '2026-05-01T00:00:00.000Z'
+        })
 
         const response = await server.inject({
           method: 'GET',
@@ -435,12 +443,13 @@ describe('report routes by natural key', () => {
       })
 
       it('refuses to change a stale report, as on /v1', async () => {
-        await reportsRepository.markActiveReportsStaleForSummaryLog(
-          numbersOf(registration).organisationNumber,
-          numbersOf(registration).registrationNumber,
-          toSummaryLogFileId('sl-2'),
-          '2026-05-01T00:00:00.000Z'
-        )
+        await reportsRepository.markActiveReportsStaleForSummaryLog({
+          organisationNumber: numbersOf(registration).organisationNumber,
+          registrationNumber: numbersOf(registration).registrationNumber,
+          year: YEAR,
+          summaryLogId: toSummaryLogFileId('sl-2'),
+          uploadedAt: '2026-05-01T00:00:00.000Z'
+        })
 
         const response = await server.inject({
           method: 'PATCH',
@@ -783,6 +792,98 @@ describe('report routes by natural key', () => {
       ).toEqual([7, 8, 9, 10, 11, 12])
     })
 
+    /**
+     * The calendar's periods, read while checking that nothing in the body is
+     * a database id or a null.
+     * @param {string} [query]
+     * @returns {Promise<Array<{ period: number, submissionNumber: number, report?: Record<string, unknown> }>>}
+     */
+    const servedPeriods = async (query = '') => {
+      const response = await server.inject({
+        ...calendar(REPROCESSOR_NUMBER),
+        url: `${calendar(REPROCESSOR_NUMBER).url}${query}`
+      })
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      /** @type {Record<string, { reportingPeriods?: [] }>} */
+      const body = JSON.parse(
+        response.payload,
+        (/** @type {string} */ key, /** @type {unknown} */ value) => {
+          expect(key).not.toBe('id')
+          expect(value).not.toBeNull()
+          return value
+        }
+      )
+      return Object.values(body).flatMap((kind) => kind.reportingPeriods ?? [])
+    }
+
+    const [, accreditedStream] = streams
+    const accreditedSubmission = (/** @type {number} */ period) =>
+      submission(accreditedStream.reports, period)
+
+    it.each(['', '?expand=submissions'])(
+      'serves a report only where there is one, and its submission only once submitted (%s)',
+      async (query) => {
+        const periods = await servedPeriods(query)
+
+        expect(periods.find(({ period }) => period === 8)?.report).toEqual({
+          status: REPORT_STATUS.SUBMITTED,
+          submissionNumber: 1,
+          submittedAt: expect.any(String),
+          submittedBy: {
+            name: expect.any(String),
+            position: expect.any(String)
+          }
+        })
+        expect(periods.find(({ period }) => period === 7)?.report).toEqual({
+          status: REPORT_STATUS.IN_PROGRESS,
+          submissionNumber: 1
+        })
+        expect(periods.find(({ period }) => period === 9)).not.toHaveProperty(
+          'report'
+        )
+      }
+    )
+
+    it('serves no submission for a report unsubmitted since', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `${accreditedSubmission(8)}/unsubmit`,
+        ...asServiceMaintainerWrite()
+      })
+
+      const periods = await servedPeriods()
+
+      expect(periods.find(({ period }) => period === 8)?.report).toEqual({
+        status: REPORT_STATUS.READY_TO_SUBMIT,
+        submissionNumber: 1
+      })
+    })
+
+    it('serves an earlier submission when asked to expand them', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `${accreditedSubmission(8)}/request-resubmission`,
+        ...asOperator()
+      })
+      await createAndSubmitReport(reportsRepository, {
+        ...numbersOf(accreditedRegistration),
+        year: YEAR,
+        cadence: CADENCE.monthly,
+        period: 8,
+        submissionNumber: 2,
+        prn: accreditedStream.prn
+      })
+
+      const periods = await servedPeriods('?expand=submissions')
+
+      expect(
+        periods
+          .filter(({ period }) => period === 8)
+          .map(({ report }) => report?.submissionNumber)
+      ).toEqual([1, 2])
+    })
+
     it('serves only the requested year', async () => {
       const response = await server.inject(calendar(REPROCESSOR_NUMBER, 2025))
 
@@ -822,7 +923,7 @@ describe('report routes by natural key', () => {
         calendar(OTHER_ORGANISATION_REGISTRATION_NUMBER)
       )
       const registrationDoesNotExist = await server.inject(
-        calendar('made-up-reg-number')
+        calendar('R26ER9999999999PL')
       )
 
       expect(underItsOwner.statusCode).toBe(StatusCodes.OK)

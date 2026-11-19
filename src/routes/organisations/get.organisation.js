@@ -2,15 +2,14 @@ import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { toYear } from '#common/helpers/dates/year.js'
 import { openYearSchema } from '#common/validation/year-schema.js'
-import { isRelevantYearOpen } from '#packaging-recycling-notes/domain/closed-year.js'
+import { isRelevantYearOpen } from '#packaging-recycling-notes/index.js'
 import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @typedef {{ year?: Year }} OrganisationQuery */
 /** @typedef {{ prns: { open: boolean } }} PrnYearState */
@@ -26,18 +25,18 @@ const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
 /**
  * Each accreditation, keyed by its year, with whether PRNs and PERNs are still
  * open for that year.
- * @template {object} A
+ * @template {{ year: Year }} A
  * @param {Record<string, A>} accreditations
  * @param {Date} now
  * @returns {Record<string, A & PrnYearState>}
  */
 const withPrnYearState = (accreditations, now) =>
   Object.fromEntries(
-    Object.entries(accreditations).map(([year, accreditation]) => [
-      year,
+    Object.entries(accreditations).map(([key, accreditation]) => [
+      key,
       {
         ...accreditation,
-        prns: { open: isRelevantYearOpen(toYear(Number(year)), now) }
+        prns: { open: isRelevantYearOpen(accreditation.year, now) }
       }
     ])
   )

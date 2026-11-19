@@ -1,5 +1,6 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import { PROCESSING_TYPES } from '../meta-fields.js'
-import { DEFAULT_TEMPLATE_YEAR, templateYear } from '../template-year.js'
+import { templateYear } from '../template-year.js'
 import { EXPORTER_TEMPLATES } from './exporter/index.js'
 import { EXPORTER_REGISTERED_ONLY_TEMPLATES } from './exporter-registered-only/index.js'
 import { REPROCESSOR_INPUT_TEMPLATES } from './reprocessor-input/index.js'
@@ -7,6 +8,7 @@ import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
 import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {ProcessingType} from '../meta-fields.js' */
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -25,10 +27,13 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
  * @property {((data: Record<string, any>, context: {accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext}) => WasteBalanceClassificationResult) | null} [classifyForWasteBalance] - Classifies a row for waste balance. Absent or null declares the table as by-design non-contributing: its rows are reported under nonBalanceAffecting with the TEMPLATE_SECTION_DOES_NOT_CONTRIBUTE_TO_WASTE_BALANCE exclusion reason, not as a data problem
  */
 
+/** @typedef {Record<string, TableSchema>} TableSchemas - A template's table schemas by table name */
+
 /**
  * @typedef {Object} Template
  * @property {number} minVersion - The lowest template version accepted
- * @property {Record<string, TableSchema>} tableSchemas - Table schemas by table name
+ * @property {number} [maxVersion] - The highest template version accepted, when the year accepts only versions known so far
+ * @property {TableSchemas} tableSchemas
  */
 
 /**
@@ -63,6 +68,67 @@ export const getTemplate = (year, processingType) => {
 }
 
 /**
+ * The table schemas of the template for a year and processing type. Throws
+ * when there is no template, like {@link getTemplate}.
+ *
+ * @param {Year} year
+ * @param {ProcessingType} processingType
+ * @returns {TableSchemas}
+ */
+export const tableSchemasOf = (year, processingType) =>
+  getTemplate(year, processingType).tableSchemas
+
+/**
+ * Whether {@link getTemplate} has a template for the year and processing type.
+ *
+ * @param {Year} year
+ * @param {string} processingType
+ * @returns {boolean}
+ */
+export const hasTemplate = (year, processingType) =>
+  TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[year] !== undefined
+
+/**
+ * Every year any processing type has a template for, in no particular order.
+ *
+ * @returns {Year[]}
+ */
+export const yearsWithTemplates = () => [
+  ...new Set(
+    Object.values(TEMPLATES_BY_PROCESSING_TYPE).flatMap((templatesByYear) =>
+      Object.keys(templatesByYear).map((year) => toYear(Number(year)))
+    )
+  )
+]
+
+/**
+ * Every table of every year's templates.
+ *
+ * @returns {{processingType: ProcessingType, schema: TableSchema, tableName: string, year: Year}[]}
+ */
+export const everyTemplateTable = () =>
+  yearsWithTemplates().flatMap((year) =>
+    Object.values(PROCESSING_TYPES)
+      .filter((processingType) => hasTemplate(year, processingType))
+      .flatMap((processingType) =>
+        Object.entries(tableSchemasOf(year, processingType)).map(
+          ([tableName, schema]) => ({ processingType, schema, tableName, year })
+        )
+      )
+  )
+
+/**
+ * Whether any processing type has a template for the year.
+ *
+ * @param {Year} year
+ * @returns {boolean}
+ */
+export const hasTemplatesForYear = (year) =>
+  Object.values(TEMPLATES_BY_PROCESSING_TYPE).some(
+    (templatesByYear) => templatesByYear[year] !== undefined
+  )
+
+/**
  * @typedef {{ error: string, context?: Record<string, unknown> }} TemplateVersionFailure
  */
 
@@ -83,10 +149,16 @@ export const checkTemplateVersion = ({ year, processingType, version }) => {
     return { error: 'templateVersion.year' }
   }
   if (versionYear !== year) {
-    return { error: 'templateVersion.yearMismatch', context: { year } }
+    return {
+      error: 'templateVersion.yearMismatch',
+      context: { year, actualYear: versionYear }
+    }
   }
   if (version < template.minVersion) {
     return { error: 'number.min', context: { limit: template.minVersion } }
+  }
+  if (template.maxVersion !== undefined && version > template.maxVersion) {
+    return { error: 'number.max', context: { limit: template.maxVersion } }
   }
   return null
 }
@@ -144,24 +216,4 @@ export const findSchemaByWasteRecordType = (wasteRecordType, tableSchemas) => {
     ([, schema]) => schema.wasteRecordType === wasteRecordType
   )
   return match ? { tableName: match[0], schema: match[1] } : null
-}
-
-/**
- * Finds a table schema by processing type and waste record type. Stored rows
- * carry no year, so this reads the DEFAULT_TEMPLATE_YEAR templates.
- *
- * @param {string} processingType - The processing type (e.g. 'REPROCESSOR_INPUT')
- * @param {string} wasteRecordType - The waste record type (e.g. 'received', 'sentOn')
- * @returns {TableSchema|null} The matching table schema, or null if not found
- */
-export const findSchemaForProcessingType = (
-  processingType,
-  wasteRecordType
-) => {
-  const tableSchemas =
-    TEMPLATES_BY_PROCESSING_TYPE[processingType]?.[DEFAULT_TEMPLATE_YEAR]
-      ?.tableSchemas ?? {}
-  return (
-    findSchemaByWasteRecordType(wasteRecordType, tableSchemas)?.schema ?? null
-  )
 }

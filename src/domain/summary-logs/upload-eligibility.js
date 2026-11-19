@@ -1,7 +1,8 @@
 import { isRegistrationActiveInYear } from '#domain/organisations/registration-utils.js'
+import { hasTemplatesForYear } from '#domain/summary-logs/table-schemas/index.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import {Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {Registration} from '#organisation-read-model/vocabulary.js' */
 
 /**
  * @typedef {{ eligible: true } | { eligible: false, reason: string }} UploadEligibilityResult
@@ -13,7 +14,7 @@ import { isRegistrationActiveInYear } from '#domain/organisations/registration-u
  * registration's current live link, captured when the upload completes.
  *
  * @param {{
- *   registration: Pick<Registration, 'status' | 'validFrom'>,
+ *   registration: Pick<Registration, 'status'>,
  *   year: Year,
  *   latestOpenYear: Year
  * }} args
@@ -32,6 +33,13 @@ export function checkSummaryLogUploadEligibility({
     return {
       eligible: false,
       reason: `Registration is not approved and active in ${year}`
+    }
+  }
+
+  if (!hasTemplatesForYear(year)) {
+    return {
+      eligible: false,
+      reason: `There are no summary log templates for ${year}`
     }
   }
 

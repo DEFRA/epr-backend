@@ -1,6 +1,6 @@
 /**
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
- * @import { KeyedSummaryLogWithId, SummaryLogWithId } from './port.js'
+ * @import { KeyedSummaryLogWithId, KeyedSubmittedSummaryLogWithId, SummaryLogWithId } from './port.js'
  */
 
 /**
@@ -11,17 +11,18 @@
  */
 export const keyedBy =
   ({ organisationNumber, registrationNumber }) =>
-  ({
-    id,
-    version,
-    summaryLog: {
-      organisationId: _o,
-      registrationId: _r,
-      accreditationId: _a,
-      ...summaryLog
-    }
-  }) => ({
+  ({ id, version, summaryLog }) => ({
     id,
     version,
     summaryLog: { ...summaryLog, organisationNumber, registrationNumber }
   })
+
+/**
+ * Names a submitted summary log found by `key` by its numbers alone. The
+ * stored schema admits a submitted summary log only with its `submittedAt`.
+ *
+ * @param {SummaryLogKey} key
+ * @returns {(found: SummaryLogWithId) => KeyedSubmittedSummaryLogWithId}
+ */
+export const submittedKeyedBy = (key) => (found) =>
+  /** @type {KeyedSubmittedSummaryLogWithId} */ (keyedBy(key)(found))

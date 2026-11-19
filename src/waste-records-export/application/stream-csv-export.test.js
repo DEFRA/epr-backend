@@ -1,24 +1,26 @@
 import {
+  coerceForExport,
   streamCsvExport,
   streamCsvExportToReadable
 } from './stream-csv-export.js'
 import {
-  METADATA_COLUMNS,
   METADATA_COL_INDEX,
   OSR_COUNTRY_REVISED,
-  OSR_NAME_REVISED,
-  buildDataFieldColumns,
-  buildHeaderRow
+  OSR_NAME_REVISED
 } from '../domain/csv-columns.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { everyTemplateTable } from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { createMockLogger } from '#test/mock-logger.js'
+import { accreditationsByYear } from '#organisation-read-model/test-support.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
 
@@ -36,13 +38,14 @@ const REGISTRATION_NUMBER = 'REG-1'
 /**
  * An accreditation as the read model serves it, approved from `approvedOn`.
  *
- * @param {{ accreditationNumber?: string, status?: string, approvedOn?: string, overseasSites?: Record<string, any> }} [options]
+ * @param {{ accreditationNumber?: string, status?: string, approvedOn?: string, overseasSites?: Record<string, any>, year?: Year }} [options]
  */
 const readModelAccreditation = ({
   accreditationNumber = 'ACC-777',
   status = 'approved',
   approvedOn = '2026-01-01',
-  overseasSites
+  overseasSites,
+  year = toYear(DEFAULT_YEAR)
 } = {}) => ({
   accreditationNumber,
   prnIssuance: { tonnageBand: 'up_to_500' },
@@ -56,7 +59,8 @@ const readModelAccreditation = ({
         : [{ status, at: '2026-10-01T00:00:00.000Z' }])
     ]
   },
-  ...(overseasSites && { overseasSites })
+  ...(overseasSites && { overseasSites }),
+  year
 })
 
 /** @param {object} [overrides] */
@@ -84,21 +88,16 @@ const overseasSite = (name, country) => ({
   address: { line1: '1 Rue', townOrCity: 'Town', country }
 })
 
-// The year `accredited` holds its second accreditation under.
-const PREVIOUS_YEAR = toYear(DEFAULT_YEAR - 1)
+const NEXT_YEAR = toYear(DEFAULT_YEAR + 1)
 
 /**
- * A reprocessor registration holding `accreditations` by year, the first under
- * `DEFAULT_YEAR` and each after it a year earlier.
+ * A reprocessor registration holding `accreditations`, each under its year.
+ *
+ * @param {...{ year: Year }} accreditations
  */
 const accredited = (...accreditations) =>
   reprocessorRegistration({
-    accreditations: Object.fromEntries(
-      accreditations.map((accreditation, i) => [
-        String(DEFAULT_YEAR - i),
-        accreditation
-      ])
-    )
+    accreditations: accreditationsByYear(...accreditations)
   })
 
 /**
@@ -225,7 +224,8 @@ const summaryLogDocument = (fileId, submittedAt) => ({
  *   seeds?: any[],
  *   summaryLogs?: Record<string, any[]>,
  *   organisation?: any,
- *   registrationNumber?: RegistrationNumber
+ *   registrationNumber?: RegistrationNumber,
+ *   year?: import('#common/helpers/dates/year.js').Year
  * }} [options]
  */
 const buildDeps = async ({
@@ -233,7 +233,8 @@ const buildDeps = async ({
   seeds = [],
   summaryLogs = {},
   organisation,
-  registrationNumber
+  registrationNumber,
+  year = DEFAULT_YEAR
 } = {}) => {
   const ledgerIdOf = (seed) => ({
     organisationNumber: seed.organisationNumber ?? ORGANISATION_NUMBER,
@@ -278,8 +279,10 @@ const buildDeps = async ({
       findAll: async ({ organisationNumber, registrationNumber }) =>
         summaryLogs[`${organisationNumber}/${registrationNumber}`] ?? []
     },
+    year,
     organisation,
-    registrationNumber
+    registrationNumber,
+    logger: createMockLogger()
   }
 }
 
@@ -293,18 +296,118 @@ const cellsByRowId = (out) =>
     })
   )
 
+const EXPORT_HEADER = [
+  'Regulator',
+  'Organisation Name',
+  'Registration Number',
+  'Material',
+  'Operator Processing Type',
+  'Accredited',
+  'Accreditation Number',
+  'Waste Record Type',
+  'Submitted At',
+  'Included in Waste Balance',
+  'Waste Balance Exclusion Reason',
+  'Waste Balance Tonnage',
+  'Row ID',
+  'OSR Country Revised',
+  'OSR Name Revised',
+  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+  'ADD_PRODUCT_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'BASEL_EXPORT_CODE',
+  'BILL_OF_LANDING_REFERENCE_NUMBER',
+  'CARRIER_NAME',
+  'CARRIER_VEHICLE_REGISTRATION_NUMBER',
+  'CBD',
+  'CBD_REG_NUMBER',
+  'CONTAINER_NUMBER',
+  'CUSTOMER_INVOICE_REFERENCE',
+  'CUSTOMER_NAME',
+  'CUSTOMS_CODES',
+  'CUSTOMS_DECLARATION_NUMBER',
+  'DATE_LOAD_LEFT_SITE',
+  'DATE_OF_EXPORT',
+  'DATE_RECEIVED_BY_OSR',
+  'DATE_RECEIVED_FOR_EXPORT',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+  'DESCRIPTION_WASTE',
+  'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
+  'DWT_EXPORT_ID',
+  'DWT_SUPPLY_ID',
+  'END_OF_WASTE_STANDARDS',
+  'EWC_CODE',
+  'EXIT_PORT',
+  'EXPORT_CONTROLS',
+  'FINAL_DESTINATION_ADDRESS',
+  'FINAL_DESTINATION_EMAIL',
+  'FINAL_DESTINATION_FACILITY_TYPE',
+  'FINAL_DESTINATION_NAME',
+  'FINAL_DESTINATION_PHONE',
+  'FINAL_DESTINATION_POSTCODE',
+  'GROSS_WEIGHT',
+  'HAULIER_NAME',
+  'HAULIER_VEHICLE_REGISTRATION_NUMBER',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'INTERIM_SITE_ID',
+  'LOADING_SITE_ADDRESS',
+  'LOADING_SITE_EMAIL',
+  'LOADING_SITE_NAME',
+  'LOADING_SITE_PHONE_NUMBER',
+  'LOADING_SITE_POSTCODE',
+  'MONTH_RECEIVED_FOR_EXPORT',
+  'MONTH_RECEIVED_FOR_REPROCESSING',
+  'NET_WEIGHT',
+  'OSR_COUNTRY',
+  'OSR_ID',
+  'OSR_NAME',
+  'PALLET_WEIGHT',
+  'PREVIOUS_YEAR_ROW_ID',
+  'PRODUCT_DESCRIPTION',
+  'PRODUCT_TONNAGE',
+  'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'SUPPLIER_ADDRESS',
+  'SUPPLIER_EMAIL',
+  'SUPPLIER_NAME',
+  'SUPPLIER_PHONE_NUMBER',
+  'SUPPLIER_POSTCODE',
+  'TARE_WEIGHT',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+  'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
+  'TONNAGE_RECEIVED_BY_OSR',
+  'TONNAGE_RECEIVED_FOR_EXPORT',
+  'TONNAGE_RECEIVED_FOR_RECYCLING',
+  'UK_PACKAGING_WEIGHT_PERCENTAGE',
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED',
+  'WASTE_TRANSFER_NOTE',
+  'WEIGHBRIDGE_TICKET',
+  'WEIGHBRIDGE_TICKET_NUMBER',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  'YOUR_REFERENCE'
+]
+
+const TEMPLATE_TABLES = everyTemplateTable().map(
+  ({ year, processingType, tableName, schema }) => ({
+    year,
+    processingType,
+    tableName,
+    wasteRecordType: schema.wasteRecordType,
+    columns: schema.requiredHeaders.filter((column) => column !== 'ROW_ID')
+  })
+)
+
 describe('streamCsvExport', () => {
   it('emits the header row even when no organisations exist', async () => {
     const out = await collect(streamCsvExport(await buildDeps()))
     expect(out).toHaveLength(1)
     // The header row is CSV-encoded and ends with a newline
     expect(out[0].endsWith('\n')).toBe(true)
-    for (const column of METADATA_COLUMNS) {
-      expect(out[0]).toContain(column)
-    }
-    for (const column of buildHeaderRow(buildDataFieldColumns([]))) {
-      expect(out[0]).toContain(column)
-    }
+    expect(cellsOf(out[0])).toStrictEqual(EXPORT_HEADER)
   })
 
   it('emits one data row per row state with org/registration/row/summaryLog data populated', async () => {
@@ -386,9 +489,7 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const idx = buildHeaderRow(buildDataFieldColumns([])).indexOf(
-      'GROSS_WEIGHT'
-    )
+    const idx = EXPORT_HEADER.indexOf('GROSS_WEIGHT')
     expect(cellsOf(out[1])[idx]).toBe('10') // bare, not the quoted '"10"'
   })
 
@@ -538,7 +639,7 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const header = buildHeaderRow(buildDataFieldColumns([]))
+    const header = EXPORT_HEADER
     const cells = cellsOf(out[1])
     expect(cells[header.indexOf(OSR_COUNTRY_REVISED)]).toBe('Germany')
     expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('Acme Recycling')
@@ -551,7 +652,7 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const header = buildHeaderRow(buildDataFieldColumns([]))
+    const header = EXPORT_HEADER
     const cells = cellsOf(out[1])
     expect(cells[header.indexOf(OSR_COUNTRY_REVISED)]).toBe('')
     expect(cells[header.indexOf(OSR_NAME_REVISED)]).toBe('')
@@ -760,8 +861,11 @@ describe('streamCsvExport', () => {
         readModelOrg({
           registrations: {
             [REGISTRATION_NUMBER]: accredited(
-              readModelAccreditation({ accreditationNumber: 'ACC-NEW' }),
-              readModelAccreditation({ accreditationNumber: 'ACC-OLD' })
+              readModelAccreditation({ accreditationNumber: 'ACC-OLD' }),
+              readModelAccreditation({
+                accreditationNumber: 'ACC-NEW',
+                year: NEXT_YEAR
+              })
             )
           }
         })
@@ -769,27 +873,34 @@ describe('streamCsvExport', () => {
       seeds: [
         {
           accreditationNumber: 'ACC-OLD',
-          year: PREVIOUS_YEAR,
           summaryLogId: 'sl-old',
           rows: [receivedRowState({ rowId: '1001' })]
         },
         {
           accreditationNumber: 'ACC-NEW',
+          year: NEXT_YEAR,
           summaryLogId: 'sl-new',
           rows: [receivedRowState({ rowId: '2002' })]
         }
       ]
     })
 
-    const out = await collect(streamCsvExport(deps))
+    const thisYear = await collect(streamCsvExport(deps))
+    const nextYear = await collect(
+      streamCsvExport({ ...deps, year: NEXT_YEAR })
+    )
 
-    expect(out).toHaveLength(3)
-    const byRowId = cellsByRowId(out)
+    expect(thisYear).toHaveLength(2)
     expect(
-      byRowId.get('1001')[METADATA_COL_INDEX['Accreditation Number']]
+      cellsByRowId(thisYear).get('1001')[
+        METADATA_COL_INDEX['Accreditation Number']
+      ]
     ).toBe('ACC-OLD')
+    expect(nextYear).toHaveLength(2)
     expect(
-      byRowId.get('2002')[METADATA_COL_INDEX['Accreditation Number']]
+      cellsByRowId(nextYear).get('2002')[
+        METADATA_COL_INDEX['Accreditation Number']
+      ]
     ).toBe('ACC-NEW')
   })
 
@@ -836,7 +947,10 @@ describe('streamCsvExport', () => {
           registrations: {
             [REGISTRATION_NUMBER]: accredited(
               readModelAccreditation({ accreditationNumber: 'ACC-B' }),
-              readModelAccreditation({ accreditationNumber: 'ACC-A' })
+              readModelAccreditation({
+                accreditationNumber: 'ACC-A',
+                year: NEXT_YEAR
+              })
             )
           }
         })
@@ -853,7 +967,6 @@ describe('streamCsvExport', () => {
         },
         {
           accreditationNumber: 'ACC-A',
-          year: PREVIOUS_YEAR,
           summaryLogId: 'sl-a',
           rows: [receivedRowState({ rowId: '2002' })]
         }
@@ -866,6 +979,31 @@ describe('streamCsvExport', () => {
     expect(
       out.slice(1).map((line) => cellsOf(line)[METADATA_COL_INDEX['Row ID']])
     ).toEqual(['1001', '2002', '3003'])
+  })
+
+  it("exports only the year's partitions", async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [
+        {
+          year: NEXT_YEAR,
+          summaryLogId: 'sl-next-year',
+          rows: [receivedRowState({ rowId: '2002' })]
+        },
+        {
+          summaryLogId: 'sl-this-year',
+          rows: [receivedRowState({ rowId: '1001' })]
+        }
+      ]
+    })
+
+    const rowIdsOf = async (year) =>
+      (await collect(streamCsvExport({ ...deps, year })))
+        .slice(1)
+        .map((line) => cellsOf(line)[METADATA_COL_INDEX['Row ID']])
+
+    expect(await rowIdsOf(DEFAULT_YEAR)).toEqual(['1001'])
+    expect(await rowIdsOf(NEXT_YEAR)).toEqual(['2002'])
   })
 
   it('orders organisations by organisation number and registrations by registration number', async () => {
@@ -1122,30 +1260,38 @@ describe('streamCsvExport', () => {
     })
 
     const out = await collect(streamCsvExport(deps))
-    const idx = buildHeaderRow(buildDataFieldColumns([])).indexOf(
-      'TONNAGE_RECEIVED_FOR_RECYCLING'
-    )
+    const idx = EXPORT_HEADER.indexOf('TONNAGE_RECEIVED_FOR_RECYCLING')
     expect(cellsOf(out[1])[idx]).toBe('9.5')
     expect(cellsOf(out[2])[idx]).toBe('9.5') // bare, not the quoted '"9.5"'
   })
 
-  it('leaves data untouched when no schema matches the processing type', async () => {
+  it('fails on a row whose processing type has no template', async () => {
     const deps = await buildDeps({
       orgs: [readModelOrg()],
       seeds: [
         {
           rows: [
-            receivedRowState({
-              processingType: 'UNKNOWN_PROCESSING_TYPE',
-              data: { SOME_FREE_COLUMN: 'kept' }
-            })
+            receivedRowState({ processingType: 'UNKNOWN_PROCESSING_TYPE' })
           ]
         }
       ]
     })
 
-    const out = await collect(streamCsvExport(deps))
-    expect(out[1]).toContain('kept')
+    await expect(collect(streamCsvExport(deps))).rejects.toThrow(
+      'No UNKNOWN_PROCESSING_TYPE summary log template for 2026'
+    )
+  })
+
+  it("classifies a partition's rows with its year's templates", async () => {
+    const deps = await buildDeps({
+      orgs: [readModelOrg()],
+      seeds: [{ year: toYear(2028), rows: [receivedRowState()] }],
+      year: toYear(2028)
+    })
+
+    await expect(collect(streamCsvExport(deps))).rejects.toThrow(
+      'summary log template for 2028'
+    )
   })
 
   it('propagates errors from the row-state read', async () => {
@@ -1158,6 +1304,166 @@ describe('streamCsvExport', () => {
 
     await expect(collect(streamCsvExport(deps))).rejects.toThrow('cursor died')
   })
+
+  describe('columns', () => {
+    it('emits the metadata columns then every template column, alphabetically', async () => {
+      const out = await collect(streamCsvExport(await buildDeps()))
+
+      expect(cellsOf(out[0])).toStrictEqual(EXPORT_HEADER)
+    })
+
+    it('leaves out a data key no template declares', async () => {
+      const deps = await buildDeps({
+        orgs: [readModelOrg()],
+        seeds: [
+          {
+            rows: [
+              receivedRowState({
+                data: {
+                  DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
+                  OPERATOR_OWN_COLUMN: 'own-value'
+                }
+              })
+            ]
+          }
+        ]
+      })
+
+      const [header, row] = await collect(streamCsvExport(deps))
+
+      expect(cellsOf(header)).toStrictEqual(EXPORT_HEADER)
+      expect(row).not.toContain('own-value')
+    })
+
+    it('warns once naming each left-out key and the registrations carrying it', async () => {
+      const deps = await buildDeps({
+        orgs: [
+          readModelOrg({
+            registrations: {
+              'REG-1': reprocessorRegistration(),
+              'REG-2': reprocessorRegistration()
+            }
+          })
+        ],
+        seeds: [
+          {
+            registrationNumber: 'REG-1',
+            summaryLogId: 'sl-1',
+            rows: [
+              receivedRowState({
+                rowId: '1001',
+                data: { OPERATOR_OWN_COLUMN: 'a' }
+              }),
+              receivedRowState({
+                rowId: '1002',
+                data: { OPERATOR_OWN_COLUMN: 'b' }
+              })
+            ]
+          },
+          {
+            registrationNumber: 'REG-2',
+            summaryLogId: 'sl-2',
+            rows: [
+              receivedRowState({
+                data: { OPERATOR_OWN_COLUMN: 'c', SECOND_OWN_COLUMN: 'd' }
+              })
+            ]
+          }
+        ]
+      })
+
+      await collect(streamCsvExport(deps))
+
+      expect(deps.logger.warn).toHaveBeenCalledExactlyOnceWith({
+        message:
+          'Waste records export for 2026 left out data keys no template declares: OPERATOR_OWN_COLUMN (REG-1, REG-2); SECOND_OWN_COLUMN (REG-2)',
+        event: {
+          category: 'server',
+          action: 'waste_records_export_undeclared_columns'
+        }
+      })
+    })
+
+    it('still warns when the export is abandoned part way', async () => {
+      const deps = await buildDeps({
+        orgs: [readModelOrg()],
+        seeds: [
+          {
+            rows: [
+              receivedRowState({
+                rowId: '1001',
+                data: { OPERATOR_OWN_COLUMN: 'a' }
+              }),
+              receivedRowState({ rowId: '1002' })
+            ]
+          }
+        ]
+      })
+      const lines = streamCsvExport(deps)
+
+      await lines.next()
+      await lines.next()
+      await lines.return(undefined)
+
+      expect(deps.logger.warn).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          message: expect.stringContaining('OPERATOR_OWN_COLUMN (REG-1)')
+        })
+      )
+    })
+
+    it('does not warn when every key is a template column', async () => {
+      const deps = await buildDeps({
+        orgs: [readModelOrg()],
+        seeds: [{ rows: [receivedRowState()] }]
+      })
+
+      await collect(streamCsvExport(deps))
+
+      expect(deps.logger.warn).not.toHaveBeenCalled()
+    })
+
+    it.for(TEMPLATE_TABLES)(
+      'exports every $year $processingType $tableName column under its own header',
+      async ({ processingType, wasteRecordType, year, columns }) => {
+        const deps = await buildDeps({
+          orgs: [readModelOrg()],
+          seeds: [
+            {
+              year,
+              rows: [
+                {
+                  rowId: '1001',
+                  wasteRecordType,
+                  processingType,
+                  data: Object.fromEntries(
+                    columns.map((column) => [column, `v-${column}`])
+                  ),
+                  classification: naClassification()
+                }
+              ]
+            }
+          ],
+          year
+        })
+
+        const [header, row] = (await collect(streamCsvExport(deps))).map(
+          cellsOf
+        )
+        const exported = Object.fromEntries(
+          header.map((column, i) => [column, row[i]])
+        )
+
+        expect(
+          Object.fromEntries(
+            columns.map((column) => [column, exported[column]])
+          )
+        ).toStrictEqual(
+          Object.fromEntries(columns.map((column) => [column, `v-${column}`]))
+        )
+      }
+    )
+  })
 })
 
 describe('streamCsvExportToReadable', () => {
@@ -1168,56 +1474,33 @@ describe('streamCsvExportToReadable', () => {
       chunks.push(chunk.toString('utf8'))
     }
     expect(chunks).toHaveLength(1)
-    for (const column of buildHeaderRow(buildDataFieldColumns([]))) {
-      expect(chunks[0]).toContain(column)
-    }
+    expect(cellsOf(chunks[0])).toStrictEqual(EXPORT_HEADER)
+  })
+})
+
+describe('coerceForExport', () => {
+  const receivedRow = {
+    data: { DWT_SUPPLY_ID: 12345 },
+    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED
+  }
+
+  it.each([
+    [toYear(2026), 12345],
+    [toYear(2027), '12345']
+  ])("coerces a row's data with the %s template", (year, expected) => {
+    expect(coerceForExport(receivedRow, year).DWT_SUPPLY_ID).toBe(expected)
   })
 
-  it('includes runtime-observed data keys in the header even when not in any schema constant', async () => {
-    const deps = await buildDeps({
-      orgs: [readModelOrg()],
-      seeds: [
-        {
-          rows: [
-            receivedRowState({
-              data: {
-                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
-                BILL_OF_LANDING_REFERENCE_NUMBER: 'BL-99'
-              }
-            })
-          ]
-        }
-      ]
+  it("exports as stored a row of a type the year's template has no table for", () => {
+    expect(
+      coerceForExport(
+        { ...receivedRow, wasteRecordType: WASTE_RECORD_TYPE.EXPORTED },
+        toYear(2026)
+      )
+    ).toEqual({
+      DWT_SUPPLY_ID: 12345,
+      processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
     })
-    const out = await collect(streamCsvExport(deps))
-    expect(out[0]).toContain('BILL_OF_LANDING_REFERENCE_NUMBER')
-    expect(out[1]).toContain('BL-99')
-  })
-
-  it('composes the header from the row-state distinct keys without buffering any row', async () => {
-    const deps = await buildDeps({
-      orgs: [readModelOrg()],
-      seeds: [
-        {
-          rows: [
-            receivedRowState({
-              data: {
-                DATE_RECEIVED_FOR_REPROCESSING: '2026-02-01',
-                WASTE_TRANSFER_NOTE: 'WTN-1'
-              }
-            })
-          ]
-        }
-      ]
-    })
-    const findDistinctDataKeys = vi.spyOn(
-      deps.summaryLogRowStatesRepository,
-      'findDistinctDataKeys'
-    )
-
-    const out = await collect(streamCsvExport(deps))
-
-    expect(findDistinctDataKeys).toHaveBeenCalledTimes(1)
-    expect(out[0]).toContain('WASTE_TRANSFER_NOTE')
   })
 })

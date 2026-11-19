@@ -1,6 +1,18 @@
 import Boom from '@hapi/boom'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
-import { ObjectId } from 'mongodb'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  approvedStatusFrom,
+  approvedTimelineFrom,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  EXPORTER_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -25,31 +37,16 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER,
-  accreditation,
-  exporter,
-  granted,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-/** @import { StatusHistoryEntry } from '#domain/organisations/accreditation.js' */
 /** @import { MockInstance } from 'vitest' */
+/** @import { Material } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
-const organisationId = new ObjectId().toString()
-const registrationId = new ObjectId().toString()
-const accreditationId = new ObjectId().toString()
 const { organisationNumber } = buildOrganisation()
 
 /**
@@ -62,7 +59,7 @@ const { organisationNumber } = buildOrganisation()
 const ledgerUnder = (registrationNumber, year = PRN_YEAR) => ({
   organisationNumber,
   registrationNumber: toRegistrationNumber(registrationNumber),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+  accreditationNumber: ACCREDITATION_NUMBER,
   year
 })
 
@@ -97,25 +94,10 @@ const seedStream = (closingBalance = SEED_BALANCE, year = PRN_YEAR) =>
       : []
   )()
 
-const outputReprocessorAccreditation = {
-  material: MATERIAL.PLASTIC,
-  glassRecyclingProcess: undefined,
-  validFrom: '2026-01-01',
-  wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-  reprocessingType: REPROCESSING_TYPE.OUTPUT,
-  site: { address: { line1: '1 Test St', postcode: 'SW1A 1AA' } }
-}
-
-const exporterAccreditation = {
-  wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-  reprocessingType: undefined
-}
-
-/** @type {StatusHistoryEntry[]} */
-const cancelledHistory = [
-  { status: 'created', updatedAt: new Date('2025-12-01') },
-  { status: 'approved', updatedAt: new Date('2026-01-01') },
-  { status: 'cancelled', updatedAt: new Date('2026-03-01') }
+/** @type {import('#organisation-read-model/vocabulary.js').StatusTimeline<import('#organisation-read-model/vocabulary.js').AccreditationStatus>} */
+const cancelledTimeline = [
+  { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
+  { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
 ]
 
 const validPayload = {
@@ -145,43 +127,64 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   /**
    * Starts a server serving the organisation with one accreditation, an output
-   * reprocessor's unless overridden, at the URL its natural keys name.
+   * reprocessor's for plastic in 2026 unless overridden, at the URL its
+   * natural keys name.
    *
-   * @param {object} [overrides]
+   * @param {{
+   *   exporting?: boolean,
+   *   year?: number,
+   *   material?: Material,
+   *   reprocessingType?: 'input' | 'output',
+   *   status?: import('#organisation-read-model/vocabulary.js').Status<import('#organisation-read-model/vocabulary.js').AccreditationStatus>,
+   *   tradingName?: string
+   * }} [options]
    */
-  const useAccreditation = async (overrides = {}) => {
-    const accredited = accreditation({
-      ...outputReprocessorAccreditation,
-      id: accreditationId,
-      ...overrides
+  const useAccreditation = async ({
+    exporting = false,
+    year = 2026,
+    material = MATERIAL.PLASTIC,
+    reprocessingType = REPROCESSING_TYPE.OUTPUT,
+    status,
+    tradingName
+  } = {}) => {
+    const validFrom = `${year}-01-01`
+    const served = buildReadAccreditation({
+      accreditationNumber: ACCREDITATION_NUMBER,
+      status: status ?? approvedStatusFrom(validFrom),
+      year: toYear(year)
     })
-    const isExporter =
-      accredited.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-    // The read model reads the material, processing and regulator from the
-    // registration, so it is given the accreditation's.
-    const registration = (isExporter ? exporter : reprocessor)({
-      id: registrationId,
-      accreditationId,
-      material: accredited.material,
-      glassRecyclingProcess: accredited.glassRecyclingProcess,
-      submittedToRegulator: accredited.submittedToRegulator,
-      ...(!isExporter && { reprocessingType: accredited.reprocessingType })
-    })
-    const organisation = buildOrganisation({
-      id: organisationId,
+    /** @type {Partial<import('#organisation-read-model/vocabulary.js').RegistrationCommon>} */
+    const registrationFields = {
+      material,
+      status: approvedStatusFrom(validFrom)
+    }
+    const registration = {
+      registrationNumber: exporting ? EXPORTER_NUMBER : REPROCESSOR_NUMBER
+    }
+    const organisation = buildReadOrganisation({
       organisationNumber,
-      statusHistory: [
-        { status: 'approved', updatedAt: new Date('2026-01-01T00:00:00.000Z') }
-      ],
-      registrations: [registration],
-      accreditations: [accredited]
+      ...(tradingName && { tradingName }),
+      registrations: {
+        [registration.registrationNumber]: exporting
+          ? buildReadExporterRegistration({
+              ...registrationFields,
+              accreditations: accreditationsByYear(
+                buildReadExporterAccreditation(served)
+              )
+            })
+          : buildReadReprocessorRegistration({
+              ...registrationFields,
+              reprocessingType,
+              accreditations: accreditationsByYear(served)
+            })
+      }
     })
     await server?.stop()
     server = await createTestServer({
       repositories: {
         packagingRecyclingNotesRepository: () =>
           packagingRecyclingNotesRepository,
-        organisationReadRepository: await organisationReadRepositoryOf([
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
           organisation
         ]),
         ledgerRepository: () => ledgerRepository
@@ -189,9 +192,8 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
     await server.initialize()
 
-    const year = new Date(/** @type {string} */ (accredited.validFrom))
     registrationNumber = registration.registrationNumber
-    url = `/organisations/${organisationNumber}/registrations/${registrationNumber}/accreditations/${year.getUTCFullYear()}/packaging-recycling-notes`
+    url = `/organisations/${organisationNumber}/registrations/${registrationNumber}/accreditations/${year}/packaging-recycling-notes`
   }
 
   /** The PRN data the route first passed to the repository's create. */
@@ -315,10 +317,24 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(stored?.accreditation).not.toHaveProperty('id')
     })
 
+    it("stores the organisation's trading name when it has one", async () => {
+      await useAccreditation({ tradingName: 'ACME Trading' })
+
+      const response = await createPrn()
+
+      const stored = await packagingRecyclingNotesRepository.findById(
+        JSON.parse(response.payload).id
+      )
+      expect(stored?.organisation).toMatchObject({
+        organisationNumber,
+        tradingName: 'ACME Trading'
+      })
+    })
+
     it('sets obligationYear from the accreditation year', async () => {
       vi.setSystemTime(new Date('2027-03-01T12:00:00.000Z'))
       ledgerRepository = seedStream(SEED_BALANCE, toYear(2027))
-      await useAccreditation({ validFrom: '2027-01-01', validTo: '2027-12-31' })
+      await useAccreditation({ year: 2027 })
 
       await createPrn()
 
@@ -390,7 +406,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('sets isExport to true for exporter', async () => {
-      await useAccreditation(exporterAccreditation)
+      await useAccreditation({ exporting: true })
 
       await createPrn()
 
@@ -400,10 +416,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('snapshots glass recycling process for glass accreditations', async () => {
-      await useAccreditation({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_re_melt']
-      })
+      await useAccreditation({ material: 'glass_re_melt' })
 
       await createPrn()
 
@@ -510,7 +523,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   describe('accreditation status', () => {
     it('returns 403 and does not create a PRN when the accreditation is cancelled', async () => {
-      await useAccreditation({ statusHistory: cancelledHistory })
+      await useAccreditation({
+        status: {
+          current: 'cancelled',
+          lastUpdatedAt: '2026-03-01T00:00:00.000Z',
+          timeline: cancelledTimeline
+        }
+      })
 
       const response = await createPrn()
 
@@ -523,10 +542,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('creates a PRN once the accreditation is approved again', async () => {
       await useAccreditation({
-        statusHistory: [
-          ...cancelledHistory,
-          { status: 'approved', updatedAt: new Date('2026-04-01') }
-        ]
+        status: {
+          current: 'approved',
+          lastUpdatedAt: '2026-04-01T00:00:00.000Z',
+          timeline: [
+            ...cancelledTimeline,
+            { status: 'approved', at: '2026-04-01T00:00:00.000Z' }
+          ]
+        }
       })
 
       const response = await createPrn()
@@ -535,7 +558,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('creates a PRN when the accreditation is suspended', async () => {
-      await useAccreditation({ statusHistory: granted('suspended') })
+      await useAccreditation({
+        status: {
+          current: 'suspended',
+          lastUpdatedAt: '2026-01-01T00:00:00.000Z',
+          timeline: approvedTimelineFrom('2026-01-01')
+        }
+      })
 
       const response = await createPrn()
 
@@ -587,7 +616,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     it('returns 409 for an exporter (PERN) journey when tonnage exceeds the balance', async () => {
-      await useAccreditation(exporterAccreditation)
+      await useAccreditation({ exporting: true })
       ledgerRepository = seedStream({ amount: 50, availableAmount: 50 })
 
       const response = await createPrn({ ...validPayload, tonnage: 51 })
@@ -672,7 +701,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('creates the draft for an exporter declaring December inside the window', async () => {
       vi.setSystemTime(new Date('2026-12-15T12:00:00.000Z'))
-      await useAccreditation(exporterAccreditation)
+      await useAccreditation({ exporting: true })
       ledgerRepository = seedStream(decemberBalance)
 
       const response = await createPrn({
@@ -686,7 +715,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     it('creates the draft when isDecemberWaste is false outside the window, for any accreditation type', async () => {
       vi.setSystemTime(new Date('2026-06-15T12:00:00.000Z'))
-      await useAccreditation(exporterAccreditation)
+      await useAccreditation({ exporting: true })
 
       const response = await createPrn({
         ...validPayload,
@@ -699,7 +728,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
   describe('December pool routing at the create pre-check', () => {
     beforeEach(async () => {
-      await useAccreditation(exporterAccreditation)
+      await useAccreditation({ exporting: true })
     })
 
     it('returns 409 when an exporter December raise exceeds the December pool, even when the total balance covers it', async () => {

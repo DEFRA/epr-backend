@@ -12,7 +12,7 @@ import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 
 /**
  * @import {TypedLogger} from '#common/hapi-types.js'
- * @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js'
+ * @import {OrganisationReadRepository} from '#organisation-read-model/index.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  */
@@ -66,7 +66,8 @@ const makeAccreditation = ({
         { status: 'approved', at: `${approvedOn}T00:00:00.000Z` }
       ]
     },
-    ...(isExporter && { overseasSites })
+    ...(isExporter && { overseasSites }),
+    year: toYear(year)
   }
   const registration = {
     material,
@@ -513,7 +514,8 @@ describe('buildCreditedTonnageReport', () => {
             { status: 'created', at: '2025-11-01T00:00:00.000Z' },
             { status: 'approved', at: `${APPROVED_ON}T00:00:00.000Z` }
           ]
-        }
+        },
+        year: toYear(DEFAULT_YEAR)
       }
     })
     const commonFields = {
@@ -590,33 +592,6 @@ describe('buildCreditedTonnageReport', () => {
           '1 dated before 2026-01 (88t credited, 0t eligible), ' +
           '1 dated after 2026-03 (7t credited, 0t eligible)',
         event: expect.objectContaining({ reference: 'ACC-500001' })
-      })
-    )
-  })
-
-  it('reports the tonnage the waste balance holds for rows dated before the window, where the accreditation started before it', async () => {
-    const { organisation, accreditationNumber, ledgerEntry } =
-      makeAccreditation({
-        orgId: 500001,
-        year: 2025,
-        approvedOn: '2025-01-01'
-      })
-
-    const { report, logger } = run({
-      organisations: [organisation],
-      entries: [ledgerEntry],
-      rowStatesByAccreditationNumber: {
-        [accreditationNumber]: [receivedRow('2025-06-01', 40)]
-      }
-    })
-
-    await report
-
-    expect(logger.info).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining(
-          '1 dated before 2026-01 (40t credited, 40t eligible)'
-        )
       })
     )
   })

@@ -1,10 +1,7 @@
-/** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {{
- *   remove: (registrationNumber: RegistrationNumber, year: Year) => Promise<ExternalAccreditation | null>
  *   upsert: (accreditation: ExternalAccreditation) => Promise<ExternalAccreditation>
  * }} ExternalAccreditationsRepository
  */

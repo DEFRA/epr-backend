@@ -5,9 +5,8 @@ import { RECORD_CHANGE } from './record-change.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordState} from '#waste-records/application/read-summary-log-row-states.js' */
-/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {OverseasSitesContext} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {RecordChange} from './record-change.js' */
+/** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
 
 /**
  * How a current-upload row changed against the latest submitted summary log,
@@ -25,16 +24,14 @@ import { RECORD_CHANGE } from './record-change.js'
  * @param {{
  *   wasteRecords: ValidatedWasteRecord[],
  *   submittedRowStatesByKey: Map<string, WasteRecordState>,
- *   accreditation: AccreditationValidity | null,
- *   overseasSites: OverseasSitesContext
+ *   classificationContext: RowClassificationContext
  * }} params
  * @returns {Map<string, RecordChange>} record change keyed by `${type}:${rowId}`
  */
 export const classifyRecordChanges = ({
   wasteRecords,
   submittedRowStatesByKey,
-  accreditation,
-  overseasSites
+  classificationContext
 }) => {
   const changes = new Map()
 
@@ -47,11 +44,7 @@ export const classifyRecordChanges = ({
       continue
     }
 
-    const projected = projectSummaryLogRowState(
-      record,
-      accreditation,
-      overseasSites
-    )
+    const projected = projectSummaryLogRowState(record, classificationContext)
 
     const unchanged =
       isDeepStrictEqual(projected.data, submitted.data) &&

@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest'
 
-import { ledgerEventInsertSchema, LEDGER_EVENT_KIND } from './ledger-schema.js'
+import {
+  LEDGER_EVENT_KIND,
+  LEDGER_ID_GROUP_KEY,
+  isSameLedger,
+  ledgerEventInsertSchema,
+  ledgerKey,
+  pickLedgerId
+} from './ledger-schema.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import {
+  toAccreditationNumber,
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import {
   buildLedgerEvent,
   buildPrnCreatedEvent,
@@ -322,6 +335,38 @@ describe('ledger event validation', () => {
       ).toThrow(
         /Invalid ledger event for organisation .* registration .* accreditation .* number 7/
       )
+    })
+  })
+})
+
+describe('ledger id', () => {
+  const ledgerId = {
+    organisationNumber: toOrganisationNumber('500001'),
+    registrationNumber: toRegistrationNumber('R25SR500001'),
+    accreditationNumber: toAccreditationNumber('ACC-1'),
+    year: toYear(2026)
+  }
+
+  it('picks only the ledger id from a record', () => {
+    const event = { ...ledgerId, number: 3, kind: 'x' }
+
+    expect(pickLedgerId(event)).toStrictEqual(ledgerId)
+  })
+
+  it('tells ledgers of different years apart', () => {
+    const nextYear = { ...ledgerId, year: toYear(2027) }
+
+    expect(isSameLedger(ledgerId, { ...ledgerId })).toBe(true)
+    expect(isSameLedger(ledgerId, nextYear)).toBe(false)
+    expect(ledgerKey(ledgerId)).not.toBe(ledgerKey(nextYear))
+  })
+
+  it('groups by every field of the ledger id', () => {
+    expect(LEDGER_ID_GROUP_KEY).toStrictEqual({
+      organisationNumber: '$organisationNumber',
+      registrationNumber: '$registrationNumber',
+      accreditationNumber: '$accreditationNumber',
+      year: '$year'
     })
   })
 })

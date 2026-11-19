@@ -6,7 +6,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import {
   accreditation,
   reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+} from '#organisation-read-model/test-support.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'

@@ -1,60 +1,95 @@
+import { vi } from 'vitest'
+
 import {
-  ACCREDITATION_NUMBER,
-  EXPORTER_ACCREDITATION_NUMBER,
-  accreditation,
-  approvedOverseasSite,
-  approvedTimeline,
-  exporter,
-  exporterAccreditation,
-  overseasSites,
-  pendingOverseasSite,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  approvedStatusFrom,
+  buildReadAccreditation,
+  buildReadExporterAccreditation,
+  buildReadExporterRegistration,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
-import { partialMock } from '#test/type-helpers.js'
-import { organisationReadRepositoryFrom } from '#vite/helpers/organisation-read-model.js'
 
-/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
+/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 
-export {
-  EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+export const REPROCESSOR_NUMBER = toRegistrationNumber('R26ER5001180041PL')
+export const EXPORTER_NUMBER = toRegistrationNumber('R26EX5001180042PL')
+export const ACCREDITATION_NUMBER = 'A26ER5001180114PL'
+export const EXPORTER_ACCREDITATION_NUMBER = 'A26EX5001180115PL'
+
+export const approvedOverseasSite = {
+  name: 'Beta Reprocessor',
+  address: {
+    line1: '2 Teststrasse',
+    townOrCity: 'Berlin',
+    postcode: '10115',
+    country: 'Germany'
+  },
+  coordinates: '52.5200,13.4050'
+}
+
+export const pendingOverseasSite = {
+  name: 'Alpha Reprocessor',
+  address: { line1: '1 Rue de Test', townOrCity: 'Paris', country: 'France' }
+}
+
+/** What `buildAccreditedOrganisation` serves as each registration's standing. */
+const standingByDate = {
+  2026: {
+    '2026-02-01': { standing: 'registeredOnly' },
+    '2026-07-01': { standing: 'accredited' }
+  }
+}
 
 /**
- * Builds accredited organisations with the caller's builders, so they draw
- * orgIds from the same sequence as the caller's other organisations.
+ * An organisation in the read model's shape with an accredited reprocessor
+ * and an accredited exporter, both for 2026.
  *
- * @param {OrganisationBuilders} builders
+ * @param {Partial<Organisation>} [overrides]
+ * @returns {Organisation}
  */
-export const createAccreditedOrganisationBuilder =
-  ({ buildOrganisation }) =>
-  (overrides = {}) => {
-    const reprocessorAccreditation = accreditation()
-    const exportAccreditation = exporterAccreditation()
-    return buildOrganisation({
-      registrations: [
-        reprocessor({ accreditationId: reprocessorAccreditation.id }),
-        exporter({ accreditationId: exportAccreditation.id })
-      ],
-      accreditations: [reprocessorAccreditation, exportAccreditation],
-      ...overrides
-    })
-  }
+export const buildAccreditedOrganisation = (overrides = {}) =>
+  buildReadOrganisation({
+    registrations: {
+      [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
+        accreditations: accreditationsByYear(
+          buildReadAccreditation({
+            accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+          })
+        )
+      }),
+      [EXPORTER_NUMBER]: buildReadExporterRegistration({
+        overseasSites: {
+          '001': approvedOverseasSite,
+          '002': pendingOverseasSite
+        },
+        accreditations: accreditationsByYear(
+          buildReadExporterAccreditation({
+            accreditationNumber: toAccreditationNumber(
+              EXPORTER_ACCREDITATION_NUMBER
+            ),
+            overseasSites: {
+              '001': { status: 'approved', approvedOn: '2026-01-01' },
+              '002': { status: 'pending' }
+            }
+          })
+        )
+      })
+    },
+    ...overrides
+  })
 
 /** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
 export const reprocessorResponse = {
-  status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
-  standingByDate: {
-    2026: {
-      '2026-02-01': { standing: 'registeredOnly' },
-      '2026-07-01': { standing: 'accredited' }
-    }
-  },
-  validFrom: '2026-02-01',
+  status: approvedStatusFrom('2026-02-01'),
+  standingByDate,
   material: 'glass_re_melt',
   submittedToRegulator: { code: 'ea' },
   wasteProcessingType: 'reprocessor',
@@ -70,41 +105,38 @@ export const reprocessorResponse = {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
       prns: { open: true },
-      status: { current: 'approved', timeline: approvedTimeline('2026-07-01') }
+      status: approvedStatusFrom('2026-07-01')
     }
   }
 }
 
-/** What `buildAccreditedOrganisation` serves for its exporter's accreditation. */
-const exporterAccreditationResponse = {
-  accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
-  prns: { open: true },
-  status: { current: 'approved', timeline: approvedTimeline('2026-07-01') },
-  overseasSites: {
-    '001': { status: 'approved', approvedOn: '2026-01-01' },
-    '002': { status: 'pending' }
-  }
-}
-
-/** What `buildAccreditedOrganisation` serves for its exporter. */
+/** What `buildAccreditedOrganisation` serves for its exporter while 2026 is open. */
 export const exporterResponse = {
-  status: { current: 'approved', timeline: approvedTimeline('2026-02-01') },
-  standingByDate: {
-    2026: {
-      '2026-02-01': { standing: 'registeredOnly' },
-      '2026-07-01': { standing: 'accredited' }
-    }
-  },
-  validFrom: '2026-02-01',
+  status: approvedStatusFrom('2026-02-01'),
+  standingByDate,
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },
   wasteProcessingType: 'exporter',
   overseasSites: { '001': approvedOverseasSite, '002': pendingOverseasSite },
-  accreditations: { 2026: exporterAccreditationResponse }
+  accreditations: {
+    2026: {
+      accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
+      prns: { open: true },
+      status: approvedStatusFrom('2026-07-01'),
+      overseasSites: {
+        '001': { status: 'approved', approvedOn: '2026-01-01' },
+        '002': { status: 'pending' }
+      }
+    }
+  }
 }
 
 export const body = (response) => JSON.parse(response.payload)
 
+/**
+ * A test server whose organisation read repository holds the organisations
+ * given to `serve`, with `findByOrganisationNumber` spied on.
+ */
 export const useViewServer = () => {
   let server
 
@@ -114,41 +146,15 @@ export const useViewServer = () => {
   })
 
   /**
-   * @param {ReturnType<typeof createInMemoryOrganisationsRepository>} organisationAdministrationRepository
+   * @param {...Organisation} organisations
    */
-  const start = async (organisationAdministrationRepository) => {
-    const overseasSitesRepository =
-      createInMemoryOverseasSitesRepository(overseasSites)
+  const serve = async (...organisations) => {
+    const repository = createInMemoryOrganisationReadRepository(organisations)()
+    vi.spyOn(repository, 'findByOrganisationNumber')
     server = await createTestServer({
-      repositories: {
-        organisationAdministrationRepository,
-        overseasSitesRepository,
-        organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationAdministrationRepository(),
-          { overseasSitesRepository: overseasSitesRepository() }
-        )
-      }
+      repositories: { organisationReadRepository: () => repository }
     })
-  }
-
-  /**
-   * Seeds the organisation as given, without repository validation.
-   * @param {object} organisation
-   */
-  const serve = (organisation) =>
-    start(createInMemoryOrganisationsRepository([partialMock(organisation)]))
-
-  /**
-   * Stores the organisation through the repository, as production writes it.
-   * @param {object} organisation
-   */
-  const serveStored = async (organisation) => {
-    const organisationAdministrationRepository =
-      createInMemoryOrganisationsRepository([])
-    await organisationAdministrationRepository().insert(
-      partialMock(organisation)
-    )
-    await start(organisationAdministrationRepository)
+    return repository
   }
 
   /**
@@ -158,5 +164,5 @@ export const useViewServer = () => {
   const get = (url, auth = asServiceMaintainer()) =>
     server.inject({ method: 'GET', url, ...auth })
 
-  return { server: () => server, serve, serveStored, get }
+  return { server: () => server, serve, get }
 }

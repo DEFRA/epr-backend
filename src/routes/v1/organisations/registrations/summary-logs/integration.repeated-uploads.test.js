@@ -7,20 +7,17 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createMockOverseasSitesRepository } from '#test/mock-repositories.js'
-import { organisationReadRepositoryOver } from '#vite/helpers/organisation-read-model.js'
+import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -31,24 +28,16 @@ import {
   createUploadPayload,
   pollForValidation,
   pollWhileStatus,
-  servedTestAccreditation,
-  servedTestRegistration,
+  servedTestReadOrganisation,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION_NUMBER,
   UPLOAD_YEAR
 } from './integration-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
-
-const { buildReadOrganisation } = createOrganisationBuilders()
+import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
 describe('Repeated uploads of identical data', () => {
   let organisationId
   let registrationId
-  const VALID_FROM = '2026-01-01'
-  const VALID_TO = '2026-12-31'
 
   const { getServer } = setupAuthContext()
 
@@ -73,7 +62,6 @@ describe('Repeated uploads of identical data', () => {
     let server
     let summaryLogRowStatesRepository
     let ledgerRepository
-    let accreditationId
     let secondUploadResponse
 
     beforeEach(async () => {
@@ -82,47 +70,6 @@ describe('Repeated uploads of identical data', () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
       const uploadsRepository = createInMemoryUploadsRepository()
-
-      // Set up organisation with registration
-      accreditationId = new ObjectId().toString()
-      const testOrg = buildReadOrganisation({
-        organisationNumber: TEST_ORGANISATION_NUMBER,
-        registrations: [
-          servedTestRegistration({
-            id: registrationId,
-            status: 'approved',
-            material: 'glass',
-            glassRecyclingProcess: ['glass_re_melt'],
-            wasteProcessingType: 'reprocessor',
-            reprocessingType: 'input',
-            formSubmission: { id: registrationId, time: new Date() },
-            submittedToRegulator: 'ea',
-            validFrom: VALID_FROM,
-            accreditationId
-          })
-        ],
-        accreditations: [
-          servedTestAccreditation({
-            id: accreditationId,
-            accreditationNumber: toAccreditationNumber('ACC-2026-001'),
-            material: 'glass',
-            wasteProcessingType: 'reprocessor',
-            validFrom: VALID_FROM,
-            validTo: VALID_TO,
-            submittedToRegulator: 'ea',
-            statusHistory: [
-              { status: 'created', updatedAt: '2025-12-01T00:00:00.000Z' },
-              { status: 'approved', updatedAt: '2025-12-15T00:00:00.000Z' }
-            ]
-          })
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationAdministrationRepository =
-        createInMemoryOrganisationsRepository([
-          { ...testOrg, status: 'active' }
-        ])()
 
       // Define shared metadata and headers
       const sharedMeta = {
@@ -261,18 +208,23 @@ describe('Repeated uploads of identical data', () => {
       ledgerRepository = createInMemoryLedgerRepository()()
       summaryLogRowStatesRepository =
         createInMemorySummaryLogRowStatesRepository()()
+      const organisationReadRepository =
+        createInMemoryOrganisationReadRepository([
+          servedTestReadOrganisation({
+            wasteProcessingType: 'reprocessor',
+            material: 'glass_re_melt',
+            accreditationNumber: toAccreditationNumber('ACC-2026-001')
+          })
+        ])()
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
-        organisationAdministrationRepository,
+        organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
           findPeriodicReports: async () => []
-        }),
-        overseasSitesRepository: createMockOverseasSitesRepository({
-          findByIds: vi.fn().mockResolvedValue([])
         })
       })
 
@@ -281,9 +233,7 @@ describe('Repeated uploads of identical data', () => {
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         summaryLogRowStatesRepository,
         ledgerRepository,
-        organisationReadRepository: organisationReadRepositoryOver(
-          organisationAdministrationRepository
-        ),
+        organisationReadRepository,
         logger: mockLogger
       })
 
@@ -313,10 +263,7 @@ describe('Repeated uploads of identical data', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          organisationAdministrationRepository: () =>
-            organisationAdministrationRepository,
-          organisationReadRepository: () =>
-            organisationReadRepositoryOver(organisationAdministrationRepository)
+          organisationReadRepository: () => organisationReadRepository
         },
         workers: {
           summaryLogsWorker
@@ -403,12 +350,12 @@ describe('Repeated uploads of identical data', () => {
       async () => {
         const ledgerId = {
           organisationNumber: TEST_ORGANISATION_NUMBER,
-          registrationNumber: toRegistrationNumber(TEST_REGISTRATION_NUMBER),
+          registrationNumber: TEST_REGISTRATION_NUMBER,
           accreditationNumber: toAccreditationNumber('ACC-2026-001'),
           year: UPLOAD_YEAR
         }
 
-        const committedBefore = await summaryLogRowStatesForRegistration({
+        const committedBefore = await summaryLogRowStatesForLedger({
           ...ledgerId,
           ledgerRepository,
           summaryLogRowStatesRepository
@@ -424,7 +371,7 @@ describe('Repeated uploads of identical data', () => {
           waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
         })
 
-        const committedAfter = await summaryLogRowStatesForRegistration({
+        const committedAfter = await summaryLogRowStatesForLedger({
           ...ledgerId,
           ledgerRepository,
           summaryLogRowStatesRepository

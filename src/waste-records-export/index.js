@@ -8,7 +8,9 @@
  * @module waste-records-export
  */
 
-// Route objects only: `plugins/router.js` spreads this module's values
-// straight into `server.route()`, so a path constant here crashes boot.
+export { streamSubmissionCsvToReadable } from './application/stream-submission-csv.js'
+export { sanitiseFormulaInjection } from './domain/csv-columns.js'
+
 export { wasteRecordsExportRoute } from './routes/export.js'
 export { registrationWasteRecordsExportByNumber } from './routes/registration-export.js'
+export { availableWasteRecordYearsGet } from './routes/available-years.js'

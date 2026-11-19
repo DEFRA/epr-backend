@@ -1,17 +1,16 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
-import { partialMock } from '#test/type-helpers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { organisationYears } from './organisation-years.js'
 
-const registration = (timeline) => partialMock({ status: { timeline } })
+/** @import { RegistrationStatus, StatusTimeline } from './model.js' */
 
-const organisationOf = (...timelines) =>
-  partialMock({
-    registrations: Object.fromEntries(
-      timelines.map((timeline, index) => [`R${index}`, registration(timeline)])
-    )
-  })
+/** @param {...StatusTimeline<RegistrationStatus>} timelines */
+const organisationOf = (...timelines) => ({
+  registrations: Object.fromEntries(
+    timelines.map((timeline, index) => [`R${index}`, { status: { timeline } }])
+  )
+})
 
-const END_DATE = calendarDate('2027-03-15')
+const UP_TO_2027 = toYear(2027)
 
 describe('organisationYears', () => {
   it('lists the current year for a registration approved this year', () => {
@@ -19,7 +18,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2027-01-10T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, END_DATE)).toEqual([2027])
+    expect(organisationYears(organisation, UP_TO_2027)).toEqual([2027])
   })
 
   it('lists every year from approval to now while it stays approved', () => {
@@ -27,7 +26,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2025-02-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, END_DATE)).toEqual([
+    expect(organisationYears(organisation, UP_TO_2027)).toEqual([
       2027, 2026, 2025
     ])
   })
@@ -38,7 +37,7 @@ describe('organisationYears', () => {
       { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, END_DATE)).toEqual([2026, 2025])
+    expect(organisationYears(organisation, UP_TO_2027)).toEqual([2026, 2025])
   })
 
   it('does not list the year when cancelled on the first of January', () => {
@@ -47,7 +46,7 @@ describe('organisationYears', () => {
       { status: 'cancelled', at: '2026-01-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, END_DATE)).toEqual([2025])
+    expect(organisationYears(organisation, UP_TO_2027)).toEqual([2025])
   })
 
   it('skips the years between a cancellation and a reinstatement', () => {
@@ -57,7 +56,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2026-09-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, END_DATE)).toEqual([
+    expect(organisationYears(organisation, UP_TO_2027)).toEqual([
       2027, 2026, 2024
     ])
   })
@@ -67,7 +66,7 @@ describe('organisationYears', () => {
       { status: 'approved', at: '2028-01-01T00:00:00.000Z' }
     ])
 
-    expect(organisationYears(organisation, END_DATE)).toEqual([])
+    expect(organisationYears(organisation, UP_TO_2027)).toEqual([])
   })
 
   it('merges registrations without duplicates, newest first', () => {
@@ -79,14 +78,12 @@ describe('organisationYears', () => {
       ]
     )
 
-    expect(organisationYears(organisation, END_DATE)).toStrictEqual([
+    expect(organisationYears(organisation, UP_TO_2027)).toStrictEqual([
       2027, 2026, 2025
     ])
   })
 
   it('lists nothing when there are no registrations', () => {
-    expect(
-      organisationYears(partialMock({ registrations: {} }), END_DATE)
-    ).toEqual([])
+    expect(organisationYears(organisationOf(), UP_TO_2027)).toEqual([])
   })
 })

@@ -1,47 +1,40 @@
-import { calendarDate } from '#common/helpers/date-formatter.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { partialMock } from '#test/type-helpers.js'
 import { standingByDate, standingByYear } from './registration-standing.js'
 
-/** @import { Registration, StatusTimeline } from './model.js' */
+/** @import { AccreditationStatus, RegistrationStatus, StatusTimeline } from './model.js' */
+/** @import { StandingSource } from './registration-standing.js' */
 
 /**
- * @param {string} status
- * @returns {(date: string, time?: string) => StatusTimeline[number]}
+ * @template {string} S
+ * @param {S} status
+ * @returns {(date: string, time?: string) => StatusTimeline<S>[number]}
  */
 const changeTo =
   (status) =>
-  (date, time = '00:00') => {
-    const at = `${date}T${time}:00.000Z`
-    return { status, at, updatedAt: at }
-  }
+  (date, time = '00:00') => ({ status, at: `${date}T${time}:00.000Z` })
 
-const createdOn = changeTo('created')
 const approvedOn = changeTo('approved')
 const suspendedOn = changeTo('suspended')
 const cancelledOn = changeTo('cancelled')
 
 /**
- * @param {StatusTimeline} registration
- * @param {Record<number, StatusTimeline>} accreditations
- * @returns {Registration}
+ * @param {StatusTimeline<RegistrationStatus>} registration
+ * @param {Record<number, StatusTimeline<AccreditationStatus>>} [accreditations]
+ * @returns {StandingSource}
  */
-const registrationWith = (registration, accreditations) =>
-  /** @type {Registration} */ (
-    /** @type {unknown} */ ({
-      status: { timeline: registration },
-      accreditations: Object.fromEntries(
-        Object.entries(accreditations).map(([key, timeline]) => [
-          key,
-          { status: { timeline } }
-        ])
-      )
-    })
+const registrationWith = (registration, accreditations = {}) => ({
+  status: { timeline: registration },
+  accreditations: Object.fromEntries(
+    Object.entries(accreditations).map(([key, timeline]) => [
+      key,
+      { status: { timeline }, year: toYear(Number(key)) }
+    ])
   )
+})
 
 /**
- * @param {StatusTimeline} registration
- * @param {Record<number, StatusTimeline>} [accreditations]
+ * @param {StatusTimeline<RegistrationStatus>} registration
+ * @param {Record<number, StatusTimeline<AccreditationStatus>>} [accreditations]
  * @param {number} [year]
  */
 const byDate = (registration, accreditations = {}, year = 2026) =>
@@ -56,7 +49,6 @@ describe('standingByDate', () => {
     expect(
       byDate([approvedOn('2026-02-01'), cancelledOn('2026-11-20')], {
         2026: [
-          createdOn('2026-03-01'),
           approvedOn('2026-07-01'),
           suspendedOn('2026-09-01'),
           cancelledOn('2026-10-15')
@@ -71,9 +63,9 @@ describe('standingByDate', () => {
   })
 
   it('has no key before the registration is first approved', () => {
-    expect(byDate([createdOn('2026-01-10'), approvedOn('2026-02-01')])).toEqual(
-      { '2026-02-01': registeredOnly }
-    )
+    expect(byDate([approvedOn('2026-02-01')])).toEqual({
+      '2026-02-01': registeredOnly
+    })
   })
 
   it('is empty for a year before registration', () => {
@@ -136,7 +128,9 @@ describe('standingByDate', () => {
 
   it('is accredited only from registration when accredited before registering', () => {
     expect(
-      byDate([approvedOn('2026-03-01')], { 2026: [approvedOn('2026-01-01')] })
+      byDate([approvedOn('2026-03-01')], {
+        2026: [approvedOn('2026-01-01')]
+      })
     ).toEqual({ '2026-03-01': accredited })
   })
 
@@ -161,27 +155,21 @@ describe('standingByDate', () => {
 
   it('counts only the accreditation for the given year', () => {
     expect(
-      byDate([approvedOn('2025-06-02')], { 2025: [approvedOn('2025-07-01')] })
+      byDate([approvedOn('2025-06-02')], {
+        2025: [approvedOn('2025-07-01')]
+      })
     ).toEqual({ '2026-01-01': registeredOnly })
   })
 })
 
 describe('standingByYear', () => {
-  const END_DATE = calendarDate('2026-12-31')
+  const UP_TO_2026 = toYear(2026)
   const registeredOnly = { standing: 'registeredOnly' }
   const accredited = { standing: 'accredited' }
-  const approvedFrom = (date, accreditations = {}) => ({
-    status: {
-      current: /** @type {const} */ ('approved'),
-      timeline: [approvedOn(date)]
-    },
-    accreditations
-  })
-  const registration = (timeline) => partialMock({ status: { timeline } })
 
-  it('covers each year from approval up to the year of the end date', () => {
+  it('covers each year from approval up to the year given', () => {
     expect(
-      standingByYear(partialMock(approvedFrom('2025-06-02')), END_DATE)
+      standingByYear(registrationWith([approvedOn('2025-06-02')]), UP_TO_2026)
     ).toEqual({
       2025: { '2025-06-02': registeredOnly },
       2026: { '2026-01-01': registeredOnly }
@@ -196,39 +184,28 @@ describe('standingByYear', () => {
     ]
 
     expect(
-      Object.keys(
-        standingByYear(
-          partialMock({ ...registration(timeline), accreditations: {} }),
-          END_DATE
-        )
-      )
+      Object.keys(standingByYear(registrationWith(timeline), UP_TO_2026))
     ).toEqual(['2024', '2026'])
   })
 
-  it('covers the year of an accreditation up to the year of the end date', () => {
-    const withAccreditationFor2027 = partialMock(
-      approvedFrom('2026-06-02', { 2027: approvedFrom('2026-10-01') })
+  it('covers the year of an accreditation up to the year given', () => {
+    const withAccreditationFor2027 = registrationWith(
+      [approvedOn('2026-06-02')],
+      { 2027: [approvedOn('2026-10-01')] }
     )
 
-    expect(standingByYear(withAccreditationFor2027, END_DATE)).toEqual({
+    expect(standingByYear(withAccreditationFor2027, UP_TO_2026)).toEqual({
       2026: { '2026-06-02': registeredOnly }
     })
-    expect(
-      standingByYear(withAccreditationFor2027, calendarDate('2027-12-31'))
-    ).toEqual({
+    expect(standingByYear(withAccreditationFor2027, toYear(2027))).toEqual({
       2026: { '2026-06-02': registeredOnly },
       2027: { '2027-01-01': accredited }
     })
   })
 
-  it('is empty for a registration never approved', () => {
-    const timeline = [createdOn('2026-06-02')]
+  it('is empty for a registration approved after the end date', () => {
+    const timeline = [approvedOn('2027-03-01')]
 
-    expect(
-      standingByYear(
-        partialMock({ ...registration(timeline), accreditations: {} }),
-        END_DATE
-      )
-    ).toEqual({})
+    expect(standingByYear(registrationWith(timeline), UP_TO_2026)).toEqual({})
   })
 })

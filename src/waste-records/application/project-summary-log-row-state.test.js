@@ -6,18 +6,18 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
+/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
+import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const overseasSites = /** @type {any} */ (new Map())
 
-const accreditation = buildAccreditation({
+/** @type {AccreditationValidity} */
+const accreditation = {
   validFrom: '2024-01-01',
   validTo: '2024-12-31',
-  statusHistory: [
-    { status: 'created', updatedAt: '2023-12-01T00:00:00.000Z' },
-    { status: 'approved', updatedAt: '2023-12-15T00:00:00.000Z' }
-  ]
-})
+  timeline: [{ status: 'approved', at: '2023-12-15T00:00:00.000Z' }]
+}
 
 describe('projectSummaryLogRowState', () => {
   it('classifies the record and coerces its stored tonnages to two decimal places', () => {
@@ -33,7 +33,11 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const projected = projectSummaryLogRowState(record, null, overseasSites)
+    const projected = projectSummaryLogRowState(record, {
+      tableSchemas: tableSchemasOf(toYear(2026), record.data.processingType),
+      accreditation: null,
+      overseasSites
+    })
 
     expect(projected).toMatchObject({
       rowId: '1',
@@ -63,7 +67,11 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const projected = projectSummaryLogRowState(record, null, overseasSites)
+    const projected = projectSummaryLogRowState(record, {
+      tableSchemas: tableSchemasOf(toYear(2026), record.data.processingType),
+      accreditation: null,
+      overseasSites
+    })
 
     expect(projected.processingType).toBe('REPROCESSOR_REGISTERED_ONLY')
     expect(projected.data).not.toHaveProperty('processingType')
@@ -81,7 +89,11 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const projected = projectSummaryLogRowState(record, null, overseasSites)
+    const projected = projectSummaryLogRowState(record, {
+      tableSchemas: tableSchemasOf(toYear(2026), record.data.processingType),
+      accreditation: null,
+      overseasSites
+    })
 
     expect(projected.data).not.toHaveProperty('ROW_ID')
     expect(projected.rowId).toBe('1011')
@@ -101,7 +113,11 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const { data } = projectSummaryLogRowState(record, null, overseasSites)
+    const { data } = projectSummaryLogRowState(record, {
+      tableSchemas: tableSchemasOf(toYear(2026), record.data.processingType),
+      accreditation: null,
+      overseasSites
+    })
 
     expect(data.NET_WEIGHT).toBe(9.99)
     expect(data.NET_WEIGHT).toBe(
@@ -121,11 +137,11 @@ describe('projectSummaryLogRowState', () => {
       }
     }
 
-    const projected = projectSummaryLogRowState(
-      record,
+    const projected = projectSummaryLogRowState(record, {
+      tableSchemas: tableSchemasOf(toYear(2026), record.data.processingType),
       accreditation,
       overseasSites
-    )
+    })
 
     // A -0 debit does not survive the Mongo round-trip (it returns +0), so a
     // resubmission of the identical row would read as an endless phantom
@@ -147,7 +163,11 @@ describe('projectSummaryLogRowState', () => {
       data: { processingType: 'REPROCESSOR_REGISTERED_ONLY', NET_WEIGHT: 7.536 }
     }
 
-    projectSummaryLogRowState(record, null, overseasSites)
+    projectSummaryLogRowState(record, {
+      tableSchemas: tableSchemasOf(toYear(2026), record.data.processingType),
+      accreditation: null,
+      overseasSites
+    })
 
     expect(record.data.NET_WEIGHT).toBe(7.536)
   })

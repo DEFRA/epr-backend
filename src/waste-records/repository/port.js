@@ -28,12 +28,12 @@
  */
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber, RequiredNumbers } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * A row as it was submitted, carrying no waste-balance classification.
  *
- * @typedef {RequiredNumbers & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
+ * @typedef {WasteBalanceLedgerId & Pick<SummaryLogRowState, 'wasteRecordType' | 'processingType' | 'data'>} SubmittedRowState
  */
 
 /**
@@ -49,8 +49,11 @@
  *   new state document whose membership starts with `summaryLogId` and which
  *   stores the numbers `ledgerId` carries. Idempotent:
  *   re-running the same submission adds no document and no membership entry.
+ *   A summary log holds one state per row: a write that would give a row a
+ *   second state under `summaryLogId` rejects with
+ *   `SummaryLogRowStateConflictError` before anything is stored.
  *   Returns the resulting state document for each entry, in input order.
- * @property {(ledgerId: RequiredNumbers, summaryLogId: SummaryLogFileId) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
  *   Return the waste record states `ledgerId` holds at the summary log
  *   `summaryLogId`. A row state belongs to the ledger that wrote it, so the
  *   summary log alone does not identify one: the same `summaryLogId` under a
@@ -66,14 +69,29 @@
  * @property {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield each state document whose membership contains at least one of
  *   `summaryLogIds`, at most once however many of them it holds.
- * @property {() => Promise<string[]>} findDistinctDataKeys
- *   Return the union of every key observed on `data` across every state
- *   document in the collection. Used by the CSV export to compose its dynamic
- *   header without materialising any document into memory.
  */
 
 /**
  * @typedef {() => SummaryLogRowStatesRepository} SummaryLogRowStatesRepositoryFactory
  */
 
-export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
+/**
+ * Raised by `upsertSummaryLogRowStates` when a row would hold two states under
+ * one summary log, so the log's rows would no longer reproduce its credit.
+ */
+export class SummaryLogRowStateConflictError extends Error {
+  /** @type {SummaryLogFileId} */
+  summaryLogId
+
+  /**
+   * @param {SummaryLogFileId} summaryLogId
+   * @param {{ wasteRecordType: string, rowId: string }} row
+   */
+  constructor(summaryLogId, { wasteRecordType, rowId }) {
+    super(
+      `Summary log ${summaryLogId} already holds a different state for ${wasteRecordType} row ${rowId}`
+    )
+    this.name = 'SummaryLogRowStateConflictError'
+    this.summaryLogId = summaryLogId
+  }
+}

@@ -3,22 +3,22 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from '#organisation-read-model/index.js'
 import { registrationParams } from '#routes/organisations/natural-keys.js'
 import { externalAccreditationPayloadSchema } from './put.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExternalAccreditationsRepository } from '#external-accreditations/repository/port.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {{ registrationNumber: RegistrationNumber, year: Year }} ExternalAccreditationParams
  *
  * @typedef {Omit<ExternalAccreditation, 'registrationNumber' | 'year' | 'status'> & {
- *   status: { timeline: { status: ExternalAccreditation['status']['current'], at: string, updatedAt: string }[] }
+ *   status: Omit<ExternalAccreditation['status'], 'current'>
  * }} ExternalAccreditationPayload
  *
  * @typedef {HapiRequest & {
@@ -29,28 +29,33 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
 export const externalAccreditationPath =
   '/v1/dev/external-accreditations/{registrationNumber}/{year}'
 
+/**
+ * Only 2027 is accepted: the read model loads external accreditations for
+ * that year alone, so one stored for any other year would never be served.
+ */
 export const externalAccreditationParams = Joi.object({
   registrationNumber: registrationParams.registrationNumber,
-  year: yearSchema().required()
+  year: yearSchema().valid(REG_ACCRED_ACCREDITATION_YEAR).required()
 })
 
 /**
+ * The organisation's registration with the number, or null when the
+ * organisation does not hold it.
+ *
  * @param {OrganisationReadRepository} organisationReadRepository
+ * @param {OrganisationNumber} organisationNumber
  * @param {RegistrationNumber} registrationNumber
  */
-const isExporterRegistration = async (
+const registrationOf = async (
   organisationReadRepository,
+  organisationNumber,
   registrationNumber
 ) => {
-  const { items } = await organisationReadRepository.find({
-    registrationNumber,
-    page: 1,
-    pageSize: 1
-  })
-  return (
-    items[0]?.registrations[registrationNumber]?.wasteProcessingType ===
-    WASTE_PROCESSING_TYPE.EXPORTER
-  )
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber
+    )
+  return organisation?.registrations[registrationNumber] ?? null
 }
 
 export const devExternalAccreditationPut = {
@@ -76,15 +81,14 @@ export const devExternalAccreditationPut = {
     const { registrationNumber, year } = request.params
     /** @type {ExternalAccreditationPayload} */
     const { status, ...fields } = request.payload
-    if (
-      'overseasSites' in fields &&
-      !(await isExporterRegistration(
-        request.organisationReadRepository,
-        registrationNumber
-      ))
-    ) {
+    const registration = await registrationOf(
+      request.organisationReadRepository,
+      fields.organisationNumber,
+      registrationNumber
+    )
+    if (!registration) {
       throw Boom.badData(
-        `Registration ${registrationNumber} is not an exporter, so its accreditation has no overseas sites`
+        `Organisation ${fields.organisationNumber} holds no registration ${registrationNumber}`
       )
     }
     const timeline = status.timeline.toSorted((a, b) =>
@@ -95,7 +99,11 @@ export const devExternalAccreditationPut = {
       ...fields,
       registrationNumber,
       year,
-      status: { current: latest.status, timeline }
+      status: {
+        current: latest.status,
+        lastUpdatedAt: status.lastUpdatedAt,
+        timeline
+      }
     })
     return h.response(stored).code(StatusCodes.OK)
   }

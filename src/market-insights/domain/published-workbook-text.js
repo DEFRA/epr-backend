@@ -158,6 +158,8 @@ export const NATION_FIGURES_MATERIALS = Object.freeze([
 /**
  * The materials of the waste balance, in published order, labelled as the UK
  * and England tables label theirs. Each gets a row per accreditation type.
+ *
+ * @alias
  */
 export const WASTE_BALANCE_MATERIALS = NATION_FIGURES_MATERIALS
 

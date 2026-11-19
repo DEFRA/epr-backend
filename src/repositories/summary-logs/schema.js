@@ -3,6 +3,7 @@ import Joi from 'joi'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { summaryLogCommitSchema } from '#domain/summary-logs/commit.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 
 const commonMessages = {
@@ -55,18 +56,10 @@ const validationSchema = Joi.object({
   }).optional()
 })
 
-// A summary log stored before accreditations were recorded holds no
-// accreditation id, and so no accreditation number.
 const numbersSchema = {
   organisationNumber: Joi.string().required(),
   registrationNumber: Joi.string().required(),
-  accreditationNumber: Joi.when('accreditationId', {
-    switch: [
-      { is: Joi.valid(null).required(), then: Joi.valid(null).required() },
-      { is: Joi.string().required(), then: Joi.string().required() }
-    ],
-    otherwise: Joi.forbidden()
-  })
+  accreditationNumber: Joi.string().allow(null).required()
 }
 
 export const summaryLogInsertSchema = Joi.object({
@@ -77,10 +70,7 @@ export const summaryLogInsertSchema = Joi.object({
     then: fileSchema.optional(),
     otherwise: fileSchema.required()
   }),
-  organisationId: Joi.string().optional(),
-  registrationId: Joi.string().optional(),
   year: yearSchema().required(),
-  accreditationId: Joi.string().allow(null).optional(),
   ...numbersSchema,
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).required(),
@@ -113,9 +103,8 @@ export const summaryLogUpdateSchema = Joi.object({
   validation: validationSchema.optional(),
   loads: loadsSchema.optional(),
   loadsByReportingPeriod: loadsByReportingPeriodSchema.optional(),
+  commit: summaryLogCommitSchema.optional(),
   file: fileSchema.optional(),
-  organisationId: Joi.string().optional(),
-  registrationId: Joi.string().optional(),
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).optional(),
   submittedAt: Joi.string().isoDate().optional(),

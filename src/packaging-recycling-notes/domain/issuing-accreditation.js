@@ -10,7 +10,7 @@ import {
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue, ReprocessingType, WasteProcessingTypeValue } from '#domain/organisations/model.js'
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
- * @import { AccreditationCommon, Registration } from '#organisation-read-model/domain/model.js'
+ * @import { AccreditationCommon, Registration } from '#organisation-read-model/vocabulary.js'
  * @import { AccreditationSnapshot } from './model.js'
  */
 
@@ -76,13 +76,12 @@ export const toPrnSiteAddress = (registration) => {
 
 /**
  * @param {Registration} registration - from the organisation read model
- * @param {AccreditationCommon} accreditation - the registration's accreditation for `year`
- * @param {Year} year
+ * @param {AccreditationCommon} accreditation
  * @returns {IssuingAccreditation}
  */
-export const toIssuingAccreditation = (registration, accreditation, year) => ({
+export const toIssuingAccreditation = (registration, accreditation) => ({
   accreditationNumber: accreditation.accreditationNumber,
-  accreditationYear: year,
+  accreditationYear: accreditation.year,
   status: accreditation.status.current,
   submittedToRegulator: registration.submittedToRegulator.code,
   wasteProcessingType: registration.wasteProcessingType,

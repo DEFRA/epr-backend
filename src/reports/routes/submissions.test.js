@@ -3,37 +3,32 @@ import { StatusCodes } from 'http-status-codes'
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
-  organisationReadRepositoryFrom,
-  organisationReadRepositoryOf
-} from '#vite/helpers/organisation-read-model.js'
-import {
-  buildRegistration,
-  createOrganisationBuilders
-} from '#repositories/organisations/contract/test-data.js'
-import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
+  createInMemoryOrganisationReadRepository,
+  buildReadApprovedOrganisation,
+  buildReadOrganisation,
+  buildReadReprocessorRegistration
+} from '#organisation-read-model/test-support.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
-import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { getReportSubmissionsPath } from './submissions.js'
-
-const organisationBuilders = createOrganisationBuilders()
-const { buildOrganisation } = organisationBuilders
-const buildApprovedOrg = createApprovedOrgBuilder(organisationBuilders)
 
 describe(`GET ${getReportSubmissionsPath}`, () => {
   setupAuthContext()
 
   const createServer = async () => {
-    const registration = buildRegistration({
-      wasteProcessingType: 'reprocessor'
+    const org = buildReadOrganisation({
+      [toRegistrationNumber('registrations')]: {
+        R26ER5001180041PL: buildReadReprocessorRegistration()
+      }
     })
-    const org = buildOrganisation({ registrations: [registration] })
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryOf([org]),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          org
+        ]),
         reportsRepository: createInMemoryReportsRepository()
       }
     })
@@ -70,24 +65,14 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
   })
 
   it('emits numeric tonnages as numbers through the response schema', async () => {
-    const organisationsRepositoryFactory =
-      createInMemoryOrganisationsRepository()
-    const organisationAdministrationRepository =
-      organisationsRepositoryFactory()
     const year = currentUtcYear()
-    const org = await buildApprovedOrg(
-      organisationAdministrationRepository,
-      undefined,
-      {
-        VALID_FROM: `${year}-01-01`,
-        VALID_TO: `${year}-12-31`
-      }
-    )
+    const org = buildReadApprovedOrganisation({ year })
 
     const reportsRepositoryFactory = createInMemoryReportsRepository()
     const reportsRepository = reportsRepositoryFactory()
     await buildSubmittedReport(reportsRepository, {
-      ...reportKeyOf(org, org.registrations[0]),
+      organisationNumber: org.organisationNumber,
+      registrationNumber: toRegistrationNumber(`REG${org.organisationNumber}`),
       year,
       cadence: 'monthly',
       period: 1,
@@ -101,9 +86,9 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
 
     const server = await createTestServer({
       repositories: {
-        organisationReadRepository: await organisationReadRepositoryFrom(
-          organisationAdministrationRepository
-        ),
+        organisationReadRepository: createInMemoryOrganisationReadRepository([
+          org
+        ]),
         reportsRepository: reportsRepositoryFactory
       }
     })

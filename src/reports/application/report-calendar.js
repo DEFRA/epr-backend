@@ -1,7 +1,11 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
-import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
-import { registrationStatusWindows } from '#organisation-read-model/domain/registration-status-windows.js'
+import {
+  HELD_ACCREDITATION_STATUSES,
+  registrationStatusWindows,
+  firstApprovedAt,
+  accreditationForYear
+} from '#organisation-read-model/vocabulary.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -10,33 +14,51 @@ import {
   hasEnded
 } from '#reports/domain/generate-reporting-periods.js'
 import { mergeReportingPeriods } from '#reports/domain/merge-reporting-periods.js'
+import { toPerson } from '#reports/domain/person.js'
 import { periodBounds } from '#reports/domain/reporting-period.js'
+import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
 
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Registration } from '#organisation-read-model/domain/model.js'
+ * @import { Registration } from '#organisation-read-model/vocabulary.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { CalendarDateRange } from '#organisation-read-model/domain/status-timeline.js'
+ * @import { CalendarDateRange } from '#organisation-read-model/vocabulary.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
- * @import { PeriodicReport, ReportListItem, ReportSummary } from '#reports/repository/port.js'
+ * @import { Person } from '#reports/domain/person.js'
+ * @import { PeriodicReport, ReportStatus, ReportSummary } from '#reports/repository/port.js'
+ * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
  */
 
 /**
- * Curates the full report summary down to the list-response shape so the
- * calendar endpoints don't leak heavy activity payloads.
- * @param {ReportSummary | null} current
- * @returns {ReportListItem | null}
+ * @typedef {{
+ *   status: ReportStatus,
+ *   submissionNumber: number,
+ *   submittedAt?: string,
+ *   submittedBy?: Person
+ * }} CalendarReport
  */
-export const toReportListItem = (current) => {
-  if (!current) {
-    return null
-  }
-  const { id, status, submissionNumber, submittedAt, submittedBy } = current
-  return { id, status, submissionNumber, submittedAt, submittedBy }
-}
+
+/**
+ * A report keeps its last submission after it is unsubmitted, so only a
+ * report submitted now serves one.
+ * @param {ReportSummary} report
+ * @returns {CalendarReport}
+ */
+const toCalendarReport = ({
+  status,
+  submissionNumber,
+  submittedAt,
+  submittedBy
+}) => ({
+  status,
+  submissionNumber,
+  ...(status === REPORT_STATUS.SUBMITTED &&
+    submittedAt &&
+    submittedBy && { submittedAt, submittedBy: toPerson(submittedBy) })
+})
 
 /**
  * @param {GeneratedPeriod[]} parts - one period's parts, oldest first
@@ -79,9 +101,8 @@ const reportingWindowsFor = (registration, year) => {
   if (registration.status.current === REGISTRATION_STATUS.CANCELLED) {
     return { registeredOnly: [], accredited: [], wholePeriods: true }
   }
-  return HELD_ACCREDITATION_STATUSES.has(
-    registration.accreditations[year]?.status.current
-  )
+  const status = accreditationForYear(registration, year)?.status.current
+  return status !== undefined && HELD_ACCREDITATION_STATUSES.has(status)
     ? { registeredOnly: [], accredited: windows.accredited, wholePeriods: true }
     : {
         registeredOnly: windows.registeredOnly,
@@ -107,23 +128,18 @@ const servesAccreditedReport = (registration, year) => {
 }
 
 /**
- * The day the year's accreditation took effect: its validFrom, which the read
- * model dates the approval after its last re-creation at. An approval before a
- * re-creation does not count.
+ * The day the year's accreditation took effect: its validFrom, which
+ * `toAccreditationStatusTimeline` dates its first approval at.
  *
  * @param {Registration} registration
  * @param {Year} year
  * @returns {CalendarDate | undefined}
  */
 export const accreditedFrom = (registration, year) => {
-  const timeline = registration.accreditations[year]?.status.timeline ?? []
-  const lastCreated = timeline.findLastIndex(
-    ({ status }) => status === 'created'
+  const approvedAt = firstApprovedAt(
+    accreditationForYear(registration, year)?.status.timeline ?? []
   )
-  const approval = timeline
-    .slice(lastCreated + 1)
-    .find(({ status }) => status === 'approved')
-  return approval && calendarDate(approval.at)
+  return approvedAt === undefined ? undefined : calendarDate(approvedAt)
 }
 
 /**
@@ -208,7 +224,7 @@ const mergedPeriods = (
  * @returns {{
  *   registeredOnly: MergedPeriod[],
  *   accredited: MergedPeriod[],
- *   accreditationNumber?: string
+ *   accreditationNumber?: AccreditationNumber
  * }}
  */
 export const reportingPeriodsByKind = ({
@@ -219,7 +235,7 @@ export const reportingPeriodsByKind = ({
 }) => {
   const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
   const reportsInYear = storedReports.filter((report) => report.year === year)
-  const accreditation = registration.accreditations[year]
+  const accreditation = accreditationForYear(registration, year)
   const options = { now, wholePeriods }
 
   return {
@@ -305,10 +321,10 @@ export const yearCalendar = ({
    * @param {MergedPeriod[]} merged
    */
   const calendarPeriods = (cadence, merged) =>
-    buildPeriods(merged, now).map((period) => ({
+    buildPeriods(merged, now).map(({ report, ...period }) => ({
       ...period,
       cadence,
-      report: toReportListItem(period.report)
+      ...(report && { report: toCalendarReport(report) })
     }))
 
   const registeredOnly = calendarPeriods(

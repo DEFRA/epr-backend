@@ -1,27 +1,25 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { utcYearOf, yearBounds } from '#common/helpers/dates/year.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import { REGISTRATION_STATUS } from '#domain/organisations/model.js'
+import { accreditationForYear } from './accreditation-for-year.js'
 import { HELD_ACCREDITATION_STATUSES, STANDING, statusOn } from './model.js'
-import { approvedYears, statusRanges } from './status-timeline.js'
+import { approvedBy, approvedYears } from './status-timeline.js'
 
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Standing, StandingByYear, Registration, StatusTimeline } from './model.js' */
+/** @import { AccreditationStatus, RegistrationStatus, Standing, StandingByYear, StatusTimeline } from './model.js' */
 
 /**
- * @typedef {Pick<Registration, 'status' | 'accreditations'>} StandingSource
+ * The timelines a registration's standing is worked out from.
+ *
+ * @typedef {{
+ *   accreditations: Record<Year, { status: { timeline: StatusTimeline<AccreditationStatus> }, year: Year }>
+ *   status: { timeline: StatusTimeline<RegistrationStatus> }
+ * }} StandingSource
  */
 
 /**
- * @param {StatusTimeline} registrationTimeline
- * @param {CalendarDate} date
- */
-const hasBeenApprovedBy = (registrationTimeline, date) => {
-  return statusRanges(registrationTimeline, date).approved !== undefined
-}
-
-/**
- * @param {StatusTimeline} accreditationTimeline
+ * @param {StatusTimeline<AccreditationStatus>} accreditationTimeline
  * @param {CalendarDate} date
  */
 const holdsAccreditationOn = (accreditationTimeline, date) => {
@@ -31,13 +29,13 @@ const holdsAccreditationOn = (accreditationTimeline, date) => {
 }
 
 /**
- * @param {StatusTimeline} registrationTimeline
- * @param {StatusTimeline} accreditationTimeline
+ * @param {StatusTimeline<RegistrationStatus>} registrationTimeline
+ * @param {StatusTimeline<AccreditationStatus>} accreditationTimeline
  * @param {CalendarDate} date
  * @returns {Standing | undefined}
  */
 const standingOn = (registrationTimeline, accreditationTimeline, date) => {
-  if (!hasBeenApprovedBy(registrationTimeline, date)) {
+  if (!approvedBy(registrationTimeline, date)) {
     return undefined
   }
 
@@ -55,7 +53,7 @@ const standingOn = (registrationTimeline, accreditationTimeline, date) => {
 /**
  * 1 January, then every date in `year` on which a timeline changes, oldest first.
  *
- * @param {StatusTimeline[]} timelines
+ * @param {StatusTimeline<string>[]} timelines
  * @param {Year} year
  * @returns {CalendarDate[]}
  */
@@ -83,7 +81,7 @@ const datesToCheck = (timelines, year) => {
 export const standingByDate = (registration, year) => {
   const registrationTimeline = registration.status.timeline
   const accreditationTimeline =
-    registration.accreditations[year]?.status.timeline ?? []
+    accreditationForYear(registration, year)?.status.timeline ?? []
   const dates = datesToCheck(
     [registrationTimeline, accreditationTimeline],
     year
@@ -111,21 +109,22 @@ export const standingByDate = (registration, year) => {
 }
 
 /**
- * `standingByDate` for each year up to the year of `endDate` that the
- * registration was approved in or holds an accreditation for.
+ * `standingByDate` for each year up to `upToYear` that the registration was
+ * approved in or holds an accreditation for.
  *
  * @param {StandingSource} registration
- * @param {CalendarDate} endDate
+ * @param {Year} upToYear
  * @returns {StandingByYear}
  */
-export const standingByYear = (registration, endDate) => {
-  const lastYear = utcYearOf(endDate)
-  const years = [
-    ...approvedYears(registration.status.timeline, endDate),
-    ...Object.keys(registration.accreditations).map(utcYearOf)
-  ].filter((year) => year <= lastYear)
+export const standingByYear = (registration, upToYear) => {
+  const years = new Set([
+    ...approvedYears(registration.status.timeline, upToYear),
+    ...Object.values(registration.accreditations).map(({ year }) => year)
+  ])
 
   return Object.fromEntries(
-    years.map((year) => [year, standingByDate(registration, year)])
+    [...years]
+      .filter((year) => year <= upToYear)
+      .map((year) => [year, standingByDate(registration, year)])
   )
 }

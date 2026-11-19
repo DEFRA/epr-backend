@@ -1,3 +1,5 @@
+/** @import { SummaryLog } from '#domain/summary-logs/model.js' */
+/** @import { CreateReportParams } from '#reports/repository/port.js' */
 import { toYear } from '#common/helpers/dates/year.js'
 import { vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -36,10 +38,16 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { summaryLogRowStatesForRegistration } from '#waste-records/application/read-summary-log-row-states.js'
+import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { organisationReadRepositoryOf } from '#vite/helpers/organisation-read-model.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import {
+  createInMemoryOrganisationReadRepository,
+  accreditationsByYear,
+  buildReadAccreditation,
+  buildReadOrganisation as buildServedOrganisation,
+  buildReadReprocessorRegistration,
+  withStandingThrough
+} from '#organisation-read-model/test-support.js'
 import { partialMock } from '#test/type-helpers.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
@@ -169,43 +177,52 @@ const setupSubmit = async ({
 
   const summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   const organisation = buildTestOrg(organisationId, registrationId)
-  const externalAccreditations = []
   if (accreditationHeldExternally) {
     organisation.accreditations = []
     delete (
       /** @type {Record<string, unknown>} */ (organisation.registrations[0])
         .accreditationId
     )
-    externalAccreditations.push(
-      buildExternalAccreditation({
-        registrationNumber: toRegistrationNumber('REG-123'),
-        year: toYear(2026),
-        accreditationNumber: toAccreditationNumber('ACC-123'),
-        status: {
-          current: 'approved',
-          timeline: [
-            { status: 'created', at: CREATED_AT, updatedAt: CREATED_AT },
-            {
-              status: 'approved',
-              at: `${VALID_FROM}T00:00:00.000Z`,
-              updatedAt: APPROVED_AT
-            }
-          ]
-        }
-      })
-    )
   }
-  const organisationReadRepository = (
-    await organisationReadRepositoryOf([organisation], {
-      externalAccreditations
+  // Held in epr-backend or outside it, the read model serves the accreditation
+  // the same way.
+  const approved = {
+    current: /** @type {const} */ ('approved'),
+    lastUpdatedAt: APPROVED_AT,
+    timeline: [
+      {
+        status: /** @type {const} */ ('approved'),
+        at: `${VALID_FROM}T00:00:00.000Z`
+      }
+    ]
+  }
+  const organisationReadRepository = createInMemoryOrganisationReadRepository([
+    buildServedOrganisation({
+      organisationNumber: organisation.organisationNumber,
+      registrations: {
+        [toRegistrationNumber('REG-123')]: withStandingThrough(
+          buildReadReprocessorRegistration({
+            material: 'paper',
+            status: approved,
+            accreditations: accreditationsByYear(
+              buildReadAccreditation({
+                accreditationNumber: toAccreditationNumber('ACC-123'),
+                status: approved
+              })
+            )
+          }),
+          toYear(2027)
+        )
+      }
     })
-  )()
+  ])()
   const reportKey = reportKeyOf(organisation, organisation.registrations[0])
 
   const summaryLog = summaryLogFactory.submitting({
     organisationId,
     registrationId,
     ...reportKey,
+    year: toYear(2026),
     accreditationId,
     accreditationNumber,
     meta: { PROCESSING_TYPE: 'REPROCESSOR_INPUT' },
@@ -255,15 +272,24 @@ const setupSubmit = async ({
 describe('submitSummaryLog staleness guard (period closure)', () => {
   it('rejects when a report was submitted after the summary log was created', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
-    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
-      await setupSubmit({
-        reportsRepository,
-        createdAt: '2025-01-01T00:00:00.000Z'
-      })
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: { year },
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({
+      reportsRepository,
+      createdAt: '2025-01-01T00:00:00.000Z'
+    })
 
-    // A periodic report closes for this registration after the log was created:
-    // its SUBMITTED status.history entry is stamped "now", well after 2025.
-    await createAndSubmitReport(reportsRepository, reportKey)
+    // A periodic report of the log's year closes for this registration after
+    // the log was created: its SUBMITTED status.history entry is stamped "now",
+    // well after 2025.
+    await createAndSubmitReport(reportsRepository, {
+      ...reportKey,
+      year
+    })
 
     await expect(submitSummaryLog(summaryLogId, deps)).rejects.toBeInstanceOf(
       PermanentError
@@ -279,26 +305,57 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     expect(version).toBe(1)
   })
 
+  it('proceeds when a report for a different year was submitted after the summary log was created', async () => {
+    const reportsRepository = createInMemoryReportsRepository()()
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: { year },
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({
+      reportsRepository,
+      createdAt: '2025-01-01T00:00:00.000Z'
+    })
+
+    await createAndSubmitReport(reportsRepository, {
+      ...reportKey,
+      year: toYear(year - 1)
+    })
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    const { summaryLog } = await waitForVersion(
+      summaryLogsRepository,
+      summaryLogId,
+      2
+    )
+    expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+  })
+
   it('proceeds and writes records when no report has been submitted since creation', async () => {
     const reportsRepository = createInMemoryReportsRepository()()
     const {
       deps,
       summaryLogId,
-      summaryLog: submitted,
+      summaryLog: { year },
       reportKey,
       summaryLogsRepository
     } = await setupSubmit({ reportsRepository })
 
-    // An open (never-submitted) report exists for the registration: the guard
-    // reacts only to SUBMITTED closures, so submission must still proceed.
-    await reportsRepository.createReport(buildCreateReportParams(reportKey))
+    // An open (never-submitted) report of the log's year exists for the
+    // registration: the guard reacts only to SUBMITTED closures, so submission
+    // must still proceed.
+    await reportsRepository.createReport(
+      buildCreateReportParams({ ...reportKey, year })
+    )
 
     await submitSummaryLog(summaryLogId, deps)
 
-    const rowStates = await summaryLogRowStatesForRegistration({
+    const rowStates = await summaryLogRowStatesForLedger({
       ...reportKey,
       accreditationNumber: toAccreditationNumber('ACC-123'),
-      year: submitted.year,
+      year,
       ledgerRepository: deps.ledgerRepository,
       summaryLogRowStatesRepository: deps.summaryLogRowStatesRepository
     })
@@ -319,13 +376,21 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
     const reportsRepository = createInMemoryReportsRepository()()
     // The log is created far in the future, after any real submission, so the
     // seeded closure predates it and the guard must not fire.
-    const { deps, summaryLogId, reportKey, summaryLogsRepository } =
-      await setupSubmit({
-        reportsRepository,
-        createdAt: '2099-01-01T00:00:00.000Z'
-      })
+    const {
+      deps,
+      summaryLogId,
+      summaryLog: { year },
+      reportKey,
+      summaryLogsRepository
+    } = await setupSubmit({
+      reportsRepository,
+      createdAt: '2099-01-01T00:00:00.000Z'
+    })
 
-    await createAndSubmitReport(reportsRepository, reportKey)
+    await createAndSubmitReport(reportsRepository, {
+      ...reportKey,
+      year
+    })
 
     await submitSummaryLog(summaryLogId, deps)
 
@@ -395,35 +460,41 @@ describe('submitSummaryLog resubmission flag source', () => {
 
     expect(flagged).toEqual({ january: true, february: false })
   })
-
-  it('flags every touched closed period for a log validated before periodsRequiringResubmission existed', async () => {
-    const { openPeriodLoads, closedPeriodLoads } = emptyLoadsByReportingPeriod()
-
-    const flagged = await submitOverJanuaryAndFebruaryReports({
-      openPeriodLoads,
-      closedPeriodLoads,
-      closedPeriods: [january, february]
-    })
-
-    expect(flagged).toEqual({ january: true, february: true })
-  })
 })
 
 describe('submitSummaryLog stale flagging', () => {
-  it('leaves alone an active report already built from the summary log being submitted', async () => {
+  it('marks reports stale only once the summary log is submitted, so a report built in between reads it', async () => {
+    const { deps, summaryLogId, summaryLogsRepository } = await setupSubmit({
+      reportsRepository: createInMemoryReportsRepository()()
+    })
+    const update = vi.spyOn(summaryLogsRepository, 'update')
+
+    await submitSummaryLog(summaryLogId, deps)
+
+    const [submittedOrder] = update.mock.calls.flatMap(([, , changes], i) =>
+      changes.status === SUMMARY_LOG_STATUS.SUBMITTED
+        ? [update.mock.invocationCallOrder[i]]
+        : []
+    )
+    const [markedStaleOrder] = vi.mocked(deps.onSummaryLogUploaded).mock
+      .invocationCallOrder
+    expect(submittedOrder).toBeLessThan(markedStaleOrder)
+  })
+
+  /**
+   * Submits a log over one active report, through the real
+   * summary-log-uploaded handler, and returns the report and the log.
+   *
+   * @param {(summaryLog: SummaryLog) => Partial<CreateReportParams>} reportOverrides
+   */
+  const submitOverActiveReport = async (reportOverrides) => {
     const reportsRepository = createInMemoryReportsRepository()()
     const { deps, summaryLogId, summaryLog, reportKey } = await setupSubmit({
       reportsRepository,
       createdAt: '2099-01-01T00:00:00.000Z'
     })
     const { id: reportId } = await reportsRepository.createReport(
-      buildCreateReportParams({
-        ...reportKey,
-        source: {
-          summaryLogId: summaryLog.file.id,
-          lastUploadedAt: '2099-01-01T00:00:00.000Z'
-        }
-      })
+      buildCreateReportParams({ ...reportKey, ...reportOverrides(summaryLog) })
     )
 
     await submitSummaryLog(summaryLogId, {
@@ -434,7 +505,39 @@ describe('submitSummaryLog stale flagging', () => {
       })
     })
 
-    const report = await reportsRepository.findReportById(reportId)
+    return {
+      report: await reportsRepository.findReportById(reportId),
+      summaryLog
+    }
+  }
+
+  it('marks stale an active report for the summary log year', async () => {
+    const { report, summaryLog } = await submitOverActiveReport(({ year }) => ({
+      year
+    }))
+
+    expect(report.stale?.summaryLogChanged?.summaryLogId).toBe(
+      summaryLog.file.id
+    )
+  })
+
+  it('leaves alone an active report for a different year', async () => {
+    const { report } = await submitOverActiveReport(({ year }) => ({
+      year: toYear(year - 1)
+    }))
+
+    expect(report.stale).toBeUndefined()
+  })
+
+  it('leaves alone an active report already built from the summary log being submitted', async () => {
+    const { report } = await submitOverActiveReport(({ year, file }) => ({
+      year,
+      source: {
+        summaryLogId: file.id,
+        lastUploadedAt: '2099-01-01T00:00:00.000Z'
+      }
+    }))
+
     expect(report.stale).toBeUndefined()
   })
 })
