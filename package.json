@@ -102,11 +102,12 @@
     "lodash.mergewith": "4.6.2",
     "lodash.partition": "4.6.0",
     "mongo-locks": "3.2.0",
-    "mongodb": "7.8.0",
+    "mongodb": "7.9.0",
     "notifications-node-client": "8.5.0",
     "obfuscate-mail": "1.5.1",
     "pino": "10.4.0",
     "pino-pretty": "13.2.0",
+    "safe-stable-stringify": "2.5.0",
     "sqs-consumer": "15.0.4",
     "unzipper": "0.12.5"
   },
@@ -116,12 +117,9 @@
     "glob": "14.0.2",
     "joi": "18.3.1",
     "uuid": "14.0.0",
-    "minimatch": "11.0.5",
+    "minimatch": "11.0.8",
     "eslint": {
       "minimatch": "3.1.5"
-    },
-    "eslint-plugin-import-x": {
-      "minimatch": "10.2.5"
     }
   },
   "devDependencies": {

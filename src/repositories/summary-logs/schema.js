@@ -3,6 +3,7 @@ import Joi from 'joi'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { summaryLogCommitSchema } from '#domain/summary-logs/commit.js'
 import { yearSchema } from '#common/validation/year-schema.js'
 
 const commonMessages = {
@@ -102,6 +103,7 @@ export const summaryLogUpdateSchema = Joi.object({
   validation: validationSchema.optional(),
   loads: loadsSchema.optional(),
   loadsByReportingPeriod: loadsByReportingPeriodSchema.optional(),
+  commit: summaryLogCommitSchema.optional(),
   file: fileSchema.optional(),
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).optional(),
