@@ -25,11 +25,15 @@ import {
   overseasSites,
   pendingOverseasSite,
   reprocessor,
-  reprocessorAt
+  reprocessorAt,
+  storedWithout
 } from './contract/organisation-read-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
+/** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { StoredRegistrationStatus } from '#domain/organisations/model.js' */
+/** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { ExporterRegistration, Organisation } from '#organisation-read-model/domain/model.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */
 /** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
@@ -184,7 +188,7 @@ describe('findByOrganisationNumber', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2026]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2026)]
     ).toMatchObject({
       accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
       overseasSites: {
@@ -539,7 +543,7 @@ describe('findByOrganisationNumber', () => {
   it('leaves out a contact phone number that was never given', async ({
     organisationReadRepositoryWith
   }) => {
-    const { phone: _phone, ...withoutPhone } = luke
+    const withoutPhone = storedWithout(luke, 'phone')
     const stored = buildOrganisation({
       registrations: [reprocessor({ applicationContactDetails: withoutPhone })]
     })
@@ -573,7 +577,9 @@ describe('findByOrganisationNumber for years', () => {
 
   /**
    * A status history recorded at the start of each day given.
-   * @param {[string, string][]} changes - status and day
+   * @template {string} S
+   * @param {[S, string][]} changes - status and day
+   * @returns {StatusHistoryEntryOf<S>[]}
    */
   const history = (changes) =>
     changes.map(([status, day]) => ({
@@ -584,8 +590,8 @@ describe('findByOrganisationNumber for years', () => {
   /**
    * A reprocessor approved from `validFrom`, with any later changes.
    * @param {string} validFrom
-   * @param {[string, string][]} [changes]
-   * @param {object} [overrides]
+   * @param {[StoredRegistrationStatus, string][]} [changes]
+   * @param {Partial<StoredRegistration>} [overrides]
    */
   const reprocessorFrom = (validFrom, changes = [], overrides = {}) =>
     reprocessor({
@@ -767,6 +773,36 @@ describe('findByOrganisationNumber for years', () => {
       organisation.status.current,
       organisation.registrations[REPROCESSOR_NUMBER].status.current
     ]).toStrictEqual(['active', 'cancelled'])
+  })
+
+  it('serves a past year’s accreditation with its latest status', async ({
+    organisationReadRepositoryWith
+  }) => {
+    const granted2025 = accreditation({
+      validFrom: '2025-02-01',
+      validTo: '2025-12-31',
+      statusHistory: history([
+        ['created', '2024-01-01'],
+        ['approved', '2025-02-01'],
+        ['cancelled', '2026-01-02']
+      ])
+    })
+    const stored = buildOrganisation({
+      registrations: [
+        reprocessorFrom('2025-02-01', [], { accreditationId: granted2025.id })
+      ],
+      accreditations: [granted2025]
+    })
+
+    const { registrations } = await findInYear(
+      organisationReadRepositoryWith,
+      stored,
+      2025
+    )
+
+    expect(
+      registrations[REPROCESSOR_NUMBER].accreditations[2025].status.current
+    ).toBe('cancelled')
   })
 
   it('serves the current year’s statuses as they stand today', async ({

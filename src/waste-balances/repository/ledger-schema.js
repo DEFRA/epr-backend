@@ -119,16 +119,6 @@ export const BACKFILL_ACTOR = Object.freeze({ id: 'system', name: 'backfill' })
  */
 
 /**
- * The ids of an accreditation, or of a registration in its registered-only
- * phase (`accreditationId` null).
- *
- * @typedef {Object} RegistrationOrAccreditationId
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string | null} accreditationId
- */
-
-/**
  * A waste balance ledger is keyed by the numbers of the registration or
  * accreditation whose balance it records, and by the year it records it for.
  * A registered-only ledger's accreditation number is `null`.

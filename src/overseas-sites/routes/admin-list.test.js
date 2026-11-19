@@ -14,10 +14,11 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
-const ALPHA_REGISTRATION = 'R26EX5001180042PL'
-const BETA_REGISTRATION = 'R26EX5001180043PL'
-const REPROCESSOR_REGISTRATION = 'R26ER5001180044PL'
+const ALPHA_REGISTRATION = toRegistrationNumber('R26EX5001180042PL')
+const BETA_REGISTRATION = toRegistrationNumber('R26EX5001180043PL')
+const REPROCESSOR_REGISTRATION = toRegistrationNumber('R26ER5001180044PL')
 const ACCREDITATION_NUMBER = nextReadAccreditationNumber()
 
 const fullSite = {

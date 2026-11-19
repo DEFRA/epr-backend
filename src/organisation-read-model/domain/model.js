@@ -1,8 +1,8 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
-/** @import { AccreditationNumber, OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
-/** @import { TonnageBand } from '#domain/organisations/model.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { TonnageBand } from '#domain/organisations/model.js' */
 
 /**
  * The organisation read model (ADR-0052).
@@ -21,7 +21,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  *   name: string
  *   organisationNumber: OrganisationNumber
  *   registeredAddress?: OrganisationAddress
- *   registrations: Record<string, Registration>
+ *   registrations: Record<RegistrationNumber, Registration>
  *   status: Status<OrganisationStatus>
  *   submittedToRegulator: Regulator
  *   submitterContactDetails: Contact
@@ -46,14 +46,14 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * }} RegistrationCommon
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ReprocessorAccreditation>
+ *   accreditations: Record<Year, ReprocessorAccreditation>
  *   reprocessingType: 'input' | 'output'
  *   site: { address: UkAddress }
  *   wasteProcessingType: 'reprocessor'
  * }} ReprocessorRegistration
  *
  * @typedef {RegistrationCommon & {
- *   accreditations: Record<string, ExporterAccreditation>
+ *   accreditations: Record<Year, ExporterAccreditation>
  *   overseasSites: Record<string, OverseasSite>
  *   wasteProcessingType: 'exporter'
  * }} ExporterRegistration
@@ -126,7 +126,7 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  * effect. Nothing requires two changes to happen at different times, so
  * changes that share a time keep the order they were recorded in.
  *
- * @template {string} [S=string]
+ * @template {string} S
  * @typedef {{ status: S, at: string }[]} StatusTimeline
  */
 
@@ -172,7 +172,7 @@ export const ACCREDITATION_STATUSES = Object.freeze([
  * By year, the date each standing starts. A standing holds until the next date,
  * or the end of the year.
  *
- * @typedef {Record<string, Record<string, { standing: Standing }>>} StandingByYear
+ * @typedef {Partial<Record<Year, Record<CalendarDate, { standing: Standing }>>>} StandingByYear
  */
 
 export const STANDING = Object.freeze({
@@ -184,16 +184,17 @@ export const STANDING = Object.freeze({
 /**
  * A suspended accreditation is still accredited.
  *
- * @type {ReadonlySet<string>}
+ * @type {ReadonlySet<AccreditationStatus>}
  */
 export const HELD_ACCREDITATION_STATUSES = new Set(['approved', 'suspended'])
 
 /**
  * The status at the end of the latest day on or before `date`.
  *
- * @param {StatusTimeline} timeline
+ * @template {string} S
+ * @param {StatusTimeline<S>} timeline
  * @param {CalendarDate} date - ISO 8601 date
- * @returns {string | undefined}
+ * @returns {S | undefined}
  */
 export const statusOn = (timeline, date) =>
   timeline.findLast(({ at }) => calendarDate(at).localeCompare(date) <= 0)

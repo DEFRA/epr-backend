@@ -18,6 +18,7 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { buildReadReprocessorRegistration } from '#organisation-read-model/repository/read-model-test-data.js'
 
 /** @import {Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
 
@@ -35,19 +36,15 @@ describe('csv-columns', () => {
   }
 
   /** @type {ReadModelRegistration} */
-  const reprocessorFixture = {
+  const reprocessorFixture = buildReadReprocessorRegistration({
     applicationContactDetails: contact,
     approvedPersons: [],
     material: 'plastic',
-    standingByDate: {},
     status: readModelStatus,
-    submittedToRegulator: { code: 'ea' },
     submitterContactDetails: contact,
-    wasteProcessingType: 'reprocessor',
     reprocessingType: 'input',
-    site: { address: { fullAddress: '1 High St' } },
-    accreditations: {}
-  }
+    site: { address: { fullAddress: '1 High St' } }
+  })
 
   // Coerced committed row data, carrying its `processingType`, as the
   // application layer hands it to the row builders.

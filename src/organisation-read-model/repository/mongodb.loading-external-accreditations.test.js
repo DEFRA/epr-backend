@@ -150,7 +150,7 @@ const storeReprocessorWithExternalAccreditation = async (
  * @param {import('#organisation-read-model/domain/model.js').Organisation} organisation
  */
 const accreditationNumber2027 = (organisation) =>
-  organisation.registrations[REPROCESSOR_NUMBER].accreditations['2027']
+  organisation.registrations[REPROCESSOR_NUMBER].accreditations[toYear(2027)]
     ?.accreditationNumber
 
 describe('loading external accreditations', () => {
@@ -213,7 +213,7 @@ describe('loading external accreditations', () => {
       )
 
       expect(
-        organisation.registrations[EXPORTER_NUMBER].accreditations['2027']
+        organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
       ).toHaveProperty('overseasSites', registrationSites)
     })
   })
@@ -274,7 +274,7 @@ describe('loading external accreditations', () => {
       )
 
       expect(
-        organisation.registrations[EXPORTER_NUMBER].accreditations['2027']
+        organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
       ).toHaveProperty('overseasSites', registrationSites)
     })
 

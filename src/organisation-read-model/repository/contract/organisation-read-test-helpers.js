@@ -6,13 +6,15 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber
+  toOrganisationNumber,
+  toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-export const REPROCESSOR_NUMBER = 'R26ER5001180041PL'
-export const EXPORTER_NUMBER = 'R26EX5001180042PL'
-export const ACCREDITATION_NUMBER = 'A26ER5001180114PL'
-export const EXPORTER_ACCREDITATION_NUMBER = 'A26EX5001180115PL'
+export const REPROCESSOR_NUMBER = toRegistrationNumber('R26ER5001180041PL')
+export const EXPORTER_NUMBER = toRegistrationNumber('R26EX5001180042PL')
+export const ACCREDITATION_NUMBER = toAccreditationNumber('A26ER5001180114PL')
+export const EXPORTER_ACCREDITATION_NUMBER =
+  toAccreditationNumber('A26EX5001180115PL')
 
 export const APPROVED_SITE_ID = new ObjectId().toString()
 export const PENDING_SITE_ID = new ObjectId().toString()
@@ -40,8 +42,10 @@ export const pendingSite = {
 
 export const overseasSites = [approvedSite, pendingSite]
 
+/** @import { Accreditation as StoredAccreditation } from '#domain/organisations/accreditation.js' */
+/** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { StoredAccreditationStatus } from '#domain/organisations/model.js' */
+/** @import { StoredRegOrAccStatus } from '#domain/organisations/model.js' */
 /** @import { Organisation, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepository } from '../port.js' */
 
@@ -65,8 +69,9 @@ export const findOrganisation = async (
 }
 
 /**
- * @param {StoredAccreditationStatus} status
- * @returns {StatusHistoryEntryOf<StoredAccreditationStatus>[]}
+ * @template {StoredRegOrAccStatus} S
+ * @param {S} status
+ * @returns {StatusHistoryEntryOf<'created' | S>[]}
  */
 export const granted = (status) => [
   { status: 'created', updatedAt: '2026-01-01T09:00:00.000Z' },
@@ -100,6 +105,10 @@ export const approvedStatus = (validFrom) => ({
   timeline: approvedTimeline(validFrom)
 })
 
+/**
+ * @param {Partial<StoredAccreditation>} [overrides]
+ * @returns {StoredAccreditation}
+ */
 export const accreditation = (overrides = {}) =>
   buildAccreditation({
     accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
@@ -109,37 +118,67 @@ export const accreditation = (overrides = {}) =>
     ...overrides
   })
 
+/**
+ * @param {Partial<StoredAccreditation>} [overrides]
+ * @returns {StoredAccreditation}
+ */
 export const exporterAccreditation = (overrides = {}) =>
   accreditation({
     wasteProcessingType: 'exporter',
-    accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
-    ...overrides
-  })
-
-export const reprocessor = (overrides = {}) =>
-  buildRegistration({
-    registrationNumber: REPROCESSOR_NUMBER,
-    reprocessingType: 'input',
-    validFrom: '2026-02-01',
-    statusHistory: granted('approved'),
-    ...overrides
-  })
-
-export const exporter = (overrides = {}) =>
-  buildRegistration({
-    wasteProcessingType: 'exporter',
-    registrationNumber: EXPORTER_NUMBER,
-    validFrom: '2026-02-01',
-    statusHistory: granted('approved'),
-    overseasSites: {
-      '001': { overseasSiteId: APPROVED_SITE_ID },
-      '002': { overseasSiteId: PENDING_SITE_ID }
-    },
+    accreditationNumber: toAccreditationNumber(EXPORTER_ACCREDITATION_NUMBER),
     ...overrides
   })
 
 /**
- * @param {object} address
+ * @param {Partial<StoredRegistration>} [overrides]
+ * @returns {StoredRegistration}
+ */
+export const reprocessor = (overrides = {}) =>
+  /** @type {StoredRegistration} */ (
+    buildRegistration({
+      registrationNumber: REPROCESSOR_NUMBER,
+      reprocessingType: 'input',
+      validFrom: '2026-02-01',
+      statusHistory: granted('approved'),
+      ...overrides
+    })
+  )
+
+/**
+ * @param {Partial<StoredRegistration>} [overrides]
+ * @returns {StoredRegistration}
+ */
+export const exporter = (overrides = {}) =>
+  /** @type {StoredRegistration} */ (
+    buildRegistration({
+      wasteProcessingType: 'exporter',
+      registrationNumber: EXPORTER_NUMBER,
+      validFrom: '2026-02-01',
+      statusHistory: granted('approved'),
+      overseasSites: {
+        '001': { overseasSiteId: APPROVED_SITE_ID },
+        '002': { overseasSiteId: PENDING_SITE_ID }
+      },
+      ...overrides
+    })
+  )
+
+/**
+ * A stored record missing a field its type requires, as malformed data
+ * reaches the read model.
+ *
+ * @template {object} T
+ * @param {T} record
+ * @param {keyof T} key
+ * @returns {T}
+ */
+export const storedWithout = (record, key) => {
+  const { [key]: _, ...rest } = record
+  return /** @type {T} */ (rest)
+}
+
+/**
+ * @param {StoredRegistration['site']['address']} address
  */
 export const reprocessorAt = (address) => {
   const registration = reprocessor()

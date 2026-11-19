@@ -12,13 +12,13 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
-import { utcYearOf } from '#common/helpers/dates/year.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { buildReadApprovedOrganisation } from '#organisation-read-model/repository/read-model-test-data.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
-/** @import { RegistrationOrAccreditationId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * What an accredited operator is accredited for, where a test needs other than
@@ -64,7 +64,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
-   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/domain/model.js').Organisation }>}
+   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/domain/model.js').Organisation }>}
    */
   return async (
     organisationAdministrationRepository,
@@ -111,7 +111,7 @@ export const createAccreditedOperatorInserter = (builders) => {
           submittedToRegulator: { code: regulator },
           accreditations: {
             2026: {
-              ...servedRegistration.accreditations[2026],
+              ...servedRegistration.accreditations[toYear(2026)],
               ...(tonnageBand && { prnIssuance: { tonnageBand } })
             }
           }
@@ -124,9 +124,6 @@ export const createAccreditedOperatorInserter = (builders) => {
       registrationId: registration.id,
       reportKey,
       ledgerId: {
-        organisationId: organisation.id,
-        registrationId: registration.id,
-        accreditationId,
         ...reportKey,
         accreditationNumber: /** @type {AccreditationNumber} */ (
           organisation.accreditations[0].accreditationNumber

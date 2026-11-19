@@ -2,7 +2,7 @@ import { describe, it as base, expect } from 'vitest'
 
 import { createInMemorySummaryLogRowStatesRepository } from './inmemory.js'
 import { testSummaryLogRowStatesRepositoryContract } from './port.contract.js'
-import { DEFAULT_LEDGER_ID, withNumbers } from './test-data.js'
+import { DEFAULT_LEDGER_ID } from './test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 
 const it = base.extend({
@@ -30,7 +30,7 @@ describe('summary-log row states repository - in-memory implementation', () => {
     const repository = createInMemorySummaryLogRowStatesRepository([
       {
         id: 'seed-1',
-        ...withNumbers(DEFAULT_LEDGER_ID),
+        ...DEFAULT_LEDGER_ID,
         wasteRecordType: 'received',
         rowId: 'row-1',
         processingType: 'REPROCESSOR_INPUT',
@@ -45,7 +45,7 @@ describe('summary-log row states repository - in-memory implementation', () => {
     ])()
 
     const committed = await repository.findWasteRecordStatesForSummaryLog(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       toSummaryLogFileId('log-seed')
     )
     expect(committed).toEqual([

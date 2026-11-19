@@ -142,9 +142,9 @@ describe('reading a waste balance ledger', () => {
   })
 
   it('reads no note for a registered-only ledger', async () => {
-    const ledgerId = buildLedgerId({ accreditationId: null })
+    const ledgerId = buildLedgerId({ accreditationNumber: null })
     await ledgerRepository.appendEvents([
-      buildLedgerEvent({ accreditationId: null })
+      buildLedgerEvent({ accreditationNumber: null })
     ])
 
     await readLedger(ledgerRepository, noteReader, ledgerId)
@@ -210,7 +210,7 @@ describe('reading a waste balance ledger', () => {
     await ledgerRepository.appendEvents([buildLedgerEvent({ number: 1 })])
     await ledgerRepository.appendEvents([buildLedgerEvent({ number: 2 })])
     await ledgerRepository.appendEvents([
-      buildLedgerEvent({ accreditationId: null, number: 1 })
+      buildLedgerEvent({ accreditationNumber: null, number: 1 })
     ])
 
     const result = await readLedger(
