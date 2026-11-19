@@ -1,3 +1,4 @@
+import { anotherOrganisationNumber } from '#waste-records/repository/test-data.js'
 import { describe, beforeEach, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
@@ -24,16 +25,16 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('returns events with number greater than the watermark', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-prn',
-          accreditationId: 'acc-prn',
+          registrationNumber: 'REG-reg-prn',
+          accreditationNumber: 'ACC-acc-prn',
           number: 1,
           payload: { prnId: 'prn-watermark', amount: 50 }
         })
       ])
       await repository.appendEvents([
         buildPrnCancelledAfterIssueEvent({
-          registrationId: 'reg-prn',
-          accreditationId: 'acc-prn',
+          registrationNumber: 'REG-reg-prn',
+          accreditationNumber: 'ACC-acc-prn',
           number: 2,
           payload: { prnId: 'prn-watermark', amount: 50 }
         })
@@ -41,8 +42,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          registrationId: 'reg-prn',
-          accreditationId: 'acc-prn'
+          registrationNumber: 'REG-reg-prn',
+          accreditationNumber: 'ACC-acc-prn'
         }),
         'prn-watermark',
         0
@@ -58,23 +59,26 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('filters out events at or below the watermark', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-wm',
-          accreditationId: 'acc-wm',
+          registrationNumber: 'REG-reg-wm',
+          accreditationNumber: 'ACC-acc-wm',
           number: 1,
           payload: { prnId: 'prn-filter', amount: 50 }
         })
       ])
       await repository.appendEvents([
         buildPrnCancelledAfterIssueEvent({
-          registrationId: 'reg-wm',
-          accreditationId: 'acc-wm',
+          registrationNumber: 'REG-reg-wm',
+          accreditationNumber: 'ACC-acc-wm',
           number: 2,
           payload: { prnId: 'prn-filter', amount: 50 }
         })
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        buildLedgerId({ registrationId: 'reg-wm', accreditationId: 'acc-wm' }),
+        buildLedgerId({
+          registrationNumber: 'REG-reg-wm',
+          accreditationNumber: 'ACC-acc-wm'
+        }),
         'prn-filter',
         1
       )
@@ -86,8 +90,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('returns an empty array when no events exist after watermark', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-caught-up',
-          accreditationId: 'acc-caught-up',
+          registrationNumber: 'REG-reg-caught-up',
+          accreditationNumber: 'ACC-acc-caught-up',
           number: 1,
           payload: { prnId: 'prn-caught-up', amount: 50 }
         })
@@ -95,8 +99,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          registrationId: 'reg-caught-up',
-          accreditationId: 'acc-caught-up'
+          registrationNumber: 'REG-reg-caught-up',
+          accreditationNumber: 'ACC-acc-caught-up'
         }),
         'prn-caught-up',
         1
@@ -108,8 +112,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('returns an empty array when no events exist for the prnId', async () => {
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          registrationId: 'reg-none',
-          accreditationId: 'acc-none'
+          registrationNumber: 'REG-reg-none',
+          accreditationNumber: 'ACC-acc-none'
         }),
         'prn-nonexistent',
         0
@@ -121,23 +125,26 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('does not return events from a different ledger', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-a',
-          accreditationId: 'acc-a',
+          registrationNumber: 'REG-reg-a',
+          accreditationNumber: 'ACC-acc-a',
           number: 1,
           payload: { prnId: 'prn-shared', amount: 50 }
         })
       ])
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-b',
-          accreditationId: 'acc-b',
+          registrationNumber: 'REG-reg-b',
+          accreditationNumber: 'ACC-acc-b',
           number: 1,
           payload: { prnId: 'prn-shared', amount: 30 }
         })
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        buildLedgerId({ registrationId: 'reg-a', accreditationId: 'acc-a' }),
+        buildLedgerId({
+          registrationNumber: 'REG-reg-a',
+          accreditationNumber: 'ACC-acc-a'
+        }),
         'prn-shared',
         0
       )
@@ -150,9 +157,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('does not read a ledger named under a different organisation', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          organisationId: 'org-owner',
-          registrationId: 'reg-owned',
-          accreditationId: 'acc-owned',
+          registrationNumber: 'REG-reg-owned',
+          accreditationNumber: 'ACC-acc-owned',
           number: 1,
           payload: { prnId: 'prn-owned', amount: 50 }
         })
@@ -160,9 +166,9 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          organisationId: 'org-stranger',
-          registrationId: 'reg-owned',
-          accreditationId: 'acc-owned'
+          organisationNumber: anotherOrganisationNumber(),
+          registrationNumber: 'REG-reg-owned',
+          accreditationNumber: 'ACC-acc-owned'
         }),
         'prn-owned',
         0

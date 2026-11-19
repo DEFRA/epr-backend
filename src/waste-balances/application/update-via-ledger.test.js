@@ -7,7 +7,7 @@ import { performUpdateViaLedger } from './update-via-ledger.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
@@ -55,13 +55,7 @@ const prnAwareClassifier = (data) =>
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 
-const accreditationId = 'acc-1'
-
-const ledgerId = withNumbers({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId
-})
+const ledgerId = DEFAULT_LEDGER_ID
 
 const { organisationNumber, registrationNumber, accreditationNumber } = ledgerId
 const numbers = { organisationNumber, registrationNumber, accreditationNumber }

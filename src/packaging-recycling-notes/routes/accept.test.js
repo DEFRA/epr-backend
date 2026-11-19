@@ -75,13 +75,7 @@ const authHeaders = {
  * while `findBalance` still resolves a balance for the status-only append.
  */
 const openingBalanceEvent = () =>
-  buildLedgerEvent({
-    registrationId,
-    accreditationId,
-    organisationId,
-    ...PRN_LEDGER_ID,
-    number: 1
-  })
+  buildLedgerEvent({ ...PRN_LEDGER_ID, number: 1 })
 
 let server
 let ledgerRepository

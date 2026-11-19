@@ -26,17 +26,14 @@ import {
 } from '#domain/organisations/numbers.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {RegistrationOrAccreditationId, WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
+/** @import {WasteBalanceLedgerId} from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * The ledger the fixture summary log reads.
  *
- * @type {RegistrationOrAccreditationId & WasteBalanceLedgerId}
+ * @type {WasteBalanceLedgerId}
  */
 const FIXTURE_LEDGER = {
-  organisationId: 'org-123',
-  registrationId: 'reg-123',
-  accreditationId: 'acc-123',
   organisationNumber: toOrganisationNumber('500123'),
   registrationNumber: toRegistrationNumber('REG12345'),
   accreditationNumber: toAccreditationNumber('ACC12345'),
@@ -48,7 +45,7 @@ const FIXTURE_LEDGER = {
  * SUMMARY_LOG_SUBMITTED ledger event that resolves it as the head.
  *
  * @param {Object} params
- * @param {RegistrationOrAccreditationId & WasteBalanceLedgerId} params.ledgerId
+ * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {string} params.summaryLogId
  * @param {number} params.number - the submission's ledger position
  * @param {{ rowId: string, wasteRecordType?: string }[]} params.rows
@@ -2556,7 +2553,6 @@ describe('SummaryLogsValidator', () => {
       await seedSubmittedSummaryLog({
         ledgerId: {
           ...FIXTURE_LEDGER,
-          accreditationId: 'acc-1',
           accreditationNumber: toAccreditationNumber('ACC-1')
         },
         summaryLogId: 'previous-log',

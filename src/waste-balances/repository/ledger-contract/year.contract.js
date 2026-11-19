@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
 
-import { buildLedgerEvent, buildLedgerNumbers } from '../ledger-test-data.js'
+import { buildLedgerEvent, buildLedgerId } from '../ledger-test-data.js'
 
 const YEAR_2026 = toYear(2026)
 const YEAR_2027 = toYear(2027)
@@ -13,11 +13,11 @@ const YEAR_2027 = toYear(2027)
  * number.
  */
 const REGISTERED_ONLY = Object.freeze({
-  2026: buildLedgerNumbers({ accreditationId: null, year: YEAR_2026 }),
-  2027: buildLedgerNumbers({ accreditationId: null, year: YEAR_2027 })
+  2026: buildLedgerId({ accreditationNumber: null, year: YEAR_2026 }),
+  2027: buildLedgerId({ accreditationNumber: null, year: YEAR_2027 })
 })
 
-const ACCREDITED = buildLedgerNumbers({ year: YEAR_2026 })
+const ACCREDITED = buildLedgerId({ year: YEAR_2026 })
 
 export const testYearBehaviour = (it) => {
   describe('year', () => {

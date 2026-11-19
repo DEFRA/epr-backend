@@ -63,32 +63,21 @@ const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 export { asOperator } from '#test/inject-auth.js'
 
 /**
- * @typedef {import('#domain/organisations/numbers.js').RequiredNumbers & {
- *   organisationId: string,
- *   registrationId: string,
- *   accreditationId: string | null,
- *   year: import('#common/helpers/dates/year.js').Year
- * }} LedgerEnvironment
+ * @typedef {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} LedgerEnvironment
  */
 
 /**
- * The ids and numbers of the environment's ledger.
+ * The environment's ledger id.
  *
  * @param {LedgerEnvironment} env
- * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
+ * @returns {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
  */
 export const ledgerIdOf = ({
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber,
   registrationNumber,
   accreditationNumber,
   year
 }) => ({
-  organisationId,
-  registrationId,
-  accreditationId,
   organisationNumber,
   registrationNumber,
   accreditationNumber,

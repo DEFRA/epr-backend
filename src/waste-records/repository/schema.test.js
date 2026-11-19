@@ -48,7 +48,7 @@ describe('row state insert schema', () => {
 
   it('accepts a null accreditation number for a registered-only row state', () => {
     const { error } = validate(
-      buildSummaryLogRowState({ accreditationId: null })
+      buildSummaryLogRowState({ accreditationNumber: null })
     )
     expect(error).toBeUndefined()
   })

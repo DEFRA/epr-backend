@@ -172,10 +172,10 @@ describe('ensureLedgerCollection', () => {
 
       await ensureLedgerCollection(mongoClient.db(DATABASE_NAME))
       await repository.appendEvents([
-        buildLedgerEvent({ accreditationId: null, year: toYear(2026) })
+        buildLedgerEvent({ accreditationNumber: null, year: toYear(2026) })
       ])
       await repository.appendEvents([
-        buildLedgerEvent({ accreditationId: null, year: toYear(2027) })
+        buildLedgerEvent({ accreditationNumber: null, year: toYear(2027) })
       ])
 
       const names = (await collection.indexes()).map(({ name }) => name)

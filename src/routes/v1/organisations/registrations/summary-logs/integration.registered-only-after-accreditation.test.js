@@ -166,7 +166,7 @@ describe('an operator accredited in July uploading their registered-only summary
     })
 
     const submittedEvent = await env.ledgerRepository.findLatestInLedgerByKind(
-      ledgerIdOf({ ...env, accreditationId: null, accreditationNumber: null }),
+      ledgerIdOf({ ...env, accreditationNumber: null }),
       LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
     )
     expect(submittedEvent).toMatchObject({
