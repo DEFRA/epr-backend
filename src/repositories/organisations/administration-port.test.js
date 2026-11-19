@@ -27,7 +27,6 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/forms-submission-data/migration/migration-orchestrator.js',
   'src/forms-submission-data/migration/organisation-persistence.js',
   'src/non-prod-data-reset/mongodb.js',
-  'src/organisation-years-diagnostic/run.js',
   'src/repositories/form-submissions/mongodb.js',
   'src/routes/v1/dev/form-submissions/migrate/post.js',
   'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
