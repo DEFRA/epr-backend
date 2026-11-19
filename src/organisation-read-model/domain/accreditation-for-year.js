@@ -4,7 +4,7 @@
  * The registration's accreditation for a year, if it holds one.
  *
  * @template A
- * @param {{ accreditations: Record<string, A> }} registration
+ * @param {{ accreditations: Record<Year, A> }} registration
  * @param {Year} year
  * @returns {A | undefined}
  */

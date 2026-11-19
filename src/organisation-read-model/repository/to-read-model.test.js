@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -11,8 +10,9 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { toReadModelOrganisations } from './to-read-model.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
-/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -22,25 +22,22 @@ const { buildOrganisation } = createOrganisationBuilders()
  * are in production.
  *
  * @param {object} organisation
- * @param {Year} [year]
  */
-const reprocessorOf = async (organisation, year) => {
+const reprocessorOf = async (organisation) => {
   const stored = await createInMemoryOrganisationsRepository([
     partialMock(organisation)
   ])().findAll()
-  const [served] = await toReadModelOrganisations(
-    stored,
-    [],
-    {
-      overseasSitesRepository: { findByIds: async () => [] },
-      logger: { warn: () => {} }
-    },
-    year
-  )
+  const [served] = await toReadModelOrganisations(stored, [], {
+    overseasSitesRepository: { findByIds: async () => [] },
+    logger: { warn: () => {} }
+  })
   return served.registrations[REPROCESSOR_NUMBER]
 }
 
-/** @param {string} updatedAt */
+/**
+ * @param {string} updatedAt
+ * @returns {StatusHistoryEntryOf<'created' | 'approved'>[]}
+ */
 const approvedSince = (updatedAt) => [
   { status: 'created', updatedAt: '2025-01-01T09:00:00.000Z' },
   { status: 'approved', updatedAt }
@@ -91,7 +88,7 @@ describe('toReadModelOrganisations', () => {
       })
     )
 
-    expect(registration.accreditations[2026].status.timeline).toEqual([
+    expect(registration.accreditations[toYear(2026)].status.timeline).toEqual([
       { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
       { status: 'suspended', at: '2026-03-01T12:00:00.000Z' },
       { status: 'cancelled', at: '2026-03-01T15:00:00.000Z' }
@@ -160,22 +157,10 @@ describe('toReadModelOrganisations', () => {
       expect(Object.keys(registration.accreditations)).toEqual([])
       expect(Object.keys(registration.standingByDate)).toEqual(['2027'])
     })
-
-    it('gives only the year asked for, even when next year is open', async () => {
-      config.set('openNextYear', true)
-
-      const registration = await reprocessorOf(
-        accreditedEarlyForNextYear(),
-        toYear(2027)
-      )
-
-      expect(registration.standingByDate).toEqual({
-        2027: { '2027-01-10': { standing: 'registeredOnly' } }
-      })
-    })
   })
 
   it('gives a registration recorded after its validFrom as approved in that year', async () => {
+    /** @type {StatusHistoryEntryOf<'created' | 'approved'>[]} */
     const recordedLate = [
       { status: 'created', updatedAt: '2026-10-14T14:30:47.171Z' },
       { status: 'approved', updatedAt: '2026-10-14T14:30:47.204Z' }
@@ -194,12 +179,11 @@ describe('toReadModelOrganisations', () => {
           })
         ],
         accreditations: [accredited]
-      }),
-      toYear(2026)
+      })
     )
 
     expect(registration.status.current).toBe('approved')
-    expect(registration.accreditations[2026].status).toMatchObject({
+    expect(registration.accreditations[toYear(2026)].status).toMatchObject({
       lastUpdatedAt: '2026-10-14T14:30:47.204Z',
       timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
     })

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
+import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -14,7 +15,8 @@ import {
   exporter,
   findOrganisation,
   overseasSites,
-  reprocessor
+  reprocessor,
+  storedWithout
 } from './contract/organisation-read-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -213,7 +215,11 @@ describe('stored and external accreditations together', () => {
       registrations: [reprocessor(), exporter()]
     })
     const other = buildOrganisation({
-      registrations: [reprocessor({ registrationNumber: 'R26ER5001189999PL' })]
+      registrations: [
+        reprocessor({
+          registrationNumber: toRegistrationNumber('R26ER5001189999PL')
+        })
+      ]
     })
     const repository = await organisationReadRepositoryWith({
       organisations: [stored, other],
@@ -237,7 +243,8 @@ describe('stored and external accreditations together', () => {
       organisation.registrations[EXPORTER_NUMBER].accreditations
     ).toStrictEqual({})
     expect(
-      otherOrganisation.registrations.R26ER5001189999PL.accreditations
+      otherOrganisation.registrations[toRegistrationNumber('R26ER5001189999PL')]
+        .accreditations
     ).toStrictEqual({})
   })
 
@@ -271,7 +278,7 @@ describe('stored and external accreditations together', () => {
     organisationReadRepositoryWith
   }) => {
     const stored = buildOrganisation({
-      registrations: [reprocessor(), exporter({ validFrom: null })]
+      registrations: [reprocessor(), storedWithout(exporter(), 'validFrom')]
     })
     const repository = await organisationReadRepositoryWith({
       organisations: [stored],
@@ -312,7 +319,7 @@ describe('stored and external accreditations together', () => {
     )
 
     expect(
-      organisation.registrations[EXPORTER_NUMBER].accreditations[2027]
+      organisation.registrations[EXPORTER_NUMBER].accreditations[toYear(2027)]
     ).toMatchObject({
       overseasSites: {
         '001': { status: 'approved', approvedOn: '2026-01-01' },

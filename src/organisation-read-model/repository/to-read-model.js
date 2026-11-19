@@ -15,7 +15,6 @@ import {
 } from '#organisation-read-model/domain/model.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { accreditationsForRegistration } from './accreditations-for-registration.js'
-import { organisationInYear } from './organisation-in-year.js'
 import {
   toAccreditationStatusTimeline,
   toOrganisationStatusTimeline,
@@ -58,7 +57,7 @@ import {
  */
 
 /**
- * @typedef {Map<RegistrationNumber, Record<string, AccreditationCommon>>} ExternalAccreditationsByRegistration
+ * @typedef {Map<RegistrationNumber, Record<Year, AccreditationCommon>>} ExternalAccreditationsByRegistration
  */
 
 /**
@@ -66,7 +65,7 @@ import {
  *
  * @param {ExternalAccreditation} externalAccreditation
  * @param {OnDrop} onDrop
- * @returns {[string, AccreditationCommon] | null}
+ * @returns {[Year, AccreditationCommon] | null}
  */
 const toAccreditationEntryOfYear = (
   {
@@ -83,7 +82,7 @@ const toAccreditationEntryOfYear = (
     )
     return null
   }
-  return [String(year), { ...accreditation, year }]
+  return [year, { ...accreditation, year }]
 }
 
 /**
@@ -110,9 +109,7 @@ const byRegistrationAndYear = (externalAccreditations, onDrop) =>
 /**
  * The stored organisations as the read model shows them, with the external
  * accreditations held for their registrations. An organisation the model
- * cannot represent is left out and reported through `logger.warn`. Without
- * `year`, each organisation is given in every year; with it, in that
- * year.
+ * cannot represent is left out and reported through `logger.warn`.
  *
  * @param {StoredOrganisation[]} stored
  * @param {ExternalAccreditation[]} externalAccreditations
@@ -120,14 +117,12 @@ const byRegistrationAndYear = (externalAccreditations, onDrop) =>
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }} dependencies
- * @param {Year} [year]
  * @returns {Promise<Organisation[]>}
  */
 export async function toReadModelOrganisations(
   stored,
   externalAccreditations,
-  { overseasSitesRepository, logger },
-  year
+  { overseasSitesRepository, logger }
 ) {
   const siteIds = stored.flatMap(({ registrations }) =>
     registrations.flatMap((registration) =>
@@ -153,9 +148,6 @@ export async function toReadModelOrganisations(
       toOrganisation(organisation, context, externalByRegistration)
     )
     .filter((organisation) => organisation !== null)
-    .map((organisation) =>
-      year === undefined ? organisation : organisationInYear(organisation, year)
-    )
 }
 
 /**
@@ -253,9 +245,9 @@ export function toLinkedDefraOrganisation(linked) {
  *   registration: StoredRegistration
  *   organisation: StoredOrganisation
  *   context: Context
- *   externalAccreditations: Record<string, AccreditationCommon>
+ *   externalAccreditations: Record<Year, AccreditationCommon>
  * }} options
- * @returns {Record<string, AccreditationCommon>}
+ * @returns {Record<Year, AccreditationCommon>}
  */
 function accreditationsUpTo({
   openYear,
@@ -271,7 +263,8 @@ function accreditationsUpTo({
     `Registration ${registrationNumber} accreditation year`,
     context.onDrop
   )
-  Object.keys(externalAccreditations)
+  Object.values(externalAccreditations)
+    .map(({ year }) => year)
     .filter((year) => Object.hasOwn(storedAccreditations, year))
     .forEach((year) =>
       context.onDrop(
@@ -282,7 +275,7 @@ function accreditationsUpTo({
     Object.entries({
       ...storedAccreditations,
       ...externalAccreditations
-    }).filter(([year]) => Number(year) <= openYear)
+    }).filter(([, { year }]) => year <= openYear)
   )
 }
 
@@ -291,7 +284,7 @@ function accreditationsUpTo({
  * @param {StoredOrganisation} organisation
  * @param {Context} context
  * @param {ExternalAccreditationsByRegistration} [externalByRegistration]
- * @returns {[string, Registration] | null}
+ * @returns {[RegistrationNumber, Registration] | null}
  */
 function toRegistrationEntry(
   registration,
@@ -364,7 +357,7 @@ function toRegistrationEntry(
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<Year, AccreditationCommon>} accreditations
  * @param {Context} context
  * @returns {ExporterRegistration}
  */
@@ -386,7 +379,7 @@ function toExporterRegistration(registration, common, accreditations, context) {
 /**
  * @param {StoredRegistration} registration
  * @param {RegistrationCommon} common
- * @param {Record<string, ReprocessorAccreditation>} accreditations
+ * @param {Record<Year, ReprocessorAccreditation>} accreditations
  * @param {OnDrop} onDrop
  * @returns {ReprocessorRegistration | null}
  */
@@ -422,11 +415,11 @@ function toReprocessorRegistration(
  * accreditation lists every registration site with the site's stored
  * approval.
  *
- * @param {Record<string, AccreditationCommon>} accreditations
+ * @param {Record<Year, AccreditationCommon>} accreditations
  * @param {Record<string, StoredOverseasSite>} overseasSites
  * @param {StoredRegistration} registration
  * @param {OnDrop} onDrop
- * @returns {Record<string, ExporterAccreditation>}
+ * @returns {Record<Year, ExporterAccreditation>}
  */
 function withAccreditedSites(
   accreditations,
@@ -481,7 +474,7 @@ function sitesHeldByRegistration(sites, year, registration, onDrop) {
 /**
  * @param {StoredAccreditation} accreditation
  * @param {Context} context
- * @returns {[string, AccreditationCommon] | null}
+ * @returns {[Year, AccreditationCommon] | null}
  */
 function toAccreditationEntry(accreditation, { onDrop }) {
   const { accreditationNumber, prnIssuance, status } = accreditation
@@ -508,7 +501,7 @@ function toAccreditationEntry(accreditation, { onDrop }) {
 
   const year = deriveAccreditationYear(accreditation)
   return [
-    String(year),
+    year,
     {
       accreditationNumber,
       prnIssuance: { tonnageBand: prnIssuance.tonnageBand },
@@ -643,11 +636,12 @@ function toContact({ email, fullName, phone }) {
  * right.
  *
  * @template T, V
+ * @template {string | number} K
  * @param {T[]} items
- * @param {(item: T) => [string, V] | null} toEntry
+ * @param {(item: T) => [K, V] | null} toEntry
  * @param {string} keyName
  * @param {OnDrop} onDrop
- * @returns {Record<string, V>}
+ * @returns {Record<K, V>}
  */
 function keyedRecords(items, toEntry, keyName, onDrop) {
   const entries = items.map(toEntry).filter((entry) => entry !== null)
@@ -656,18 +650,23 @@ function keyedRecords(items, toEntry, keyName, onDrop) {
   for (const key of clashes) {
     onDrop(`${keyName} ${key} is shared by more than one record`)
   }
-  return Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
+  return /** @type {Record<K, V>} */ (
+    Object.fromEntries(entries.filter(([key]) => !clashes.has(key)))
+  )
 }
 
 /**
  * @template T, V
- * @param {Record<string, T>} record
+ * @template {string} K
+ * @param {Record<K, T>} record
  * @param {(value: T) => V} map
- * @returns {Record<string, V>}
+ * @returns {Record<K, V>}
  */
 function mapValues(record, map) {
-  return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => [key, map(value)])
+  return /** @type {Record<K, V>} */ (
+    Object.fromEntries(
+      Object.entries(record).map(([key, value]) => [key, map(value)])
+    )
   )
 }
 
