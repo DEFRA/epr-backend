@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   currentUtcYear,
   nextYear,
+  previousYear,
   toYear,
   utcYearOf,
   yearBounds,
@@ -32,6 +33,12 @@ describe('utcYearOf', () => {
 describe('nextYear', () => {
   it('gives the year after', () => {
     expect(nextYear(toYear(2026))).toBe(2027)
+  })
+})
+
+describe('previousYear', () => {
+  it('gives the year before', () => {
+    expect(previousYear(toYear(2027))).toBe(2026)
   })
 })
 

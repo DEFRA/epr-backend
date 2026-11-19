@@ -72,7 +72,13 @@ const seedValidatedSummaryLog = async (
   overrides = {},
   commit = buildSummaryLogCommit()
 ) => {
-  const inserted = await seedValidatingSummaryLog(repository, id, overrides)
+  const inserted = await seedValidatingSummaryLog(repository, id, {
+    meta: {
+      [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+        PROCESSING_TYPES.REPROCESSOR_INPUT
+    },
+    ...overrides
+  })
   await repository.update(id, inserted.version, {
     ...transitionStatus(inserted.summaryLog, SUMMARY_LOG_STATUS.VALIDATED),
     ...(commit && { commit })
