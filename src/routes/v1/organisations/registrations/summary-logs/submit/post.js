@@ -23,7 +23,7 @@ import {
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {HapiRequest & {
