@@ -188,6 +188,21 @@ const summaryLogPayloadSchema = Joi.object({
   decemberCreditTotal: Joi.number()
 })
 
+/**
+ * A `summary-log-submitted` payload worked out before the summary log is
+ * submitted: every field but `summaryLogId`, each one present.
+ *
+ * @typedef {Required<Omit<SummaryLogSubmittedPayload, 'summaryLogId'>>} SummaryLogSubmittedTotals
+ */
+
+/**
+ * Every field required, so totals saved before a payload field was added fail
+ * here rather than reading the missing field as zero.
+ */
+export const summaryLogSubmittedTotalsSchema = summaryLogPayloadSchema
+  .keys({ summaryLogId: Joi.forbidden() })
+  .options({ presence: 'required' })
+
 const prnPayloadSchema = Joi.object({
   prnId: Joi.string().required(),
   amount: Joi.number().required(),
