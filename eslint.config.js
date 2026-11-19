@@ -22,13 +22,23 @@ const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
 // A module of ADR 0027's modular monolith lives at src/<module>/. Code outside
-// it imports only its public interface: index.js, vocabulary.js, and
-// test-support.js in a test.
-const moduleFence = (module, name) => [
+// it imports only its public interface, the entry points its README names, and
+// only a test imports its test-support.js.
+/**
+ * @param {string} module
+ * @param {string} name
+ * @param {string[]} entryPoints
+ */
+const moduleFence = (module, name, entryPoints) => [
   {
-    target: [`./src/!(${module})/**/*`, './src/*.js', './.vite/**/*'],
+    target: [
+      `./src/!(${module})/**/*`,
+      './src/*.js',
+      './.vite/**/*',
+      './scripts/**/*'
+    ],
     from: `./src/${module}`,
-    except: ['./index.js', './vocabulary.js', './test-support.js'],
+    except: entryPoints,
     message: `Import ${name} only through the entry points its README names.`
   },
   {
@@ -94,9 +104,13 @@ export default [
             },
             ...moduleFence(
               'organisation-read-model',
-              'the organisation read model'
+              'the organisation read model',
+              ['./index.js', './vocabulary.js', './test-support.js']
             ),
-            ...moduleFence('waste-records-export', 'the waste records export')
+            ...moduleFence('waste-records-export', 'the waste records export', [
+              './index.js',
+              './test-support.js'
+            ])
           ]
         }
       ]
