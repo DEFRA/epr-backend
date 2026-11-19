@@ -212,7 +212,7 @@ export const buildReadOrganisation = (overrides = {}) => ({
  *   year?: number,
  *   validFrom?: string,
  *   openYear?: Year,
- *   overrides?: Partial<ReprocessorRegistration>
+ *   overrides?: Partial<Omit<ReprocessorRegistration, 'standingByDate'>>
  * }} [options]
  * @returns {Organisation}
  */
