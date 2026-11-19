@@ -1,6 +1,6 @@
 # Registration and accreditation admin
 
-This module holds the admin routes that serve a registration or accreditation by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes that support and nothing else.
+This module holds the admin routes that serve an organisation, registration or accreditation record by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes that support and nothing else.
 
 The routes keep their paths:
 

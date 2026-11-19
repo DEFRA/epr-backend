@@ -1,5 +1,6 @@
 import { testAccreditationLinkValidation } from '#repositories/organisations/contract/accreditation-link.contract.js'
 import { testAccreditationNumberUniquenessBehaviour } from '#repositories/organisations/contract/accreditation-number-uniqueness.contract.js'
+import { testFindByIdBehaviour } from '#repositories/organisations/contract/find-by-id.contract.js'
 import { testFindAccreditationByIdBehaviour } from '#repositories/organisations/contract/find-accreditation-by-id.contract.js'
 import { testFindByOrganisationNumberBehaviour } from '#repositories/organisations/contract/find-by-organisation-number.contract.js'
 import { testFindRegistrationByIdBehaviour } from '#repositories/organisations/contract/find-registration-by-id.contract.js'
@@ -39,6 +40,7 @@ export const testRegistrationAccreditationAdminRepositoryContract = (
   })
 
   testReplaceBehaviour(it)
+  testFindByIdBehaviour(it)
   testFindByOrganisationNumberBehaviour(it)
   testIsAccreditationNumberInUseBehaviour(it)
   testIsRegistrationNumberInUseBehaviour(it)
