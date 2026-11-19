@@ -21,16 +21,16 @@ export const testAppendEventsBehaviour = (it) => {
 
     it('persists an event and returns it as written', async () => {
       const event = buildLedgerEvent({
-        registrationNumber: 'REG-reg-append',
-        accreditationNumber: 'ACC-acc-append',
+        registrationNumber: 'REG-append',
+        accreditationNumber: 'ACC-append',
         number: 1
       })
 
       const [stored] = await repository.appendEvents([event])
 
       expect(stored).not.toHaveProperty('id')
-      expect(stored.registrationNumber).toBe('REG-reg-append')
-      expect(stored.accreditationNumber).toBe('ACC-acc-append')
+      expect(stored.registrationNumber).toBe('REG-append')
+      expect(stored.accreditationNumber).toBe('ACC-append')
       expect(stored.number).toBe(1)
       expect(stored.kind).toBe(event.kind)
       expect(stored.payload).toEqual(event.payload)
@@ -41,13 +41,13 @@ export const testAppendEventsBehaviour = (it) => {
     it('inserts multiple events and returns them in order', async () => {
       const events = [
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-bulk',
-          accreditationNumber: 'ACC-acc-bulk',
+          registrationNumber: 'REG-bulk',
+          accreditationNumber: 'ACC-bulk',
           number: 1
         }),
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-bulk',
-          accreditationNumber: 'ACC-acc-bulk',
+          registrationNumber: 'REG-bulk',
+          accreditationNumber: 'ACC-bulk',
           number: 2,
           payload: { summaryLogId: 'log-2', creditTotal: 200 }
         })
@@ -63,16 +63,16 @@ export const testAppendEventsBehaviour = (it) => {
     it('throws LedgerSequenceError when first event does not start at currentMax + 1', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-seq',
-          accreditationNumber: 'ACC-acc-seq',
+          registrationNumber: 'REG-seq',
+          accreditationNumber: 'ACC-seq',
           number: 1
         })
       ])
 
       const events = [
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-seq',
-          accreditationNumber: 'ACC-acc-seq',
+          registrationNumber: 'REG-seq',
+          accreditationNumber: 'ACC-seq',
           number: 5,
           payload: { summaryLogId: 'log-5', creditTotal: 500 }
         })
@@ -86,8 +86,8 @@ export const testAppendEventsBehaviour = (it) => {
     it('throws LedgerSequenceError when the first event of an empty ledger is not number 1', async () => {
       const events = [
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-empty',
-          accreditationNumber: 'ACC-acc-empty',
+          registrationNumber: 'REG-empty',
+          accreditationNumber: 'ACC-empty',
           number: 2
         })
       ]
@@ -100,8 +100,8 @@ export const testAppendEventsBehaviour = (it) => {
     it('LedgerSequenceError carries the full ledger identity and both numbers', async () => {
       const ledger = {
         organisationNumber: anotherOrganisationNumber(),
-        registrationNumber: 'REG-reg-seq-err',
-        accreditationNumber: 'ACC-acc-seq-err'
+        registrationNumber: 'REG-seq-err',
+        accreditationNumber: 'ACC-seq-err'
       }
       await repository.appendEvents([
         buildLedgerEvent({ ...ledger, number: 1 })
@@ -125,16 +125,16 @@ export const testAppendEventsBehaviour = (it) => {
     it('throws LedgerSlotConflictError when the starting slot is already occupied', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-occupied',
-          accreditationNumber: 'ACC-acc-occupied',
+          registrationNumber: 'REG-occupied',
+          accreditationNumber: 'ACC-occupied',
           number: 1
         })
       ])
 
       const events = [
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-occupied',
-          accreditationNumber: 'ACC-acc-occupied',
+          registrationNumber: 'REG-occupied',
+          accreditationNumber: 'ACC-occupied',
           number: 1,
           payload: { summaryLogId: 'log-clash', creditTotal: 100 }
         })
@@ -148,8 +148,8 @@ export const testAppendEventsBehaviour = (it) => {
     it('LedgerSlotConflictError carries the full ledger identity and slot number', async () => {
       const ledger = {
         organisationNumber: anotherOrganisationNumber(),
-        registrationNumber: 'REG-reg-slot-err',
-        accreditationNumber: 'ACC-acc-slot-err'
+        registrationNumber: 'REG-slot-err',
+        accreditationNumber: 'ACC-slot-err'
       }
       await repository.appendEvents([
         buildLedgerEvent({ ...ledger, number: 1 })
@@ -172,13 +172,13 @@ export const testAppendEventsBehaviour = (it) => {
     it('throws LedgerSequenceError when events are not sequentially numbered', async () => {
       const events = [
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-gap',
-          accreditationNumber: 'ACC-acc-gap',
+          registrationNumber: 'REG-gap',
+          accreditationNumber: 'ACC-gap',
           number: 1
         }),
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-gap',
-          accreditationNumber: 'ACC-acc-gap',
+          registrationNumber: 'REG-gap',
+          accreditationNumber: 'ACC-gap',
           number: 3,
           payload: { summaryLogId: 'log-3', creditTotal: 300 }
         })
@@ -192,8 +192,8 @@ export const testAppendEventsBehaviour = (it) => {
     it('allows the same slot number across different ledgers', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-a',
-          accreditationNumber: 'ACC-acc-a',
+          registrationNumber: 'REG-a',
+          accreditationNumber: 'ACC-a',
           number: 1
         })
       ])
@@ -201,8 +201,8 @@ export const testAppendEventsBehaviour = (it) => {
       await expect(
         repository.appendEvents([
           buildLedgerEvent({
-            registrationNumber: 'REG-reg-b',
-            accreditationNumber: 'ACC-acc-b',
+            registrationNumber: 'REG-b',
+            accreditationNumber: 'ACC-b',
             number: 1
           })
         ])
@@ -218,13 +218,13 @@ export const testAppendEventsBehaviour = (it) => {
     it('appended events are visible via findLatestInLedger', async () => {
       const events = [
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-vis',
-          accreditationNumber: 'ACC-acc-vis',
+          registrationNumber: 'REG-vis',
+          accreditationNumber: 'ACC-vis',
           number: 1
         }),
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-vis',
-          accreditationNumber: 'ACC-acc-vis',
+          registrationNumber: 'REG-vis',
+          accreditationNumber: 'ACC-vis',
           number: 2,
           payload: { summaryLogId: 'log-2', creditTotal: 200 }
         })
@@ -234,8 +234,8 @@ export const testAppendEventsBehaviour = (it) => {
 
       const latest = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-vis',
-          accreditationNumber: 'ACC-acc-vis'
+          registrationNumber: 'REG-vis',
+          accreditationNumber: 'ACC-vis'
         })
       )
       expect(latest).not.toBeNull()

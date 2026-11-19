@@ -64,7 +64,7 @@ export const anotherOrganisationNumber = () =>
 /** @type {Readonly<WasteBalanceLedgerId>} */
 export const DEFAULT_LEDGER_ID = Object.freeze({
   organisationNumber: anotherOrganisationNumber(),
-  registrationNumber: toRegistrationNumber('REG-reg-1'),
-  accreditationNumber: toAccreditationNumber('ACC-acc-1'),
+  registrationNumber: toRegistrationNumber('REG-1'),
+  accreditationNumber: toAccreditationNumber('ACC-1'),
   year: DEFAULT_YEAR
 })

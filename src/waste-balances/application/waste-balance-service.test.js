@@ -69,8 +69,8 @@ describe('createWasteBalanceService', () => {
       expect(event).not.toHaveProperty('registrationId')
       expect(event).not.toHaveProperty('accreditationId')
       expect(event.organisationNumber).toBe(ledgerId.organisationNumber)
-      expect(event.registrationNumber).toBe('REG-reg-1')
-      expect(event.accreditationNumber).toBe('ACC-acc-1')
+      expect(event.registrationNumber).toBe('REG-1')
+      expect(event.accreditationNumber).toBe('ACC-1')
       expect(event.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(event.payload).toEqual({ summaryLogId: 'log-A', creditTotal: 150 })
       expect(event.openingBalance).toEqual({ amount: 0, availableAmount: 0 })
@@ -457,7 +457,7 @@ describe('createWasteBalanceService', () => {
     const catchupParams = {
       organisationNumber: ledgerId.organisationNumber,
       registrationNumber: ledgerId.registrationNumber,
-      accreditationNumber: toAccreditationNumber('ACC-acc-1'),
+      accreditationNumber: toAccreditationNumber('ACC-1'),
       year: ledgerId.year,
       prnId: 'prn-1'
     }

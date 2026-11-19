@@ -23,15 +23,15 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
     it('deletes all events for the given ledgerId and returns the count', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-del',
-          accreditationNumber: 'ACC-acc-del',
+          registrationNumber: 'REG-del',
+          accreditationNumber: 'ACC-del',
           number: 1
         })
       ])
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-del',
-          accreditationNumber: 'ACC-acc-del',
+          registrationNumber: 'REG-del',
+          accreditationNumber: 'ACC-del',
           number: 2,
           payload: { summaryLogId: 'log-2', creditTotal: 200 }
         })
@@ -39,8 +39,8 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
       const count = await repository.deleteAllInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-del',
-          accreditationNumber: 'ACC-acc-del'
+          registrationNumber: 'REG-del',
+          accreditationNumber: 'ACC-del'
         })
       )
 
@@ -48,8 +48,8 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
       const latest = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-del',
-          accreditationNumber: 'ACC-acc-del'
+          registrationNumber: 'REG-del',
+          accreditationNumber: 'ACC-del'
         })
       )
       expect(latest).toBeNull()
@@ -58,8 +58,8 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
     it('returns 0 when the ledger is empty', async () => {
       const count = await repository.deleteAllInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-empty',
-          accreditationNumber: 'ACC-acc-empty'
+          registrationNumber: 'REG-empty',
+          accreditationNumber: 'ACC-empty'
         })
       )
 
@@ -69,43 +69,43 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
     it('does not affect events in other ledgers', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-keep',
-          accreditationNumber: 'ACC-acc-keep',
+          registrationNumber: 'REG-keep',
+          accreditationNumber: 'ACC-keep',
           number: 1
         })
       ])
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-remove',
-          accreditationNumber: 'ACC-acc-remove',
+          registrationNumber: 'REG-remove',
+          accreditationNumber: 'ACC-remove',
           number: 1
         })
       ])
 
       await repository.deleteAllInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-remove',
-          accreditationNumber: 'ACC-acc-remove'
+          registrationNumber: 'REG-remove',
+          accreditationNumber: 'ACC-remove'
         })
       )
 
       const kept = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-keep',
-          accreditationNumber: 'ACC-acc-keep'
+          registrationNumber: 'REG-keep',
+          accreditationNumber: 'ACC-keep'
         })
       )
       expect(kept).not.toBeNull()
       expect(kept?.registrationNumber).toBe(
-        buildLedgerId({ registrationNumber: 'REG-reg-keep' }).registrationNumber
+        buildLedgerId({ registrationNumber: 'REG-keep' }).registrationNumber
       )
     })
 
     it('deletes nothing from a ledger named under a different organisation', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-owned',
-          accreditationNumber: 'ACC-acc-owned',
+          registrationNumber: 'REG-owned',
+          accreditationNumber: 'ACC-owned',
           number: 1
         })
       ])
@@ -113,8 +113,8 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
       const count = await repository.deleteAllInLedger(
         buildLedgerId({
           organisationNumber: anotherOrganisationNumber(),
-          registrationNumber: 'REG-reg-owned',
-          accreditationNumber: 'ACC-acc-owned'
+          registrationNumber: 'REG-owned',
+          accreditationNumber: 'ACC-owned'
         })
       )
 
@@ -122,8 +122,8 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
       const survivor = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-owned',
-          accreditationNumber: 'ACC-acc-owned'
+          registrationNumber: 'REG-owned',
+          accreditationNumber: 'ACC-owned'
         })
       )
       expect(survivor).not.toBeNull()
@@ -133,14 +133,14 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
     it("deletes one accreditation's ledgerId without touching the same registration's registered-only ledger", async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-shared',
-          accreditationNumber: 'ACC-acc-1',
+          registrationNumber: 'REG-shared',
+          accreditationNumber: 'ACC-1',
           number: 1
         })
       ])
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-shared',
+          registrationNumber: 'REG-shared',
           accreditationNumber: null,
           number: 1,
           payload: { summaryLogId: 'reg-only-log', creditTotal: 0 },
@@ -150,8 +150,8 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
       const count = await repository.deleteAllInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-shared',
-          accreditationNumber: 'ACC-acc-1'
+          registrationNumber: 'REG-shared',
+          accreditationNumber: 'ACC-1'
         })
       )
 
@@ -159,15 +159,15 @@ export const testDeleteAllInLedgerBehaviour = (it) => {
 
       const accreditationLedger = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-shared',
-          accreditationNumber: 'ACC-acc-1'
+          registrationNumber: 'REG-shared',
+          accreditationNumber: 'ACC-1'
         })
       )
       expect(accreditationLedger).toBeNull()
 
       const registeredOnlyLedger = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-shared',
+          registrationNumber: 'REG-shared',
           accreditationNumber: null
         })
       )

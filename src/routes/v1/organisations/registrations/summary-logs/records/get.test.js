@@ -243,7 +243,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   it('serves the same file after the organisation and other submissions change', async () => {
     const { server, organisation, summaryLogRowStatesRepository, urlFor } =
       await createServer({
-        accreditationNumber: toAccreditationNumber('ACC-acc-1'),
+        accreditationNumber: toAccreditationNumber('ACC-1'),
         summaryLogs: [
           submittedLog(FILE_ID, SUBMITTED_AT, {
             ...SUBMITTED_META,
@@ -273,7 +273,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
       {
         ...DEFAULT_LEDGER_ID,
-        registrationNumber: toRegistrationNumber('REG-reg-other'),
+        registrationNumber: toRegistrationNumber('REG-other'),
         accreditationNumber: null
       },
       [receivedRowState({ data: { A_KEY_ADDED_LATER: 'x' } })],

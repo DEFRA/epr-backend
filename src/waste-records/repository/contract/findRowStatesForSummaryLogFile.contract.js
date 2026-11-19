@@ -13,7 +13,7 @@ import {
 const REGISTERED_ONLY = { ...DEFAULT_LEDGER_ID, accreditationNumber: null }
 const OTHER_ACCREDITATION = {
   ...DEFAULT_LEDGER_ID,
-  accreditationNumber: toAccreditationNumber('ACC-acc-2')
+  accreditationNumber: toAccreditationNumber('ACC-2')
 }
 const OTHER_ORGANISATION = {
   ...DEFAULT_LEDGER_ID,
@@ -21,7 +21,7 @@ const OTHER_ORGANISATION = {
 }
 const OTHER_REGISTRATION = {
   ...DEFAULT_LEDGER_ID,
-  registrationNumber: toRegistrationNumber('REG-reg-2')
+  registrationNumber: toRegistrationNumber('REG-2')
 }
 
 export const testFindRowStatesForSummaryLogFileBehaviour = (it) => {

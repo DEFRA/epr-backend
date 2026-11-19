@@ -38,8 +38,8 @@ describe('waste-balances ledger repository - in-memory implementation', () => {
   describe('findLatestSubmittedSummaryLogPerLedger with out-of-order seeds', () => {
     it('returns the highest-numbered submission regardless of storage order', async () => {
       const seed = {
-        registrationNumber: 'REG-reg-seed',
-        accreditationNumber: 'ACC-acc-seed'
+        registrationNumber: 'REG-seed',
+        accreditationNumber: 'ACC-seed'
       }
       const partition = buildLedgerId(seed)
       const repository = createInMemoryLedgerRepository([

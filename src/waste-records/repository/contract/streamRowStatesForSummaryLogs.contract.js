@@ -82,12 +82,12 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
         'log-1'
       )
       await repository.upsertSummaryLogRowStates(
-        { ...DEFAULT_LEDGER_ID, registrationNumber: 'REG-reg-2' },
+        { ...DEFAULT_LEDGER_ID, registrationNumber: 'REG-2' },
         [buildSummaryLogRowStateEntry({ rowId: 'row-2' })],
         'log-2'
       )
       await repository.upsertSummaryLogRowStates(
-        { ...DEFAULT_LEDGER_ID, registrationNumber: 'REG-reg-3' },
+        { ...DEFAULT_LEDGER_ID, registrationNumber: 'REG-3' },
         [buildSummaryLogRowStateEntry({ rowId: 'row-3' })],
         'log-3'
       )
@@ -98,7 +98,7 @@ export const testStreamRowStatesForSummaryLogsBehaviour = (it) => {
 
       expect(
         yielded.map((rowState) => rowState.registrationNumber).sort()
-      ).toEqual(['REG-reg-1', 'REG-reg-3'])
+      ).toEqual(['REG-1', 'REG-3'])
     })
 
     it('yields a row state only once however many of the asked-for logs share it', async () => {

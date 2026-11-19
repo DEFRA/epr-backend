@@ -12,11 +12,11 @@ const OTHER_ORGANISATION = {
 }
 const OTHER_REGISTRATION = {
   ...DEFAULT_LEDGER_ID,
-  registrationNumber: 'REG-reg-2'
+  registrationNumber: 'REG-2'
 }
 const OTHER_ACCREDITATION = {
   ...DEFAULT_LEDGER_ID,
-  accreditationNumber: 'ACC-acc-2'
+  accreditationNumber: 'ACC-2'
 }
 const REGISTERED_ONLY = { ...DEFAULT_LEDGER_ID, accreditationNumber: null }
 

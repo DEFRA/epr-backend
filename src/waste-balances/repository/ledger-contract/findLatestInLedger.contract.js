@@ -21,8 +21,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
     it('returns null when no events exist for the ledger', async () => {
       const result = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-empty',
-          accreditationNumber: 'ACC-acc-empty'
+          registrationNumber: 'REG-empty',
+          accreditationNumber: 'ACC-empty'
         })
       )
       expect(result).toBeNull()
@@ -31,8 +31,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
     it('returns the only event when one exists', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-single',
-          accreditationNumber: 'ACC-acc-single',
+          registrationNumber: 'REG-single',
+          accreditationNumber: 'ACC-single',
           number: 1,
           closingBalance: { amount: 50, availableAmount: 40 }
         })
@@ -40,8 +40,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
       const result = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-single',
-          accreditationNumber: 'ACC-acc-single'
+          registrationNumber: 'REG-single',
+          accreditationNumber: 'ACC-single'
         })
       )
 
@@ -53,8 +53,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
     it('returns the highest-numbered event when many exist', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-many',
-          accreditationNumber: 'ACC-acc-many',
+          registrationNumber: 'REG-many',
+          accreditationNumber: 'ACC-many',
           number: 1,
           payload: { summaryLogId: 'log-1', creditTotal: 100 },
           closingBalance: { amount: 10, availableAmount: 10 }
@@ -62,8 +62,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       ])
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-many',
-          accreditationNumber: 'ACC-acc-many',
+          registrationNumber: 'REG-many',
+          accreditationNumber: 'ACC-many',
           number: 2,
           payload: { summaryLogId: 'log-2', creditTotal: 200 },
           closingBalance: { amount: 20, availableAmount: 18 }
@@ -71,8 +71,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       ])
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-many',
-          accreditationNumber: 'ACC-acc-many',
+          registrationNumber: 'REG-many',
+          accreditationNumber: 'ACC-many',
           number: 3,
           payload: { summaryLogId: 'log-3', creditTotal: 300 },
           closingBalance: { amount: 30, availableAmount: 25 }
@@ -81,8 +81,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
       const result = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-many',
-          accreditationNumber: 'ACC-acc-many'
+          registrationNumber: 'REG-many',
+          accreditationNumber: 'ACC-many'
         })
       )
 
@@ -93,15 +93,15 @@ export const testFindLatestInLedgerBehaviour = (it) => {
     it('isolates results by ledgerId', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-x',
-          accreditationNumber: 'ACC-acc-x',
+          registrationNumber: 'REG-x',
+          accreditationNumber: 'ACC-x',
           number: 1
         })
       ])
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-y',
-          accreditationNumber: 'ACC-acc-y',
+          registrationNumber: 'REG-y',
+          accreditationNumber: 'ACC-y',
           number: 1,
           payload: { summaryLogId: 'log-y', creditTotal: 500 }
         })
@@ -109,28 +109,28 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
       const x = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-x',
-          accreditationNumber: 'ACC-acc-x'
+          registrationNumber: 'REG-x',
+          accreditationNumber: 'ACC-x'
         })
       )
       const y = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-y',
-          accreditationNumber: 'ACC-acc-y'
+          registrationNumber: 'REG-y',
+          accreditationNumber: 'ACC-y'
         })
       )
 
       expect(x.number).toBe(1)
-      expect(x.accreditationNumber).toBe('ACC-acc-x')
+      expect(x.accreditationNumber).toBe('ACC-x')
       expect(y.number).toBe(1)
-      expect(y.accreditationNumber).toBe('ACC-acc-y')
+      expect(y.accreditationNumber).toBe('ACC-y')
     })
 
     it('does not read a ledger named under a different organisation', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-owned',
-          accreditationNumber: 'ACC-acc-owned',
+          registrationNumber: 'REG-owned',
+          accreditationNumber: 'ACC-owned',
           number: 1
         })
       ])
@@ -138,8 +138,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       const result = await repository.findLatestInLedger(
         buildLedgerId({
           organisationNumber: anotherOrganisationNumber(),
-          registrationNumber: 'REG-reg-owned',
-          accreditationNumber: 'ACC-acc-owned'
+          registrationNumber: 'REG-owned',
+          accreditationNumber: 'ACC-owned'
         })
       )
 
@@ -149,7 +149,7 @@ export const testFindLatestInLedgerBehaviour = (it) => {
     it('treats null and non-null accreditation numbers as separate ledgers', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-null-test',
+          registrationNumber: 'REG-null-test',
           accreditationNumber: null,
           number: 1,
           closingBalance: { amount: 0, availableAmount: 0 }
@@ -157,8 +157,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
       ])
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-null-test',
-          accreditationNumber: 'ACC-acc-non-null',
+          registrationNumber: 'REG-null-test',
+          accreditationNumber: 'ACC-non-null',
           number: 1,
           closingBalance: { amount: 999, availableAmount: 999 }
         })
@@ -166,14 +166,14 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
       const nullLedger = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-null-test',
+          registrationNumber: 'REG-null-test',
           accreditationNumber: null
         })
       )
       const nonNullLedger = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-null-test',
-          accreditationNumber: 'ACC-acc-non-null'
+          registrationNumber: 'REG-null-test',
+          accreditationNumber: 'ACC-non-null'
         })
       )
 
@@ -190,8 +190,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
     it('round-trips high-precision amounts exactly', async () => {
       await repository.appendEvents([
         buildLedgerEvent({
-          registrationNumber: 'REG-reg-precision',
-          accreditationNumber: 'ACC-acc-precision',
+          registrationNumber: 'REG-precision',
+          accreditationNumber: 'ACC-precision',
           number: 1,
           payload: { summaryLogId: 'log-precise', creditTotal: 200.005 },
           openingBalance: { amount: 0, availableAmount: 0 },
@@ -201,8 +201,8 @@ export const testFindLatestInLedgerBehaviour = (it) => {
 
       const result = await repository.findLatestInLedger(
         buildLedgerId({
-          registrationNumber: 'REG-reg-precision',
-          accreditationNumber: 'ACC-acc-precision'
+          registrationNumber: 'REG-precision',
+          accreditationNumber: 'ACC-precision'
         })
       )
 

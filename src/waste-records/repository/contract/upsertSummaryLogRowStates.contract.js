@@ -218,8 +218,8 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
         const otherLedgerId = {
           ...DEFAULT_LEDGER_ID,
-          registrationNumber: 'REG-reg-2',
-          accreditationNumber: 'ACC-acc-1'
+          registrationNumber: 'REG-2',
+          accreditationNumber: 'ACC-1'
         }
         await repository.upsertSummaryLogRowStates(
           otherLedgerId,
@@ -336,8 +336,8 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
         const otherLedgerId = {
           ...DEFAULT_LEDGER_ID,
-          registrationNumber: 'REG-reg-2',
-          accreditationNumber: 'ACC-acc-1'
+          registrationNumber: 'REG-2',
+          accreditationNumber: 'ACC-1'
         }
 
         const [other] = await repository.upsertSummaryLogRowStates(

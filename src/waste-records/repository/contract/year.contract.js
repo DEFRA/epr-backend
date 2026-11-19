@@ -9,7 +9,7 @@ import {
 
 const LEDGER_2026 = {
   ...DEFAULT_LEDGER_ID,
-  registrationNumber: 'REG-reg-year',
+  registrationNumber: 'REG-year',
   accreditationNumber: null,
   year: toYear(2026)
 }
