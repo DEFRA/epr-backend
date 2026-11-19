@@ -55,7 +55,7 @@ import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
 
 const accredited = buildReadAccreditation({
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  accreditationNumber: ACCREDITATION_NUMBER
 })
 const registration = {
   registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
@@ -63,12 +63,6 @@ const registration = {
 const organisation = buildReadOrganisation({
   registrations: {
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      standingByDate: {
-        2026: {
-          '2026-02-01': { standing: 'registeredOnly' },
-          '2026-07-01': { standing: 'accredited' }
-        }
-      },
       accreditations: accreditationsByYear(accredited)
     })
   }
@@ -77,7 +71,7 @@ const organisation = buildReadOrganisation({
 const ownNumbers = {
   organisationNumber: organisation.organisationNumber,
   registrationNumber: registration.registrationNumber,
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  accreditationNumber: ACCREDITATION_NUMBER
 }
 const otherNumbers = {
   ...ownNumbers,

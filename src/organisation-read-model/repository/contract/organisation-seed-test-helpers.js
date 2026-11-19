@@ -1,3 +1,4 @@
+import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -7,7 +8,7 @@ import {
 /** @import { OrganisationSeed } from '../port.contract.js' */
 
 /** The year of every accreditation a seed gives. */
-export const SEED_ACCREDITATION_YEAR = 2026
+export const SEED_ACCREDITATION_YEAR = toYear(2026)
 
 /** The day a seeded registration is approved from, unless its seed says otherwise. */
 export const SEED_REGISTRATION_APPROVED_ON = `${SEED_ACCREDITATION_YEAR}-02-01`

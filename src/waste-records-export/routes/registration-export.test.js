@@ -29,7 +29,7 @@ import { config } from '#root/config.js'
 const ORGANISATION_ID = 'org-1'
 const ORGANISATION_NUMBER = toOrganisationNumber('500123')
 const REGISTRATION_ID = 'reg-1'
-const REGISTRATION_NUMBER = 'R26ER5000000002PA'
+const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000000002PA')
 const FILE_ID = 'file-1'
 const FILE_ID_2027 = 'file-2027'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'

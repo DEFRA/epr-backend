@@ -39,14 +39,12 @@ import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER
 } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
 /** @import { MockInstance } from 'vitest' */
+/** @import { Material } from '#domain/organisations/model.js' */
 /** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
@@ -63,7 +61,7 @@ const { organisationNumber } = buildOrganisation()
 const ledgerUnder = (registrationNumber, year = PRN_YEAR) => ({
   organisationNumber,
   registrationNumber: toRegistrationNumber(registrationNumber),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+  accreditationNumber: ACCREDITATION_NUMBER,
   year
 })
 
@@ -137,7 +135,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    * @param {{
    *   exporting?: boolean,
    *   year?: number,
-   *   material?: string,
+   *   material?: Material,
    *   reprocessingType?: 'input' | 'output',
    *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>,
    *   tradingName?: string
@@ -153,15 +151,14 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   } = {}) => {
     const validFrom = `${year}-01-01`
     const served = buildReadAccreditation({
-      accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER),
+      accreditationNumber: ACCREDITATION_NUMBER,
       status: status ?? approvedStatusFrom(validFrom),
       year: toYear(year)
     })
     /** @type {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>} */
     const registrationFields = {
-      material: /** @type {any} */ (material),
-      status: approvedStatusFrom(validFrom),
-      standingByDate: { [year]: { [validFrom]: { standing: 'accredited' } } }
+      material,
+      status: approvedStatusFrom(validFrom)
     }
     const registration = {
       registrationNumber: exporting ? EXPORTER_NUMBER : REPROCESSOR_NUMBER

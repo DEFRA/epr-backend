@@ -19,7 +19,9 @@ describe(`GET ${getReportSubmissionsPath}`, () => {
 
   const createServer = async () => {
     const org = buildReadOrganisation({
-      registrations: { R26ER5001180041PL: buildReadReprocessorRegistration() }
+      [toRegistrationNumber('registrations')]: {
+        R26ER5001180041PL: buildReadReprocessorRegistration()
+      }
     })
 
     const server = await createTestServer({
