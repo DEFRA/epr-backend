@@ -7,7 +7,7 @@
  * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
  * @import {ExternalAccreditationsRepository} from '#external-accreditations/repository/port.js'
  * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
- * @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js'
+ * @import {OrganisationReadRepository} from '#organisation-read-model/index.js'
  * @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js'
  * @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js'
  * @import {PrnEvents} from '#packaging-recycling-notes/application/prn-events.plugin.js'

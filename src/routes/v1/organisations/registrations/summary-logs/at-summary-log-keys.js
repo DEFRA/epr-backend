@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
 
@@ -9,7 +9,7 @@ import { findOrganisationAndRegistrationReadModels } from '#routes/organisations
  * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
- * @import { Registration } from '#organisation-read-model/domain/model.js'
+ * @import { Registration } from '#organisation-read-model/vocabulary.js'
  * @import { KeyedOptions, NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  *

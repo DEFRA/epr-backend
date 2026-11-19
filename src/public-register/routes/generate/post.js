@@ -9,7 +9,7 @@ import Boom from '@hapi/boom'
 import { auditPublicRegisterGenerate } from '#public-register/auditing.js'
 
 /**
- * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
  * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository

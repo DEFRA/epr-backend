@@ -8,7 +8,7 @@ import { everyTemplateTable } from '#domain/summary-logs/table-schemas/index.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 
 /** @import {AccreditationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
-/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation as ReadModelOrganisation, Registration as ReadModelRegistration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogMeta} from '#domain/summary-logs/model.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
 /** @import {RowClassification} from '#waste-records/repository/schema.js' */

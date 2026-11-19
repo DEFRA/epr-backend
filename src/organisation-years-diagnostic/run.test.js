@@ -7,7 +7,7 @@ import {
   approvedStatusFrom,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { buildStoredOrganisation } from '#organisation-years-diagnostic/validity-test-data.js'
 import {
   buildAccreditation,
@@ -19,7 +19,7 @@ import { runOrganisationYearsDiagnostic } from './run.js'
 
 /** @import { Lock } from 'mongo-locks' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }

@@ -4,7 +4,7 @@ import {
   approvedStatusFrom,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 
 import { diagnoseOrganisationYears } from './diagnose-organisation-years.js'
 

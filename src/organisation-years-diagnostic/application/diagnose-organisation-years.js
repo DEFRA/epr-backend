@@ -1,13 +1,13 @@
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
-import { organisationYears } from '#organisation-read-model/domain/organisation-years.js'
 import {
+  organisationYears,
   approvedYears,
   firstApprovedAt
-} from '#organisation-read-model/domain/status-timeline.js'
+} from '#organisation-read-model/vocabulary.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Organisation, RegistrationStatus } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation, RegistrationStatus } from '#organisation-read-model/vocabulary.js' */
 
 /**
  * @typedef {Object} OtherYearRegistration

@@ -35,7 +35,7 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { router } from '#plugins/router.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
-import { organisationReadRepositoryPlugin } from '#organisation-read-model/repository/mongodb.plugin.js'
+import { organisationReadRepositoryPlugin } from '#organisation-read-model/index.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'

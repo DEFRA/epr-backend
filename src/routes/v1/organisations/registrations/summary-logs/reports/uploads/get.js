@@ -10,7 +10,7 @@ import Boom from '@hapi/boom'
 import { summaryLogUploadsReportResponseSchema } from './response.schema.js'
 
 /**
- * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository
  */
 

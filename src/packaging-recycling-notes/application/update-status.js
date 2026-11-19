@@ -22,12 +22,12 @@ import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { toIssuingAccreditation } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
  * @typedef {ReturnType<typeof createWasteBalanceService>} WasteBalanceService
- * @typedef {import('#organisation-read-model/repository/port.js').OrganisationReadRepository} OrganisationReadRepository
+ * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#packaging-recycling-notes/repository/port.js').AccreditationNumbers} AccreditationNumbers
  * @typedef {import('#packaging-recycling-notes/domain/issuing-accreditation.js').IssuingAccreditation} IssuingAccreditation
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote

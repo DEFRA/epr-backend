@@ -18,7 +18,7 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { accreditationsByYear } from '#organisation-read-model/repository/read-model-test-data.js'
+import { accreditationsByYear } from '#organisation-read-model/test-support.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */

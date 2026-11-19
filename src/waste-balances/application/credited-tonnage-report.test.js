@@ -12,7 +12,7 @@ import { DEFAULT_YEAR } from '#waste-records/repository/test-data.js'
 
 /**
  * @import {TypedLogger} from '#common/hapi-types.js'
- * @import {OrganisationReadRepository} from '#organisation-read-model/repository/port.js'
+ * @import {OrganisationReadRepository} from '#organisation-read-model/index.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  */
