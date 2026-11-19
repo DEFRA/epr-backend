@@ -1,11 +1,17 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { assertPresent, partialMock } from '#test/type-helpers.js'
+import { toUploadCallbackSignature } from '#common/helpers/auth/upload-callback-signature.js'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { createUploadsRepository } from './cdp-uploader.js'
+
+const callback = {
+  url: 'https://backend.test/callback',
+  signature: toUploadCallbackSignature('abc123')
+}
 
 vi.mock('@aws-sdk/client-s3', async (importOriginal) => {
   const actual = /** @type {Record<string, unknown>} */ (await importOriginal())
@@ -95,12 +101,32 @@ describe('bucket routing', () => {
       registrationNumber: toRegistrationNumber('R26ER5001180001PL'),
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callback
     })
 
     expect(parseFetchBody()).toMatchObject({
       s3Bucket: 'test-summary-logs-bucket',
       s3Path: '/organisations/500001/registrations/R26ER5001180001PL'
+    })
+  })
+
+  it('sends the callback signature in the ORS import metadata, not the callback url', async () => {
+    stubFetch()
+
+    const repository = createUploadsRepository({
+      s3Client: partialMock({ send: vi.fn() }),
+      ...testConfig
+    })
+
+    await repository.initiateOrsImport({
+      importId: 'import-1',
+      redirectUrl: 'https://admin.test/redirect',
+      callback
+    })
+
+    expect(parseFetchBody()).toMatchObject({
+      callback: 'https://backend.test/callback',
+      metadata: { importId: 'import-1', signature: 'abc123' }
     })
   })
 
@@ -117,7 +143,7 @@ describe('bucket routing', () => {
       registrationNumber: toRegistrationNumber('R26ER5001180001PL'),
       summaryLogId: 'sl-1',
       redirectUrl: 'https://frontend.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callback
     })
 
     expect(parseFetchBody().mimeTypes).toEqual([
@@ -136,7 +162,7 @@ describe('bucket routing', () => {
     await repository.initiateOrsImport({
       importId: 'import-1',
       redirectUrl: 'https://admin.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callback
     })
 
     expect(parseFetchBody().s3Bucket).toBe('test-ors-bucket')
@@ -153,7 +179,7 @@ describe('bucket routing', () => {
     await repository.initiateOrsImport({
       importId: 'import-1',
       redirectUrl: 'https://admin.test/redirect',
-      callbackUrl: 'https://backend.test/callback'
+      callback
     })
 
     expect(parseFetchBody().mimeTypes).toEqual([

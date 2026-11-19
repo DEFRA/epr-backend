@@ -35,7 +35,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
-import { signedCallback } from '#test/upload-callback.js'
+import {
+  signedCallbackPayload,
+  signedCallbackRequest
+} from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
@@ -227,18 +230,22 @@ describe('summary-log routes by natural key', () => {
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
           organisationNumber,
           registrationNumber,
-          callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
+          callback: {
+            url: `${config.get('appBaseUrl')}${uploads}/${summaryLogId}/upload-completed`,
+            signature: expect.stringMatching(/^[0-9a-f]{64}$/)
+          }
         })
       })
 
       it('stores the summary log for the registration, year and accreditation when the upload completes', async () => {
         const summaryLogId = toSummaryLogId(randomUUID())
 
-        const response = await server.inject({
-          method: 'POST',
-          url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
-          payload: uploadCompletedFor(registrationNumber)
-        })
+        const response = await server.inject(
+          signedCallbackRequest(
+            `${uploads}/${summaryLogId}/upload-completed`,
+            uploadCompletedFor(registrationNumber)
+          )
+        )
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
         const stored = await waitForVersion(
@@ -305,13 +312,12 @@ describe('summary-log routes by natural key', () => {
   it('stores a registered-only upload as registered-only when the registration is accredited', async () => {
     const summaryLogId = toSummaryLogId(randomUUID())
 
-    const response = await server.inject({
-      method: 'POST',
-      url: signedCallback(
-        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
-      ),
-      payload: uploadCompletedFor(REPROCESSOR_NUMBER)
-    })
+    const response = await server.inject(
+      signedCallbackRequest(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+        uploadCompletedFor(REPROCESSOR_NUMBER)
+      )
+    )
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
@@ -325,13 +331,12 @@ describe('summary-log routes by natural key', () => {
     await seed(accreditedLog, summaryLogFactory.submitted)
     const summaryLogId = toSummaryLogId(randomUUID())
 
-    await server.inject({
-      method: 'POST',
-      url: signedCallback(
-        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`
-      ),
-      payload: uploadCompletedFor(REPROCESSOR_NUMBER)
-    })
+    await server.inject(
+      signedCallbackRequest(
+        `${summaryLogs}/${YEAR}/${summaryLogId}/upload-completed`,
+        uploadCompletedFor(REPROCESSOR_NUMBER)
+      )
+    )
 
     const stored = await waitForVersion(summaryLogsRepository, summaryLogId, 1)
     expect(stored.summaryLog.validatedAgainstSummaryLogId).toBe(
@@ -488,6 +493,9 @@ describe('summary-log routes by natural key', () => {
     })
   })
 
+  const unknownRegistrationCompletedPath = `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}/${randomUUID()}/upload-completed`
+  const unaccreditedCompletedPath = `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
+
   it.each([
     [
       'creating under a registration with no accreditation',
@@ -510,18 +518,20 @@ describe('summary-log routes by natural key', () => {
     [
       'completing an upload under an unknown registration',
       'POST',
-      signedCallback(
-        `${registrations}/R26XX0000000000PL/summary-logs/${YEAR}/${randomUUID()}/upload-completed`
-      ),
-      uploadCompletedFor('R26XX0000000000PL')
+      unknownRegistrationCompletedPath,
+      signedCallbackPayload(
+        unknownRegistrationCompletedPath,
+        uploadCompletedFor('R26XX0000000000PL')
+      )
     ],
     [
       'completing an upload under a registration with no accreditation',
       'POST',
-      signedCallback(
-        `${registrations}/${REGISTERED_ONLY_NUMBER}/accreditations/${YEAR}/summary-log/${randomUUID()}/upload-completed`
-      ),
-      uploadCompletedFor(REGISTERED_ONLY_NUMBER)
+      unaccreditedCompletedPath,
+      signedCallbackPayload(
+        unaccreditedCompletedPath,
+        uploadCompletedFor(REGISTERED_ONLY_NUMBER)
+      )
     ],
     [
       'reading under an unknown registration',

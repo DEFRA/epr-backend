@@ -8,6 +8,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { config } from '#root/config.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -102,20 +103,21 @@ const openYear2027 = () => {
 
 const upload = async (env, { summaryLogId, fileId }, parsed) => {
   env.fileDataMap[fileId] = parsed
-  await env.server.inject({
-    method: 'POST',
-    url: buildPostUrl(summaryLogId, {
-      accredited: env.accredited,
-      year: env.year
-    }),
-    payload: createUploadPayload(
-      env.organisationId,
-      env.registrationId,
-      UPLOAD_STATUS.COMPLETE,
-      fileId,
-      `${fileId}.xlsx`
+  await env.server.inject(
+    signedCallbackRequest(
+      buildPostUrl(summaryLogId, {
+        accredited: env.accredited,
+        year: env.year
+      }),
+      createUploadPayload(
+        env.organisationId,
+        env.registrationId,
+        UPLOAD_STATUS.COMPLETE,
+        fileId,
+        `${fileId}.xlsx`
+      )
     )
-  })
+  )
   await pollForValidation(env.server, summaryLogId)
   const response = await env.server.inject({
     method: 'GET',

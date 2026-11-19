@@ -5,6 +5,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -61,17 +62,18 @@ describe('Validation saves what submission will commit', () => {
       data: exportedLoads(rows)
     }
 
-    await server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId),
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileIdOf(summaryLogId),
-        'waste-data.xlsx'
+    await server.inject(
+      signedCallbackRequest(
+        buildPostUrl(summaryLogId),
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileIdOf(summaryLogId),
+          'waste-data.xlsx'
+        )
       )
-    })
+    )
 
     return pollForValidation(server, summaryLogId)
   }

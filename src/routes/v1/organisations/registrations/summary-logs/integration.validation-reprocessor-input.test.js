@@ -2,6 +2,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -113,17 +114,18 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         server = result.server
         summaryLogsRepository = result.summaryLogsRepository
 
-        uploadResponse = await server.inject({
-          method: 'POST',
-          url: buildPostUrl(summaryLogId),
-          payload: createUploadPayload(
-            organisationId,
-            registrationId,
-            UPLOAD_STATUS.COMPLETE,
-            fileId,
-            filename
+        uploadResponse = await server.inject(
+          signedCallbackRequest(
+            buildPostUrl(summaryLogId),
+            createUploadPayload(
+              organisationId,
+              registrationId,
+              UPLOAD_STATUS.COMPLETE,
+              fileId,
+              filename
+            )
           )
-        })
+        )
       })
 
       it('should return ACCEPTED', () => {
@@ -323,17 +325,18 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         server = result.server
         summaryLogsRepository = result.summaryLogsRepository
 
-        uploadResponse = await server.inject({
-          method: 'POST',
-          url: buildPostUrl(summaryLogId),
-          payload: createUploadPayload(
-            organisationId,
-            registrationId,
-            UPLOAD_STATUS.COMPLETE,
-            fileId,
-            filename
+        uploadResponse = await server.inject(
+          signedCallbackRequest(
+            buildPostUrl(summaryLogId),
+            createUploadPayload(
+              organisationId,
+              registrationId,
+              UPLOAD_STATUS.COMPLETE,
+              fileId,
+              filename
+            )
           )
-        })
+        )
       })
 
       it('should return ACCEPTED', () => {
@@ -508,17 +511,18 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
         server = result.server
         summaryLogsRepository = result.summaryLogsRepository
 
-        await server.inject({
-          method: 'POST',
-          url: buildPostUrl(summaryLogId),
-          payload: createUploadPayload(
-            organisationId,
-            registrationId,
-            UPLOAD_STATUS.COMPLETE,
-            fileId,
-            filename
+        await server.inject(
+          signedCallbackRequest(
+            buildPostUrl(summaryLogId),
+            createUploadPayload(
+              organisationId,
+              registrationId,
+              UPLOAD_STATUS.COMPLETE,
+              fileId,
+              filename
+            )
           )
-        })
+        )
       })
 
       it('should treat whitespace-only field as empty, not as a system error', async () => {

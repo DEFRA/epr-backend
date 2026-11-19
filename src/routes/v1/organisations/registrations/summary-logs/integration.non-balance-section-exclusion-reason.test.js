@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { UPLOAD_STATUS } from '#domain/summary-logs/status.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
@@ -79,17 +80,18 @@ describe('by-design non-waste-balance sections carry an explicit exclusion reaso
 
     fileDataMap[fileId] = { meta, data }
 
-    await server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId),
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        'waste-data.xlsx'
+    await server.inject(
+      signedCallbackRequest(
+        buildPostUrl(summaryLogId),
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          'waste-data.xlsx'
+        )
       )
-    })
+    )
 
     await pollForValidation(server, summaryLogId)
 

@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs'
 import { http, HttpResponse } from 'msw'
+import { createTestServer } from '#test/create-test-server.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
@@ -21,7 +23,6 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -391,17 +392,18 @@ describe('Submission and placeholder tests', () => {
         }
       })
 
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
+      await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(summaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            fileId,
+            filename
+          )
         )
-      })
+      )
 
       await pollForValidation(server, summaryLogId)
 
@@ -488,17 +490,18 @@ describe('Submission and placeholder tests', () => {
     })
 
     it('should classify loads as added, adjusted, and unchanged on second upload', async () => {
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(secondSummaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          secondFileId,
-          secondFilename
+      await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(secondSummaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            secondFileId,
+            secondFilename
+          )
         )
-      })
+      )
       await pollForValidation(server, secondSummaryLogId)
 
       const response = await server.inject({
@@ -711,7 +714,10 @@ describe('Submission and placeholder tests', () => {
         registrationNumber: TEST_REGISTRATION_NUMBER,
         summaryLogId,
         redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `http://localhost:3001/v1/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`
+        callback: {
+          url: `http://localhost:3001/v1/organisations/${TEST_ORGANISATION_NUMBER}/registrations/${TEST_REGISTRATION_NUMBER}/accreditations/2026/summary-log/${summaryLogId}/upload-completed`,
+          signature: 'signature'
+        }
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,
@@ -755,10 +761,8 @@ describe('Submission and placeholder tests', () => {
         }
       })
 
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: {
+      uploadResponse = await server.inject(
+        signedCallbackRequest(buildPostUrl(summaryLogId), {
           uploadStatus: 'ready',
           metadata: {
             organisationId,
@@ -780,8 +784,8 @@ describe('Submission and placeholder tests', () => {
             }
           },
           numberOfRejectedFiles: 0
-        }
-      })
+        })
+      )
     })
 
     it('should return ACCEPTED', () => {

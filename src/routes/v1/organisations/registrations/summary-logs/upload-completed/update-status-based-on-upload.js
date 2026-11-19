@@ -24,7 +24,7 @@ import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
 /** @import { SummaryLogUpload } from './year-post.schema.js' */
 
 /**
- * @typedef {{ year: Year, numbers: RequiredNumbers }} UploadLocation
+ * @typedef {{ year: Year, numbers: RequiredNumbers }} UploadedFor
  */
 
 /**
@@ -94,7 +94,7 @@ const validatedAgainstSummaryLogIdFor = async (
  * @param {SummaryLogsRepository} summaryLogsRepository
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
- * @param {UploadLocation} location
+ * @param {UploadedFor} uploadedFor
  */
 const insertNewSummaryLog = async (
   summaryLogsRepository,
@@ -125,7 +125,7 @@ const insertNewSummaryLog = async (
  * @param {SummaryLogId} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
- * @param {UploadLocation} location
+ * @param {UploadedFor} uploadedFor
  * @returns {Promise<string>} The new status
  */
 export const updateStatusBasedOnUpload = async (
@@ -133,7 +133,7 @@ export const updateStatusBasedOnUpload = async (
   summaryLogId,
   upload,
   logger,
-  location
+  uploadedFor
 ) => {
   const existing = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
@@ -168,7 +168,7 @@ export const updateStatusBasedOnUpload = async (
       summaryLogsRepository,
       summaryLogId,
       upload,
-      location
+      uploadedFor
     )
   }
 

@@ -77,7 +77,7 @@ export const createUploadsRepository = ({
       registrationNumber,
       summaryLogId,
       redirectUrl,
-      callbackUrl
+      callback
     }) {
       const s3Path = summaryLogUploadPath({
         organisationNumber,
@@ -88,27 +88,27 @@ export const createUploadsRepository = ({
         method: 'POST',
         body: JSON.stringify({
           redirect: redirectUrl,
-          callback: callbackUrl,
+          callback: callback.url,
           s3Bucket: summaryLogsBucket,
           s3Path,
           mimeTypes: SUMMARY_LOG_MIME_TYPES,
-          metadata: { summaryLogId }
+          metadata: { summaryLogId, signature: callback.signature }
         })
       })
     },
 
-    async initiateOrsImport({ importId, redirectUrl, callbackUrl }) {
+    async initiateOrsImport({ importId, redirectUrl, callback }) {
       const s3Path = orsImportUploadPath(importId)
 
       return fetchJson(`${cdpUploaderUrl}/initiate`, {
         method: 'POST',
         body: JSON.stringify({
           redirect: redirectUrl,
-          callback: callbackUrl,
+          callback: callback.url,
           s3Bucket: orsBucket,
           s3Path,
           mimeTypes: ORS_MIME_TYPES,
-          metadata: { importId }
+          metadata: { importId, signature: callback.signature }
         })
       })
     }

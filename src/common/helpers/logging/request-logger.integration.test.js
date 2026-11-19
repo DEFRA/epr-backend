@@ -1,11 +1,15 @@
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 import pino from 'pino'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { logger } from './logger.js'
 import { loggerOptions } from './logger-options.js'
+import { failAction } from '#common/helpers/fail-action.js'
 import { config } from '#root/config.js'
 import { createLogCaptureServer } from '#test/log-capture-server.js'
+
+/** @import { Lifecycle } from '@hapi/hapi' */
 
 describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
   afterEach(() => {
@@ -176,17 +180,33 @@ describe('request-logger integration (hapi-pino + pino + ecs format)', () => {
       handler: () => {
         throw new Error('boom')
       }
+    },
+    {
+      description: 'fails validation',
+      handler: () => 'ok',
+      validate: {
+        payload: Joi.object({ form: Joi.object().required() }).unknown(),
+        failAction: /** @type {Lifecycle.FailAction} */ (
+          /** @type {unknown} */ (failAction)
+        )
+      }
     }
   ])(
-    'should not log the query string of a request that $description',
-    async ({ handler }) => {
+    'should not log the body of a request that $description',
+    async ({ handler, validate }) => {
       config.set('cdpEnvironment', 'dev')
       const { server, lines } = await createLogCaptureServer()
-      server.route({ method: 'POST', path: '/test', handler })
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { validate },
+        handler
+      })
 
       await server.inject({
         method: 'POST',
-        url: '/test?signature=5ec7e75160a7d0e5'
+        url: '/test',
+        payload: { metadata: { signature: '5ec7e75160a7d0e5' } }
       })
 
       expect(lines).not.toHaveLength(0)

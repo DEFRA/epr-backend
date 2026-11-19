@@ -1,4 +1,5 @@
 import { toYear } from '#common/helpers/dates/year.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -10,7 +11,6 @@ import { CADENCE } from '#reports/domain/cadence.js'
 import { QUARTERLY_PERIODS } from '#reports/domain/period-labels.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { signedCallback } from '#test/upload-callback.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -124,19 +124,18 @@ describe('an operator accredited in July uploading their registered-only summary
         { rowId: 1002, month: `${YEAR}-06-01` }
       ])
     }
-    await server.inject({
-      method: 'POST',
-      url: signedCallback(
-        `${registration}/summary-logs/${YEAR}/${summaryLogId}/upload-completed`
-      ),
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        'january-to-june.xlsx'
+    await server.inject(
+      signedCallbackRequest(
+        `${registration}/summary-logs/${YEAR}/${summaryLogId}/upload-completed`,
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          'january-to-june.xlsx'
+        )
       )
-    })
+    )
     await pollForValidation(server, summaryLogId)
 
     const { summaryLog: validated } = await waitForVersion(

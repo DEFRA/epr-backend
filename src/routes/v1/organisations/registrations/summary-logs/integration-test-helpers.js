@@ -41,7 +41,6 @@ import {
 } from '#organisation-read-model/test-support.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
-import { signedCallback } from '#test/upload-callback.js'
 
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
@@ -515,15 +514,13 @@ export const buildPostUrl = (
   summaryLogId,
   { accredited = true, year = UPLOAD_YEAR } = {}
 ) =>
-  signedCallback(
-    uploadCompletedPath({
-      organisationNumber: TEST_ORGANISATION_NUMBER,
-      registrationNumber: TEST_REGISTRATION_NUMBER,
-      year,
-      accredited,
-      summaryLogId
-    })
-  )
+  uploadCompletedPath({
+    organisationNumber: TEST_ORGANISATION_NUMBER,
+    registrationNumber: TEST_REGISTRATION_NUMBER,
+    year,
+    accredited,
+    summaryLogId
+  })
 
 /** @param {string} summaryLogId */
 export const buildSubmitUrl = (summaryLogId) =>

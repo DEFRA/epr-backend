@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 import { http, HttpResponse } from 'msw'
 
 import {
@@ -52,14 +53,15 @@ describe('Waste balance stream (Exporter)', () => {
     fileDataMap[fileId] = { meta: sharedMeta, data: uploadData }
 
     await server.inject({
-      method: 'POST',
-      url: buildPostUrl(summaryLogId),
-      payload: createUploadPayload(
-        organisationId,
-        registrationId,
-        UPLOAD_STATUS.COMPLETE,
-        fileId,
-        `${fileId}.xlsx`
+      ...signedCallbackRequest(
+        buildPostUrl(summaryLogId),
+        createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          `${fileId}.xlsx`
+        )
       ),
       ...asOperator()
     })

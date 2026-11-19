@@ -1,5 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { ObjectId } from 'mongodb'
+import { createTestServer } from '#test/create-test-server.js'
+import { signedCallbackRequest } from '#test/upload-callback.js'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -15,7 +17,6 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
@@ -270,17 +271,18 @@ describe('Repeated uploads of identical data', () => {
       })
 
       // === First upload: upload, validate, submit ===
-      await server.inject({
-        method: 'POST',
-        url: buildPostUrl(firstSummaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          firstFileId,
-          'waste-data.xlsx'
+      await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(firstSummaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            firstFileId,
+            'waste-data.xlsx'
+          )
         )
-      })
+      )
 
       await pollForValidation(server, firstSummaryLogId)
 
@@ -295,17 +297,18 @@ describe('Repeated uploads of identical data', () => {
       })
 
       // === Second upload: upload the same data again ===
-      secondUploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(secondSummaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          secondFileId,
-          'waste-data.xlsx'
+      secondUploadResponse = await server.inject(
+        signedCallbackRequest(
+          buildPostUrl(secondSummaryLogId),
+          createUploadPayload(
+            organisationId,
+            registrationId,
+            UPLOAD_STATUS.COMPLETE,
+            secondFileId,
+            'waste-data.xlsx'
+          )
         )
-      })
+      )
 
       await pollForValidation(server, secondSummaryLogId)
     })
