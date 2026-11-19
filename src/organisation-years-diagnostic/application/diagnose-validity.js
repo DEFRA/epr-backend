@@ -80,7 +80,7 @@ export const diagnoseValidity = (organisations, year) => {
   const firstJanuary = yearBounds(nextYear(year)).start
   const endsAfter = (/** @type {string | null | undefined} */ validTo) => {
     const day = dayOf(validTo)
-    return day !== undefined && day > firstJanuary
+    return day !== undefined && day.localeCompare(firstJanuary) > 0
   }
 
   const registrations = organisations.flatMap((organisation) =>
