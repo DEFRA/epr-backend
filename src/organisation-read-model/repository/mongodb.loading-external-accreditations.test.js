@@ -336,7 +336,7 @@ describe('loading external accreditations', () => {
       expect(requested).toStrictEqual([])
     })
 
-    it('makes no request to Reg Accred for a year other than 2027', async ({
+    it('makes no request to Reg Accred in findByOrganisationNumber for a year other than 2027', async ({
       organisationReadRepositoryWith,
       mongoClient
     }) => {
@@ -353,7 +353,7 @@ describe('loading external accreditations', () => {
       expect(requested).toStrictEqual([])
     })
 
-    it("requests every organisation's accreditations from Reg Accred at once in findAll", async ({
+    it('makes no request to Reg Accred in findAll for a year other than 2027', async ({
       organisationReadRepositoryWith,
       mongoClient
     }) => {
@@ -365,15 +365,37 @@ describe('loading external accreditations', () => {
       })
       const repository = await repositoryWith(mongoClient, options)
 
-      const [organisation] = await repository.findAll()
+      await repository.findAll({ year: /** @type {Year} */ (2026) })
 
-      expect(accreditationNumber2027(organisation)).toBe(
-        REG_ACCRED_ACCREDITATION_NUMBER
-      )
-      expect(
-        requested.map(({ searchParams }) => Object.fromEntries(searchParams))
-      ).toStrictEqual([firstPage])
+      expect(requested).toStrictEqual([])
     })
+
+    it.for(
+      /** @type {[string, Year | undefined][]} */ ([
+        ['no year', undefined],
+        ['2027', /** @type {Year} */ (2027)]
+      ])
+    )(
+      "requests every organisation's 2027 accreditations from Reg Accred at once in findAll, with %s",
+      async ([, year], { organisationReadRepositoryWith, mongoClient }) => {
+        const stored = await storeReprocessorWithExternalAccreditation(
+          organisationReadRepositoryWith
+        )
+        const requested = serveRegAccred({
+          organisationNumber: stored.organisationNumber
+        })
+        const repository = await repositoryWith(mongoClient, options)
+
+        const [organisation] = await repository.findAll({ year })
+
+        expect(accreditationNumber2027(organisation)).toBe(
+          REG_ACCRED_ACCREDITATION_NUMBER
+        )
+        expect(
+          requested.map(({ searchParams }) => Object.fromEntries(searchParams))
+        ).toStrictEqual([firstPage])
+      }
+    )
   })
 
   describe('before 2027 is open', () => {

@@ -9,7 +9,6 @@ import {
   REG_ACCRED_ACCREDITATION_YEAR,
   createRegAccredAccreditationsLoader
 } from './reg-accred-accreditations.js'
-import { organisationInYear } from './organisation-in-year.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { Collection, Db } from 'mongodb' */
@@ -39,6 +38,15 @@ export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
  *   regAccredApi?: RegAccredApiConfig
  * }} OrganisationReadRepositoryOptions
  */
+
+/**
+ * Whether the year asked for, or every year when none is, includes Reg Accred's.
+ *
+ * @param {Year | undefined} year
+ * @returns {boolean}
+ */
+const isRegAccredYear = (year) =>
+  year === undefined || year === REG_ACCRED_ACCREDITATION_YEAR
 
 /**
  * Wraps a loader so it loads nothing for a year the service does not serve
@@ -111,7 +119,7 @@ export const createOrganisationReadRepository =
      * @returns {Promise<ExternalAccreditation[]>}
      */
     const findExternalAccreditationsOf = async (stored, year) =>
-      year !== undefined && year !== REG_ACCRED_ACCREDITATION_YEAR
+      !isRegAccredYear(year)
         ? []
         : loadExternalAccreditations(
             REG_ACCRED_ACCREDITATION_YEAR,
@@ -129,14 +137,11 @@ export const createOrganisationReadRepository =
         const [organisation] = await toReadModelOrganisations(
           [stored],
           await findExternalAccreditationsOf(stored, year),
-          dependencies
+          dependencies,
+          year
         )
-        if (!organisation) {
-          return null
-        }
-        return year === undefined
-          ? organisation
-          : organisationInYear(organisation, year)
+
+        return organisation ?? null
       },
 
       find: async (params) => {
@@ -147,14 +152,15 @@ export const createOrganisationReadRepository =
         }
       },
 
-      findAll: async () => {
+      findAll: async ({ year } = {}) => {
         const stored = await findAll(db)
         return toReadModelOrganisations(
           stored,
-          stored.length === 0
+          stored.length === 0 || !isRegAccredYear(year)
             ? []
             : await loadExternalAccreditations(REG_ACCRED_ACCREDITATION_YEAR),
-          dependencies
+          dependencies,
+          year
         )
       }
     }

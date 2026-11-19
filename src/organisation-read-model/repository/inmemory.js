@@ -65,6 +65,13 @@ export const createInMemoryOrganisationReadRepository = (
       return { ...page, items: items.map(({ organisation }) => organisation) }
     },
 
-    findAll: async () => structuredClone(held)
+    findAll: async ({ year } = {}) => {
+      const organisations = structuredClone(held)
+      return year !== undefined
+        ? organisations.map((organisation) =>
+            organisationInYear(organisation, year)
+          )
+        : organisations
+    }
   })
 }

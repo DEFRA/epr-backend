@@ -33,7 +33,7 @@ import { getCurrentStatus } from './status.js'
 /** @import { StoredLinkedDefraOrganisation, Organisation, StoredOrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { SearchCriteria } from './administration-port.js' */
+/** @import { OrganisationReplacement, SearchCriteria } from './administration-port.js' */
 
 /**
  * A status history entry as it reaches the repository: stored entries carry a
@@ -41,6 +41,11 @@ import { getCurrentStatus } from './status.js'
  * @typedef {{status: string, updatedAt: Date | string}} StatusHistoryEntryInput
  */
 
+/**
+ * @template {string} S
+ * @param {S} status
+ * @returns {{ status: S, updatedAt: Date }}
+ */
 export const createStatusHistoryEntry = (status) => ({
   status,
   updatedAt: new Date()
@@ -203,7 +208,10 @@ export const duplicateKeyConflict = ({
     }
   )
 
-/** @returns {Organisation} */
+/**
+ * @param {{ _id: ObjectId | string }} org
+ * @returns {Organisation}
+ */
 export const mapDocumentWithCurrentStatuses = (org) => {
   const normalised =
     /** @type {WithId<Omit<Organisation, 'id' | 'organisationNumber'> & { orgId: number }>} */ (
@@ -233,6 +241,10 @@ export const mapDocumentWithCurrentStatuses = (org) => {
   }
 }
 
+/**
+ * @param {NumberHolder} validated
+ * @param {NumberHolder} existing
+ */
 function prepareRegAccForReplace(validated, existing) {
   const { accreditations: accreditationsAfterUpdate, cascadeCancelledIds } =
     applyRegistrationStatusToLinkedAccreditations(
@@ -290,6 +302,10 @@ const withStatusFromExisting = (existingItems, itemUpdates) => {
   }))
 }
 
+/**
+ * @param {Organisation} existing
+ * @param {OrganisationReplacement} updates
+ */
 export const prepareForReplace = (existing, updates) => {
   const validated = validateOrganisationUpdate(
     {
@@ -378,6 +394,10 @@ export const versionConflict = (version, currentVersion) =>
     `Version conflict: attempted to update with version ${version} but current version is ${currentVersion}`
   )
 
+/**
+ * @param {string} string
+ * @returns {string}
+ */
 export const escapeRegex = (string) =>
   string.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
 
