@@ -24,6 +24,7 @@
     "#packaging-recycling-notes/*": "./src/packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",
     "#public-register/*": "./src/public-register/*",
+    "#registration-accreditation-admin/*": "./src/registration-accreditation-admin/*",
     "#reports/*": "./src/reports/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",
