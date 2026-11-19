@@ -67,18 +67,40 @@ const assertOrgIdUnheldElsewhere = (storage, id, orgId) => {
 }
 
 /**
+ * Serves reads from the store as it stood before this repository's last
+ * write, until the next tick, as a MongoDB secondary lags its primary.
+ *
+ * @param {Object[]} storage
+ */
+const createLaggingReads = (storage) => {
+  /** @type {Object[] | null} */
+  let snapshot = null
+  return {
+    read: () => snapshot ?? storage,
+    beforeWrite: () => {
+      if (snapshot === null) {
+        snapshot = structuredClone(storage)
+        setImmediate(() => {
+          snapshot = null
+        })
+      }
+    }
+  }
+}
+
+/**
  * Reads the one organisation `predicate` matches, retrying until its version
  * is at least `minimumVersion`. Without `minimumVersion` it reads once.
  * Resolves null when no organisation matches, and throws 500 when the version
  * never arrives.
  *
- * @param {Object[]} storage
+ * @param {() => Object[]} read
  * @param {(org: Object) => boolean} predicate
  * @param {number} [minimumVersion]
  */
-const findOneAtMinimumVersion = async (storage, predicate, minimumVersion) => {
+const findOneAtMinimumVersion = async (read, predicate, minimumVersion) => {
   for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
-    const found = storage.find(predicate)
+    const found = read().find(predicate)
     const isLastRetry = i === MAX_CONSISTENCY_RETRIES - 1
 
     if (found) {
@@ -103,36 +125,39 @@ const findOneAtMinimumVersion = async (storage, predicate, minimumVersion) => {
 
 /**
  * @param {Object[]} storage
+ * @param {() => void} beforeWrite
  * @returns {RegistrationAccreditationAdminRepository['replace']}
  */
-const performReplace = (storage) => async (id, version, updates) => {
-  const validatedId = validateId(id)
+const performReplace =
+  (storage, beforeWrite) => async (id, version, updates) => {
+    const validatedId = validateId(id)
 
-  const existingIndex = storage.findIndex((o) => o._id === validatedId)
-  if (existingIndex === -1) {
-    throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+    const existingIndex = storage.findIndex((o) => o._id === validatedId)
+    if (existingIndex === -1) {
+      throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+    }
+
+    const existing = storage[existingIndex]
+    if (existing.version !== version) {
+      throw versionConflict(version, existing.version)
+    }
+
+    const replaced = prepareForReplace(
+      mapDocumentWithCurrentStatuses(structuredClone(existing)),
+      updates
+    )
+
+    assertOrgIdUnheldElsewhere(storage, existing._id, replaced.orgId)
+    assertNumbersUnheldElsewhere(storage, existing._id, replaced)
+    beforeWrite()
+    storage[existingIndex] = { _id: existing._id, ...replaced }
   }
-
-  const existing = storage[existingIndex]
-  if (existing.version !== version) {
-    throw versionConflict(version, existing.version)
-  }
-
-  const replaced = prepareForReplace(
-    mapDocumentWithCurrentStatuses(structuredClone(existing)),
-    updates
-  )
-
-  assertOrgIdUnheldElsewhere(storage, existing._id, replaced.orgId)
-  assertNumbersUnheldElsewhere(storage, existing._id, replaced)
-  storage[existingIndex] = { _id: existing._id, ...replaced }
-}
 
 /**
- * @param {Object[]} storage
+ * @param {() => Object[]} read
  * @returns {RegistrationAccreditationAdminRepository['findById']}
  */
-const performFindById = (storage) => async (id, minimumVersion) => {
+const performFindById = (read) => async (id, minimumVersion) => {
   try {
     validateId(id)
   } catch {
@@ -140,7 +165,7 @@ const performFindById = (storage) => async (id, minimumVersion) => {
   }
 
   const found = await findOneAtMinimumVersion(
-    storage,
+    read,
     (o) => o._id === id,
     minimumVersion
   )
@@ -152,10 +177,9 @@ const performFindById = (storage) => async (id, minimumVersion) => {
 
 /**
  * Reads and writes the store of an in-memory organisations repository, as the
- * MongoDB adapter shares the organisations repository's collection. It reads
- * what was last written, with no replication lag. The organisations
- * repository serves its own reads from a copy it refreshes only on its own
- * writes, so read back through this repository what it wrote.
+ * MongoDB adapter shares the organisations repository's collection. The
+ * organisations repository serves its own reads from a copy it refreshes only
+ * on its own writes, so read back through this repository what it wrote.
  *
  * @param {object} organisationsRepository - from createInMemoryOrganisationsRepository
  * @returns {() => RegistrationAccreditationAdminRepository}
@@ -171,29 +195,30 @@ export const createInMemoryRegistrationAccreditationAdminRepository = (
   }
   /** @type {Object[]} */
   const storage = organisationsRepository._getStorageForTesting()
+  const { read, beforeWrite } = createLaggingReads(storage)
 
   return () => {
-    const findById = performFindById(storage)
+    const findById = performFindById(read)
 
     return {
-      replace: performReplace(storage),
+      replace: performReplace(storage, beforeWrite),
       findById,
       findByOrganisationNumber: (organisationNumber, minimumVersion) =>
         findOneAtMinimumVersion(
-          storage,
+          read,
           (o) => o.orgId === storedOrgId(organisationNumber),
           minimumVersion
         ),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
       isAccreditationNumberInUse: async (accreditationNumber) =>
-        storage.some((org) =>
+        read().some((org) =>
           org.accreditations.some(
             (acc) => acc.accreditationNumber === accreditationNumber
           )
         ),
       isRegistrationNumberInUse: async (registrationNumber) =>
-        storage.some((org) =>
+        read().some((org) =>
           org.registrations.some(
             (reg) => reg.registrationNumber === registrationNumber
           )
