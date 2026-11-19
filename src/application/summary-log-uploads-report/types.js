@@ -16,4 +16,4 @@
  * @property {number} failedUploads - Count of failed (rejected/invalid) uploads
  */
 
-export default {}
+export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
