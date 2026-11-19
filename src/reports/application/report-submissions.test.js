@@ -588,30 +588,27 @@ describe('generateReportSubmissions (edge cases)', () => {
     expect(row.reportType).toBe('Quarterly')
   })
 
-  it.each([
-    ['ea', 'EA'],
-    ['niea', 'NIEA'],
-    ['sepa', 'SEPA'],
-    ['nrw', 'NRW']
-  ])(
-    'uppercases regulator %s to %s',
-    async (submittedToRegulator, expected) => {
-      const org = buildOrg({
-        registration: {
-          submittedToRegulator: {
-            code: /** @type {any} */ (submittedToRegulator)
-          }
-        }
-      })
+  it.each(
+    /** @type {const} */ ([
+      ['ea', 'EA'],
+      ['niea', 'NIEA'],
+      ['sepa', 'SEPA'],
+      ['nrw', 'NRW']
+    ])
+  )('uppercases regulator %s to %s', async (submittedToRegulator, expected) => {
+    const org = buildOrg({
+      registration: {
+        submittedToRegulator: { code: submittedToRegulator }
+      }
+    })
 
-      const result = await generateReportSubmissions(
-        makeOrgsRepo([org]),
-        makeReportsRepo()
-      )
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
 
-      expect(result.reportSubmissions[0].regulator).toBe(expected)
-    }
-  )
+    expect(result.reportSubmissions[0].regulator).toBe(expected)
+  })
 
   it('excludes test organisations from report submissions', async () => {
     const testOrg = buildOrg({
