@@ -1,5 +1,5 @@
 export { organisationReadRepositoryPlugin } from './repository/mongodb.plugin.js'
-export { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './repository/mongodb.js'
+export { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './repository/mongodb-and-reg-accred-api.js'
 export { REG_ACCRED_ACCREDITATION_YEAR } from './repository/reg-accred-accreditations.js'
 export {
   servesOrganisationOn,
