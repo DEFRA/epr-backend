@@ -23,7 +23,6 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
-  toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
@@ -49,7 +48,7 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
   auditSummaryLogDownload: vi.fn()
 }))
 
-const REGISTERED_ONLY_NUMBER = 'R26ER5001180099PL'
+const REGISTERED_ONLY_NUMBER = toRegistrationNumber('R26ER5001180099PL')
 const YEAR = toYear(2026)
 
 const accredited = accreditation()
@@ -70,16 +69,10 @@ const servedOrganisation = buildReadOrganisation({
   registrations: {
     [REGISTERED_ONLY_NUMBER]: buildReadReprocessorRegistration(),
     [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-      standingByDate: {
-        [YEAR]: {
-          '2026-02-01': { standing: 'registeredOnly' },
-          '2026-07-01': { standing: 'accredited' }
-        }
-      },
       accreditations: accreditationsByYear(
         buildReadAccreditation({
           year: YEAR,
-          accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+          accreditationNumber: ACCREDITATION_NUMBER
         })
       )
     })
@@ -89,15 +82,15 @@ const registeredOnlyLog = {
   registrationId: registeredOnlyRegistration.id,
   accreditationId: null,
   organisationNumber,
-  registrationNumber: toRegistrationNumber(REGISTERED_ONLY_NUMBER),
+  registrationNumber: REGISTERED_ONLY_NUMBER,
   accreditationNumber: null
 }
 const accreditedLog = {
   registrationId: accreditedRegistration.id,
   accreditationId: accredited.id,
   organisationNumber,
-  registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
-  accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+  registrationNumber: REPROCESSOR_NUMBER,
+  accreditationNumber: ACCREDITATION_NUMBER
 }
 
 const registrations = `/organisations/${organisationNumber}/registrations`
@@ -107,14 +100,14 @@ const uploadAddresses = [
   {
     kind: 'registered-only',
     uploads: `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${YEAR}`,
-    registration: registeredOnlyRegistration,
+    registrationNumber: REGISTERED_ONLY_NUMBER,
     accreditationNumber: null
   },
   {
     kind: 'accredited',
     uploads: `${registrations}/${REPROCESSOR_NUMBER}/accreditations/${YEAR}/summary-log`,
-    registration: accreditedRegistration,
-    accreditationNumber: toAccreditationNumber(ACCREDITATION_NUMBER)
+    registrationNumber: REPROCESSOR_NUMBER,
+    accreditationNumber: ACCREDITATION_NUMBER
   }
 ]
 
@@ -220,7 +213,7 @@ describe('summary-log routes by natural key', () => {
 
   describe.each(uploadAddresses)(
     'uploading a $kind summary log',
-    ({ uploads, registration, accreditationNumber }) => {
+    ({ uploads, registrationNumber, accreditationNumber }) => {
       it('starts the upload under the registration numbers, with its callback under the same address', async () => {
         const response = await server.inject({
           method: 'POST',
@@ -233,7 +226,7 @@ describe('summary-log routes by natural key', () => {
         const { summaryLogId } = JSON.parse(response.payload)
         expect(uploadsRepository.initiateCalls.at(-1)).toMatchObject({
           organisationNumber,
-          registrationNumber: registration.registrationNumber,
+          registrationNumber,
           callbackUrl: `${config.get('appBaseUrl')}${signedCallback(`${uploads}/${summaryLogId}/upload-completed`)}`
         })
       })
@@ -244,7 +237,7 @@ describe('summary-log routes by natural key', () => {
         const response = await server.inject({
           method: 'POST',
           url: signedCallback(`${uploads}/${summaryLogId}/upload-completed`),
-          payload: uploadCompletedFor(registration.registrationNumber)
+          payload: uploadCompletedFor(registrationNumber)
         })
 
         expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -255,7 +248,7 @@ describe('summary-log routes by natural key', () => {
         )
         expect(stored.summaryLog).toMatchObject({
           organisationNumber,
-          registrationNumber: registration.registrationNumber,
+          registrationNumber,
           year: YEAR,
           accreditationNumber
         })

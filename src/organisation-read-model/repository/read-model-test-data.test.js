@@ -11,10 +11,14 @@ import {
   buildReadOrganisation,
   buildReadOrganisationWithNumbersOf,
   buildReadReprocessorRegistration,
-  servedOrganisations
+  servedOrganisations,
+  withStandingThrough
 } from './read-model-test-data.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
 describe('read-model-test-data', () => {
   describe('approvedTimelineFrom', () => {
@@ -92,15 +96,20 @@ describe('read-model-test-data', () => {
         2027: { '2027-01-01': { standing: 'accredited' } }
       })
     })
+  })
 
-    it('keeps a standingByDate it is given', () => {
-      const standingByDate = {
-        2026: {
-          '2026-01-01': { standing: /** @type {const} */ ('accredited') }
-        }
-      }
+  describe('withStandingThrough', () => {
+    it('carries the standing into each year up to the year given', () => {
+      const registration = withStandingThrough(
+        buildReadReprocessorRegistration(),
+        toYear(2028)
+      )
 
-      expect(build({ standingByDate }).standingByDate).toBe(standingByDate)
+      expect(registration.standingByDate).toEqual({
+        2026: { '2026-02-01': { standing: 'registeredOnly' } },
+        2027: { '2027-01-01': { standing: 'registeredOnly' } },
+        2028: { '2028-01-01': { standing: 'registeredOnly' } }
+      })
     })
   })
 
@@ -116,6 +125,19 @@ describe('read-model-test-data', () => {
         2027: { '2027-01-01': { standing: 'accredited' } }
       })
     })
+
+    it('carries its standing to the end of the open year given', () => {
+      const organisation = buildReadApprovedOrganisation({
+        year: 2025,
+        openYear: toYear(2026)
+      })
+      const [registration] = Object.values(organisation.registrations)
+
+      expect(registration.standingByDate).toEqual({
+        2025: { '2025-01-01': { standing: 'accredited' } },
+        2026: { '2026-01-01': { standing: 'registeredOnly' } }
+      })
+    })
   })
 
   describe('buildReadOrganisationWithNumbersOf', () => {
@@ -129,12 +151,14 @@ describe('read-model-test-data', () => {
       })
 
       expect(organisation.organisationNumber).toBe('500001')
-      expect(organisation.registrations['R-EXP'].wasteProcessingType).toBe(
-        'exporter'
-      )
-      expect(organisation.registrations['R-REP'].wasteProcessingType).toBe(
-        'reprocessor'
-      )
+      expect(
+        organisation.registrations[toRegistrationNumber('R-EXP')]
+          .wasteProcessingType
+      ).toBe('exporter')
+      expect(
+        organisation.registrations[toRegistrationNumber('R-REP')]
+          .wasteProcessingType
+      ).toBe('reprocessor')
     })
 
     it('leaves out registrations that have no number', () => {

@@ -12,7 +12,7 @@ import {
 } from '#repositories/organisations/contract/test-data.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
-import { utcYearOf } from '#common/helpers/dates/year.js'
+import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import { buildReadApprovedOrganisation } from '#organisation-read-model/test-support.js'
 
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
@@ -111,7 +111,7 @@ export const createAccreditedOperatorInserter = (builders) => {
           submittedToRegulator: { code: regulator },
           accreditations: {
             2026: {
-              ...servedRegistration.accreditations[2026],
+              ...servedRegistration.accreditations[toYear(2026)],
               ...(tonnageBand && { prnIssuance: { tonnageBand } })
             }
           }

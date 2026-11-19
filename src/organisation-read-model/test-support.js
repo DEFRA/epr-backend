@@ -15,7 +15,8 @@ export {
   nextReadAccreditationNumber,
   nextReadOrganisationNumber,
   registrationOf,
-  servedOrganisations
+  servedOrganisations,
+  withStandingThrough
 } from './repository/read-model-test-data.js'
 export {
   ACCREDITATION_NUMBER,

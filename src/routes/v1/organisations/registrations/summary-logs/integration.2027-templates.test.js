@@ -463,46 +463,45 @@ describe('2027 summary logs', () => {
     })
   })
 
-  describe.each([
-    { reprocessingType: 'input', processingType: 'REPROCESSOR_INPUT' },
-    { reprocessingType: 'output', processingType: 'REPROCESSOR_OUTPUT' }
-  ])(
-    'an accredited $processingType',
-    ({ reprocessingType, processingType }) => {
-      it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
-        openYear2027()
-        const env = await setupWasteBalanceIntegrationEnvironment({
-          processingType: 'reprocessor',
-          reprocessingType,
-          year: YEAR
-        })
-        const ids = {
-          summaryLogId: `summary-2027-${reprocessingType}`,
-          fileId: `file-2027-${reprocessingType}`
-        }
-
-        const validated = await upload(env, ids, {
-          meta: meta2027(createWasteBalanceMeta(processingType)),
-          data: reprocessorReceivedLoads([
-            { rowId: 1001, dwtSupplyId: 12345678 },
-            { rowId: 1002 }
-          ])
-        })
-
-        expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-        expect(await submit(env, ids.summaryLogId)).toBe(
-          SUMMARY_LOG_STATUS.SUBMITTED
-        )
-
-        const rows = await storedRows(env, ledgerIdOf(env), ids.fileId)
-        expect(rows.find(({ rowId }) => rowId === '1001')).toMatchObject({
-          processingType,
-          data: { DWT_SUPPLY_ID: 12345678 }
-        })
-        expect(rows.find(({ rowId }) => rowId === '1002')?.data).toMatchObject({
-          DWT_SUPPLY_ID: null
-        })
+  describe.each(
+    /** @type {const} */ ([
+      { reprocessingType: 'input', processingType: 'REPROCESSOR_INPUT' },
+      { reprocessingType: 'output', processingType: 'REPROCESSOR_OUTPUT' }
+    ])
+  )('an accredited $processingType', ({ reprocessingType, processingType }) => {
+    it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
+      openYear2027()
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        reprocessingType,
+        year: YEAR
       })
-    }
-  )
+      const ids = {
+        summaryLogId: `summary-2027-${reprocessingType}`,
+        fileId: `file-2027-${reprocessingType}`
+      }
+
+      const validated = await upload(env, ids, {
+        meta: meta2027(createWasteBalanceMeta(processingType)),
+        data: reprocessorReceivedLoads([
+          { rowId: 1001, dwtSupplyId: 12345678 },
+          { rowId: 1002 }
+        ])
+      })
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(await submit(env, ids.summaryLogId)).toBe(
+        SUMMARY_LOG_STATUS.SUBMITTED
+      )
+
+      const rows = await storedRows(env, ledgerIdOf(env), ids.fileId)
+      expect(rows.find(({ rowId }) => rowId === '1001')).toMatchObject({
+        processingType,
+        data: { DWT_SUPPLY_ID: 12345678 }
+      })
+      expect(rows.find(({ rowId }) => rowId === '1002')?.data).toMatchObject({
+        DWT_SUPPLY_ID: null
+      })
+    })
+  })
 })

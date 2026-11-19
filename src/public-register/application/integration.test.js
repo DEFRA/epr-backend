@@ -7,7 +7,11 @@ import {
   buildReadApprovedOrganisation
 } from '#organisation-read-model/test-support.js'
 import { formatDateTimeDots } from '#common/helpers/date-formatter.js'
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const FIXED_DATE = new Date('2026-04-17T10:00:00.000Z')
 
@@ -35,7 +39,7 @@ const servedOrganisation = () => {
   })
   const registration =
     /** @type {import('#organisation-read-model/domain/model.js').ReprocessorRegistration} */ (
-      organisation.registrations.REG200001
+      organisation.registrations[toRegistrationNumber('REG200001')]
     )
   return {
     ...organisation,
@@ -51,7 +55,10 @@ const servedOrganisation = () => {
         ...registration,
         status: approved,
         accreditations: {
-          2026: { ...registration.accreditations[2026], status: approved }
+          2026: {
+            ...registration.accreditations[toYear(2026)],
+            status: approved
+          }
         }
       }
     }

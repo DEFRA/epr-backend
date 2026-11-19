@@ -39,6 +39,8 @@ import {
   submitSummaryLog
 } from '#vite/helpers/submit-summary-log.js'
 
+/** @import { ExporterAccreditation, ExporterRegistration } from '#organisation-read-model/domain/model.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
 const SUMMARY_LOG_ID = 'sl-1'
@@ -89,12 +91,10 @@ const seedRepositories = async (
 /**
  * A registration approved from `validFrom`, as the read model serves it.
  * @param {string} validFrom
- * @param {'registeredOnly' | 'accredited'} standing
  * @returns {Partial<import('#organisation-read-model/domain/model.js').RegistrationCommon>}
  */
-const approvedFrom = (validFrom, standing = 'registeredOnly') => ({
-  status: approvedStatusFrom(validFrom),
-  standingByDate: { 2026: { [validFrom]: { standing } } }
+const approvedFrom = (validFrom) => ({
+  status: approvedStatusFrom(validFrom)
 })
 
 const accreditedFromJanuary = (accreditationNumber) =>
@@ -123,7 +123,7 @@ const accreditedReprocessor = () => {
     }),
     accreditations: [accredited],
     readRegistration: buildReadReprocessorRegistration({
-      ...approvedFrom('2026-01-01', 'accredited'),
+      ...approvedFrom('2026-01-01'),
       accreditations: accreditationsByYear(
         accreditedFromJanuary(ACCREDITATION_NUMBER)
       )
@@ -133,8 +133,8 @@ const accreditedReprocessor = () => {
 
 /**
  * @param {{
- *   overseasSites?: Record<string, object>,
- *   accreditedSites?: Record<string, object>
+ *   overseasSites?: ExporterRegistration['overseasSites'],
+ *   accreditedSites?: ExporterAccreditation['overseasSites']
  * }} [sites]
  */
 const accreditedExporter = ({
@@ -149,11 +149,11 @@ const accreditedExporter = ({
     }),
     accreditations: [accredited],
     readRegistration: buildReadExporterRegistration({
-      ...approvedFrom('2026-01-01', 'accredited'),
-      overseasSites: /** @type {any} */ (overseasSites),
+      ...approvedFrom('2026-01-01'),
+      overseasSites,
       accreditations: accreditationsByYear({
         ...accreditedFromJanuary(EXPORTER_ACCREDITATION_NUMBER),
-        overseasSites: /** @type {any} */ (accreditedSites)
+        overseasSites: accreditedSites
       })
     })
   }

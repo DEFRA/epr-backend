@@ -1,4 +1,7 @@
-import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  toOrganisationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportSubmissions } from './report-submissions.js'
@@ -190,13 +193,7 @@ describe('generateReportSubmissions (integration)', () => {
     const reportsRepo = createInMemoryReportsRepository()()
 
     // Accredited for 2025 only, so registered only in 2026.
-    const org = orgs.approved({
-      year: 2025,
-      standingByDate: {
-        2025: { '2025-01-01': { standing: 'accredited' } },
-        2026: { '2026-01-01': { standing: 'registeredOnly' } }
-      }
-    })
+    const org = orgs.approved({ year: 2025, openYear: toYear(2026) })
     const reg = registrationOf(org)
 
     await buildSubmittedReport(reportsRepo, {
@@ -464,12 +461,9 @@ const buildOrg = ({
     organisationNumber: toOrganisationNumber(organisationNumber),
     name,
     registrations: {
-      'REG-001': buildReadReprocessorRegistration({
+      [toRegistrationNumber('REG-001')]: buildReadReprocessorRegistration({
         material: 'plastic',
         status: approvedFromJanuary,
-        standingByDate: {
-          2026: { '2026-01-01': { standing: 'registeredOnly' } }
-        },
         submitterContactDetails: {
           fullName: 'Submitter',
           phone: '01234567890',
@@ -488,26 +482,12 @@ const buildOrg = ({
   })
 
 /**
- * A registration accredited for 2026 from `from`.
+ * A registration accredited for 2026 in `status`.
  *
  * @param {string} accreditationNumber
  * @param {import('#organisation-read-model/domain/model.js').Status<'approved' | 'suspended'>} [status]
- * @param {string} [from]
  */
-const accreditedAs = (
-  accreditationNumber,
-  status = approvedFromJanuary,
-  from = '2026-01-01'
-) => ({
-  standingByDate: {
-    2026:
-      from === '2026-01-01'
-        ? { '2026-01-01': { standing: /** @type {const} */ ('accredited') } }
-        : {
-            '2026-01-01': { standing: /** @type {const} */ ('registeredOnly') },
-            [from]: { standing: /** @type {const} */ ('accredited') }
-          }
-  },
+const accreditedAs = (accreditationNumber, status = approvedFromJanuary) => ({
   accreditations: accreditationsByYear(
     buildReadAccreditation({
       accreditationNumber: toAccreditationNumber(accreditationNumber),
@@ -608,30 +588,27 @@ describe('generateReportSubmissions (edge cases)', () => {
     expect(row.reportType).toBe('Quarterly')
   })
 
-  it.each([
-    ['ea', 'EA'],
-    ['niea', 'NIEA'],
-    ['sepa', 'SEPA'],
-    ['nrw', 'NRW']
-  ])(
-    'uppercases regulator %s to %s',
-    async (submittedToRegulator, expected) => {
-      const org = buildOrg({
-        registration: {
-          submittedToRegulator: {
-            code: /** @type {any} */ (submittedToRegulator)
-          }
-        }
-      })
+  it.each(
+    /** @type {const} */ ([
+      ['ea', 'EA'],
+      ['niea', 'NIEA'],
+      ['sepa', 'SEPA'],
+      ['nrw', 'NRW']
+    ])
+  )('uppercases regulator %s to %s', async (submittedToRegulator, expected) => {
+    const org = buildOrg({
+      registration: {
+        submittedToRegulator: { code: submittedToRegulator }
+      }
+    })
 
-      const result = await generateReportSubmissions(
-        makeOrgsRepo([org]),
-        makeReportsRepo()
-      )
+    const result = await generateReportSubmissions(
+      makeOrgsRepo([org]),
+      makeReportsRepo()
+    )
 
-      expect(result.reportSubmissions[0].regulator).toBe(expected)
-    }
-  )
+    expect(result.reportSubmissions[0].regulator).toBe(expected)
+  })
 
   it('excludes test organisations from report submissions', async () => {
     const testOrg = buildOrg({
@@ -656,11 +633,7 @@ describe('generateReportSubmissions (edge cases)', () => {
   it('lists rows for both kinds, split at the accreditation date, with mid-year status transition on', async () => {
     config.set('featureFlags.midYearStatusTransition', true)
     const org = buildOrg({
-      registration: accreditedAs(
-        'ACC-001',
-        approvedStatusFrom('2026-02-15'),
-        '2026-02-15'
-      )
+      registration: accreditedAs('ACC-001', approvedStatusFrom('2026-02-15'))
     })
 
     const result = await generateReportSubmissions(

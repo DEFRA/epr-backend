@@ -36,7 +36,8 @@ import {
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation as buildServedOrganisation,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  withStandingThrough
 } from '#organisation-read-model/test-support.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -58,7 +59,7 @@ const TEST_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-123')
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
-/** @import { AppliedForMaterial, StoredRegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
+/** @import { AppliedForMaterial, Material, StoredRegistrationStatus, ReprocessingType } from '#domain/organisations/model.js' */
 
 export { asOperator } from '#test/inject-auth.js'
 
@@ -687,6 +688,10 @@ export const createRegisteredOnlyReceivedRow = (
   ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'Sorting'
 })
 
+/**
+ * @param {Parameters<typeof createInMemorySummaryLogExtractor>[0]} extractorData
+ * @param {{ reprocessingType?: ReprocessingType }} [options]
+ */
 export const createTestInfrastructure = async (
   extractorData,
   { reprocessingType = 'input' } = {}
@@ -739,8 +744,8 @@ export const createTestInfrastructure = async (
 /**
  * @typedef {{
  *   processingType?: string,
- *   reprocessingType?: string,
- *   material?: string,
+ *   reprocessingType?: ReprocessingType,
+ *   material?: Material,
  *   organisationId?: string,
  *   registrationId?: string,
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
@@ -1037,8 +1042,8 @@ const buildComplexTestOrg = ({
  *
  * @param {{
  *   processingType: string,
- *   reprocessingType: string,
- *   material: string,
+ *   reprocessingType: ReprocessingType,
+ *   material: Material,
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   withOverseasSites?: boolean,
@@ -1068,79 +1073,66 @@ const buildComplexTestReadOrg = ({
     ]
   })
   const accreditationYear = utcYearOf(accreditationValidFrom)
-  const startOfAccreditationYear = `${accreditationYear}-01-01`
   const followingYear = nextYear(accreditationYear)
-  const standingInAccreditationYear = !accredited
-    ? { [startOfAccreditationYear]: { standing: 'registeredOnly' } }
-    : accreditationValidFrom === startOfAccreditationYear
-      ? { [startOfAccreditationYear]: { standing: 'accredited' } }
-      : {
-          [startOfAccreditationYear]: { standing: 'registeredOnly' },
-          [accreditationValidFrom]: { standing: 'accredited' }
-        }
   const accreditation = buildReadAccreditation({
     accreditationNumber,
     status: approvedFrom(accreditationValidFrom),
     year: accreditationYear
   })
   const common = {
-    material: /** @type {any} */ (material),
-    status: approvedFrom(VALID_FROM),
-    standingByDate: /** @type {any} */ ({
-      [accreditationYear]: standingInAccreditationYear,
-      [followingYear]: {
-        [`${followingYear}-01-01`]: { standing: 'registeredOnly' }
-      }
-    })
+    material,
+    status: approvedFrom(VALID_FROM)
   }
+  const registration = isExporter
+    ? buildReadExporterRegistration({
+        ...common,
+        overseasSites: withOverseasSites
+          ? {
+              100: {
+                name: 'Test Overseas Site',
+                address: {
+                  line1: '1 Test Road',
+                  townOrCity: 'Berlin',
+                  country: 'Germany'
+                }
+              },
+              200: {
+                name: 'Test Unapproved Overseas Site',
+                address: {
+                  line1: '2 Test Road',
+                  townOrCity: 'Hamburg',
+                  country: 'Germany'
+                }
+              }
+            }
+          : {},
+        accreditations: accredited
+          ? accreditationsByYear(
+              buildReadExporterAccreditation({
+                ...accreditation,
+                overseasSites: {
+                  100: { status: 'approved', approvedOn: VALID_FROM },
+                  200: {
+                    status: 'approved',
+                    approvedOn: UNAPPROVED_VALID_FROM
+                  }
+                }
+              })
+            )
+          : {}
+      })
+    : buildReadReprocessorRegistration({
+        ...common,
+        reprocessingType,
+        accreditations: accredited ? accreditationsByYear(accreditation) : {}
+      })
   return buildServedOrganisation({
     organisationNumber: TEST_ORGANISATION_NUMBER,
     registrations: {
-      [TEST_REGISTRATION_NUMBER]: isExporter
-        ? buildReadExporterRegistration({
-            ...common,
-            overseasSites: withOverseasSites
-              ? {
-                  100: {
-                    name: 'Test Overseas Site',
-                    address: {
-                      line1: '1 Test Road',
-                      townOrCity: 'Berlin',
-                      country: 'Germany'
-                    }
-                  },
-                  200: {
-                    name: 'Test Unapproved Overseas Site',
-                    address: {
-                      line1: '2 Test Road',
-                      townOrCity: 'Hamburg',
-                      country: 'Germany'
-                    }
-                  }
-                }
-              : {},
-            accreditations: accredited
-              ? accreditationsByYear(
-                  buildReadExporterAccreditation({
-                    ...accreditation,
-                    overseasSites: {
-                      100: { status: 'approved', approvedOn: VALID_FROM },
-                      200: {
-                        status: 'approved',
-                        approvedOn: UNAPPROVED_VALID_FROM
-                      }
-                    }
-                  })
-                )
-              : {}
-          })
-        : buildReadReprocessorRegistration({
-            ...common,
-            reprocessingType: /** @type {any} */ (reprocessingType),
-            accreditations: accredited
-              ? accreditationsByYear(accreditation)
-              : {}
-          })
+      [TEST_REGISTRATION_NUMBER]: withStandingThrough(
+        registration,
+        followingYear
+      )
     }
   })
 }
@@ -1153,8 +1145,8 @@ const buildComplexTestReadOrg = ({
  *
  * @param {{
  *   wasteProcessingType: string,
- *   material?: string,
- *   reprocessingType?: string,
+ *   material?: Material,
+ *   reprocessingType?: ReprocessingType,
  *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
  * }} options
  */

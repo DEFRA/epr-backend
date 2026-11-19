@@ -31,7 +31,7 @@ const url = `/v1/dev/external-accreditations/${registrationNumber}/${year}`
 const urlFor = (number) => `/v1/dev/external-accreditations/${number}/${year}`
 
 /** A registration only another organisation holds. */
-const OTHER_ORGANISATIONS_NUMBER = 'R26ER5009990001PL'
+const OTHER_ORGANISATIONS_NUMBER = toRegistrationNumber('R26ER5009990001PL')
 
 /** @param {{ devEndpoints: boolean }} featureFlags */
 const serverWith = async (featureFlags) => {

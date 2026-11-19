@@ -1,15 +1,14 @@
 import { toYear } from '#common/helpers/dates/year.js'
-import { partialMock } from '#test/type-helpers.js'
 import { organisationYears } from './organisation-years.js'
 
-const registration = (timeline) => partialMock({ status: { timeline } })
+/** @import { RegistrationStatus, StatusTimeline } from './model.js' */
 
-const organisationOf = (...timelines) =>
-  partialMock({
-    registrations: Object.fromEntries(
-      timelines.map((timeline, index) => [`R${index}`, registration(timeline)])
-    )
-  })
+/** @param {...StatusTimeline<RegistrationStatus>} timelines */
+const organisationOf = (...timelines) => ({
+  registrations: Object.fromEntries(
+    timelines.map((timeline, index) => [`R${index}`, { status: { timeline } }])
+  )
+})
 
 const UP_TO_2027 = toYear(2027)
 
@@ -85,8 +84,6 @@ describe('organisationYears', () => {
   })
 
   it('lists nothing when there are no registrations', () => {
-    expect(
-      organisationYears(partialMock({ registrations: {} }), UP_TO_2027)
-    ).toEqual([])
+    expect(organisationYears(organisationOf(), UP_TO_2027)).toEqual([])
   })
 })
