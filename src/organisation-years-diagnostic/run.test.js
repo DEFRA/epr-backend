@@ -1,13 +1,9 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
-import { buildStoredOrganisation } from '#organisation-years-diagnostic/validity-test-data.js'
-import {
-  buildAccreditation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+  buildInYearAccreditation,
+  buildInYearRegistration,
+  buildStoredOrganisation
+} from '#organisation-years-diagnostic/validity-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { runOrganisationYearsDiagnostic } from './run.js'
@@ -69,40 +65,27 @@ describe('runOrganisationYearsDiagnostic', () => {
     findAll.mockResolvedValue([
       buildStoredOrganisation({
         registrations: [
-          buildRegistration({
-            id: 'reg-1',
-            registrationNumber: toRegistrationNumber('R27ER500001PL'),
-            status: 'approved',
-            validFrom: '2027-01-01'
-          }),
-          buildRegistration({
+          buildInYearRegistration({ validFrom: '2027-01-01' }),
+          buildInYearRegistration({
             id: 'reg-2',
             registrationNumber: null,
             status: 'created',
             validFrom: null
           }),
-          buildRegistration({ id: 'reg-3', validFrom: '2026-01-01' })
+          buildInYearRegistration({ id: 'reg-3' })
         ],
         accreditations: [
-          buildAccreditation({
-            id: 'acc-1',
-            accreditationNumber: toAccreditationNumber('A26ER500001PL'),
+          buildInYearAccreditation({
             status: 'suspended',
-            validFrom: '2025-01-01',
-            validTo: '2026-12-31'
+            validFrom: '2025-01-01'
           }),
-          buildAccreditation({
+          buildInYearAccreditation({
             id: 'acc-2',
             accreditationNumber: null,
             status: 'created',
-            validFrom: '2026-01-01',
             validTo: undefined
           }),
-          buildAccreditation({
-            id: 'acc-3',
-            validFrom: '2026-01-01',
-            validTo: '2026-12-31'
-          })
+          buildInYearAccreditation({ id: 'acc-3' })
         ]
       })
     ])
@@ -113,7 +96,7 @@ describe('runOrganisationYearsDiagnostic', () => {
       [
         {
           message:
-            'Registration validity outside year: organisationNumber=500001 testOrganisation=false registrationId=reg-1 registrationNumber=R27ER500001PL status=approved validFrom=2027-01-01(after)'
+            'Registration validity outside year: organisationNumber=500001 testOrganisation=false registrationId=reg-1 registrationNumber=R26ER500001PL status=approved validFrom=2027-01-01(after)'
         }
       ],
       [

@@ -1,38 +1,13 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import {
-  toAccreditationNumber,
-  toRegistrationNumber
-} from '#domain/organisations/numbers.js'
-import { buildStoredOrganisation as organisation } from '#organisation-years-diagnostic/validity-test-data.js'
-import {
-  buildAccreditation,
-  buildRegistration
-} from '#repositories/organisations/contract/test-data.js'
+  buildInYearAccreditation as accreditation,
+  buildInYearRegistration as registration,
+  buildStoredOrganisation as organisation
+} from '#organisation-years-diagnostic/validity-test-data.js'
 
 import { diagnoseValidityOutsideYear } from './diagnose-validity-outside-year.js'
 
 const NO_PROBLEMS = { before: 0, after: 0, empty: 0, unparseable: 0 }
-
-/** @param {object} overrides */
-const registration = (overrides) =>
-  buildRegistration({
-    id: 'reg-1',
-    registrationNumber: toRegistrationNumber('R26ER500001PL'),
-    status: 'approved',
-    validFrom: '2026-01-01',
-    ...overrides
-  })
-
-/** @param {object} overrides */
-const accreditation = (overrides) =>
-  buildAccreditation({
-    id: 'acc-1',
-    accreditationNumber: toAccreditationNumber('A26ER500001PL'),
-    status: 'approved',
-    validFrom: '2026-01-01',
-    validTo: '2026-12-31',
-    ...overrides
-  })
 
 describe('diagnoseValidityOutsideYear', () => {
   it('reports nothing when every date falls in the year', () => {

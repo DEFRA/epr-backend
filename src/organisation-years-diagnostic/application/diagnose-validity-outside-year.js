@@ -3,7 +3,7 @@ import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { Organisation, StoredAccreditationStatus, StoredRegistrationStatus } from '#domain/organisations/model.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /** @typedef {'before' | 'after' | 'empty' | 'unparseable'} DateProblem */
 
@@ -14,7 +14,7 @@ import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
  * @property {OrganisationNumber} organisationNumber
  * @property {boolean} testOrganisation
  * @property {string} registrationId
- * @property {string | null} registrationNumber
+ * @property {RegistrationNumber | null} registrationNumber
  * @property {StoredRegistrationStatus} status
  * @property {string | null | undefined} validFrom
  * @property {DateProblem} validFromProblem
@@ -25,7 +25,7 @@ import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
  * @property {OrganisationNumber} organisationNumber
  * @property {boolean} testOrganisation
  * @property {string} accreditationId
- * @property {string | null} accreditationNumber
+ * @property {AccreditationNumber | null} accreditationNumber
  * @property {StoredAccreditationStatus} status
  * @property {string | null | undefined} validFrom
  * @property {DateProblem | undefined} validFromProblem
