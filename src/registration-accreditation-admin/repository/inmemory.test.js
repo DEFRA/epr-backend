@@ -1,8 +1,4 @@
 import { it as base } from 'vitest'
-import {
-  createOrganisationBuilders,
-  prepareOrgUpdate
-} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryRegistrationAccreditationAdminRepository } from './inmemory.js'
 import { testRegistrationAccreditationAdminRepositoryContract } from './port.contract.js'
@@ -24,27 +20,6 @@ const it = base.extend({
 
 describe('In-memory registration and accreditation admin repository', () => {
   testRegistrationAccreditationAdminRepositoryContract(it)
-
-  base('serves the version before a write until the next tick', async () => {
-    const organisations = createInMemoryOrganisationsRepository([])()
-    const admin =
-      createInMemoryRegistrationAccreditationAdminRepository(organisations)()
-    const { buildOrganisation } = createOrganisationBuilders()
-    const org = buildOrganisation()
-    await organisations.insert(org)
-    const stored = await admin.findById(org.id)
-
-    await admin.replace(
-      org.id,
-      stored.version,
-      prepareOrgUpdate(stored, { wasteProcessingTypes: ['exporter'] })
-    )
-
-    expect((await admin.findById(org.id)).version).toBe(stored.version)
-    expect((await admin.findById(org.id, stored.version + 1)).version).toBe(
-      stored.version + 1
-    )
-  })
 
   it('refuses an organisations repository that is not in memory', () => {
     expect(() =>

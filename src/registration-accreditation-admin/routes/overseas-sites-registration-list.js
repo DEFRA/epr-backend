@@ -13,7 +13,7 @@ import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSiteDetail } from '#overseas-sites/application/resolve-overseas-site-details.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { RegistrationAccreditationAdminRepository } from '../repository/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 export const registrationOverseasSitesPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/overseas-sites'
@@ -58,7 +58,7 @@ export const registrationOverseasSitesList = {
   },
   /**
    * @param {HapiRequest & {
-   *   registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
    *   params: { organisationId: string, registrationId: string }
    * }} request
@@ -66,7 +66,7 @@ export const registrationOverseasSitesList = {
    */
   handler: async (request, h) => {
     const {
-      registrationAccreditationAdminRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       params,
       logger
@@ -75,7 +75,7 @@ export const registrationOverseasSitesList = {
 
     try {
       const registration =
-        await registrationAccreditationAdminRepository.findRegistrationById(
+        await organisationAdministrationRepository.findRegistrationById(
           organisationId,
           registrationId
         )

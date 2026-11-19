@@ -1,15 +1,8 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import { MongoClient, ObjectId } from 'mongodb'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { MongoClient } from 'mongodb'
+import { beforeEach, describe } from 'vitest'
 import { COLLECTION_NAME } from '#repositories/organisations/mongodb-find.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import {
-  createOrganisationBuilders,
-  prepareOrgUpdate
-} from '#repositories/organisations/contract/test-data.js'
-import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
-import { createMockDb } from '#test/mock-db.js'
-import { createMongoError } from '#test/mongo-error.js'
 import { createRegistrationAccreditationAdminRepository } from './mongodb.js'
 import { testRegistrationAccreditationAdminRepositoryContract } from './port.contract.js'
 
@@ -20,9 +13,7 @@ import { testRegistrationAccreditationAdminRepositoryContract } from './port.con
 
 const DATABASE_NAME = 'epr-backend'
 
-const { buildOrganisation } = createOrganisationBuilders()
-
-const itWithMongo = /** @type {import('vitest').TestAPI<MongoFixtures>} */ (
+const it = /** @type {import('vitest').TestAPI<MongoFixtures>} */ (
   mongoIt.extend({
     mongoClient: async ({ db }, use) => {
       const client = await MongoClient.connect(db)
@@ -49,90 +40,5 @@ describe('MongoDB registration and accreditation admin repository', () => {
     }
   )
 
-  testRegistrationAccreditationAdminRepositoryContract(itWithMongo)
-})
-
-describe('MongoDB registration and accreditation admin repository errors', () => {
-  it('converts E11000 from replace to a curated Boom.conflict without leaking the raw errmsg', async () => {
-    const existingOrg = buildOrganisation()
-    const existingDoc = {
-      ...toStoredOrganisation(existingOrg),
-      _id: ObjectId.createFromHexString(existingOrg.id),
-      version: 1,
-      schemaVersion: 1,
-      users: []
-    }
-    const leakyErrmsg =
-      'E11000 duplicate key error collection: epr-backend.epr-organisations index: orgId_1 dup key: { orgId: "conflicting-value" }'
-    const dbMock = createMockDb({
-      findOne: async () => existingDoc,
-      replaceOne: async () => {
-        throw createMongoError(leakyErrmsg, {
-          code: 11000,
-          keyPattern: { orgId: 1 }
-        })
-      }
-    })
-
-    const repository = createRegistrationAccreditationAdminRepository(dbMock)()
-    const updatePayload = prepareOrgUpdate(existingOrg, {
-      wasteProcessingTypes: ['reprocessor']
-    })
-
-    await expect(
-      repository.replace(existingOrg.id, 1, updatePayload)
-    ).rejects.toMatchObject({
-      isBoom: true,
-      output: {
-        statusCode: 409,
-        payload: {
-          message: expect.stringContaining('orgId')
-        }
-      },
-      event: {
-        action: 'update_organisation',
-        reason: 'fields=orgId type=Error code=11000'
-      }
-    })
-
-    await expect(
-      repository.replace(existingOrg.id, 1, updatePayload)
-    ).rejects.not.toMatchObject({
-      message: expect.stringContaining('conflicting-value')
-    })
-  })
-
-  it('falls back to "unknown" in the dup-key message from replace when keyPattern is absent', async () => {
-    const existingOrg = buildOrganisation()
-    const existingDoc = {
-      ...toStoredOrganisation(existingOrg),
-      _id: ObjectId.createFromHexString(existingOrg.id),
-      version: 1,
-      schemaVersion: 1,
-      users: []
-    }
-    const dbMock = createMockDb({
-      findOne: async () => existingDoc,
-      replaceOne: async () => {
-        throw createMongoError('E11000 duplicate key error', { code: 11000 })
-      }
-    })
-
-    const repository = createRegistrationAccreditationAdminRepository(dbMock)()
-    const updatePayload = prepareOrgUpdate(existingOrg, {
-      wasteProcessingTypes: ['reprocessor']
-    })
-
-    await expect(
-      repository.replace(existingOrg.id, 1, updatePayload)
-    ).rejects.toMatchObject({
-      isBoom: true,
-      output: {
-        statusCode: 409,
-        payload: {
-          message: expect.stringContaining('unknown')
-        }
-      }
-    })
-  })
+  testRegistrationAccreditationAdminRepositoryContract(it)
 })

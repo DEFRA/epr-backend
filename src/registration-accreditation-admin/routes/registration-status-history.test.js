@@ -7,7 +7,6 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createInMemoryRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -772,12 +771,13 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(grantResponse.statusCode).toBe(StatusCodes.OK)
 
       // findRegistrationById is the join point that hydrates a registration
-      // with its linked accreditation (../repository/inmemory.js); granting
-      // never sets accreditationId, so it stays absent.
+      // with its linked accreditation (repositories/organisations/inmemory.js);
+      // granting never sets accreditationId, so it stays absent.
       const grantedRegistration =
-        await createInMemoryRegistrationAccreditationAdminRepository(
-          organisationsRepositoryFactory()
-        )().findRegistrationById(fixture.id, registration.id)
+        await organisationsRepositoryFactory().findRegistrationById(
+          fixture.id,
+          registration.id
+        )
       expect(grantedRegistration.status).toBe('approved')
       expect(grantedRegistration.accreditationId).toBeUndefined()
 

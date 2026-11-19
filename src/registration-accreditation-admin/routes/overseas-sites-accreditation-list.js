@@ -8,11 +8,12 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { resolveOverseasSiteDetails } from '#overseas-sites/application/resolve-overseas-site-details.js'
+import { findAccreditationById } from '../find-accreditation-by-id.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { RegistrationAccreditationAdminRepository } from '../repository/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 export const accreditationOverseasSitesPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/overseas-sites'
@@ -41,7 +42,7 @@ export const accreditationOverseasSitesList = {
   },
   /**
    * @param {HapiRequest & {
-   *   registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
+   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
    *   params: { organisationId: string, registrationId: string, accreditationId: string }
    * }} request
@@ -49,7 +50,7 @@ export const accreditationOverseasSitesList = {
    */
   handler: async (request, h) => {
     const {
-      registrationAccreditationAdminRepository,
+      organisationAdministrationRepository,
       overseasSitesRepository,
       params,
       logger
@@ -58,11 +59,12 @@ export const accreditationOverseasSitesList = {
 
     try {
       const [registration] = await Promise.all([
-        registrationAccreditationAdminRepository.findRegistrationById(
+        organisationAdministrationRepository.findRegistrationById(
           organisationId,
           registrationId
         ),
-        registrationAccreditationAdminRepository.findAccreditationById(
+        findAccreditationById(
+          organisationAdministrationRepository,
           organisationId,
           accreditationId
         )

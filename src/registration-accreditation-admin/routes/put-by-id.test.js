@@ -8,7 +8,6 @@ import {
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createInMemoryRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
@@ -515,13 +514,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const fixture = buildOrganisation()
       await instance.insert(fixture)
 
-      const adminRepository =
-        createInMemoryRegistrationAccreditationAdminRepository(instance)()
-
       const testServer = await createTestServer({
         repositories: {
           organisationAdministrationRepository: instance,
-          registrationAccreditationAdminRepository: adminRepository,
           systemLogsRepository: createSystemLogsRepository()
         }
       })
@@ -533,7 +528,7 @@ describe('PUT /v1/organisations/{id}', () => {
       })
       const org = JSON.parse(fetchResponse.payload)
 
-      adminRepository.replace = async () => {
+      instance.replace = async () => {
         throw new Error('unexpected repository failure')
       }
 

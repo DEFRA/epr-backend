@@ -5,8 +5,9 @@ import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 import { assertRegistrationStatusTransitionValid } from '#domain/organisations/status.js'
 import { registrationStatusHistoryPayloadSchema } from './registration-status-history.schema.js'
 
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
 /** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
-/** @typedef {import('../repository/port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').StoredRegistrationStatus} StoredRegistrationStatus */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -37,6 +38,7 @@ export const registrationStatusHistory = {
    *      registrationNumber: RegistrationNumber
    *    }
    * > & {
+   *    organisationAdministrationRepository: OrganisationAdministrationRepository,
    *    registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string }
@@ -45,7 +47,10 @@ export const registrationStatusHistory = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { registrationAccreditationAdminRepository } = request
+    const {
+      organisationAdministrationRepository,
+      registrationAccreditationAdminRepository
+    } = request
     const { organisationId, registrationId } = request.params
     const payload = request.payload
     const { fromStatus, toStatus } = payload
@@ -55,7 +60,7 @@ export const registrationStatusHistory = {
     const grant = 'registrationNumber' in payload ? payload : undefined
 
     const initial =
-      await registrationAccreditationAdminRepository.findById(organisationId)
+      await organisationAdministrationRepository.findById(organisationId)
 
     const registration = initial.registrations.find(
       (reg) => reg.id === registrationId
@@ -117,8 +122,8 @@ export const registrationStatusHistory = {
       )
     }
 
-    await registrationAccreditationAdminRepository.replace(id, version, updates)
-    const updated = await registrationAccreditationAdminRepository.findById(
+    await organisationAdministrationRepository.replace(id, version, updates)
+    const updated = await organisationAdministrationRepository.findById(
       id,
       version + 1
     )

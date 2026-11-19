@@ -125,10 +125,7 @@ function getProductionPlugins(config) {
       plugin: mongoOrganisationsRepositoryPlugin,
       options: { eventualConsistency }
     },
-    {
-      plugin: registrationAccreditationAdminRepositoryPlugin,
-      options: { eventualConsistency }
-    },
+    registrationAccreditationAdminRepositoryPlugin,
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
     mongoLedgerRepositoryPlugin,

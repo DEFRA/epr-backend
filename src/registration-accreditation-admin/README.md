@@ -1,6 +1,6 @@
 # Registration and accreditation admin
 
-This module holds the admin routes that serve an organisation, registration or accreditation record by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes that support and nothing else.
+This module holds the admin routes that serve an organisation, registration or accreditation record by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes those routes, and the repository functions only they use, and nothing else.
 
 The routes keep their paths:
 
@@ -18,5 +18,8 @@ Lint refuses any other import into the module, but it cannot see a JSDoc `@impor
 
 ## Shape
 
+The routes read and write organisations through the administration port, which the context's data tooling also uses. The module holds only what no other user of that port needs:
+
 - **`routes/`** holds the routes.
-- **`repository/`** holds the functions the routes read and write organisations with. They are copies of the organisations repository's own, over the same store, so the numbered code does not depend on them. They share the organisations repository's stored shape, its validation and its status rules, and they pass the organisations repository's contract tests for the functions they copy.
+- **`repository/`** holds the checks that a registration or accreditation number is not already in use, which the routes make before they grant one.
+- **`find-accreditation-by-id.js`** finds an accreditation through the administration port.

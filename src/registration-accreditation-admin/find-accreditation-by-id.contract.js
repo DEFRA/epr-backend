@@ -1,9 +1,13 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
-import { buildAccreditation, prepareOrgUpdate } from './test-data.js'
+import {
+  buildAccreditation,
+  prepareOrgUpdate
+} from '#repositories/organisations/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
+import { findAccreditationById } from './find-accreditation-by-id.js'
 
-/** @import { OrganisationBuilders } from './test-data.js' */
+/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
 export const testFindAccreditationByIdBehaviour = (it) => {
   describe('findAccreditationById', () => {
@@ -13,7 +17,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: import("../port.js").OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+        /** @type {{ organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
           organisationsRepository,
           organisationBuilders
         }
@@ -42,7 +46,8 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       await repository.insert(org)
 
-      const result = await repository.findAccreditationById(
+      const result = await findAccreditationById(
+        repository,
         org.id,
         accreditation1.id
       )
@@ -67,7 +72,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       const nonExistentOrgId = new ObjectId().toString()
 
       await expect(
-        repository.findAccreditationById(nonExistentOrgId, accreditation.id)
+        findAccreditationById(repository, nonExistentOrgId, accreditation.id)
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 404 }
@@ -86,7 +91,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       const nonExistentAccreditationId = new ObjectId().toString()
 
       await expect(
-        repository.findAccreditationById(org.id, nonExistentAccreditationId)
+        findAccreditationById(repository, org.id, nonExistentAccreditationId)
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 404 }
@@ -104,7 +109,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       const nonExistentAccreditationId = new ObjectId().toString()
 
       await expect(
-        repository.findAccreditationById(org.id, nonExistentAccreditationId)
+        findAccreditationById(repository, org.id, nonExistentAccreditationId)
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 404 }
@@ -113,7 +118,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
     it('throws 404 for invalid organisation ID format', async () => {
       await expect(
-        repository.findAccreditationById('invalid-id', 'acc-123')
+        findAccreditationById(repository, 'invalid-id', 'acc-123')
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 404 }
@@ -132,7 +137,7 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       // Request a version that will never exist
       await expect(
-        repository.findAccreditationById(org.id, accreditation.id, 999)
+        findAccreditationById(repository, org.id, accreditation.id, 999)
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 500 },
@@ -158,7 +163,8 @@ export const testFindAccreditationByIdBehaviour = (it) => {
       await repository.replace(org.id, 1, updatePayload)
 
       // Request with minimumOrgVersion=2 - should retry until version 2 appears
-      const result = await repository.findAccreditationById(
+      const result = await findAccreditationById(
+        repository,
         org.id,
         accreditation.id,
         2

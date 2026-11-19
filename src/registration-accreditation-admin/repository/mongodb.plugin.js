@@ -5,21 +5,17 @@ import { createRegistrationAccreditationAdminRepository } from './mongodb.js'
 
 /**
  * Registers after the organisations repository, which creates the indexes on
- * the collection both repositories read and write.
+ * the collection this repository reads.
  */
 export const registrationAccreditationAdminRepositoryPlugin = {
   name: 'registrationAccreditationAdminRepository',
   version: '1.0.0',
   dependencies: ['mongodb', 'organisationsRepository'],
 
-  /**
-   * @param {import('@hapi/hapi').Server & { db: Db }} server
-   * @param {{ eventualConsistency?: { maxRetries?: number, retryDelayMs?: number } }} [options]
-   */
-  register: (server, options = {}) => {
+  /** @param {import('@hapi/hapi').Server & { db: Db }} server */
+  register: (server) => {
     const createRepository = createRegistrationAccreditationAdminRepository(
-      server.db,
-      options.eventualConsistency
+      server.db
     )
     registerDependency(server, 'registrationAccreditationAdminRepository', () =>
       createRepository()

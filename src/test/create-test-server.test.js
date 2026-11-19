@@ -75,13 +75,13 @@ describe('createTestServer', () => {
         name: 'Mock Org',
         organisationNumber: '500001'
       }
-      const mockAdminRepository = {
+      const mockOrganisationsRepository = {
         findById: vi.fn().mockResolvedValue(mockOrg)
       }
 
       const server = await createTestServer({
         repositories: {
-          registrationAccreditationAdminRepository: mockAdminRepository
+          organisationAdministrationRepository: mockOrganisationsRepository
         }
       })
 
@@ -97,7 +97,9 @@ describe('createTestServer', () => {
         name: mockOrg.name,
         orgId: 500001
       })
-      expect(mockAdminRepository.findById).toHaveBeenCalledWith(mockOrg.id)
+      expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
+        mockOrg.id
+      )
     })
   })
 
