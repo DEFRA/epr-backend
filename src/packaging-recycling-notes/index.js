@@ -8,6 +8,7 @@
  */
 
 // Domain exports
+/** @moduleBoundaryPending */
 export { PRN_STATUS, PRN_STATUS_TRANSITIONS } from './domain/model.js'
 export { isRelevantYearOpen } from './domain/closed-year.js'
 
@@ -15,8 +16,11 @@ export { isRelevantYearOpen } from './domain/closed-year.js'
 export { getIssuedTonnage } from './application/get-issued-tonnage.js'
 
 // Repository exports
+/** @moduleBoundaryPending */
 export { createPackagingRecyclingNotesRepository } from './repository/mongodb.js'
 
 // Route exports
+/** @moduleBoundaryPending */
 export { packagingRecyclingNotesCreate } from './routes/post.js'
+/** @moduleBoundaryPending */
 export { packagingRecyclingNotesUpdateStatus } from './routes/status.js'

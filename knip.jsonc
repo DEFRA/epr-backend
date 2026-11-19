@@ -1,13 +1,16 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    // A module's public interface and test-support entry point are entries
-    // whether or not anything imports them yet (ADR 0027).
-    "src/*/index.js",
-    "src/*/test-support.js",
     // Run by hand, as each script's header or README says.
     "scripts/generate-summary-log-rules.mjs",
     "scripts/mongo-performance-test/*/benchmark-*.js"
+  ],
+  // Each module's callers reach past its interface until the modular-monolith
+  // boundary lint covers it. Remove an entry once knip hints it is stale.
+  "ignoreFiles": [
+    "src/market-insights/index.js",
+    "src/reports/index.js",
+    "src/waste-balances/index.js"
   ],
   "ignoreDependencies": [
     // pino loads it by name as a transport target.
@@ -19,6 +22,15 @@
   ],
   // lint-staged runs it, and it comes from the system rather than npm.
   "ignoreBinaries": ["gitleaks"],
+  // Knip makes every file reached through a package.json import alias an
+  // entry, so without this it reports no unused export in most of the code.
+  "includeEntryExports": true,
+  // A stale ignore fails the build, so it is removed as soon as it is stale.
+  "treatConfigHintsAsErrors": true,
+  // @moduleBoundaryPending marks a module interface export whose callers still
+  // reach past the interface. A tag on an export that is used fails the build.
+  "tags": ["-moduleBoundaryPending"],
+  "treatTagHintsAsErrors": true,
   // An export used in its own file is live code, not dead code.
   "ignoreExportsUsedInFile": true
 }
