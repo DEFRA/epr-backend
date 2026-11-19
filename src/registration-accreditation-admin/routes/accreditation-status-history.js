@@ -9,8 +9,8 @@ import {
 import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
-/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
-/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
+/** @typedef {import('../repository/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').StoredAccreditationStatus} StoredAccreditationStatus */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
@@ -25,12 +25,12 @@ export const accreditationStatusHistoryPath =
  * accreditation in any organisation, whatever its status. The unique index on
  * accreditations.accreditationNumber also blocks concurrent grants of the
  * same number; this check gives the clear 422.
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
+ * @param {RegistrationAccreditationAdminRepository} registrationAccreditationAdminRepository
  * @param {{ validFrom: string, validTo: string, accreditationNumber: AccreditationNumber }} grant
  * @returns {Promise<void>}
  */
 const assertGrantAllowed = async (
-  organisationAdministrationRepository,
+  registrationAccreditationAdminRepository,
   grant
 ) => {
   if (new Date(grant.validFrom) > new Date(grant.validTo)) {
@@ -40,7 +40,7 @@ const assertGrantAllowed = async (
   }
 
   const inUse =
-    await organisationAdministrationRepository.isAccreditationNumberInUse(
+    await registrationAccreditationAdminRepository.isAccreditationNumberInUse(
       grant.accreditationNumber
     )
   if (inUse) {
@@ -74,7 +74,7 @@ export const accreditationStatusHistory = {
    *      accreditationNumber: AccreditationNumber
    *    }
    * > & {
-   *    organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *    registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string, accreditationId: string }
    * }} request
@@ -82,7 +82,7 @@ export const accreditationStatusHistory = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationAdministrationRepository } = request
+    const { registrationAccreditationAdminRepository } = request
     const { organisationId, registrationId, accreditationId } = request.params
     const payload = request.payload
     const { fromStatus, toStatus } = payload
@@ -92,7 +92,7 @@ export const accreditationStatusHistory = {
     const grant = 'accreditationNumber' in payload ? payload : undefined
 
     const initial =
-      await organisationAdministrationRepository.findById(organisationId)
+      await registrationAccreditationAdminRepository.findById(organisationId)
 
     const accreditation = initial.accreditations.find(
       (acc) => acc.id === accreditationId
@@ -138,7 +138,7 @@ export const accreditationStatusHistory = {
     assertAccreditationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
-      await assertGrantAllowed(organisationAdministrationRepository, grant)
+      await assertGrantAllowed(registrationAccreditationAdminRepository, grant)
     }
 
     const grantFields = grant
@@ -167,8 +167,8 @@ export const accreditationStatusHistory = {
       )
     }
 
-    await organisationAdministrationRepository.replace(id, version, updates)
-    const updated = await organisationAdministrationRepository.findById(
+    await registrationAccreditationAdminRepository.replace(id, version, updates)
+    const updated = await registrationAccreditationAdminRepository.findById(
       id,
       version + 1
     )

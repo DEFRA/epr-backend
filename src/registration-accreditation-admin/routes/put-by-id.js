@@ -22,8 +22,8 @@ import {
  * @typedef {{status: string, updatedAt: Date | string, updatedBy?: string}} StatusHistoryEntry
  */
 
-/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
-/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
+/** @typedef {import('../repository/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository */
 
@@ -341,7 +341,7 @@ export const makePutOrganisationHandler =
   ({ devSeeding = false } = {}) =>
   /**
    * @param {import('#common/hapi-types.js').HapiRequest<PutByIdPayload> & {
-   *    organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *    registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *    overseasSitesRepository: OverseasSitesRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { id: string }
@@ -349,8 +349,10 @@ export const makePutOrganisationHandler =
    * @param {Object} h - Hapi response toolkit
    */
   async (request, h) => {
-    const { organisationAdministrationRepository, overseasSitesRepository } =
-      request
+    const {
+      registrationAccreditationAdminRepository,
+      overseasSitesRepository
+    } = request
 
     const id = request.params.id.trim()
 
@@ -365,7 +367,7 @@ export const makePutOrganisationHandler =
     /** @type {OrganisationReplacement} */
     const updates = fromOrganisationWire(sanitisedFragment)
 
-    const initial = await organisationAdministrationRepository.findById(id)
+    const initial = await registrationAccreditationAdminRepository.findById(id)
     if (!devSeeding) {
       validateStatusesUnchanged(initial, updates)
       validateStatusHistoryEdits(initial, updates)
@@ -376,8 +378,8 @@ export const makePutOrganisationHandler =
       updates.registrations
     )
 
-    await organisationAdministrationRepository.replace(id, version, updates)
-    const updated = await organisationAdministrationRepository.findById(
+    await registrationAccreditationAdminRepository.replace(id, version, updates)
+    const updated = await registrationAccreditationAdminRepository.findById(
       id,
       version + 1
     )

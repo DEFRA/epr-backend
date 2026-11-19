@@ -12,6 +12,7 @@
  * @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js'
  * @import {PrnEvents} from '#packaging-recycling-notes/application/prn-events.plugin.js'
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
+ * @import {RegistrationAccreditationAdminRepository} from '#registration-accreditation-admin/index.js'
  * @import {ReportsRepository} from '#reports/repository/port.js'
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationAdministrationRepository} from '#repositories/organisations/administration-port.js'
@@ -75,6 +76,7 @@
  *  organisationAdministrationRepository: OrganisationAdministrationRepository,
  *  organisationLinkingRepository: OrganisationLinkingRepository,
  *  organisationReadRepository: OrganisationReadRepository,
+ *  registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
  *  systemLogsRepository: SystemLogsRepository,
  *  ledgerRepository: WasteBalanceLedgerRepository,
  *  wasteBalanceService: WasteBalanceService,
@@ -147,6 +149,7 @@
  *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
  *   prnEvents: PrnEvents,
  *   publicRegisterRepository: PublicRegisterRepository,
+ *   registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
  *   reportsRepository: ReportsRepository,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository,
  *   summaryLogsRepository: SummaryLogsRepository,

@@ -19,12 +19,6 @@ const ADMINISTRATION_PORT_MODULES = [
   // Registration and accreditation administration
   'src/overseas-sites/application/process-import-file.js',
   'src/overseas-sites/application/process-import.js',
-  'src/registration-accreditation-admin/routes/accreditation-status-history.js',
-  'src/registration-accreditation-admin/routes/get-by-id.js',
-  'src/registration-accreditation-admin/routes/overseas-sites-accreditation-list.js',
-  'src/registration-accreditation-admin/routes/overseas-sites-registration-list.js',
-  'src/registration-accreditation-admin/routes/put-by-id.js',
-  'src/registration-accreditation-admin/routes/registration-status-history.js',
   'src/routes/v1/system-logs/get-search.js',
   'src/server/queue-consumer/ors-import-commands.js',
 

@@ -8,7 +8,7 @@ import {
 } from '#domain/organisations/numbers.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
-/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
+/** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
 
 const DOCUMENT_ID_PATTERN = /^[0-9a-f]{24}$/i
 
@@ -16,16 +16,19 @@ const DOCUMENT_ID_PATTERN = /^[0-9a-f]{24}$/i
  * The organisation a path names by its database id or its organisation
  * number. An id is tried first, since one can be all digits.
  *
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
+ * @param {RegistrationAccreditationAdminRepository} registrationAccreditationAdminRepository
  * @param {string} key
  */
-const findOrganisation = async (organisationAdministrationRepository, key) => {
+const findOrganisation = async (
+  registrationAccreditationAdminRepository,
+  key
+) => {
   if (DOCUMENT_ID_PATTERN.test(key)) {
-    return organisationAdministrationRepository.findById(key)
+    return registrationAccreditationAdminRepository.findById(key)
   }
 
   const organisation = ORGANISATION_NUMBER_PATTERN.test(key)
-    ? await organisationAdministrationRepository.findByOrganisationNumber(
+    ? await registrationAccreditationAdminRepository.findByOrganisationNumber(
         toOrganisationNumber(key)
       )
     : null
@@ -51,16 +54,16 @@ export const organisationsGetById = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {
-   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *   registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *   params: { organisationId: string }
    * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { organisationAdministrationRepository } = request
+    const { registrationAccreditationAdminRepository } = request
 
     const organisation = await findOrganisation(
-      organisationAdministrationRepository,
+      registrationAccreditationAdminRepository,
       request.params.organisationId.trim()
     )
 

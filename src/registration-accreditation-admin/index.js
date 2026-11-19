@@ -16,3 +16,7 @@ export const registrationAccreditationAdminRoutes = [
 ]
 
 export const registrationAccreditationAdminDevRoutes = [devOrganisationsPutById]
+
+export { registrationAccreditationAdminRepositoryPlugin } from './repository/mongodb.plugin.js'
+
+/** @typedef {import('./repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */

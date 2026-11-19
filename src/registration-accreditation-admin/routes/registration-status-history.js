@@ -5,8 +5,8 @@ import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 import { assertRegistrationStatusTransitionValid } from '#domain/organisations/status.js'
 import { registrationStatusHistoryPayloadSchema } from './registration-status-history.schema.js'
 
-/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
-/** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
+/** @typedef {import('../repository/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').StoredRegistrationStatus} StoredRegistrationStatus */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -37,7 +37,7 @@ export const registrationStatusHistory = {
    *      registrationNumber: RegistrationNumber
    *    }
    * > & {
-   *    organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *    registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string }
    * }} request
@@ -45,7 +45,7 @@ export const registrationStatusHistory = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationAdministrationRepository } = request
+    const { registrationAccreditationAdminRepository } = request
     const { organisationId, registrationId } = request.params
     const payload = request.payload
     const { fromStatus, toStatus } = payload
@@ -55,7 +55,7 @@ export const registrationStatusHistory = {
     const grant = 'registrationNumber' in payload ? payload : undefined
 
     const initial =
-      await organisationAdministrationRepository.findById(organisationId)
+      await registrationAccreditationAdminRepository.findById(organisationId)
 
     const registration = initial.registrations.find(
       (reg) => reg.id === registrationId
@@ -82,7 +82,7 @@ export const registrationStatusHistory = {
       // The unique index on registrations.registrationNumber also blocks
       // concurrent grants of the same number; this check gives the clear 422.
       const inUse =
-        await organisationAdministrationRepository.isRegistrationNumberInUse(
+        await registrationAccreditationAdminRepository.isRegistrationNumberInUse(
           grant.registrationNumber
         )
       if (inUse) {
@@ -117,8 +117,8 @@ export const registrationStatusHistory = {
       )
     }
 
-    await organisationAdministrationRepository.replace(id, version, updates)
-    const updated = await organisationAdministrationRepository.findById(
+    await registrationAccreditationAdminRepository.replace(id, version, updates)
+    const updated = await registrationAccreditationAdminRepository.findById(
       id,
       version + 1
     )

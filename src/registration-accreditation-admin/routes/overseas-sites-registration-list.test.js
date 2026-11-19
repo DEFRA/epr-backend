@@ -417,7 +417,7 @@ describe('GET registration overseas-sites', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository: () => ({
+        registrationAccreditationAdminRepository: () => ({
           findRegistrationById: () =>
             Promise.reject(new Error('database unavailable'))
         })

@@ -12,7 +12,7 @@ import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
+/** @import { RegistrationAccreditationAdminRepository } from '../repository/port.js' */
 
 export const accreditationOverseasSitesPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/overseas-sites'
@@ -41,7 +41,7 @@ export const accreditationOverseasSitesList = {
   },
   /**
    * @param {HapiRequest & {
-   *   organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *   registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *   overseasSitesRepository: OverseasSitesRepository,
    *   params: { organisationId: string, registrationId: string, accreditationId: string }
    * }} request
@@ -49,7 +49,7 @@ export const accreditationOverseasSitesList = {
    */
   handler: async (request, h) => {
     const {
-      organisationAdministrationRepository,
+      registrationAccreditationAdminRepository,
       overseasSitesRepository,
       params,
       logger
@@ -58,11 +58,11 @@ export const accreditationOverseasSitesList = {
 
     try {
       const [registration] = await Promise.all([
-        organisationAdministrationRepository.findRegistrationById(
+        registrationAccreditationAdminRepository.findRegistrationById(
           organisationId,
           registrationId
         ),
-        organisationAdministrationRepository.findAccreditationById(
+        registrationAccreditationAdminRepository.findAccreditationById(
           organisationId,
           accreditationId
         )

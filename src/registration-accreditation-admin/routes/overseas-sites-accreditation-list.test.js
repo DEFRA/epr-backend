@@ -527,7 +527,7 @@ describe('GET accreditation overseas-sites', () => {
 
     server = await createTestServer({
       repositories: {
-        organisationAdministrationRepository: () => ({
+        registrationAccreditationAdminRepository: () => ({
           findRegistrationById: () =>
             Promise.reject(new Error('database unavailable')),
           findAccreditationById: () => Promise.resolve({})
