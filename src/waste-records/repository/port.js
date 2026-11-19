@@ -50,6 +50,9 @@
  *   new state document whose membership starts with `summaryLogId` and which
  *   stores the numbers `ledgerId` carries. Idempotent:
  *   re-running the same submission adds no document and no membership entry.
+ *   A summary log holds one state per row: a write that would give a row a
+ *   second state under `summaryLogId` rejects with
+ *   `SummaryLogRowStateConflictError` before anything is stored.
  *   Returns the resulting state document for each entry, in input order.
  * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<WasteRecordState[]>} findWasteRecordStatesForSummaryLog
  *   Return the waste record states `ledgerId` holds at the summary log
@@ -77,4 +80,23 @@
  * @typedef {() => SummaryLogRowStatesRepository} SummaryLogRowStatesRepositoryFactory
  */
 
-export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
+/**
+ * Raised by `upsertSummaryLogRowStates` when a row would hold two states under
+ * one summary log, so the log's rows would no longer reproduce its credit.
+ */
+export class SummaryLogRowStateConflictError extends Error {
+  /** @type {SummaryLogFileId} */
+  summaryLogId
+
+  /**
+   * @param {SummaryLogFileId} summaryLogId
+   * @param {{ wasteRecordType: string, rowId: string }} row
+   */
+  constructor(summaryLogId, { wasteRecordType, rowId }) {
+    super(
+      `Summary log ${summaryLogId} already holds a different state for ${wasteRecordType} row ${rowId}`
+    )
+    this.name = 'SummaryLogRowStateConflictError'
+    this.summaryLogId = summaryLogId
+  }
+}
