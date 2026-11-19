@@ -384,7 +384,6 @@ describe('2027 summary logs', () => {
         env,
         ledgerIdOf({
           ...env,
-          accreditationId: null,
           accreditationNumber: null
         }),
         ids.fileId
@@ -445,7 +444,6 @@ describe('2027 summary logs', () => {
         env,
         ledgerIdOf({
           ...env,
-          accreditationId: null,
           accreditationNumber: null
         }),
         ids.fileId

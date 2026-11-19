@@ -33,7 +33,7 @@ import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildSummaryLogRowStateEntry,
-  withNumbers
+  DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 
@@ -195,9 +195,7 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
   return {
     organisation,
     organisationId: organisation.id,
-    registrationId: organisation.registrations[0].id,
     registrationNumber: organisation.registrations[0].registrationNumber,
-    accreditationId: organisation.accreditations[0].id,
     siteA,
     siteB
   }
@@ -206,13 +204,7 @@ const seedOrganisationWithOverseasSites = async (repositories) => {
 const seedDownstreamForOrganisation = async (
   database,
   repositories,
-  {
-    organisation,
-    organisationId,
-    registrationId,
-    registrationNumber,
-    accreditationId
-  }
+  { organisation, organisationId, registrationNumber }
 ) => {
   await repositories.externalAccreditations.upsert(
     buildExternalAccreditation({
@@ -255,8 +247,9 @@ const seedDownstreamForOrganisation = async (
 
   // The ledger and its row states name the organisation by number.
   const ledgerId = {
-    ...withNumbers({ organisationId, registrationId, accreditationId }),
-    organisationNumber: organisation.organisationNumber
+    ...DEFAULT_LEDGER_ID,
+    organisationNumber: organisation.organisationNumber,
+    registrationNumber
   }
 
   await database

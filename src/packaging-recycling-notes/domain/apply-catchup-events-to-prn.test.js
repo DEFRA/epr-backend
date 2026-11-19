@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
 import { applyCatchupEventsToPrn } from './apply-catchup-events-to-prn.js'
 
 /**
@@ -36,11 +36,7 @@ const basePrn = () =>
 const eventCreator = { id: 'user-1', name: 'Test User' }
 
 const buildEvent = (kind, number, createdAt, createdBy = eventCreator) => ({
-  ...withNumbers({
-    registrationId: 'reg-1',
-    accreditationId: 'acc-1',
-    organisationId: 'org-1'
-  }),
+  ...DEFAULT_LEDGER_ID,
   number,
   kind,
   payload: { prnId: 'prn-1', amount: 50 },

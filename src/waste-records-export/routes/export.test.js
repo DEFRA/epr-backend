@@ -41,7 +41,7 @@ const ORGANISATION_NUMBER = toOrganisationNumber('500123')
  * @param {string} [registrationNumber]
  * @returns {Organisation}
  */
-const organisationWith = (registrationNumber = 'REG-reg-1') =>
+const organisationWith = (registrationNumber = 'REG-1') =>
   buildReadOrganisation({
     organisationNumber: ORGANISATION_NUMBER,
     name: 'Acme Ltd',
@@ -103,7 +103,7 @@ const createServerWithRepos = async ({
   const ledgerIdOf = (seed) => ({
     organisationNumber: ORGANISATION_NUMBER,
     registrationNumber: toRegistrationNumber(
-      seed.registrationNumber ?? 'REG-reg-1'
+      seed.registrationNumber ?? 'REG-1'
     ),
     accreditationNumber: null,
     year: seed.year ?? DEFAULT_YEAR

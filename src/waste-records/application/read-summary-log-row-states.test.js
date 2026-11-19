@@ -8,7 +8,7 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import {
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
-  withNumbers
+  anotherOrganisationNumber
 } from '#waste-records/repository/test-data.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { partialMock } from '#test/type-helpers.js'
@@ -37,7 +37,7 @@ const submissionEvent = (number, summaryLogId, submittedAt) =>
     })
   )
 
-const registration = withNumbers(DEFAULT_LEDGER_ID)
+const registration = DEFAULT_LEDGER_ID
 
 describe('summaryLogRowStatesForLedger', () => {
   it('returns an empty array when the stream has no submission', async () => {
@@ -55,7 +55,7 @@ describe('summaryLogRowStatesForLedger', () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       [
         buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } }),
         buildSummaryLogRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
@@ -63,7 +63,7 @@ describe('summaryLogRowStatesForLedger', () => {
       toSummaryLogFileId('log-1')
     )
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       [
         buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
         buildSummaryLogRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })
@@ -95,12 +95,12 @@ describe('summaryLogRowStatesForLedger', () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       toSummaryLogFileId('log-1')
     )
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers({ ...DEFAULT_LEDGER_ID, organisationId: 'org-2' }),
+      { ...DEFAULT_LEDGER_ID, organisationNumber: anotherOrganisationNumber() },
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 20 } })],
       toSummaryLogFileId('log-1')
     )
@@ -123,7 +123,7 @@ describe('summaryLogRowStatesForLedger', () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       toSummaryLogFileId('log-1')
     )
@@ -167,12 +167,12 @@ describe('latestSubmittedSummaryLogRowStates', () => {
     const summaryLogRowStatesRepository =
       createInMemorySummaryLogRowStatesRepository()()
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       [buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 10 } })],
       toSummaryLogFileId('log-1')
     )
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers(DEFAULT_LEDGER_ID),
+      DEFAULT_LEDGER_ID,
       [
         buildSummaryLogRowStateEntry({ rowId: 'row-1', data: { tonnage: 99 } }),
         buildSummaryLogRowStateEntry({ rowId: 'row-2', data: { tonnage: 20 } })

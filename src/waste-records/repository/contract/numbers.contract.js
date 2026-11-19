@@ -1,9 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 
-import {
-  buildSummaryLogRowStateEntry,
-  DEFAULT_LEDGER_ID
-} from '../test-data.js'
+import { buildSummaryLogRowStateEntry } from '../test-data.js'
 
 const NUMBERS = Object.freeze({
   organisationNumber: '500001',
@@ -32,7 +29,12 @@ export const testNumbersBehaviour = (it) => {
 
     it('does not store the ids of the ledger', async () => {
       const [state] = await repository.upsertSummaryLogRowStates(
-        { ...DEFAULT_LEDGER_ID, ...NUMBERS },
+        {
+          ...NUMBERS,
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          accreditationId: 'acc-1'
+        },
         [buildSummaryLogRowStateEntry()],
         'log-1'
       )

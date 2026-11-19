@@ -145,7 +145,7 @@ const seedOperator = async (
     { material, validFrom }
   )
   served.add(servedOrganisation)
-  const summaryLogId = `log-${ledgerId.registrationId}`
+  const summaryLogId = `log-${ledgerId.registrationNumber}`
 
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     ledgerId,

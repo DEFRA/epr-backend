@@ -1,5 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 
+import { anotherOrganisationNumber } from '#waste-records/repository/test-data.js'
+
 import { LEDGER_EVENT_KIND } from '../ledger-schema.js'
 import {
   buildLedgerId,
@@ -24,16 +26,16 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('returns events with number greater than the watermark', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-prn',
-          accreditationId: 'acc-prn',
+          registrationNumber: 'REG-prn',
+          accreditationNumber: 'ACC-prn',
           number: 1,
           payload: { prnId: 'prn-watermark', amount: 50 }
         })
       ])
       await repository.appendEvents([
         buildPrnCancelledAfterIssueEvent({
-          registrationId: 'reg-prn',
-          accreditationId: 'acc-prn',
+          registrationNumber: 'REG-prn',
+          accreditationNumber: 'ACC-prn',
           number: 2,
           payload: { prnId: 'prn-watermark', amount: 50 }
         })
@@ -41,8 +43,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          registrationId: 'reg-prn',
-          accreditationId: 'acc-prn'
+          registrationNumber: 'REG-prn',
+          accreditationNumber: 'ACC-prn'
         }),
         'prn-watermark',
         0
@@ -58,23 +60,26 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('filters out events at or below the watermark', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-wm',
-          accreditationId: 'acc-wm',
+          registrationNumber: 'REG-wm',
+          accreditationNumber: 'ACC-wm',
           number: 1,
           payload: { prnId: 'prn-filter', amount: 50 }
         })
       ])
       await repository.appendEvents([
         buildPrnCancelledAfterIssueEvent({
-          registrationId: 'reg-wm',
-          accreditationId: 'acc-wm',
+          registrationNumber: 'REG-wm',
+          accreditationNumber: 'ACC-wm',
           number: 2,
           payload: { prnId: 'prn-filter', amount: 50 }
         })
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        buildLedgerId({ registrationId: 'reg-wm', accreditationId: 'acc-wm' }),
+        buildLedgerId({
+          registrationNumber: 'REG-wm',
+          accreditationNumber: 'ACC-wm'
+        }),
         'prn-filter',
         1
       )
@@ -86,8 +91,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('returns an empty array when no events exist after watermark', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-caught-up',
-          accreditationId: 'acc-caught-up',
+          registrationNumber: 'REG-caught-up',
+          accreditationNumber: 'ACC-caught-up',
           number: 1,
           payload: { prnId: 'prn-caught-up', amount: 50 }
         })
@@ -95,8 +100,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          registrationId: 'reg-caught-up',
-          accreditationId: 'acc-caught-up'
+          registrationNumber: 'REG-caught-up',
+          accreditationNumber: 'ACC-caught-up'
         }),
         'prn-caught-up',
         1
@@ -108,8 +113,8 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('returns an empty array when no events exist for the prnId', async () => {
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          registrationId: 'reg-none',
-          accreditationId: 'acc-none'
+          registrationNumber: 'REG-none',
+          accreditationNumber: 'ACC-none'
         }),
         'prn-nonexistent',
         0
@@ -121,38 +126,40 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
     it('does not return events from a different ledger', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-a',
-          accreditationId: 'acc-a',
+          registrationNumber: 'REG-a',
+          accreditationNumber: 'ACC-a',
           number: 1,
           payload: { prnId: 'prn-shared', amount: 50 }
         })
       ])
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-b',
-          accreditationId: 'acc-b',
+          registrationNumber: 'REG-b',
+          accreditationNumber: 'ACC-b',
           number: 1,
           payload: { prnId: 'prn-shared', amount: 30 }
         })
       ])
 
       const result = await repository.findEventsByPrnIdAfter(
-        buildLedgerId({ registrationId: 'reg-a', accreditationId: 'acc-a' }),
+        buildLedgerId({
+          registrationNumber: 'REG-a',
+          accreditationNumber: 'ACC-a'
+        }),
         'prn-shared',
         0
       )
 
       expect(result).toHaveLength(1)
-      expect(result[0].registrationNumber).toBe('REG-reg-a')
-      expect(result[0].accreditationNumber).toBe('ACC-acc-a')
+      expect(result[0].registrationNumber).toBe('REG-a')
+      expect(result[0].accreditationNumber).toBe('ACC-a')
     })
 
     it('does not read a ledger named under a different organisation', async () => {
       await repository.appendEvents([
         buildPrnCreatedEvent({
-          organisationId: 'org-owner',
-          registrationId: 'reg-owned',
-          accreditationId: 'acc-owned',
+          registrationNumber: 'REG-owned',
+          accreditationNumber: 'ACC-owned',
           number: 1,
           payload: { prnId: 'prn-owned', amount: 50 }
         })
@@ -160,9 +167,9 @@ export const testFindEventsByPrnIdAfterBehaviour = (it) => {
 
       const result = await repository.findEventsByPrnIdAfter(
         buildLedgerId({
-          organisationId: 'org-stranger',
-          registrationId: 'reg-owned',
-          accreditationId: 'acc-owned'
+          organisationNumber: anotherOrganisationNumber(),
+          registrationNumber: 'REG-owned',
+          accreditationNumber: 'ACC-owned'
         }),
         'prn-owned',
         0

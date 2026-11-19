@@ -2,14 +2,17 @@ import { describe, beforeEach, expect } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
 
-import { buildSummaryLogRowStateEntry, withNumbers } from '../test-data.js'
+import {
+  buildSummaryLogRowStateEntry,
+  DEFAULT_LEDGER_ID
+} from '../test-data.js'
 
-const LEDGER_2026 = withNumbers({
-  organisationId: 'org-year',
-  registrationId: 'reg-year',
-  accreditationId: null,
+const LEDGER_2026 = {
+  ...DEFAULT_LEDGER_ID,
+  registrationNumber: 'REG-year',
+  accreditationNumber: null,
   year: toYear(2026)
-})
+}
 
 const LEDGER_2027 = { ...LEDGER_2026, year: toYear(2027) }
 

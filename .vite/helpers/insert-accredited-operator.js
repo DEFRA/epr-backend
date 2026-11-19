@@ -18,7 +18,7 @@ import { buildReadApprovedOrganisation } from '#organisation-read-model/test-sup
 /** @import { GlassRecyclingProcess, Material, TonnageBand } from '#domain/organisations/model.js' */
 /** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
-/** @import { RegistrationOrAccreditationId, WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
  * What an accredited operator is accredited for, where a test needs other than
@@ -64,7 +64,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
-   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/vocabulary.js').Organisation }>}
+   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/vocabulary.js').Organisation }>}
    */
   return async (
     organisationAdministrationRepository,
@@ -124,9 +124,6 @@ export const createAccreditedOperatorInserter = (builders) => {
       registrationId: registration.id,
       reportKey,
       ledgerId: {
-        organisationId: organisation.id,
-        registrationId: registration.id,
-        accreditationId,
         ...reportKey,
         accreditationNumber: /** @type {AccreditationNumber} */ (
           organisation.accreditations[0].accreditationNumber
