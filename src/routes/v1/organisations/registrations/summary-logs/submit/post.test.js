@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -100,11 +101,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     organisationReadRepository = createInMemoryOrganisationReadRepository([
       buildReadOrganisationWithNumbersOf(organisation)
     ])()
+    const { registrationNumber } = registration
+    assert(registrationNumber)
     const numbers = {
       organisationNumber: organisation.organisationNumber,
-      registrationNumber: registration.registrationNumber
+      registrationNumber
     }
-    const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${registration.registrationNumber}/summary-logs`
+    const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${registrationNumber}/summary-logs`
     return {
       numbers,
       ...numbers,
