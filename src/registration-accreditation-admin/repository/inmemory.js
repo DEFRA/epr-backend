@@ -8,6 +8,10 @@ import {
   versionConflict
 } from '#repositories/organisations/helpers.js'
 import { validateId } from '#repositories/organisations/schema/index.js'
+import {
+  performFindAccreditationById,
+  performFindRegistrationById
+} from './find-in-organisation.js'
 
 /** @import { NumberHolder } from '#repositories/organisations/helpers.js' */
 /** @import { RegistrationAccreditationAdminRepository } from './port.js' */
@@ -145,44 +149,6 @@ const performFindById = (storage) => async (id, minimumVersion) => {
   }
   return found
 }
-
-/**
- * @param {RegistrationAccreditationAdminRepository['findById']} findById
- * @returns {RegistrationAccreditationAdminRepository['findRegistrationById']}
- */
-const performFindRegistrationById =
-  (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
-    const org = await findById(organisationId, minimumOrgVersion)
-    const registration = org.registrations?.find((r) => r.id === registrationId)
-
-    if (!registration) {
-      throw Boom.notFound(`Registration with id ${registrationId} not found`)
-    }
-
-    const accreditation =
-      registration.accreditationId &&
-      org.accreditations?.find((a) => a.id === registration.accreditationId)
-
-    return accreditation ? { ...registration, accreditation } : registration
-  }
-
-/**
- * @param {RegistrationAccreditationAdminRepository['findById']} findById
- * @returns {RegistrationAccreditationAdminRepository['findAccreditationById']}
- */
-const performFindAccreditationById =
-  (findById) => async (organisationId, accreditationId, minimumOrgVersion) => {
-    const org = await findById(organisationId, minimumOrgVersion)
-    const accreditation = org.accreditations?.find(
-      (a) => a.id === accreditationId
-    )
-
-    if (!accreditation) {
-      throw Boom.notFound(`Accreditation with id ${accreditationId} not found`)
-    }
-
-    return accreditation
-  }
 
 /**
  * Reads and writes the store of an in-memory organisations repository, as the
