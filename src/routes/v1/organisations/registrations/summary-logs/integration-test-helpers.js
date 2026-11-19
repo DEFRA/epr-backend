@@ -834,6 +834,7 @@ export const createTestInfrastructure = async (
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
+ *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
  *   year?: Year,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
@@ -850,6 +851,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   accredited = true,
   year = UPLOAD_YEAR,
   accreditationValidFrom = `${year}-01-01`,
+  previousYearAccreditationNumber,
   config
 } = {}) => {
   const accreditationId = 'ACC-123'
@@ -875,7 +877,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       reprocessingType,
       material,
       accredited,
-      accreditationValidFrom
+      accreditationValidFrom,
+      previousYearAccreditationNumber
     })
   ])()
 
@@ -944,6 +947,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         logger: mockLogger,
         summaryLogsRepository,
         organisationReadRepository,
+        ledgerRepository,
         wasteBalanceService,
         reportsService: createReportsService(reportsRepository),
         onSummaryLogUploaded: createOnSummaryLogUploaded({
@@ -1123,7 +1127,8 @@ const buildComplexTestOrg = ({
  * The organisation `buildComplexTestOrg` builds, as the read model serves it:
  * its registration under the test keys, approved from `VALID_FROM`, and its
  * accreditation for the year of `accreditationValidFrom` when accredited,
- * approved from `accreditationValidFrom`.
+ * approved from `accreditationValidFrom`, and, given its number, the
+ * accreditation for the year before, approved from the start of that year.
  *
  * @param {{
  *   processingType: string,
@@ -1132,7 +1137,8 @@ const buildComplexTestOrg = ({
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   withOverseasSites?: boolean,
- *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
+ *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
+ *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
  * }} options
  * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
  */
@@ -1143,7 +1149,8 @@ const buildComplexTestReadOrg = ({
   accredited = true,
   accreditationValidFrom = VALID_FROM,
   withOverseasSites = true,
-  accreditationNumber = TEST_ACCREDITATION_NUMBER
+  accreditationNumber = TEST_ACCREDITATION_NUMBER,
+  previousYearAccreditationNumber
 }) => {
   const isExporter = processingType === 'exporter'
   /** @param {string} approvedAt */
@@ -1159,11 +1166,23 @@ const buildComplexTestReadOrg = ({
   })
   const accreditationYear = utcYearOf(accreditationValidFrom)
   const followingYear = nextYear(accreditationYear)
-  const accreditation = buildReadAccreditation({
-    accreditationNumber,
-    status: approvedFrom(accreditationValidFrom),
-    year: accreditationYear
-  })
+  const previousYear = toYear(accreditationYear - 1)
+  const accreditations = [
+    ...(previousYearAccreditationNumber
+      ? [
+          buildReadAccreditation({
+            accreditationNumber: previousYearAccreditationNumber,
+            status: approvedFrom(`${previousYear}-01-01`),
+            year: previousYear
+          })
+        ]
+      : []),
+    buildReadAccreditation({
+      accreditationNumber,
+      status: approvedFrom(accreditationValidFrom),
+      year: accreditationYear
+    })
+  ]
   const common = {
     material,
     status: approvedFrom(VALID_FROM)
@@ -1193,23 +1212,27 @@ const buildComplexTestReadOrg = ({
           : {},
         accreditations: accredited
           ? accreditationsByYear(
-              buildReadExporterAccreditation({
-                ...accreditation,
-                overseasSites: {
-                  100: { status: 'approved', approvedOn: VALID_FROM },
-                  200: {
-                    status: 'approved',
-                    approvedOn: UNAPPROVED_VALID_FROM
+              ...accreditations.map((accreditation) =>
+                buildReadExporterAccreditation({
+                  ...accreditation,
+                  overseasSites: {
+                    100: { status: 'approved', approvedOn: VALID_FROM },
+                    200: {
+                      status: 'approved',
+                      approvedOn: UNAPPROVED_VALID_FROM
+                    }
                   }
-                }
-              })
+                })
+              )
             )
           : {}
       })
     : buildReadReprocessorRegistration({
         ...common,
         reprocessingType,
-        accreditations: accredited ? accreditationsByYear(accreditation) : {}
+        accreditations: accredited
+          ? accreditationsByYear(...accreditations)
+          : {}
       })
   return buildServedOrganisation({
     organisationNumber: TEST_ORGANISATION_NUMBER,

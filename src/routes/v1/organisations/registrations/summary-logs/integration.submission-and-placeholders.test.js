@@ -341,6 +341,7 @@ describe('Submission and placeholder tests', () => {
         logger: mockLogger,
         summaryLogsRepository,
         organisationReadRepository,
+        ledgerRepository,
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
