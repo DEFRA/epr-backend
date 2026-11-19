@@ -20,11 +20,14 @@ import {
   buildReadOrganisation
 } from '#organisation-read-model/repository/read-model-test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 
-/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { AccreditationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 const mockAuditSummaryLogDownload = vi.fn()
 
@@ -32,8 +35,6 @@ vi.mock('#root/auditing/summary-logs.js', () => ({
   auditSummaryLogDownload: (...args) => mockAuditSummaryLogDownload(...args)
 }))
 
-const ORGANISATION_ID = 'org-1'
-const REGISTRATION_ID = 'reg-1'
 const FILE_ID = 'file-1'
 const SUBMITTED_AT = '2026-09-11T09:15:42.318Z'
 
@@ -76,7 +77,7 @@ const submittedLog = (fileId, submittedAt, meta = SUBMITTED_META) => ({
  * @param {{
  *   summaryLogs?: any[],
  *   rows?: any[],
- *   accreditationId?: string | null,
+ *   accreditationNumber?: AccreditationNumber | null,
  *   registrationNumber?: RegistrationNumber,
  *   readModelHolds?: (organisation: any) => any
  * }} [options]
@@ -84,7 +85,7 @@ const submittedLog = (fileId, submittedAt, meta = SUBMITTED_META) => ({
 const createServer = async ({
   summaryLogs = [submittedLog(FILE_ID, SUBMITTED_AT)],
   rows = [receivedRowState()],
-  accreditationId = null,
+  accreditationNumber = null,
   registrationNumber = REGISTRATION_NUMBER,
   readModelHolds = (organisation) => organisation
 } = {}) => {
@@ -99,13 +100,10 @@ const createServer = async ({
     createInMemorySummaryLogRowStatesRepository()()
   await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
     {
-      ...withNumbers({
-        organisationId: ORGANISATION_ID,
-        registrationId: REGISTRATION_ID,
-        accreditationId
-      }),
+      ...DEFAULT_LEDGER_ID,
       organisationNumber: organisation.organisationNumber,
-      registrationNumber
+      registrationNumber,
+      accreditationNumber
     },
     rows,
     toSummaryLogFileId(FILE_ID)
@@ -245,7 +243,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   it('serves the same file after the organisation and other submissions change', async () => {
     const { server, organisation, summaryLogRowStatesRepository, urlFor } =
       await createServer({
-        accreditationId: 'acc-1',
+        accreditationNumber: toAccreditationNumber('ACC-1'),
         summaryLogs: [
           submittedLog(FILE_ID, SUBMITTED_AT, {
             ...SUBMITTED_META,
@@ -273,11 +271,11 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
 
     organisation.registrations[REGISTRATION_NUMBER].material = 'wood'
     await summaryLogRowStatesRepository.upsertSummaryLogRowStates(
-      withNumbers({
-        organisationId: ORGANISATION_ID,
-        registrationId: 'reg-other',
-        accreditationId: null
-      }),
+      {
+        ...DEFAULT_LEDGER_ID,
+        registrationNumber: toRegistrationNumber('REG-other'),
+        accreditationNumber: null
+      },
       [receivedRowState({ data: { A_KEY_ADDED_LATER: 'x' } })],
       toSummaryLogFileId('file-other')
     )

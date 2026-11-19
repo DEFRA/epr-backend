@@ -1,77 +1,41 @@
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
 
 import { LEDGER_EVENT_KIND } from './ledger-schema.js'
+
+/** @import { WasteBalanceLedgerId } from './ledger-schema.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 const DEFAULT_CREATED_AT = new Date('2026-01-15T10:00:00.000Z')
 
 /**
- * @typedef {Partial<import('./ledger-schema.js').RegistrationOrAccreditationId & { year: import('#common/helpers/dates/year.js').Year }>} LedgerIdOverrides
- */
-
-/**
- * Build a waste balance ledger's ids and numbers. Defaults match
- * `buildLedgerEvent`, so a ledger id built with no overrides names the ledger
- * that event belongs to.
+ * Build a waste balance ledger id. Defaults match `buildLedgerEvent`.
  *
- * @param {LedgerIdOverrides} [overrides]
- * @returns {import('./ledger-schema.js').RegistrationOrAccreditationId & import('./ledger-schema.js').WasteBalanceLedgerId}
+ * @param {Partial<Record<'organisationNumber' | 'registrationNumber', string> & { accreditationNumber: string | null, year: Year }>} [overrides]
+ * @returns {WasteBalanceLedgerId}
  */
 export const buildLedgerId = (overrides = {}) =>
-  withNumbers({
-    organisationId: 'org-1',
-    registrationId: 'reg-1',
-    accreditationId: 'acc-1',
-    ...overrides
-  })
-
-/**
- * The numbers and year alone of the ledger `buildLedgerId` builds from the
- * same overrides.
- *
- * @param {LedgerIdOverrides} [overrides]
- * @returns {import('./ledger-schema.js').WasteBalanceLedgerId}
- */
-export const buildLedgerNumbers = (overrides = {}) => {
-  const { organisationNumber, registrationNumber, accreditationNumber, year } =
-    buildLedgerId(overrides)
-  return { organisationNumber, registrationNumber, accreditationNumber, year }
-}
+  /** @type {WasteBalanceLedgerId} */ ({ ...DEFAULT_LEDGER_ID, ...overrides })
 
 /**
  * Build a valid ledger event (insert shape — no `id`).
- * Defaults to a summary-log-submitted event, with the numbers of whichever
- * ledger the overrides name. An event stores numbers alone, so ids in the
- * overrides only choose the numbers.
+ * Defaults to a summary-log-submitted event.
  * @param {object} [overrides]
  */
-export const buildLedgerEvent = (overrides = {}) => {
-  const {
-    organisationId: _organisationId,
-    registrationId: _registrationId,
-    accreditationId: _accreditationId,
-    ...event
-  } = {
-    ...withNumbers({
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1',
-      organisationId: 'org-1',
-      ...overrides
-    }),
-    number: 1,
-    kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
-    payload: {
-      summaryLogId: toSummaryLogFileId('log-1'),
-      creditTotal: 100
-    },
-    openingBalance: { amount: 0, availableAmount: 0 },
-    closingBalance: { amount: 100, availableAmount: 100 },
-    createdAt: DEFAULT_CREATED_AT,
-    createdBy: { id: 'user-1', name: 'Test User' },
-    ...overrides
-  }
-  return event
-}
+export const buildLedgerEvent = (overrides = {}) => ({
+  ...DEFAULT_LEDGER_ID,
+  number: 1,
+  kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
+  payload: {
+    summaryLogId: toSummaryLogFileId('log-1'),
+    creditTotal: 100
+  },
+  openingBalance: { amount: 0, availableAmount: 0 },
+  closingBalance: { amount: 100, availableAmount: 100 },
+  createdAt: DEFAULT_CREATED_AT,
+  createdBy: { id: 'user-1', name: 'Test User' },
+  ...overrides
+})
 
 /**
  * Build a PRN-created event.

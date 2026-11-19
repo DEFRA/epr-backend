@@ -9,43 +9,28 @@ import {
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
 
-/** @import { RegistrationOrAccreditationId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
+/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * Build a summary-log row state document (insert shape — no `id`).
  * Defaults to an INCLUDED received-waste row in one submission's membership.
- * A row state stores numbers alone, so ids in the overrides only choose them.
  * @param {object} [overrides]
  */
-export const buildSummaryLogRowState = (overrides = {}) => {
-  const {
-    organisationId: _organisationId,
-    registrationId: _registrationId,
-    accreditationId: _accreditationId,
-    ...rowState
-  } = {
-    ...withNumbers({
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      accreditationId: 'acc-1',
-      ...overrides
-    }),
-    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-    rowId: 'row-1',
-    processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
-    data: { supplierName: 'Acme', tonnage: 10 },
-    classification: {
-      outcome: ROW_OUTCOME.INCLUDED,
-      reasons: [],
-      transactionAmount: 10
-    },
-    summaryLogIds: ['log-1'],
-    ...overrides
-  }
-  return rowState
-}
+export const buildSummaryLogRowState = (overrides = {}) => ({
+  ...DEFAULT_LEDGER_ID,
+  wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+  rowId: 'row-1',
+  processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+  data: { supplierName: 'Acme', tonnage: 10 },
+  classification: {
+    outcome: ROW_OUTCOME.INCLUDED,
+    reasons: [],
+    transactionAmount: 10
+  },
+  summaryLogIds: ['log-1'],
+  ...overrides
+})
 
 /**
  * Build a per-row entry as produced by the 1.1 classification list — the
@@ -67,53 +52,19 @@ export const buildSummaryLogRowStateEntry = (overrides = {}) => ({
 
 export const DEFAULT_YEAR = utcYearOf('2026-01-01')
 
+/**
+ * A random organisation number, so test files sharing a database don't
+ * collide.
+ *
+ * @returns {OrganisationNumber}
+ */
+export const anotherOrganisationNumber = () =>
+  toOrganisationNumber(String(generateOrgId()))
+
+/** @type {Readonly<WasteBalanceLedgerId>} */
 export const DEFAULT_LEDGER_ID = Object.freeze({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: 'acc-1'
+  organisationNumber: anotherOrganisationNumber(),
+  registrationNumber: toRegistrationNumber('REG-1'),
+  accreditationNumber: toAccreditationNumber('ACC-1'),
+  year: DEFAULT_YEAR
 })
-
-/** @type {Map<string, number>} */
-const organisationNumbers = new Map()
-
-/** @param {string} organisationId */
-const organisationNumberOf = (organisationId) => {
-  if (!organisationNumbers.has(organisationId)) {
-    organisationNumbers.set(organisationId, generateOrgId())
-  }
-  return toOrganisationNumber(String(organisationNumbers.get(organisationId)))
-}
-
-/**
- * The organisation and registration numbers `withNumbers` gives a ledger
- * identity, as the arguments a registration-scoped read takes.
- *
- * @param {Pick<RegistrationOrAccreditationId, 'organisationId' | 'registrationId'>} ledgerId
- * @returns {[OrganisationNumber, RegistrationNumber]}
- */
-export const registrationNumbersOf = ({ organisationId, registrationId }) => [
-  organisationNumberOf(organisationId),
-  toRegistrationNumber(`REG-${registrationId}`)
-]
-
-/**
- * The ledger identity with the numbers a submission stores beside its ids,
- * for `DEFAULT_YEAR` unless the identity names its year.
- *
- * @param {RegistrationOrAccreditationId & { year?: Year }} ledgerId
- * @returns {import('#waste-balances/repository/ledger-schema.js').RegistrationOrAccreditationId & import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId}
- */
-export const withNumbers = (ledgerId) => {
-  const [organisationNumber, registrationNumber] =
-    registrationNumbersOf(ledgerId)
-  return {
-    year: DEFAULT_YEAR,
-    ...ledgerId,
-    organisationNumber,
-    registrationNumber,
-    accreditationNumber:
-      ledgerId.accreditationId === null
-        ? null
-        : toAccreditationNumber(`ACC-${ledgerId.accreditationId}`)
-  }
-}

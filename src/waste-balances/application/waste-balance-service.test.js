@@ -17,15 +17,11 @@ import {
   PRN_COMMAND_STATUS,
   PRN_COMMAND_REJECTION
 } from '../domain/commands.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { createWasteBalanceService } from './waste-balance-service.js'
 
-const ledgerId = withNumbers({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: 'acc-1'
-})
+const ledgerId = DEFAULT_LEDGER_ID
 
 const createdBy = {
   id: 'user-1',
@@ -73,8 +69,8 @@ describe('createWasteBalanceService', () => {
       expect(event).not.toHaveProperty('registrationId')
       expect(event).not.toHaveProperty('accreditationId')
       expect(event.organisationNumber).toBe(ledgerId.organisationNumber)
-      expect(event.registrationNumber).toBe('REG-reg-1')
-      expect(event.accreditationNumber).toBe('ACC-acc-1')
+      expect(event.registrationNumber).toBe('REG-1')
+      expect(event.accreditationNumber).toBe('ACC-1')
       expect(event.kind).toBe(LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED)
       expect(event.payload).toEqual({ summaryLogId: 'log-A', creditTotal: 150 })
       expect(event.openingBalance).toEqual({ amount: 0, availableAmount: 0 })
@@ -461,7 +457,7 @@ describe('createWasteBalanceService', () => {
     const catchupParams = {
       organisationNumber: ledgerId.organisationNumber,
       registrationNumber: ledgerId.registrationNumber,
-      accreditationNumber: toAccreditationNumber('ACC-acc-1'),
+      accreditationNumber: toAccreditationNumber('ACC-1'),
       year: ledgerId.year,
       prnId: 'prn-1'
     }
@@ -469,16 +465,12 @@ describe('createWasteBalanceService', () => {
     it('returns the PRN catch-up events after the watermark in order', async () => {
       await ledgerRepository.appendEvents([
         buildPrnCreatedEvent({
-          registrationId: 'reg-1',
-          accreditationId: 'acc-1',
           number: 1,
           payload: { prnId: 'prn-1', amount: 10 }
         })
       ])
       await ledgerRepository.appendEvents([
         buildPrnIssuedEvent({
-          registrationId: 'reg-1',
-          accreditationId: 'acc-1',
           number: 2,
           payload: { prnId: 'prn-1', amount: 10 }
         })
@@ -530,8 +522,8 @@ describe('createWasteBalanceService', () => {
       const balance = await service.currentBalance(ledgerId)
 
       expect(balance).toMatchObject({
-        registrationId: 'reg-1',
-        accreditationId: 'acc-1',
+        registrationNumber: ledgerId.registrationNumber,
+        accreditationNumber: ledgerId.accreditationNumber,
         amount: 150,
         availableAmount: 110
       })

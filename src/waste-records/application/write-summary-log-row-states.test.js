@@ -7,7 +7,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { withNumbers } from '#waste-records/repository/test-data.js'
+import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -68,17 +68,12 @@ const buildIncompleteReprocessorInputRecord = ({ rowId }) => ({
 
 const overseasSites = /** @type {any} */ (new Map())
 
-const registeredOnlyLedgerId = withNumbers({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: null
-})
+const registeredOnlyLedgerId = {
+  ...DEFAULT_LEDGER_ID,
+  accreditationNumber: null
+}
 
-const accreditedLedgerId = withNumbers({
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  accreditationId: 'acc-1'
-})
+const accreditedLedgerId = DEFAULT_LEDGER_ID
 
 /** @type {AccreditationValidity} */
 const accreditation = {
@@ -102,7 +97,7 @@ describe('writeSummaryLogRowStates', () => {
         buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 }),
         buildRegisteredOnlyRecord({ rowId: '2', tonnage: 20 })
       ],
-      ledgerId: withNumbers(registeredOnlyLedgerId),
+      ledgerId: registeredOnlyLedgerId,
       summaryLogId: toSummaryLogFileId('log-A'),
       classificationContext: {
         tableSchemas: tableSchemasOf(
@@ -134,7 +129,7 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildReceivedRecord({ rowId: '1', tonnage: 1.005 })],
-      ledgerId: withNumbers(registeredOnlyLedgerId),
+      ledgerId: registeredOnlyLedgerId,
       summaryLogId: toSummaryLogFileId('log-A'),
       classificationContext: {
         tableSchemas: tableSchemasOf(
@@ -158,7 +153,7 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 7.536 })],
-      ledgerId: withNumbers(registeredOnlyLedgerId),
+      ledgerId: registeredOnlyLedgerId,
       summaryLogId: toSummaryLogFileId('log-A'),
       classificationContext: {
         tableSchemas: tableSchemasOf(
@@ -186,7 +181,7 @@ describe('writeSummaryLogRowStates', () => {
         buildReceivedRecord({ rowId: '2', tonnage: 1.005 }),
         buildReceivedRecord({ rowId: '3', tonnage: 1.005 })
       ],
-      ledgerId: withNumbers(registeredOnlyLedgerId),
+      ledgerId: registeredOnlyLedgerId,
       summaryLogId: toSummaryLogFileId('log-A'),
       classificationContext: {
         tableSchemas: tableSchemasOf(
@@ -217,7 +212,7 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-      ledgerId: withNumbers(accreditedLedgerId),
+      ledgerId: accreditedLedgerId,
       summaryLogId: toSummaryLogFileId('log-A'),
       classificationContext: {
         tableSchemas: tableSchemasOf(
@@ -247,7 +242,7 @@ describe('writeSummaryLogRowStates', () => {
     await writeSummaryLogRowStates({
       summaryLogRowStatesRepository,
       wasteRecords: [buildIncompleteReprocessorInputRecord({ rowId: '1' })],
-      ledgerId: withNumbers(accreditedLedgerId),
+      ledgerId: accreditedLedgerId,
       summaryLogId: toSummaryLogFileId('log-A'),
       classificationContext: {
         tableSchemas: tableSchemasOf(
@@ -279,7 +274,7 @@ describe('writeSummaryLogRowStates', () => {
       writeSummaryLogRowStates({
         summaryLogRowStatesRepository,
         wasteRecords: [buildRegisteredOnlyRecord({ rowId: '1', tonnage: 10 })],
-        ledgerId: withNumbers(registeredOnlyLedgerId),
+        ledgerId: registeredOnlyLedgerId,
         summaryLogId: toSummaryLogFileId('log-A'),
         classificationContext: {
           tableSchemas: tableSchemasOf(
