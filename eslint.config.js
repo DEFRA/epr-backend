@@ -35,7 +35,8 @@ const moduleFence = (module, name, entryPoints) => [
       `./src/!(${module})/**/*`,
       './src/*.js',
       './.vite/**/*',
-      './scripts/**/*'
+      './scripts/**/*',
+      './benchmarks/**/*'
     ],
     from: `./src/${module}`,
     except: entryPoints,
@@ -44,7 +45,9 @@ const moduleFence = (module, name, entryPoints) => [
   {
     target: [
       './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-fixtures|test-support).js',
-      './src/!(*.test).js'
+      './src/!(*.test).js',
+      './scripts/**/!(*.test).*',
+      './benchmarks/**/*'
     ],
     from: `./src/${module}/test-support.js`,
     message: `Only tests import ${name} through test-support.js.`
@@ -109,6 +112,7 @@ export default [
             ),
             ...moduleFence('waste-records-export', 'the waste records export', [
               './index.js',
+              './vocabulary.js',
               './test-support.js'
             ])
           ]
