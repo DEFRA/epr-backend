@@ -1,7 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import {
@@ -9,6 +8,11 @@ import {
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/repository/read-model-test-data.js'
+import { buildStoredOrganisation } from '#organisation-years-diagnostic/validity-test-data.js'
+import {
+  buildAccreditation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { partialMock } from '#test/type-helpers.js'
 
 import { runOrganisationYearsDiagnostic } from './run.js'
@@ -115,49 +119,48 @@ describe('runOrganisationYearsDiagnostic', () => {
 
   it('logs one line per registration and accreditation valid outside the year plus the summary', async () => {
     findAllStored.mockResolvedValue([
-      partialMock({
-        organisationNumber: toOrganisationNumber('500001'),
+      buildStoredOrganisation({
         registrations: [
-          {
+          buildRegistration({
             id: 'reg-1',
             registrationNumber: toRegistrationNumber('R25ER500001PL'),
             status: 'approved',
             validFrom: '2025-11-01'
-          },
-          {
+          }),
+          buildRegistration({
             id: 'reg-2',
             registrationNumber: null,
             status: 'created',
             validFrom: '2024-01-01'
-          }
+          })
         ],
         accreditations: [
-          {
+          buildAccreditation({
             id: 'acc-1',
             accreditationNumber: toAccreditationNumber('A26ER500001PL'),
             status: 'approved',
             validFrom: '2026-01-01',
             validTo: '2027-03-31'
-          },
-          {
+          }),
+          buildAccreditation({
             id: 'acc-3',
             accreditationNumber: toAccreditationNumber('A26ER500002PL'),
             status: 'approved',
             validFrom: '2026-01-01',
             validTo: '2027-01-01'
-          },
-          {
+          }),
+          buildAccreditation({
             id: 'acc-2',
             accreditationNumber: null,
             status: 'created',
             validFrom: '2025-01-01'
-          },
-          {
+          }),
+          buildAccreditation({
             id: 'acc-4',
             accreditationNumber: null,
             status: 'created',
             validTo: '2027-06-30'
-          }
+          })
         ]
       })
     ])
@@ -186,7 +189,7 @@ describe('runOrganisationYearsDiagnostic', () => {
     })
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Validity diagnostic: year=2026 scannedRegistrations=2 registrationsStartingBefore=2 scannedAccreditations=4 accreditationsStartingBefore=1 accreditationsEndingAfter=2 accreditationsEndingOnFirstJanuary=1 rowsInTestOrganisations=0'
+        'Validity diagnostic: year=2026 scannedRegistrations=2 registrationsStartingBefore=2 scannedAccreditations=4 accreditationsStartingBefore=1 accreditationsEndingAfter=2 accreditationsEndingOnFirstJanuary=1 unparseableDates=0 rowsInTestOrganisations=0'
     })
   })
 
@@ -195,7 +198,7 @@ describe('runOrganisationYearsDiagnostic', () => {
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
-        'Validity diagnostic: year=2026 scannedRegistrations=0 registrationsStartingBefore=0 scannedAccreditations=0 accreditationsStartingBefore=0 accreditationsEndingAfter=0 accreditationsEndingOnFirstJanuary=0 rowsInTestOrganisations=0'
+        'Validity diagnostic: year=2026 scannedRegistrations=0 registrationsStartingBefore=0 scannedAccreditations=0 accreditationsStartingBefore=0 accreditationsEndingAfter=0 accreditationsEndingOnFirstJanuary=0 unparseableDates=0 rowsInTestOrganisations=0'
     })
   })
 

@@ -77,6 +77,7 @@ const formatValiditySummaryLine = (summary) =>
     `accreditationsStartingBefore=${summary.accreditationsStartingBefore}`,
     `accreditationsEndingAfter=${summary.accreditationsEndingAfter}`,
     `accreditationsEndingOnFirstJanuary=${summary.accreditationsEndingOnFirstJanuary}`,
+    `unparseableDates=${summary.unparseableDates}`,
     `rowsInTestOrganisations=${summary.rowsInTestOrganisations}`
   ].join(' ')
 
