@@ -69,13 +69,33 @@ describe('ensureSummaryLogRowStatesCollection', () => {
       .deleteMany({})
   })
 
-  it('creates the membership multikey index', async (/** @type {*} */ {
+  it('creates the membership multikey index in _id order', async (/** @type {*} */ {
     summaryLogRowStatesCollection
   }) => {
     const indexes = await summaryLogRowStatesCollection.indexes()
-    expect(indexKeyFor(indexes, 'summary_log_membership')).toEqual({
-      summaryLogIds: 1
+
+    expect(indexKeyFor(indexes, 'summary_log_membership_by_id')).toStrictEqual({
+      summaryLogIds: 1,
+      _id: 1
     })
+  })
+
+  it('drops the membership index without _id, which the _id-ordered one covers', async (/** @type {*} */ {
+    mongoClient
+  }) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const collection = database.collection(
+      SUMMARY_LOG_ROW_STATES_COLLECTION_NAME
+    )
+    await collection.createIndex(
+      { summaryLogIds: 1 },
+      { name: 'summary_log_membership' }
+    )
+
+    await ensureSummaryLogRowStatesCollection(database)
+
+    const names = (await collection.indexes()).map(({ name }) => name)
+    expect(names).not.toContain('summary_log_membership')
   })
 
   it('drops the row-history indexes, which no read uses', async (/** @type {*} */ {
