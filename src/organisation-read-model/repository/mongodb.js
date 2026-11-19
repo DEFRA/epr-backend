@@ -9,6 +9,7 @@ import {
   REG_ACCRED_ACCREDITATION_YEAR,
   createRegAccredAccreditationsLoader
 } from './reg-accred-accreditations.js'
+import { organisationInYear } from './organisation-in-year.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { Collection, Db } from 'mongodb' */
@@ -128,10 +129,14 @@ export const createOrganisationReadRepository =
         const [organisation] = await toReadModelOrganisations(
           [stored],
           await findExternalAccreditationsOf(stored, year),
-          dependencies,
-          year
+          dependencies
         )
-        return organisation ?? null
+        if (!organisation) {
+          return null
+        }
+        return year === undefined
+          ? organisation
+          : organisationInYear(organisation, year)
       },
 
       find: async (params) => {

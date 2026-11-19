@@ -12,7 +12,7 @@ import { STANDING } from './model.js'
  */
 
 /**
- * @param {Registration} registration
+ * @param {Pick<Registration, 'standingByDate'>} registration
  * @param {Year} year
  * @returns {Period[]}
  */
@@ -43,7 +43,7 @@ const rangesWithStanding = (periods, standing) => {
  * When a registration is registered only, and when it is accredited, in
  * `year`.
  *
- * @param {Registration} registration
+ * @param {Pick<Registration, 'standingByDate'>} registration
  * @param {Year} year
  * @returns {{ registeredOnly: CalendarDateRange[], accredited: CalendarDateRange[] }}
  */
