@@ -17,7 +17,9 @@
     "pino-pretty",
     // setup:husky imports it inside a `node -e` string, which knip cannot read.
     "husky",
-    // Restored in #249 for signing AWS requests in deployed environments.
+    // Restored in https://github.com/DEFRA/epr-backend/pull/249 as likely needed
+    // for MongoDB auth in deployed environments. Kept until a deployment shows
+    // it is not.
     "aws4"
   ],
   // lint-staged runs it, and it comes from the system rather than npm.

@@ -9,7 +9,9 @@
 
 // Domain exports
 /** @moduleBoundaryPending */
-export { PRN_STATUS, PRN_STATUS_TRANSITIONS } from './domain/model.js'
+export { PRN_STATUS } from './domain/model.js'
+/** @moduleBoundaryPending */
+export { PRN_STATUS_TRANSITIONS } from './domain/model.js'
 export { isRelevantYearOpen } from './domain/closed-year.js'
 
 // Application exports

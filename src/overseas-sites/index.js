@@ -1,10 +1,10 @@
 // Domain
 /** @moduleBoundaryPending */
-export {
-  ORS_FILE_RESULT_STATUS,
-  ORS_IMPORT_STATUS,
-  ORS_IMPORT_COMMAND
-} from './domain/import-status.js'
+export { ORS_FILE_RESULT_STATUS } from './domain/import-status.js'
+/** @moduleBoundaryPending */
+export { ORS_IMPORT_STATUS } from './domain/import-status.js'
+/** @moduleBoundaryPending */
+export { ORS_IMPORT_COMMAND } from './domain/import-status.js'
 
 export { isOrsApprovedAtDate } from './domain/approval.js'
 
