@@ -10,6 +10,9 @@ import {
 const NEXT_YEAR_IN_PROD_ERROR =
   'OPEN_NEXT_YEAR must not be true when ENVIRONMENT is prod'
 
+const REG_ACCRED_WITHOUT_SECRET_ERROR =
+  'REG_ACCRED_API_SHARED_SECRET must be set when FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS is true'
+
 describe('config', () => {
   describe('cdpUploader.callbackHmacKey', () => {
     it('should refuse to validate without a key', () => {
@@ -62,6 +65,35 @@ describe('config', () => {
       expect(() =>
         getConfig({ cdpEnvironment: 'prod', openNextYear: true })
       ).toThrow(NEXT_YEAR_IN_PROD_ERROR)
+    })
+  })
+
+  describe('loading external accreditations from Reg Accred', () => {
+    it('should refuse to build a config with the flag on and no shared secret', () => {
+      expect(() =>
+        getConfig({
+          featureFlags: { regAccredExternalAccreditations: true },
+          regAccredApi: { sharedSecret: '' }
+        })
+      ).toThrow(REG_ACCRED_WITHOUT_SECRET_ERROR)
+    })
+
+    it('should build a config with the flag on and a shared secret', () => {
+      const cfg = getConfig({
+        featureFlags: { regAccredExternalAccreditations: true },
+        regAccredApi: { sharedSecret: 'secret' }
+      })
+
+      expect(cfg.get('featureFlags.regAccredExternalAccreditations')).toBe(true)
+    })
+
+    it('should build a config with the flag off and no shared secret', () => {
+      const cfg = getConfig({
+        featureFlags: { regAccredExternalAccreditations: false },
+        regAccredApi: { sharedSecret: '' }
+      })
+
+      expect(cfg.get('regAccredApi.sharedSecret')).toBe('')
     })
   })
 

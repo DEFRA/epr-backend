@@ -10,8 +10,11 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { hashClassificationContext } from '#application/summary-logs/classification-context-hash.js'
+import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { SummaryLogCommit } from '#domain/summary-logs/commit.js' */
 
 export const generateFileId = () => toSummaryLogFileId(`file-${randomUUID()}`)
 
@@ -42,6 +45,22 @@ export const buildRejectedFile = (overrides = {}) => {
     ...rest
   }
 }
+
+/**
+ * What validation saves for submission to commit, with nothing to credit, for
+ * a registered-only summary log as the factory builds one.
+ *
+ * @param {Partial<SummaryLogCommit>} [overrides]
+ * @returns {SummaryLogCommit}
+ */
+export const buildSummaryLogCommit = (overrides = {}) => ({
+  contextHash: hashClassificationContext(
+    classificationContextOf({ accreditation: null })
+  ),
+  payload: { creditTotal: 0, decemberCreditTotal: 0 },
+  counts: { created: 0, updated: 0, decemberWasteRowCount: 0 },
+  ...overrides
+})
 
 // ============================================================================
 // Summary Log Factory

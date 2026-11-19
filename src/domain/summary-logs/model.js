@@ -78,6 +78,7 @@
 
 /**
  * @typedef {{
+ *   commit?: unknown,
  *   createdAt?: string,
  *   expiresAt?: Date | null,
  *   file: SummaryLogFile,

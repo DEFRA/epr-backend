@@ -18,6 +18,7 @@ import {
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {TableSchemas} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
+/** @import {RecordChange} from './record-change.js' */
 /** @typedef {import('#reports/application/report-service.js').ReportsService} ReportsService */
 
 /**
@@ -43,7 +44,7 @@ export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
  * @param {RowClassificationContext} [params.classificationContext] - absent when validation stopped before reading the registration
  * @param {SummaryLogRegistration} [params.registration]
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
- * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null }}
+ * @returns {{ loads: Loads | null, loadsByReportingPeriod: LoadsByReportingPeriod | null, recordChanges: Map<string, RecordChange> | null }}
  */
 export const classifyLoads = ({
   status,
@@ -62,7 +63,8 @@ export const classifyLoads = ({
   ) {
     return {
       loads: null,
-      loadsByReportingPeriod: null
+      loadsByReportingPeriod: null,
+      recordChanges: null
     }
   }
 
@@ -94,7 +96,7 @@ export const classifyLoads = ({
     : null
   /* v8 ignore stop */
 
-  return { loads, loadsByReportingPeriod }
+  return { loads, loadsByReportingPeriod, recordChanges }
 }
 
 /**
