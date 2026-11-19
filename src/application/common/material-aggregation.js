@@ -71,4 +71,3 @@ export const formatTonnageMonitoringResults = (results) => {
 
   return { materials, total }
 }
-export const knipGateProbe = true
