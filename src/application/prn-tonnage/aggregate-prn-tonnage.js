@@ -13,7 +13,7 @@ import { indexByLedger } from '#waste-balances/application/read-model-accreditat
 /** @import { Material, WasteProcessingTypeValue, ReprocessingType } from '#domain/organisations/model.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
-/** @import { Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { Registration } from '#organisation-read-model/vocabulary.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { AccreditationTonnage, PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
 

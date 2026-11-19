@@ -17,7 +17,7 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 
 export const REPROCESSOR_NUMBER = toRegistrationNumber('R26ER5001180041PL')
 export const EXPORTER_NUMBER = toRegistrationNumber('R26EX5001180042PL')

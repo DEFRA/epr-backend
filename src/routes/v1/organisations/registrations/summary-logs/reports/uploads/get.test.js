@@ -19,7 +19,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   setupAuthContext()
 
   let server
-  /** @type {import('#organisation-read-model/domain/model.js').Organisation[]} */
+  /** @type {import('#organisation-read-model/vocabulary.js').Organisation[]} */
   const servedOrganisations = []
   let summaryLogsRepository
 

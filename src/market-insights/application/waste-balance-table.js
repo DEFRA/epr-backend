@@ -31,7 +31,7 @@ import {
 import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/vocabulary.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */

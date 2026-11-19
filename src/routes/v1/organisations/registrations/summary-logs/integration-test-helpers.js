@@ -1049,7 +1049,7 @@ const buildComplexTestOrg = ({
  *   withOverseasSites?: boolean,
  *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
  * }} options
- * @returns {import('#organisation-read-model/domain/model.js').Organisation}
+ * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
  */
 const buildComplexTestReadOrg = ({
   processingType,

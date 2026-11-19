@@ -11,7 +11,7 @@ import {
 } from '#reports/domain/operator-category.js'
 import { reportingCadenceOf } from './registration-for-summary-log.js'
 
-/** @import {AccreditationCommon, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {AccreditationCommon, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 
 /**

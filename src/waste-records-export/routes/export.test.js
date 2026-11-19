@@ -12,7 +12,7 @@ import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 /** @import { SummaryLogWithId } from '#repositories/summary-logs/port.js' */
 /** @import { SummaryLogRowStateEntry } from '#waste-records/repository/schema.js' */
 import {

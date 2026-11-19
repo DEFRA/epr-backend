@@ -30,7 +30,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 
-/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
 
 const NOW = new Date('2026-04-15T12:00:00.000Z')
 

@@ -22,7 +22,7 @@ const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
 // A module of ADR 0027's modular monolith. Code outside it imports only its
-// public interface: index.js, its domain/ folder, and test-support.js in a test.
+// public interface: index.js, vocabulary.js, and test-support.js in a test.
 const ORGANISATION_READ_MODEL = './src/organisation-read-model'
 
 const ns = neostandard({
@@ -83,9 +83,9 @@ export default [
                 './.vite/**/*'
               ],
               from: ORGANISATION_READ_MODEL,
-              except: ['./index.js', './domain', './test-support.js'],
+              except: ['./index.js', './vocabulary.js', './test-support.js'],
               message:
-                'Import the organisation read model through its index.js, its domain/ folder, or test-support.js in a test.'
+                'Import the organisation read model through its index.js, its vocabulary.js, or test-support.js in a test.'
             },
             {
               target: [

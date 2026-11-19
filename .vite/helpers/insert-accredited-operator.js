@@ -64,7 +64,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
-   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/domain/model.js').Organisation }>}
+   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: RegistrationOrAccreditationId & WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/vocabulary.js').Organisation }>}
    */
   return async (
     organisationAdministrationRepository,
@@ -99,7 +99,7 @@ export const createAccreditedOperatorInserter = (builders) => {
       validFrom
     })
     const servedRegistration =
-      /** @type {import('#organisation-read-model/domain/model.js').ReprocessorRegistration} */ (
+      /** @type {import('#organisation-read-model/vocabulary.js').ReprocessorRegistration} */ (
         served.registrations[reportKey.registrationNumber]
       )
     const servedOrganisation = {

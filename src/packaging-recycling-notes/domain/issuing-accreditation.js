@@ -10,7 +10,7 @@ import {
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AppliedForMaterial, GlassRecyclingProcess, RegulatorValue, ReprocessingType, WasteProcessingTypeValue } from '#domain/organisations/model.js'
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
- * @import { AccreditationCommon, Registration } from '#organisation-read-model/domain/model.js'
+ * @import { AccreditationCommon, Registration } from '#organisation-read-model/vocabulary.js'
  * @import { AccreditationSnapshot } from './model.js'
  */
 

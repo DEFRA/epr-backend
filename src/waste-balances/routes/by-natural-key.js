@@ -5,8 +5,10 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { yearSchema } from '#common/validation/year-schema.js'
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
-import { approvedYears } from '#organisation-read-model/domain/status-timeline.js'
+import {
+  accreditationForYear,
+  approvedYears
+} from '#organisation-read-model/vocabulary.js'
 import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import {
   accreditationPath,
@@ -26,7 +28,7 @@ import { wasteBalanceSchema } from './response.schema.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/domain/model.js'
+ * @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/vocabulary.js'
  * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  * @import { OrganisationParams, RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'

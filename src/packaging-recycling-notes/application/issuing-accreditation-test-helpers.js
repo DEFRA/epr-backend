@@ -13,7 +13,7 @@ import {
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { AccreditationStatus, Registration } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Registration } from '#organisation-read-model/vocabulary.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**

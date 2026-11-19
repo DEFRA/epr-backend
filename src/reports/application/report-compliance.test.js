@@ -472,7 +472,7 @@ describe('generateReportCompliance', () => {
         }
       })
 
-    /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
+    /** @param {import('#organisation-read-model/vocabulary.js').Organisation} organisation */
     const complianceFor = async (organisation) =>
       generateReportCompliance(
         await createInMemoryOrganisationReadRepository([
@@ -481,7 +481,7 @@ describe('generateReportCompliance', () => {
         createInMemoryReportsRepository()()
       )
 
-    /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
+    /** @param {import('#organisation-read-model/vocabulary.js').Organisation} organisation */
     const entryKeyOf = (organisation) =>
       registrationKey(reportKeyOf(organisation, registrationOf(organisation)))
 

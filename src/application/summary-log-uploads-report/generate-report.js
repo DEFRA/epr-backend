@@ -1,5 +1,5 @@
 /** @import {SummaryLogUploadReportRow} from './types.js' */
-/** @import {Organisation, Registration} from '#organisation-read-model/domain/model.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
 /** @import {OrganisationNumber, RegistrationNumber, AccreditationNumber} from '#domain/organisations/numbers.js' */
 
@@ -17,7 +17,7 @@ import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { isTestOrganisation } from '#common/helpers/parse-test-organisations.js'
-import { accreditationForYear } from '#organisation-read-model/domain/accreditation-for-year.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 
 const BATCH_SIZE = Number(config.get('summaryLogReport.batchSize'))
 

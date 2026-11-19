@@ -38,7 +38,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { Organisation as ReadModelOrganisation } from '#organisation-read-model/domain/model.js'
+ * @import { Organisation as ReadModelOrganisation } from '#organisation-read-model/vocabulary.js'
  * @import { PrnKeys, PrnRecords } from './at-prn-keys.js'
  */
 

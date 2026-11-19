@@ -25,7 +25,7 @@ import {
 
 const approved = approvedTimelineFrom('2026-07-01')
 
-/** @type {import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>} */
+/** @type {import('#organisation-read-model/vocabulary.js').Status<import('#organisation-read-model/vocabulary.js').AccreditationStatus>} */
 const cancelledAfterApproval = {
   current: 'cancelled',
   lastUpdatedAt: '2026-11-01T09:00:00.000Z',
@@ -39,7 +39,7 @@ const cancelledAfterApproval = {
  * @param {{
  *   exporting?: boolean,
  *   reprocessingType?: 'input' | 'output',
- *   status?: import('#organisation-read-model/domain/model.js').Status<import('#organisation-read-model/domain/model.js').AccreditationStatus>
+ *   status?: import('#organisation-read-model/vocabulary.js').Status<import('#organisation-read-model/vocabulary.js').AccreditationStatus>
  * }} [options]
  */
 const organisationWith = ({
@@ -87,7 +87,7 @@ describe('GET /organisations/{organisationNumber}/registrations/{registrationNum
   /** @type {Awaited<ReturnType<typeof createTestServer>>} */
   let server
 
-  /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
+  /** @param {import('#organisation-read-model/vocabulary.js').Organisation} organisation */
   const startServer = async (organisation) => {
     server = await createTestServer({
       repositories: {

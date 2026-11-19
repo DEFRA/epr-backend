@@ -45,7 +45,7 @@ import {
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
 /** @import { PublishedWasteBalanceFigures } from '#market-insights/domain/waste-balance-figures.js' */
-/** @import { Organisation as ServedOrganisation, Registration, Status } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation as ServedOrganisation, Registration, Status } from '#organisation-read-model/vocabulary.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { WasteBalanceTable } from './waste-balance-table.js' */

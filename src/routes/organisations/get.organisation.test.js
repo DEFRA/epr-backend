@@ -22,7 +22,7 @@ import {
   useViewServer
 } from './organisation-view-test-helpers.js'
 
-/** @import { Organisation } from '#organisation-read-model/domain/model.js' */
+/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 
 describe('GET /organisations/{organisationNumber}', () => {
   setupAuthContext()

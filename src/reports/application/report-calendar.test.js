@@ -1,6 +1,6 @@
 import { utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { toYear, utcYearOf } from '#common/helpers/dates/year.js'
-import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
+import { standingByYear } from '#organisation-read-model/vocabulary.js'
 import { PERIOD_STATUS } from '#reports/domain/period-status.js'
 import { REPORT_STATUS } from '#reports/domain/report-status.js'
 import { config } from '#root/config.js'
@@ -11,7 +11,7 @@ import {
 } from './report-calendar.js'
 
 /**
- * @import { AccreditationStatus, Registration, StatusTimeline } from '#organisation-read-model/domain/model.js'
+ * @import { AccreditationStatus, Registration, StatusTimeline } from '#organisation-read-model/vocabulary.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 

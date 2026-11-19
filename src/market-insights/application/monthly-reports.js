@@ -14,7 +14,7 @@ import { formatLocalDateTime } from '#common/helpers/dates/local-datetime.js'
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CoversRegistration, GrantedRegistration } from '#market-insights/application/accredited-months.js' */
 
