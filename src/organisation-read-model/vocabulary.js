@@ -22,6 +22,7 @@ export { approvedYears, firstApprovedAt } from './domain/status-timeline.js'
 /** @typedef {import('./domain/model.js').RegistrationCommon} RegistrationCommon */
 /** @typedef {import('./domain/model.js').ReprocessorAccreditation} ReprocessorAccreditation */
 /** @typedef {import('./domain/model.js').ReprocessorRegistration} ReprocessorRegistration */
+/** @typedef {import('./domain/model.js').RegistrationStatus} RegistrationStatus */
 /** @typedef {import('./domain/model.js').UkAddress} UkAddress */
 /** @typedef {import('./domain/status-timeline.js').CalendarDateRange} CalendarDateRange */
 
