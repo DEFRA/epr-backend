@@ -26,7 +26,7 @@ import {
  *   wasteProcessingType?: 'reprocessor' | 'exporter',
  *   reprocessingType?: 'input' | 'output',
  *   withAccreditation?: boolean,
- *   alsoHeld?: Array<{ accreditationNumber: AccreditationNumber, year: Year }>
+ *   alsoHeld?: Array<{ accreditationNumber: AccreditationNumber, year: Year, status?: AccreditationStatus }>
  * }} HeldAccreditation
  */
 
@@ -43,12 +43,27 @@ const heldRegistration = ({
   withAccreditation = true,
   alsoHeld = []
 }) => {
-  const accreditations = [{ accreditationNumber, year }, ...alsoHeld].map(
-    (held) => ({
-      ...held,
-      status: { ...approvedStatusFrom(`${held.year}-01-01`), current: status }
-    })
-  )
+  if (!withAccreditation && alsoHeld.length > 0) {
+    throw new Error('alsoHeld needs withAccreditation')
+  }
+  const accreditations = [
+    { accreditationNumber, year, status },
+    ...alsoHeld.map(({ status: otherStatus = 'approved', ...other }) => ({
+      ...other,
+      status: otherStatus
+    }))
+  ].map((held) => ({
+    ...held,
+    status: {
+      ...approvedStatusFrom(`${held.year}-01-01`),
+      current: held.status
+    }
+  }))
+  const years = accreditations.map((held) => held.year)
+  const repeated = years.find((y, i) => years.indexOf(y) !== i)
+  if (repeated !== undefined) {
+    throw new Error(`More than one accreditation held for ${repeated}`)
+  }
   if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
     return buildReadExporterRegistration({
       accreditations: withAccreditation
@@ -70,7 +85,8 @@ const heldRegistration = ({
 /**
  * An organisation read repository serving one organisation, with one
  * registration holding an accreditation for one year, and for each of
- * `alsoHeld` another, for tests of PRN code that reads the accreditation a PRN
+ * `alsoHeld` another for a different year, approved unless given a status, for
+ * tests of PRN code that reads the accreditation a PRN
  * was raised against.
  *
  * @param {HeldAccreditation} held
