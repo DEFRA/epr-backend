@@ -778,9 +778,7 @@ describe('report-service', () => {
         output: { statusCode: 404 },
         code: 'period_not_required'
       })
-      expect(
-        await reportsRepository.findPeriodicReports(params.key)
-      ).toStrictEqual([])
+      expect(await reportsRepository.findAllPeriodicReports()).toStrictEqual([])
     })
 
     it('throws badRequest for period that has not yet ended', async () => {
@@ -1060,7 +1058,7 @@ describe('createReportsService', () => {
   it('delegates hasReportSubmittedSince to the repository and returns its result', async () => {
     const reportsRepository = /** @type {any} */ ({
       hasReportSubmittedSince: vi.fn().mockResolvedValue(true),
-      findPeriodicReports: vi.fn()
+      findPeriodicReport: vi.fn()
     })
     const service = createReportsService(reportsRepository)
 
@@ -1079,23 +1077,25 @@ describe('createReportsService', () => {
     expect(result).toBe(true)
   })
 
-  it('delegates findPeriodicReports to the repository and returns its result', async () => {
-    const periodicReports = [
-      { organisationNumber: '500123', registrationNumber: 'R25SR500010912PL' }
-    ]
+  it('delegates findPeriodicReport to the repository and returns its result', async () => {
+    const periodicReport = {
+      organisationNumber: '500123',
+      registrationNumber: 'R25SR500010912PL'
+    }
     const reportsRepository = /** @type {any} */ ({
       hasReportSubmittedSince: vi.fn(),
-      findPeriodicReports: vi.fn().mockResolvedValue(periodicReports)
+      findPeriodicReport: vi.fn().mockResolvedValue(periodicReport)
     })
     const service = createReportsService(reportsRepository)
 
     const params = {
       organisationNumber: toOrganisationNumber('500123'),
-      registrationNumber: toRegistrationNumber('R25SR500010912PL')
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+      year: toYear(2024)
     }
-    const result = await service.findPeriodicReports(params)
+    const result = await service.findPeriodicReport(params)
 
-    expect(reportsRepository.findPeriodicReports).toHaveBeenCalledWith(params)
-    expect(result).toBe(periodicReports)
+    expect(reportsRepository.findPeriodicReport).toHaveBeenCalledWith(params)
+    expect(result).toBe(periodicReport)
   })
 })

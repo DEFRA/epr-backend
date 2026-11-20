@@ -83,22 +83,21 @@ const assertPeriodEnded = (periodInfo, period, cadence) => {
  * Throws a 409 Boom with `output.payload.existingReport` if a report for the
  * same period already exists.
  *
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
  * @returns {void}
  */
 export const assertNoExistingReport = (
-  periodicReports,
+  periodicReport,
   year,
   cadence,
   period,
   submissionNumber
 ) => {
   const id = findSubmissionByNumber(
-    periodicReports,
-    year,
+    periodicReport,
     cadence,
     period,
     submissionNumber
@@ -127,7 +126,7 @@ export const assertNoExistingReport = (
  * failure carries a distinct `reason` so the frontend can tell them apart from
  * the duplicate-period conflict.
  *
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @param {Year} year
  * @param {Cadence} cadence
  * @param {number} period
@@ -135,7 +134,7 @@ export const assertNoExistingReport = (
  * @returns {void}
  */
 export const assertResubmissionAllowed = (
-  periodicReports,
+  periodicReport,
   year,
   cadence,
   period,
@@ -159,8 +158,7 @@ export const assertResubmissionAllowed = (
     )
 
   const previous = findSubmissionByNumber(
-    periodicReports,
-    year,
+    periodicReport,
     cadence,
     period,
     submissionNumber - 1

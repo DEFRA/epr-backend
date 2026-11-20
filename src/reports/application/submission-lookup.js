@@ -1,29 +1,26 @@
 import { findPeriodSlot } from '#reports/domain/find-period-slot.js'
 
 /**
- * @import { Year } from '#common/helpers/dates/year.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import { PeriodicReport } from '#reports/repository/port.js'
  */
 
 /**
- * Finds the submission summary for a specific submission number within periodic
- * reports, checking both the current slot and previous submissions.
- * @param {PeriodicReport[]} periodicReports
- * @param {Year} year
+ * Finds the submission summary for a specific submission number within a
+ * periodic report, checking both the current slot and previous submissions.
+ * @param {PeriodicReport | null} periodicReport
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
  * @returns {import('#reports/repository/port.js').ReportSummary | null}
  */
 export function findSubmissionByNumber(
-  periodicReports,
-  year,
+  periodicReport,
   cadence,
   period,
   submissionNumber
 ) {
-  const slot = findPeriodSlot(periodicReports, { year, cadence, period })
+  const slot = findPeriodSlot(periodicReport, { cadence, period })
   if (!slot) {
     return null
   }
@@ -38,42 +35,34 @@ export function findSubmissionByNumber(
 }
 
 /**
- * Finds the report ID for a specific submission number within periodic reports,
- * checking both the current slot and previous submissions.
- * @param {PeriodicReport[]} periodicReports
- * @param {Year} year
+ * Finds the report ID for a specific submission number within a periodic
+ * report, checking both the current slot and previous submissions.
+ * @param {PeriodicReport | null} periodicReport
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
  * @returns {string|null}
  */
 export function findReportIdBySubmissionNumber(
-  periodicReports,
-  year,
+  periodicReport,
   cadence,
   period,
   submissionNumber
 ) {
   return (
-    findSubmissionByNumber(
-      periodicReports,
-      year,
-      cadence,
-      period,
-      submissionNumber
-    )?.id ?? null
+    findSubmissionByNumber(periodicReport, cadence, period, submissionNumber)
+      ?.id ?? null
   )
 }
 
 /**
  * Whether any submission is stored for the period.
- * @param {PeriodicReport[]} periodicReports
- * @param {Year} year
+ * @param {PeriodicReport | null} periodicReport
  * @param {Cadence} cadence
  * @param {number} period
  * @returns {boolean}
  */
-export function hasStoredSubmission(periodicReports, year, cadence, period) {
-  const slot = findPeriodSlot(periodicReports, { year, cadence, period })
+export function hasStoredSubmission(periodicReport, cadence, period) {
+  const slot = findPeriodSlot(periodicReport, { cadence, period })
   return Boolean(slot?.current) || (slot?.previousSubmissions?.length ?? 0) > 0
 }

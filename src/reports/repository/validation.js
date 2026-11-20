@@ -4,7 +4,7 @@ import {
   updateReportSchema,
   updateReportStatusSchema,
   deleteReportParamsSchema,
-  findPeriodicReportsSchema,
+  findPeriodicReportSchema,
   findPeriodicReportsForYearSchema,
   findReportByIdSchema,
   markActiveReportsStaleSchema,
@@ -84,11 +84,11 @@ export const validateDeleteReportParams = (params) => {
 }
 
 /**
- * @param {import('./port.js').FindPeriodicReportsParams} params
- * @returns {import('./port.js').FindPeriodicReportsParams}
+ * @param {import('./port.js').FindPeriodicReportParams} params
+ * @returns {import('./port.js').FindPeriodicReportParams}
  */
-export const validateFindPeriodicReports = (params) => {
-  const { error, value } = findPeriodicReportsSchema.validate(params, {
+export const validateFindPeriodicReport = (params) => {
+  const { error, value } = findPeriodicReportSchema.validate(params, {
     abortEarly: false
   })
 

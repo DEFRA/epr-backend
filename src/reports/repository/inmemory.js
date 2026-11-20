@@ -15,7 +15,7 @@ import Boom from '@hapi/boom'
 import {
   validateCreateReport,
   validateDeleteReportParams,
-  validateFindPeriodicReports,
+  validateFindPeriodicReport,
   validateFindPeriodicReportsForYear,
   validateFindReportById,
   validateHasReportSubmittedSince,
@@ -34,7 +34,7 @@ import {
  * @import {
  *   CreateReportParams,
  *   DeleteReportParams,
- *   FindPeriodicReportsParams,
+ *   FindPeriodicReportParams,
  *   MarkSubmittedReportRequiringResubmissionResult,
  *   MarkSubmittedReportsRequiringResubmissionParams,
  *   PeriodicReport,
@@ -266,17 +266,18 @@ const isForRegistration = (
 
 /**
  * @param {Map<string, Object>} reports
- * @param {FindPeriodicReportsParams} params
- * @returns {Promise<PeriodicReport[]>}
+ * @param {FindPeriodicReportParams} params
+ * @returns {Promise<PeriodicReport | null>}
  */
-const findPeriodicReports = async (reports, params) => {
-  const key = validateFindPeriodicReports(params)
+const findPeriodicReport = async (reports, params) => {
+  const key = validateFindPeriodicReport(params)
 
-  const matching = [...reports.values()].filter((r) =>
-    isForRegistration(r, key)
+  const matching = [...reports.values()].filter(
+    (r) => isForRegistration(r, key) && r.year === key.year
   )
 
-  return structuredClone(transformToPeriodicReports(matching))
+  const [periodicReport = null] = transformToPeriodicReports(matching)
+  return structuredClone(periodicReport)
 }
 
 /**
@@ -640,7 +641,7 @@ export const createInMemoryReportsRepository = (initialReports = new Map()) => {
     updateReportStatus: (params) => updateReportStatus(reports, params),
     deleteReport: (params) => deleteReport(reports, params),
     findReportById: (reportId) => findReportById(reports, reportId),
-    findPeriodicReports: (params) => findPeriodicReports(reports, params),
+    findPeriodicReport: (params) => findPeriodicReport(reports, params),
     findAllPeriodicReports: () => findAllPeriodicReports(reports),
     findPeriodicReportsForYear: (params) =>
       findPeriodicReportsForYear(reports, params),

@@ -33,14 +33,15 @@ export const reportsYearCalendar = {
     const { organisationNumber, registrationNumber, year } = request.params
     const { registration } = request.app
 
-    const storedReports = await request.reportsRepository.findPeriodicReports({
+    const storedReport = await request.reportsRepository.findPeriodicReport({
       organisationNumber,
-      registrationNumber
+      registrationNumber,
+      year
     })
 
     const calendar = yearCalendar({
       registration,
-      storedReports,
+      storedReport,
       year,
       allSubmissions:
         /** @type {{ expand?: string }} */ (request.query).expand ===
