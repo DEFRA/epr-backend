@@ -272,8 +272,8 @@ const isForRegistration = (
 const findPeriodicReports = async (reports, params) => {
   const key = validateFindPeriodicReports(params)
 
-  const matching = [...reports.values()].filter((r) =>
-    isForRegistration(r, key)
+  const matching = [...reports.values()].filter(
+    (r) => isForRegistration(r, key) && r.year === key.year
   )
 
   return structuredClone(transformToPeriodicReports(matching))

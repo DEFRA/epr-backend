@@ -122,11 +122,11 @@ export const fetchPeriodicReports = async ({
   reportsService
 }) => {
   if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-    const periodicReports = await reportsService.findPeriodicReports({
+    return reportsService.findPeriodicReports({
       organisationNumber: summaryLog.organisationNumber,
-      registrationNumber: summaryLog.registrationNumber
+      registrationNumber: summaryLog.registrationNumber,
+      year: summaryLog.year
     })
-    return periodicReports.filter(({ year }) => year === summaryLog.year)
   }
   return []
 }

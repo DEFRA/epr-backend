@@ -315,12 +315,12 @@ const performDeleteReport = async (db, params) => {
  * @returns {Promise<PeriodicReport[]>}
  */
 const performFindPeriodicReports = async (db, params) => {
-  const { organisationNumber, registrationNumber } =
+  const { organisationNumber, registrationNumber, year } =
     validateFindPeriodicReports(params)
 
   const docs = await reportsCollection(db)
     .find(
-      { organisationNumber, registrationNumber },
+      { organisationNumber, registrationNumber, year },
       {
         projection: {
           _id: 0,

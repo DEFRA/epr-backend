@@ -380,7 +380,7 @@
  */
 
 /**
- * @typedef {RegistrationKey} FindPeriodicReportsParams
+ * @typedef {RegistrationKey & { year: Year }} FindPeriodicReportsParams
  */
 
 /**

@@ -87,7 +87,10 @@ describe('DELETE /organisations/{organisationNumber}/registrations/{registration
 
       expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-      const periodicReports = await reportsRepository.findPeriodicReports(key)
+      const periodicReports = await reportsRepository.findPeriodicReports({
+        ...key,
+        year: YEAR
+      })
       expect(periodicReports).toEqual([])
     })
 

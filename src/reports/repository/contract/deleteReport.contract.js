@@ -60,7 +60,8 @@ export const testDeleteReportBehaviour = (it) => {
 
       const result = await repository.findPeriodicReports({
         organisationNumber: DEFAULT_ORG_NUMBER,
-        registrationNumber: DEFAULT_REG_NUMBER
+        registrationNumber: DEFAULT_REG_NUMBER,
+        year: DEFAULT_REPORT_YEAR
       })
       expect(result).toEqual([])
     })

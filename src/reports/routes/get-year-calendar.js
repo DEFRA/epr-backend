@@ -35,7 +35,8 @@ export const reportsYearCalendar = {
 
     const storedReports = await request.reportsRepository.findPeriodicReports({
       organisationNumber,
-      registrationNumber
+      registrationNumber,
+      year
     })
 
     const calendar = yearCalendar({
