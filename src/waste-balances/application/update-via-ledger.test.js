@@ -8,11 +8,7 @@ import { createWasteBalanceService } from './waste-balance-service.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { DEFAULT_LEDGER_ID } from '#waste-records/repository/test-data.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { CLASSIFICATION_REASON } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
-import { tableSchemasWith } from '#waste-balances/domain/table-schemas-test-helpers.js'
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: vi.fn()
@@ -35,39 +31,11 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-// Excludes on a PRN having been issued rather than on absent data, so an
-// excluded row still carries a real tonnage — the amount the ledger must
-// withhold, and the shape every genuine exclusion reason takes.
-/** @type {TableSchema['classifyForWasteBalance']} */
-const prnAwareClassifier = (data) =>
-  data.prnIssued
-    ? {
-        outcome: ROW_OUTCOME.EXCLUDED,
-        reasons: [{ code: CLASSIFICATION_REASON.PRN_ISSUED }]
-      }
-    : {
-        outcome: ROW_OUTCOME.INCLUDED,
-        reasons: [],
-        transactionAmount: data.tonnage
-      }
-
-/** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
-/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
-
 const ledgerId = DEFAULT_LEDGER_ID
 
 const { organisationNumber, registrationNumber, accreditationNumber } = ledgerId
 const numbers = { organisationNumber, registrationNumber, accreditationNumber }
 
-/** @type {AccreditationValidity} */
-const accreditation = {
-  timeline: [],
-  validFrom: '2023-01-01',
-  validTo: '2030-12-31'
-}
-
-const overseasSites = /** @type {*} */ (new Map())
 const user = {
   id: 'user-1',
   name: 'Test User',
@@ -76,21 +44,13 @@ const user = {
   role: 'standard_user'
 }
 
-/**
- * @param {{ rowId: string, tonnage: number, prnIssued?: boolean }} args
- * @returns {WasteRecord}
- */
-const buildExporterRecord = ({ rowId, tonnage, prnIssued = false }) => ({
-  rowId,
-  type: WASTE_RECORD_TYPE.EXPORTED,
-  data: { processingType: 'EXPORTER', tonnage, prnIssued }
-})
+/** @param {number} creditTotal */
+const totalsOf = (creditTotal) => ({ creditTotal, decemberCreditTotal: 0 })
 
 describe('performUpdateViaLedger', () => {
   let ledgerRepository
   let systemLogsRepository
   let commitSummaryLogSubmittedEvent
-  let tableSchemas
 
   beforeEach(async () => {
     ledgerRepository = createInMemoryLedgerRepository()()
@@ -99,25 +59,27 @@ describe('performUpdateViaLedger', () => {
       ledgerRepository,
       systemLogsRepository
     ).commitSummaryLogSubmittedEvent
-    tableSchemas = tableSchemasWith(prnAwareClassifier)
   })
 
-  describe('first submission', () => {
-    it('appends a single summary-log-submitted event with aggregate creditTotal', async () => {
-      const records = [
-        buildExporterRecord({ rowId: '1', tonnage: 100 }),
-        buildExporterRecord({ rowId: '2', tonnage: 50 })
-      ]
+  /**
+   * @param {string} summaryLogId
+   * @param {number} creditTotal
+   * @param {Partial<Parameters<typeof performUpdateViaLedger>[0]>} [overrides]
+   */
+  const submit = (summaryLogId, creditTotal, overrides = {}) =>
+    performUpdateViaLedger({
+      totals: totalsOf(creditTotal),
+      commitSummaryLogSubmittedEvent,
+      ledgerId,
+      dependencies: { systemLogsRepository },
+      user,
+      summaryLogId: toSummaryLogFileId(summaryLogId),
+      ...overrides
+    })
 
-      await performUpdateViaLedger({
-        wasteRecords: records,
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
+  describe('first submission', () => {
+    it('appends a single summary-log-submitted event with its creditTotal', async () => {
+      await submit('log-A', 150)
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.number).toBe(1)
@@ -136,32 +98,8 @@ describe('performUpdateViaLedger', () => {
 
   describe('subsequent submission', () => {
     it('computes delta from previous creditTotal', async () => {
-      await performUpdateViaLedger({
-        wasteRecords: [
-          buildExporterRecord({ rowId: '1', tonnage: 100 }),
-          buildExporterRecord({ rowId: '2', tonnage: 50 })
-        ],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
-
-      await performUpdateViaLedger({
-        wasteRecords: [
-          buildExporterRecord({ rowId: '1', tonnage: 100 }),
-          buildExporterRecord({ rowId: '2', tonnage: 80 }),
-          buildExporterRecord({ rowId: '3', tonnage: 20 })
-        ],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-B'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
+      await submit('log-A', 150)
+      await submit('log-B', 200)
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.number).toBe(2)
@@ -176,89 +114,9 @@ describe('performUpdateViaLedger', () => {
     })
   })
 
-  describe('excluded records', () => {
-    it('skips records the schema excludes', async () => {
-      const records = [
-        buildExporterRecord({ rowId: '1', tonnage: 100 }),
-        buildExporterRecord({ rowId: '2', tonnage: 50, prnIssued: true })
-      ]
-
-      await performUpdateViaLedger({
-        wasteRecords: records,
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
-
-      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
-      expect(latest.payload.creditTotal).toBe(100)
-    })
-  })
-
-  describe('credit total invariant', () => {
-    it('sums exactly the INCLUDED transaction amounts, dropping excluded rows', async () => {
-      const includedTonnages = [120, 30, 45]
-      const records = [
-        buildExporterRecord({ rowId: '1', tonnage: includedTonnages[0] }),
-        buildExporterRecord({ rowId: '2', tonnage: includedTonnages[1] }),
-        buildExporterRecord({ rowId: '3', tonnage: 999, prnIssued: true }),
-        buildExporterRecord({ rowId: '4', tonnage: includedTonnages[2] })
-      ]
-
-      await performUpdateViaLedger({
-        wasteRecords: records,
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
-
-      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
-      expect(latest.payload.creditTotal).toBe(
-        includedTonnages.reduce((sum, tonnage) => sum + tonnage, 0)
-      )
-    })
-  })
-
-  describe('empty input', () => {
-    it('does not touch the ledger when no waste records are provided', async () => {
-      const appendSpy = vi.spyOn(ledgerRepository, 'appendEvents')
-
-      await performUpdateViaLedger({
-        wasteRecords: [],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
-
-      expect(appendSpy).not.toHaveBeenCalled()
-      const { systemLogs } = await systemLogsRepository.find({ limit: 10 })
-      expect(systemLogs).toHaveLength(0)
-    })
-  })
-
   describe('audit emission', () => {
     it('inserts one system-log entry covering the submission', async () => {
-      await performUpdateViaLedger({
-        wasteRecords: [
-          buildExporterRecord({ rowId: '1', tonnage: 100 }),
-          buildExporterRecord({ rowId: '2', tonnage: 50 })
-        ],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
+      await submit('log-A', 150)
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
 
@@ -281,15 +139,7 @@ describe('performUpdateViaLedger', () => {
     })
 
     it("lists the entry in its organisation's system log", async () => {
-      await performUpdateViaLedger({
-        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
+      await submit('log-A', 100)
 
       const { systemLogs } = await systemLogsRepository.find({
         organisationNumber,
@@ -301,19 +151,11 @@ describe('performUpdateViaLedger', () => {
 
   describe('without a system-logs repository', () => {
     it('appends the ledger event but emits no back-office audit', async () => {
-      const auditlessSubmit =
-        createWasteBalanceService(
-          ledgerRepository
-        ).commitSummaryLogSubmittedEvent
-
-      await performUpdateViaLedger({
-        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
-        commitSummaryLogSubmittedEvent: auditlessSubmit,
-        ledgerId,
-        dependencies: {},
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
+      await submit('log-A', 100, {
+        commitSummaryLogSubmittedEvent:
+          createWasteBalanceService(ledgerRepository)
+            .commitSummaryLogSubmittedEvent,
+        dependencies: {}
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -325,39 +167,9 @@ describe('performUpdateViaLedger', () => {
     })
   })
 
-  describe('classifier outcome', () => {
-    it('treats records with non-INCLUDED outcome as zero contribution', async () => {
-      tableSchemas = tableSchemasWith(() => ({
-        outcome: ROW_OUTCOME.IGNORED,
-        reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
-      }))
-
-      await performUpdateViaLedger({
-        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 100 })],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
-
-      const latest = await ledgerRepository.findLatestInLedger(ledgerId)
-      expect(latest.payload.creditTotal).toBe(0)
-    })
-  })
-
   describe('actor attribution', () => {
     it('stamps createdBy with the submitter id, name and email', async () => {
-      await performUpdateViaLedger({
-        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
-      })
+      await submit('log-A', 50)
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
       expect(latest.createdBy).toEqual({
@@ -368,19 +180,13 @@ describe('performUpdateViaLedger', () => {
     })
 
     it('omits name when the submitter has none, keeping the email distinct', async () => {
-      await performUpdateViaLedger({
-        wasteRecords: [buildExporterRecord({ rowId: '1', tonnage: 50 })],
-        commitSummaryLogSubmittedEvent,
-        ledgerId,
-        dependencies: { systemLogsRepository },
+      await submit('log-A', 50, {
         user: {
           id: 'user-2',
           email: 'noname@example.test',
           scope: [],
           role: null
-        },
-        summaryLogId: toSummaryLogFileId('log-A'),
-        classificationContext: { tableSchemas, accreditation, overseasSites }
+        }
       })
 
       const latest = await ledgerRepository.findLatestInLedger(ledgerId)
@@ -393,17 +199,6 @@ describe('performUpdateViaLedger', () => {
 
   describe('optimistic concurrency', () => {
     it('lets one of two concurrent submissions win and surfaces the loser as a slot conflict', async () => {
-      const submit = (summaryLogId, tonnage) =>
-        performUpdateViaLedger({
-          wasteRecords: [buildExporterRecord({ rowId: '1', tonnage })],
-          commitSummaryLogSubmittedEvent,
-          ledgerId,
-          dependencies: { systemLogsRepository },
-          user,
-          summaryLogId,
-          classificationContext: { tableSchemas, accreditation, overseasSites }
-        })
-
       const results = await Promise.allSettled([
         submit('log-A', 150),
         submit('log-B', 200)

@@ -1,3 +1,4 @@
+import assert from 'node:assert'
 import { randomUUID } from 'node:crypto'
 
 import { StatusCodes } from 'http-status-codes'
@@ -17,12 +18,21 @@ import {
 } from '#domain/summary-logs/meta-fields.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import {
-  reprocessor,
+  accreditationsByYear,
+  buildReadAccreditation,
+  buildReadOrganisation,
+  buildReadOrganisationWithNumbersOf,
+  buildReadReprocessorRegistration,
   createInMemoryOrganisationReadRepository,
-  buildReadOrganisationWithNumbersOf
+  reprocessor
 } from '#organisation-read-model/test-support.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  buildSummaryLogCommit,
+  buildSummaryLogCommitFor,
+  summaryLogFactory
+} from '#repositories/summary-logs/contract/test-data.js'
+import { currentUtcYear } from '#common/helpers/dates/year.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -50,13 +60,23 @@ const seedValidatingSummaryLog = async (repository, id, overrides = {}) => {
   return waitForVersion(repository, id, 1)
 }
 
-const seedValidatedSummaryLog = async (repository, id, overrides = {}) => {
+/**
+ * @param {*} repository
+ * @param {string} id
+ * @param {Record<string, unknown>} [overrides]
+ * @param {import('#domain/summary-logs/commit.js').SummaryLogCommit | null} [commit] - `null` for a log validated before commits were saved
+ */
+const seedValidatedSummaryLog = async (
+  repository,
+  id,
+  overrides = {},
+  commit = buildSummaryLogCommit()
+) => {
   const inserted = await seedValidatingSummaryLog(repository, id, overrides)
-  await repository.update(
-    id,
-    inserted.version,
-    transitionStatus(inserted.summaryLog, SUMMARY_LOG_STATUS.VALIDATED)
-  )
+  await repository.update(id, inserted.version, {
+    ...transitionStatus(inserted.summaryLog, SUMMARY_LOG_STATUS.VALIDATED),
+    ...(commit && { commit })
+  })
   return waitForVersion(repository, id, inserted.version + 1)
 }
 
@@ -81,11 +101,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     organisationReadRepository = createInMemoryOrganisationReadRepository([
       buildReadOrganisationWithNumbersOf(organisation)
     ])()
+    const { registrationNumber } = registration
+    assert(registrationNumber)
     const numbers = {
       organisationNumber: organisation.organisationNumber,
-      registrationNumber: registration.registrationNumber
+      registrationNumber
     }
-    const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${registration.registrationNumber}/summary-logs`
+    const summaryLogs = `/organisations/${organisation.organisationNumber}/registrations/${registrationNumber}/summary-logs`
     return {
       numbers,
       ...numbers,
@@ -287,13 +309,37 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       servedRegistration()
     const accreditationNumber = toAccreditationNumber('A27SR500030912PA')
     const summaryLogId = randomUUID()
-
-    await seedValidatedSummaryLog(summaryLogsRepository, summaryLogId, {
+    organisationReadRepository = createInMemoryOrganisationReadRepository([
+      buildReadOrganisation({
+        organisationNumber,
+        registrations: {
+          [registrationNumber]: buildReadReprocessorRegistration({
+            accreditations: accreditationsByYear(
+              buildReadAccreditation({
+                year: currentUtcYear(),
+                accreditationNumber
+              })
+            )
+          })
+        }
+      })
+    ])()
+    const accredited = {
       ...numbers,
       accreditationId: randomUUID(),
       accreditationNumber,
       validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
-    })
+    }
+
+    await seedValidatedSummaryLog(
+      summaryLogsRepository,
+      summaryLogId,
+      accredited,
+      await buildSummaryLogCommitFor(organisationReadRepository, {
+        ...accredited,
+        year: currentUtcYear()
+      })
+    )
 
     const response = await server.inject({
       method: 'POST',
@@ -370,9 +416,11 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     })
 
     expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    expect(JSON.parse(response.payload).message).toBe(
-      'Waste records have changed since preview was generated. Please re-upload.'
-    )
+    expect(JSON.parse(response.payload)).toMatchObject({
+      message:
+        'This summary log can no longer be submitted as validated. Please re-upload.',
+      reason: 'newer_submission'
+    })
 
     const stored = await waitForVersion(
       summaryLogsRepository,
@@ -384,9 +432,86 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
     expect(mockRecordStatusTransition).toHaveBeenCalledWith({
       status: SUMMARY_LOG_STATUS.SUPERSEDED,
-      processingType: PROCESSING_TYPES.EXPORTER
+      processingType: PROCESSING_TYPES.EXPORTER,
+      reason: 'newer_submission'
     })
     expect(mockAuditSummaryLogSubmit).not.toHaveBeenCalled()
+  })
+
+  it('supersedes the log and returns 409 when it was validated before its commit was saved', async () => {
+    const { numbers, submitUrl } = servedRegistration()
+    const summaryLogId = randomUUID()
+
+    const validated = await seedValidatedSummaryLog(
+      summaryLogsRepository,
+      summaryLogId,
+      { ...numbers, validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION },
+      null
+    )
+
+    const response = await server.inject({
+      method: 'POST',
+      url: submitUrl(summaryLogId),
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    expect(JSON.parse(response.payload)).toMatchObject({
+      message:
+        'This summary log can no longer be submitted as validated. Please re-upload.',
+      reason: 'no_commit'
+    })
+    const stored = await waitForVersion(
+      summaryLogsRepository,
+      summaryLogId,
+      validated.version + 2
+    )
+    expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
+    expect(summaryLogsWorker.submit).not.toHaveBeenCalled()
+    expect(mockRecordStatusTransition).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.SUPERSEDED,
+        reason: 'no_commit'
+      })
+    )
+  })
+
+  it('supersedes the log and returns 409 when its accreditation or overseas sites changed since validation', async () => {
+    const { numbers, submitUrl } = servedRegistration()
+    const summaryLogId = randomUUID()
+
+    const validated = await seedValidatedSummaryLog(
+      summaryLogsRepository,
+      summaryLogId,
+      { ...numbers, validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION },
+      buildSummaryLogCommit({ contextHash: 'f'.repeat(64) })
+    )
+
+    const response = await server.inject({
+      method: 'POST',
+      url: submitUrl(summaryLogId),
+      ...asOperator()
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    expect(JSON.parse(response.payload)).toMatchObject({
+      message:
+        'This summary log can no longer be submitted as validated. Please re-upload.',
+      reason: 'context_changed'
+    })
+    const stored = await waitForVersion(
+      summaryLogsRepository,
+      summaryLogId,
+      validated.version + 2
+    )
+    expect(stored.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
+    expect(summaryLogsWorker.submit).not.toHaveBeenCalled()
+    expect(mockRecordStatusTransition).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.SUPERSEDED,
+        reason: 'context_changed'
+      })
+    )
   })
 
   it('returns 500 and logs the failure when the submission worker throws a non-Boom error', async () => {

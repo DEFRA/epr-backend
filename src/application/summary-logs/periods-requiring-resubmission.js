@@ -6,7 +6,7 @@ import { diffReports } from '#reports/domain/resubmission/reported-data-equivale
 import { projectSummaryLogRowState } from '#waste-records/application/project-summary-log-row-state.js'
 import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
 import { reportOperatorCategory } from '#reports/domain/operator-category.js'
-import { ledgerIdFor } from './ledger-id.js'
+import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
@@ -314,7 +314,7 @@ export const withPeriodsRequiringResubmission = async ({
       closedPeriods: loadsByReportingPeriod.closedPeriods,
       // classifyLoads yields a loadsByReportingPeriod only for present records.
       wasteRecords: /** @type {ValidatedWasteRecord[]} */ (wasteRecords),
-      ledgerId: ledgerIdFor(summaryLog)
+      ledgerId: pickLedgerId(summaryLog)
     })
 
   return {

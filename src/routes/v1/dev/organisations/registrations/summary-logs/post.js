@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.js'
+import {
+  staleSubmissionConflict,
+  supersedeIfStale
+} from '#application/summary-logs/supersede-if-stale.js'
 import { extractUser } from '#adapters/sqs-command-executor/sqs-command-executor.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -219,14 +222,16 @@ const submitValidatedLog = async (request, submitPayload, deps) => {
     throw Boom.conflict('Another submission is in progress. Please try again.')
   }
 
-  const isStale = await supersedeIfStale({
+  const { reason } = await supersedeIfStale({
     summaryLogsRepository,
+    organisationReadRepository: deps.organisationReadRepository,
+    logger: deps.logger,
     summaryLog: transition.summaryLog,
     summaryLogId,
     version: transition.version
   })
-  if (isStale) {
-    throw Boom.conflict('Waste records have changed since validation.')
+  if (reason) {
+    throw staleSubmissionConflict(reason)
   }
 
   const { organisationNumber, registrationNumber, accreditationNumber } =

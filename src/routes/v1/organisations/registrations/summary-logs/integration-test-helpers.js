@@ -1,12 +1,11 @@
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
+import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { nextYear, toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS,
-  transitionStatus
+  UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -925,15 +924,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     logger: mockLogger
   })
 
-  const syncWasteRecords = syncFromSummaryLog({
-    extractor: dynamicExtractor,
-    wasteBalanceService,
-    organisationReadRepository,
-    summaryLogRowStatesRepository,
-    ledgerRepository,
-    logger: mockLogger
-  })
-
   const server = await createTestServer({
     config,
     repositories: {
@@ -949,8 +939,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     },
     workers: {
       summaryLogsWorker: createTestSubmitterWorker({
+        logger: mockLogger,
         summaryLogsRepository,
-        syncWasteRecords,
+        organisationReadRepository,
+        wasteBalanceService,
+        reportsService: createReportsService(reportsRepository),
         validateSummaryLog
       })
     }
@@ -985,25 +978,27 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 const TEST_SYNC_USER = {
   id: 'test-user',
   email: 'test-user@example.com',
-  scope: ['some-scope']
+  scope: ['some-scope'],
+  role: null
 }
 
-const createTestSubmitterWorker = ({
-  summaryLogsRepository,
-  syncWasteRecords,
-  validateSummaryLog
+/**
+ * @param {Omit<Parameters<typeof submitSummaryLog>[1], 'user' | 'onSummaryLogUploaded'> & {
+ *   validateSummaryLog: (summaryLogId: import('#domain/summary-logs/ids.js').SummaryLogId) => Promise<void>
+ * }} deps
+ */
+export const createTestSubmitterWorker = ({
+  validateSummaryLog,
+  ...submitDeps
 }) => ({
   validate: validateSummaryLog,
   submit: async (summaryLogId) => {
     await new Promise((resolve) => setImmediate(resolve))
-    const existing = await summaryLogsRepository.findById(summaryLogId)
-    const { version, summaryLog } = existing
-    await syncWasteRecords(summaryLog, TEST_SYNC_USER)
-    await summaryLogsRepository.update(
-      summaryLogId,
-      version,
-      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-    )
+    await submitSummaryLog(summaryLogId, {
+      ...submitDeps,
+      user: TEST_SYNC_USER,
+      onSummaryLogUploaded: async () => {}
+    })
   }
 })
 
