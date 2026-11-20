@@ -119,7 +119,8 @@ export const aggregateTonnageByMaterial = async (
   )
 
   const { materials, total } = formatTonnageMonitoringResults(
-    sumByMaterial(registrationTonnages, materialByRegistration(organisations))
+    sumByMaterial(registrationTonnages, materialByRegistration(organisations)),
+    year
   )
 
   return {

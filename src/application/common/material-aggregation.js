@@ -3,8 +3,10 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { toNumber } from '#common/helpers/decimal-utils.js'
-import { getMonthRange } from '#common/helpers/date-formatter.js'
+import { getMonthsOfYear } from '#common/helpers/date-formatter.js'
 import { capitalize } from '#common/helpers/formatters.js'
+
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 export const formatMaterialResults = (results, valueField) => {
   const materialMap = new Map(
@@ -21,35 +23,29 @@ export const formatMaterialResults = (results, valueField) => {
   return { materials, total }
 }
 
-const getMaterialMonthlyCombinations = () => {
-  const monthsByYear = Object.groupBy(getMonthRange(), (m) => m.year)
-
-  return TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
-    Object.values(WASTE_PROCESSING_TYPE)
-      .map((type) => capitalize(type))
-      .flatMap((type) =>
-        Object.entries(monthsByYear).map(([year, months = []]) => ({
-          material,
-          type,
-          year,
-          months
-        }))
-      )
-  )
-}
-
-export const formatTonnageMonitoringResults = (results) => {
+/**
+ * Each material and operator type's tonnage for every month of the year the
+ * report shows, zero where none was recorded.
+ *
+ * @param {Array<{ material: string, year: number, monthNumber: number, type: string, totalTonnage: number }>} results
+ * @param {Year} year
+ */
+export const formatTonnageMonitoringResults = (results, year) => {
   const resultMap = new Map(
     results.map((r) => [
       `${r.material}-${r.year}-${r.monthNumber}-${r.type}`,
       toNumber(r.totalTonnage)
     ])
   )
+  const months = getMonthsOfYear(year)
+  const types = Object.values(WASTE_PROCESSING_TYPE).map((type) =>
+    capitalize(type)
+  )
 
-  const materials = getMaterialMonthlyCombinations()
-    .map(({ material, type, year, months }) => ({
+  const materials = TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
+    types.map((type) => ({
       material,
-      year: Number(year),
+      year,
       type,
       months: months.map(({ monthNumber, month }) => ({
         month,
@@ -57,12 +53,10 @@ export const formatTonnageMonitoringResults = (results) => {
           resultMap.get(`${material}-${year}-${monthNumber}-${type}`) || 0
       }))
     }))
-    .sort(
-      (a, b) =>
-        b.year - a.year ||
-        b.type.localeCompare(a.type) ||
-        a.material.localeCompare(b.material)
-    )
+  ).sort(
+    (a, b) =>
+      b.type.localeCompare(a.type) || a.material.localeCompare(b.material)
+  )
 
   const total = materials.reduce(
     (sum, item) => sum + item.months.reduce((s, m) => s + m.tonnage, 0),
