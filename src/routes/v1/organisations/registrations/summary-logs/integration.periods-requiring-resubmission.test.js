@@ -14,7 +14,6 @@ import {
 } from '#reports/domain/period-labels.js'
 import { createReportForPeriod } from '#reports/application/report-service.js'
 import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
-import { requestOperatorResubmission } from '#reports/application/resubmission-service.js'
 import {
   REPORT_STATUS,
   REPORT_STATUS_SLOT
@@ -1106,9 +1105,9 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     })
     await submitAndCloseJanuary(env)
 
-    // A later submission changes January's tonnage, and the operator starts
-    // resubmitting January from it: submission 2 is in progress, so the
-    // regulator still holds submission 1 (100 tonnes).
+    // A later submission changes January's tonnage, which flags January for
+    // resubmission, and the operator starts resubmitting it: submission 2 is in
+    // progress, so the regulator still holds submission 1 (100 tonnes).
     await upload(
       env,
       'sl-second',
@@ -1118,13 +1117,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
       ])
     )
     await submitAndPoll(env, 'sl-second')
-    await requestOperatorResubmission({
-      reportsRepository: env.reportsRepository,
-      ...env.reportKey,
-      ...JANUARY_2026,
-      submissionNumber: 1,
-      requestedBy: CHANGED_BY
-    })
     await generateReport(env, JANUARY_2026, 2)
 
     // Matches the draft's figures, but not the submitted report's.
