@@ -194,7 +194,6 @@ const buildOwnYearMatchStage = () => ({
 
 const buildDateFieldsStage = () => ({
   $addFields: {
-    year: buildYearExpression(),
     monthNumber: buildMonthNumberExpression(),
     month: buildMonthExpression()
   }
@@ -239,7 +238,8 @@ const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
 
 /**
  * Sums the tonnage of the row states in the given summary logs, by
- * registration, month and operator type.
+ * registration, month and operator type, counting each ledger's rows only in
+ * months of that ledger's year.
  *
  * @param {import('mongodb').Db} db
  * @returns {(summaryLogIds: string[]) => Promise<RegistrationTonnage[]>}
