@@ -105,7 +105,7 @@ describe(`GET ${wasteBalanceAvailabilityPath} (integration)`, () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: wasteBalanceAvailabilityPath,
+      url: `${wasteBalanceAvailabilityPath}?year=2026`,
       headers: { Authorization: `Bearer ${validToken}` }
     })
 
