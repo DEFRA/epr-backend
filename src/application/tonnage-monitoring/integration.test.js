@@ -213,11 +213,6 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       REPORT_YEAR
     )
 
-  /**
-   * Insert row states and record one submitted summary log per distinct ledger
-   * partition, so every row's `summaryLogIds[0]` is the latest submitted summary
-   * log of its `(registrationNumber, accreditationNumber)` ledger.
-   */
   const submitRows = async (rows) => {
     await db.collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME).insertMany(rows)
 
