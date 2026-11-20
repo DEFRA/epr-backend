@@ -210,7 +210,7 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
-        findPeriodicReports: async () => []
+        findPeriodicReport: async () => null
       }),
       summaryLogExtractor: extractor
     })

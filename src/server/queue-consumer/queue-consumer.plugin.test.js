@@ -192,7 +192,7 @@ describe('commandQueueConsumerPlugin', () => {
           wasteBalanceService: server.app.wasteBalanceService,
           reportsService: expect.objectContaining({
             hasReportSubmittedSince: expect.any(Function),
-            findPeriodicReports: expect.any(Function)
+            findPeriodicReport: expect.any(Function)
           }),
           summaryLogExtractor: expect.any(Object),
           onSummaryLogUploaded: expect.any(Function)

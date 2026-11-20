@@ -229,7 +229,7 @@ export const updateReportStatusSchema = Joi.object({
   })
 })
 
-export const findPeriodicReportsSchema = Joi.object({
+export const findPeriodicReportSchema = Joi.object({
   ...registrationKeySchema,
   year: YEAR_SCHEMA
 })

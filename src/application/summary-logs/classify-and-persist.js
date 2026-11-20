@@ -40,7 +40,7 @@ export const filterWasteBalanceRecords = (wasteRecords, tableSchemas) =>
  * @param {string} params.status - Summary log status after validation
  * @param {ValidatedWasteRecord[] | null} params.wasteRecords - All waste records
  * @param {ValidatedWasteRecord[]} params.wasteBalanceRecords - Waste-balance-eligible records
- * @param {import('#reports/repository/port.js').PeriodicReport[]} params.periodicReports
+ * @param {import('#reports/repository/port.js').PeriodicReport | null} params.periodicReport
  * @param {RowClassificationContext} [params.classificationContext] - absent when validation stopped before reading the registration
  * @param {SummaryLogRegistration} [params.registration]
  * @param {Map<string, WasteRecordState>} [params.submittedRowStatesByKey]
@@ -50,7 +50,7 @@ export const classifyLoads = ({
   status,
   wasteBalanceRecords,
   wasteRecords,
-  periodicReports,
+  periodicReport,
   classificationContext,
   registration,
   submittedRowStatesByKey
@@ -88,7 +88,7 @@ export const classifyLoads = ({
         wasteRecords,
         submittedRowStatesByKey,
         recordChanges,
-        periodicReports,
+        periodicReport,
         cadence: reportingCadenceOf(registration),
         operatorCategory: reportOperatorCategory(registration),
         classificationContext
@@ -100,7 +100,7 @@ export const classifyLoads = ({
 }
 
 /**
- * Fetches the periodic reports of the validated summary log's year. A log can
+ * Fetches the periodic report of the validated summary log's year. A log can
  * carry earlier-year dates, but it cannot change an earlier year's reports.
  *
  * The period-status split is core flow once the feature is live, so a failure
@@ -113,20 +113,20 @@ export const classifyLoads = ({
  * @param {string} params.status
  * @param {SubmittedSummaryLog} params.summaryLog
  * @param {ReportsService} params.reportsService
- * @returns {Promise<import('#reports/repository/port.js').PeriodicReport[]>}
+ * @returns {Promise<import('#reports/repository/port.js').PeriodicReport | null>}
  */
-export const fetchPeriodicReports = async ({
+export const fetchPeriodicReport = async ({
   registration,
   status,
   summaryLog,
   reportsService
 }) => {
   if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-    return reportsService.findPeriodicReports({
+    return reportsService.findPeriodicReport({
       organisationNumber: summaryLog.organisationNumber,
       registrationNumber: summaryLog.registrationNumber,
       year: summaryLog.year
     })
   }
-  return []
+  return null
 }

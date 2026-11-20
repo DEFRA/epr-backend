@@ -532,7 +532,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
-        findPeriodicReports: vi.fn().mockResolvedValue([])
+        findPeriodicReport: vi.fn().mockResolvedValue(null)
       }),
       summaryLogExtractor
     })
@@ -1165,7 +1165,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
-        findPeriodicReports: vi.fn().mockResolvedValue([])
+        findPeriodicReport: vi.fn().mockResolvedValue(null)
       }),
       summaryLogExtractor
     })
@@ -1212,7 +1212,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogRowStatesRepository,
       ledgerRepository,
       reportsService: /** @type {any} */ ({
-        findPeriodicReports: vi.fn().mockRejectedValue(fetchError)
+        findPeriodicReport: vi.fn().mockRejectedValue(fetchError)
       }),
       summaryLogExtractor
     })

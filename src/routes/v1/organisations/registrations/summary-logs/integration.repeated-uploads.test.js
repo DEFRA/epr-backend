@@ -225,7 +225,7 @@ describe('Repeated uploads of identical data', () => {
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
-          findPeriodicReports: async () => []
+          findPeriodicReport: async () => null
         })
       })
 

@@ -71,59 +71,56 @@ const periodicReport = (year, reports) => ({
 
 describe('buildSubmittedPeriods', () => {
   it('includes a period whose current report is submitted', () => {
-    const reports = [
-      periodicReport(2026, { quarterly: { 1: submittedSlot() } })
-    ]
+    const report = periodicReport(2026, { quarterly: { 1: submittedSlot() } })
 
-    const result = buildSubmittedPeriods(reports, CADENCE.quarterly)
+    const result = buildSubmittedPeriods(report, CADENCE.quarterly)
 
     expect(result.has('2026:1')).toBe(true)
   })
 
   it('includes a period with previous submissions even if the current report is not submitted', () => {
-    const reports = [
-      periodicReport(2026, { quarterly: { 2: resubmittedSlot() } })
-    ]
+    const report = periodicReport(2026, { quarterly: { 2: resubmittedSlot() } })
 
-    const result = buildSubmittedPeriods(reports, CADENCE.quarterly)
+    const result = buildSubmittedPeriods(report, CADENCE.quarterly)
 
     expect(result.has('2026:2')).toBe(true)
   })
 
   it('excludes a period that has never been submitted', () => {
-    const reports = [
-      periodicReport(2026, { quarterly: { 3: inProgressSlot() } })
-    ]
+    const report = periodicReport(2026, { quarterly: { 3: inProgressSlot() } })
 
-    const result = buildSubmittedPeriods(reports, CADENCE.quarterly)
+    const result = buildSubmittedPeriods(report, CADENCE.quarterly)
 
     expect(result.has('2026:3')).toBe(false)
   })
 
   it('skips a periodic report with no slots for the cadence', () => {
-    const reports = [periodicReport(2026, { monthly: { 1: submittedSlot() } })]
+    const report = periodicReport(2026, { monthly: { 1: submittedSlot() } })
 
-    const result = buildSubmittedPeriods(reports, CADENCE.quarterly)
+    const result = buildSubmittedPeriods(report, CADENCE.quarterly)
 
     expect(result.size).toBe(0)
   })
 
-  it('keys submitted periods by year across multiple years', () => {
-    const reports = [
-      periodicReport(2025, { quarterly: { 4: submittedSlot() } }),
-      periodicReport(2026, { quarterly: { 1: submittedSlot() } })
-    ]
+  it('keys submitted periods by the year of the periodic report', () => {
+    const report = periodicReport(2025, { quarterly: { 4: submittedSlot() } })
 
-    const result = buildSubmittedPeriods(reports, CADENCE.quarterly)
+    const result = buildSubmittedPeriods(report, CADENCE.quarterly)
 
     expect(result.has('2025:4')).toBe(true)
-    expect(result.has('2026:1')).toBe(true)
+    expect(result.has('2026:4')).toBe(false)
+  })
+
+  it('returns no periods when there is no periodic report', () => {
+    const result = buildSubmittedPeriods(null, CADENCE.quarterly)
+
+    expect(result.size).toBe(0)
   })
 })
 
 describe('isDateInSubmittedPeriod', () => {
-  const reports = [periodicReport(2026, { quarterly: { 1: submittedSlot() } })]
-  const submitted = buildSubmittedPeriods(reports, CADENCE.quarterly)
+  const report = periodicReport(2026, { quarterly: { 1: submittedSlot() } })
+  const submitted = buildSubmittedPeriods(report, CADENCE.quarterly)
 
   it('returns true for a date in a submitted period', () => {
     expect(
