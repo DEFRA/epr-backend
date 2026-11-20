@@ -25,7 +25,8 @@ import {
  *   status?: AccreditationStatus,
  *   wasteProcessingType?: 'reprocessor' | 'exporter',
  *   reprocessingType?: 'input' | 'output',
- *   withAccreditation?: boolean
+ *   withAccreditation?: boolean,
+ *   alsoHeld?: Array<{ accreditationNumber: AccreditationNumber, year: Year, status?: AccreditationStatus }>
  * }} HeldAccreditation
  */
 
@@ -39,17 +40,36 @@ const heldRegistration = ({
   status = 'approved',
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = 'input',
-  withAccreditation = true
+  withAccreditation = true,
+  alsoHeld = []
 }) => {
-  const accreditation = {
-    accreditationNumber,
-    year,
-    status: { ...approvedStatusFrom(`${year}-01-01`), current: status }
+  if (!withAccreditation && alsoHeld.length > 0) {
+    throw new Error('alsoHeld needs withAccreditation')
+  }
+  const accreditations = [
+    { accreditationNumber, year, status },
+    ...alsoHeld.map(({ status: otherStatus = 'approved', ...other }) => ({
+      ...other,
+      status: otherStatus
+    }))
+  ].map((held) => ({
+    ...held,
+    status: {
+      ...approvedStatusFrom(`${held.year}-01-01`),
+      current: held.status
+    }
+  }))
+  const years = accreditations.map((held) => held.year)
+  const repeated = years.find((y, i) => years.indexOf(y) !== i)
+  if (repeated !== undefined) {
+    throw new Error(`More than one accreditation held for ${repeated}`)
   }
   if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
     return buildReadExporterRegistration({
       accreditations: withAccreditation
-        ? accreditationsByYear(buildReadExporterAccreditation(accreditation))
+        ? accreditationsByYear(
+            ...accreditations.map(buildReadExporterAccreditation)
+          )
         : {}
     })
   }
@@ -57,15 +77,17 @@ const heldRegistration = ({
     material: 'plastic',
     reprocessingType,
     accreditations: withAccreditation
-      ? accreditationsByYear(buildReadAccreditation(accreditation))
+      ? accreditationsByYear(...accreditations.map(buildReadAccreditation))
       : {}
   })
 }
 
 /**
  * An organisation read repository serving one organisation, with one
- * registration holding an accreditation for one year, for tests of PRN code
- * that reads the accreditation a PRN was raised against.
+ * registration holding an accreditation for one year, and for each of
+ * `alsoHeld` another for a different year, approved unless given a status, for
+ * tests of PRN code that reads the accreditation a PRN
+ * was raised against.
  *
  * @param {HeldAccreditation} held
  * @returns {OrganisationReadRepository}

@@ -1,33 +1,22 @@
 /**
- * @import {AccreditationValidity} from '#domain/organisations/accreditation.js'
  * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
- * @import {WasteRecord} from '#domain/waste-records/model.js'
- * @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js'
+ * @import {SummaryLogSubmittedTotals} from '#waste-balances/repository/ledger-schema.js'
  */
 
-/** @typedef {RowClassificationContext & { accreditation: AccreditationValidity }} AccreditedRowClassificationContext */
-
-import { add, toNumber } from '#common/helpers/decimal-utils.js'
-
 import { recordWasteBalanceUpdateAudit } from './audit.js'
-import { decemberCreditTotalFor } from './december-credit-total.js'
-import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
+import { toLedgerUser } from './ledger-user.js'
 
 /**
- * Apply a summary-log submission to the event-sourced ledger.
- *
- * Computes the aggregate `creditTotal` (sum of all row-level target amounts)
- * and commits it through the injected `commitSummaryLogSubmittedEvent`, which
- * folds the ledger, decides the submission event, and appends it. A competing
- * write that
+ * Apply a summary-log submission's totals to the event-sourced ledger through
+ * the injected `commitSummaryLogSubmittedEvent`, which folds the ledger,
+ * decides the submission event, and appends it. A competing write that
  * advanced the head since the fold surfaces as a slot conflict and propagates to
  * the caller (ADR-0036): the caller is the summary-log worker job, so the
- * conflict fails the job and the queue redelivers, recomputing against fresh
+ * conflict fails the job and the queue redelivers, deciding against fresh
  * state.
  *
  * @param {Object} params
- * @param {Array<WasteRecord>} params.wasteRecords
- * @param {AccreditedRowClassificationContext} params.classificationContext
+ * @param {SummaryLogSubmittedTotals} params.totals
  * @param {import('./waste-balance-service.js').CommitSummaryLogSubmittedEvent} params.commitSummaryLogSubmittedEvent
  * @param {Object} [params.dependencies]
  * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
@@ -36,40 +25,17 @@ import { classifyWasteRecord, getTargetAmount } from './target-amount.js'
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  */
 export const performUpdateViaLedger = async ({
-  wasteRecords,
-  classificationContext,
+  totals,
   commitSummaryLogSubmittedEvent,
   dependencies = {},
   user,
   summaryLogId,
   ledgerId
 }) => {
-  if (wasteRecords.length === 0) {
-    return
-  }
-
-  const classifiedRows = wasteRecords.map((record) =>
-    classifyWasteRecord(record, classificationContext)
-  )
-
-  let creditTotal = 0
-  for (const { classification } of classifiedRows) {
-    creditTotal = toNumber(add(creditTotal, getTargetAmount(classification)))
-  }
-
-  const decemberCreditTotal = decemberCreditTotalFor(
-    classifiedRows,
-    classificationContext.accreditation
-  )
-
   const [event] = await commitSummaryLogSubmittedEvent(
     ledgerId,
-    { summaryLogId, creditTotal, decemberCreditTotal },
-    {
-      id: user.id,
-      ...(user.name && { name: user.name }),
-      email: user.email
-    }
+    { summaryLogId, ...totals },
+    toLedgerUser(user)
   )
 
   await recordWasteBalanceUpdateAudit({
