@@ -31,9 +31,9 @@ import {
 import { recordOf } from '#common/helpers/record-of.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js' */
+/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/vocabulary.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */

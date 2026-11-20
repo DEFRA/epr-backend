@@ -23,12 +23,12 @@ import {
 import {
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
   createOrganisationReadRepository
-} from './mongodb.js'
+} from './mongodb-and-reg-accred-api.js'
 
 /** @import { MongoClient } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OrganisationReadRepositoryOptions } from './mongodb.js' */
+/** @import { OrganisationReadRepositoryOptions } from './mongodb-and-reg-accred-api.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -224,7 +224,7 @@ describe('loading external accreditations', () => {
     it.for(
       /** @type {[string, Year | undefined][]} */ ([
         ['no year', undefined],
-        ['2027', /** @type {Year} */ (2027)]
+        ['2027', toYear(2027)]
       ])
     )(
       "serves the organisation's 2027 accreditation from Reg Accred, not the database, with %s",
@@ -347,7 +347,7 @@ describe('loading external accreditations', () => {
       const repository = await repositoryWith(mongoClient, options)
 
       await repository.findByOrganisationNumber(stored.organisationNumber, {
-        year: /** @type {Year} */ (2026)
+        year: toYear(2026)
       })
 
       expect(requested).toStrictEqual([])
@@ -365,7 +365,7 @@ describe('loading external accreditations', () => {
       })
       const repository = await repositoryWith(mongoClient, options)
 
-      await repository.findAll({ year: /** @type {Year} */ (2026) })
+      await repository.findAll({ year: toYear(2026) })
 
       expect(requested).toStrictEqual([])
     })
@@ -373,7 +373,7 @@ describe('loading external accreditations', () => {
     it.for(
       /** @type {[string, Year | undefined][]} */ ([
         ['no year', undefined],
-        ['2027', /** @type {Year} */ (2027)]
+        ['2027', toYear(2027)]
       ])
     )(
       "requests every organisation's 2027 accreditations from Reg Accred at once in findAll, with %s",

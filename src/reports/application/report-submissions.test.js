@@ -5,8 +5,8 @@ import {
 import { toYear } from '#common/helpers/dates/year.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateReportSubmissions } from './report-submissions.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
@@ -14,7 +14,7 @@ import {
   buildReadReprocessorRegistration,
   registrationOf,
   servedOrganisations
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
@@ -78,7 +78,7 @@ describe('generateReportSubmissions (integration)', () => {
       material: 'Glass-remelt',
       reportType: 'Monthly'
     }
-    /** @param {import('#organisation-read-model/domain/model.js').Organisation} org */
+    /** @param {import('#organisation-read-model/vocabulary.js').Organisation} org */
     const rowFor = (org) => ({
       ...baseRow,
       registrationNumber: `REG${org.organisationNumber}`,
@@ -449,7 +449,7 @@ const approvedFromJanuary = approvedStatusFrom('2026-01-01')
  * @param {{
  *   organisationNumber?: string,
  *   name?: string,
- *   registration?: Partial<import('#organisation-read-model/domain/model.js').ReprocessorRegistration>
+ *   registration?: Partial<import('#organisation-read-model/vocabulary.js').ReprocessorRegistration>
  * }} [options]
  */
 const buildOrg = ({
@@ -485,7 +485,7 @@ const buildOrg = ({
  * A registration accredited for 2026 in `status`.
  *
  * @param {string} accreditationNumber
- * @param {import('#organisation-read-model/domain/model.js').Status<'approved' | 'suspended'>} [status]
+ * @param {import('#organisation-read-model/vocabulary.js').Status<'approved' | 'suspended'>} [status]
  */
 const accreditedAs = (accreditationNumber, status = approvedFromJanuary) => ({
   accreditations: accreditationsByYear(
@@ -496,7 +496,7 @@ const accreditedAs = (accreditationNumber, status = approvedFromJanuary) => ({
   )
 })
 
-/** @param {import('#organisation-read-model/domain/model.js').Organisation[]} orgs */
+/** @param {import('#organisation-read-model/vocabulary.js').Organisation[]} orgs */
 const makeOrgsRepo = (orgs) => createInMemoryOrganisationReadRepository(orgs)()
 
 const makeReportsRepo = (allPeriodicReports = []) =>

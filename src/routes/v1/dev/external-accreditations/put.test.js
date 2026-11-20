@@ -7,15 +7,13 @@ import {
 } from '#domain/organisations/numbers.js'
 import {
   EXPORTER_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
-import {
+  REPROCESSOR_NUMBER,
+  buildExternalAccreditation,
+  createInMemoryOrganisationReadRepository,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+} from '#organisation-read-model/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'

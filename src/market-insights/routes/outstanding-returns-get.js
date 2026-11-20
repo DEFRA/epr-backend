@@ -31,7 +31,7 @@ export const marketInsightsOutstandingReturnsGet = {
   /**
    * @param {HapiRequest & {
    *   params: { year: Year, cadence: 'monthly', period: number },
-   *   organisationReadRepository: import('#organisation-read-model/repository/port.js').OrganisationReadRepository,
+   *   organisationReadRepository: import('#organisation-read-model/index.js').OrganisationReadRepository,
    *   reportsRepository: import('#reports/repository/port.js').ReportsRepository
    * }} request
    * @param {HapiResponseToolkit} h

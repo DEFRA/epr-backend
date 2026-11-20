@@ -4,16 +4,14 @@ import { createMongoExternalAccreditationsRepository } from '#external-accredita
 import { createOverseasSitesRepository } from '#overseas-sites/index.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
-import {
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
-  createOrganisationReadRepository
-} from '#organisation-read-model/repository/mongodb.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 
 /** @import { TestAPI } from 'vitest' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
  * Stores the organisations, overseas sites and external accreditations as the

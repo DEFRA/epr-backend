@@ -18,9 +18,9 @@ import {
   toAccreditationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { buildReadReprocessorRegistration } from '#organisation-read-model/repository/read-model-test-data.js'
+import { buildReadReprocessorRegistration } from '#organisation-read-model/test-support.js'
 
-/** @import {Registration as ReadModelRegistration} from '#organisation-read-model/domain/model.js' */
+/** @import {Registration as ReadModelRegistration} from '#organisation-read-model/vocabulary.js' */
 
 describe('csv-columns', () => {
   const contact = { email: 'test@example.com', fullName: 'Test User' }

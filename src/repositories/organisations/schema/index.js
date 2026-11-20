@@ -6,7 +6,5 @@ export {
   validateOrganisationInsert,
   validateOrganisationUpdate,
   validateStatusHistory,
-  validateUsers,
-  validateRegistration,
-  validateAccreditation
+  validateUsers
 } from './validation.js'

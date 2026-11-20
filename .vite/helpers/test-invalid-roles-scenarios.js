@@ -92,27 +92,6 @@ export function testRegulatorCanRead({
 }
 
 /**
- * A regulator standard user must be refused anywhere data changes.
- * @param {Object} params
- * @param {() => import('#test/create-test-server.js').TestServer} params.server
- * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
- */
-export function testRegulatorIsRefused({ server, makeRequest }) {
-  it('returns 403 for a regulator standard user', async () => {
-    const requestConfig = await makeRequest()
-    const response = await server().inject({
-      ...requestConfig,
-      headers: {
-        ...requestConfig.headers,
-        Authorization: `Bearer ${entraIdMockAuthTokens.regulatorToken}`
-      }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
-  })
-}
-
-/**
  * @param {Object} params
  * @param {() => import('#test/create-test-server.js').TestServer} params.server
  * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest

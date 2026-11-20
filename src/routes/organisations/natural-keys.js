@@ -7,13 +7,13 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { servesOrganisationOn } from '#organisation-read-model/repository/to-read-model.js'
+import { servesOrganisationOn } from '#organisation-read-model/index.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
+ * @import { Organisation as ReadModelOrganisation, Registration as ReadModelRegistration } from '#organisation-read-model/vocabulary.js'
  * @import { ManagedOrganisation, OrganisationLinkingRepository } from '#repositories/organisations/linking-port.js'
  *
  * @typedef {{ organisationNumber: OrganisationNumber }} OrganisationParams

@@ -9,7 +9,7 @@ import {
   GLASS_RECYCLING_PROCESS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/repository/mongodb.js'
+import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { SUMMARY_LOG_ROW_STATES_COLLECTION_NAME } from '#waste-records/repository/mongodb.js'
 import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mongodb.js'

@@ -2,7 +2,7 @@
 /** @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js' */
 /** @import { Cadence } from '#reports/domain/cadence.js' */
 /** @import { PeriodicReport, WasteSentSummary } from '#reports/repository/port.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { ReportableRegistration } from '#reports/application/reportable-registrations.js' */
 /** @import { AccreditationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 

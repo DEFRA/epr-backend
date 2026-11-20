@@ -11,17 +11,17 @@ import { seedInFlightResubmission } from '#vite/helpers/seed-inflight-resubmissi
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadOrganisation,
   buildReadReprocessorRegistration,
   registrationOf,
-  servedOrganisations
-} from '#organisation-read-model/repository/read-model-test-data.js'
-import { REPROCESSOR_NUMBER } from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
+  servedOrganisations,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { config } from '#root/config.js'
 
 // ---------------------------------------------------------------------------
@@ -472,7 +472,7 @@ describe('generateReportCompliance', () => {
         }
       })
 
-    /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
+    /** @param {import('#organisation-read-model/vocabulary.js').Organisation} organisation */
     const complianceFor = async (organisation) =>
       generateReportCompliance(
         await createInMemoryOrganisationReadRepository([
@@ -481,7 +481,7 @@ describe('generateReportCompliance', () => {
         createInMemoryReportsRepository()()
       )
 
-    /** @param {import('#organisation-read-model/domain/model.js').Organisation} organisation */
+    /** @param {import('#organisation-read-model/vocabulary.js').Organisation} organisation */
     const entryKeyOf = (organisation) =>
       registrationKey(reportKeyOf(organisation, registrationOf(organisation)))
 

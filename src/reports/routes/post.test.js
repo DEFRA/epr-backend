@@ -1,14 +1,19 @@
 import { CADENCE } from '#reports/domain/cadence.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   approvedStatusFrom,
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+  buildReadReprocessorRegistration,
+  accreditation,
+  exporter,
+  exporterAccreditation,
+  granted,
+  reprocessor
+} from '#organisation-read-model/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { calendarDate } from '#common/helpers/date-formatter.js'
@@ -33,13 +38,6 @@ import {
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import {
-  accreditation,
-  exporter,
-  exporterAccreditation,
-  granted,
-  reprocessor
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES

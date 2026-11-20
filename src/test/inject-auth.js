@@ -140,10 +140,3 @@ export const asUnscopedAdminUser = (overrides = {}) => ({
     }
   }
 })
-
-export const ADMIN_TIER_HELPERS = {
-  service_maintainer_write: asServiceMaintainerWrite,
-  service_maintainer: asServiceMaintainerRead,
-  support: asSupport,
-  unscoped: asUnscopedAdminUser
-}

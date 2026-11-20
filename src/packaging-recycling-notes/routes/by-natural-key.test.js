@@ -4,13 +4,15 @@ import {
 } from '#domain/organisations/numbers.js'
 import { ObjectId } from 'mongodb'
 import { toYear } from '#common/helpers/dates/year.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/repository/inmemory.js'
 import {
+  createInMemoryOrganisationReadRepository,
   accreditationsByYear,
   buildReadAccreditation,
   buildReadOrganisation,
-  buildReadReprocessorRegistration
-} from '#organisation-read-model/repository/read-model-test-data.js'
+  buildReadReprocessorRegistration,
+  ACCREDITATION_NUMBER,
+  REPROCESSOR_NUMBER
+} from '#organisation-read-model/test-support.js'
 import { StatusCodes } from 'http-status-codes'
 
 import { createTestServer } from '#test/create-test-server.js'
@@ -41,10 +43,6 @@ import {
   buildPrnCreationCancelledEvent,
   buildPrnIssuedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import {
-  ACCREDITATION_NUMBER,
-  REPROCESSOR_NUMBER
-} from '#organisation-read-model/repository/contract/organisation-read-test-helpers.js'
 import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 
 /**

@@ -1,5 +1,5 @@
 import { registerDependency } from '#plugins/register-dependency.js'
-import { createOrganisationReadRepository } from './mongodb.js'
+import { createOrganisationReadRepository } from './mongodb-and-reg-accred-api.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */

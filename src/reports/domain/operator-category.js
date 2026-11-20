@@ -5,7 +5,7 @@ import { isRegistrationAccredited } from '#domain/organisations/registration-uti
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { WasteProcessingTypeValue } from '#domain/organisations/model.js'
  * @import { AccreditationLink } from '#domain/organisations/registration-utils.js'
- * @import { Registration as ReadModelRegistration } from '#organisation-read-model/domain/model.js'
+ * @import { Registration as ReadModelRegistration } from '#organisation-read-model/vocabulary.js'
  */
 
 /**

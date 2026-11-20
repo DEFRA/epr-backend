@@ -3,7 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { REG_ACCRED_ACCREDITATION_YEAR } from '#organisation-read-model/repository/reg-accred-accreditations.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from '#organisation-read-model/index.js'
 import { registrationParams } from '#routes/organisations/natural-keys.js'
 import { externalAccreditationPayloadSchema } from './put.schema.js'
 
@@ -11,8 +11,8 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExternalAccreditationsRepository } from '#external-accreditations/repository/port.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {{ registrationNumber: RegistrationNumber, year: Year }} ExternalAccreditationParams
