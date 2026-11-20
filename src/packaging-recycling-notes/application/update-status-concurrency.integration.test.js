@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect, vi } from 'vitest'
+import { describe, beforeEach, afterEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 
@@ -17,7 +17,8 @@ import {
 import {
   PRN_YEAR,
   buildAccreditationSnapshot,
-  buildAwaitingAcceptancePrn
+  buildAwaitingAcceptancePrn,
+  WITHIN_PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   createMongoLedgerRepository,
@@ -155,6 +156,7 @@ describe('PRN status concurrency against real MongoDB', () => {
   let prnId
 
   beforeEach(async (/** @type {*} */ { mongoClient }) => {
+    vi.useFakeTimers({ toFake: ['Date'], now: WITHIN_PRN_YEAR })
     database = mongoClient.db(DATABASE_NAME)
     await database.collection(PRNS_COLLECTION).deleteMany({})
     await database
@@ -194,6 +196,10 @@ describe('PRN status concurrency against real MongoDB', () => {
       })
     )
     prnId = id
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   const cancel = (repositoryFactory) =>

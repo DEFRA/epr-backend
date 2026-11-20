@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { beforeEach, describe, expect, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 
 import {
   toAccreditationNumber,
@@ -186,6 +186,17 @@ describe('status history written, then read by the PRN routes (integration)', ()
   )
 
   describe('an accreditation status', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: new Date('2026-06-01T12:00:00.000Z')
+      })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     /**
      * Writes the accreditation status change, then asks to issue the PRN.
      *
