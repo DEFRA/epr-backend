@@ -90,6 +90,7 @@ const seedSubmittedSummaryLog = (db) =>
     organisationNumber: String(orgNumber),
     registrationNumber: regNumber,
     accreditationNumber: null,
+    year: 2026,
     number: 1,
     kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
     payload: { summaryLogId, creditTotal: 0 }
@@ -119,7 +120,7 @@ describe(`GET ${tonnageMonitoringPath} (integration)`, () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: tonnageMonitoringPath,
+      url: tonnageMonitoringPath.replace('{year}', '2026'),
       headers: { Authorization: `Bearer ${validToken}` }
     })
 
