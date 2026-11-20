@@ -48,12 +48,12 @@ export const overseasSites = [approvedSite, pendingSite]
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 /** @import { StoredRegOrAccStatus } from '#domain/organisations/model.js' */
 /** @import { Organisation, Status, StatusTimeline } from '#organisation-read-model/domain/model.js' */
-/** @import { OrganisationReadRepository } from '../port.js' */
+/** @import { FindByYearOptions, OrganisationReadRepository } from '../port.js' */
 
 /**
  * @param {OrganisationReadRepository} repository
  * @param {string} organisationNumber
- * @param {import('../port.js').FindByOrganisationNumberOptions} [options]
+ * @param {FindByYearOptions} [options]
  * @returns {Promise<Organisation>}
  */
 export const findOrganisation = async (

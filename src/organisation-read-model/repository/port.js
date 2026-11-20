@@ -10,7 +10,7 @@
  *
  * @typedef {{
  *   year?: Year
- * }} FindByOrganisationNumberOptions
+ * }} FindByYearOptions
  */
 
 /**
@@ -39,9 +39,9 @@
 
 /**
  * @typedef {Object} OrganisationReadRepository
- * @property {(organisationNumber: OrganisationNumber, options?: FindByOrganisationNumberOptions) => Promise<Organisation | null>} findByOrganisationNumber
+ * @property {(organisationNumber: OrganisationNumber, options?: FindByYearOptions) => Promise<Organisation | null>} findByOrganisationNumber
  * @property {(params: FindParams) => Promise<OrganisationPage>} find - Organisations matching every criterion, sorted by name, a page at a time
- * @property {() => Promise<Organisation[]>} findAll - Every organisation the model serves
+ * @property {(options?: FindByYearOptions) => Promise<Organisation[]>} findAll - Every organisation the model serves
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
