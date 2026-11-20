@@ -9,7 +9,8 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,
-  underAccreditation
+  underAccreditation,
+  WITHIN_PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { COLLECTION_NAME as PRNS_COLLECTION } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -189,7 +190,7 @@ describe('status history written, then read by the PRN routes (integration)', ()
     beforeEach(() => {
       vi.useFakeTimers({
         toFake: ['Date'],
-        now: new Date('2026-06-01T12:00:00.000Z')
+        now: WITHIN_PRN_YEAR
       })
     })
 

@@ -20,7 +20,10 @@ import {
   buildReadApprovedOrganisation,
   nextReadOrganisationNumber as nextOrganisationNumber
 } from '#organisation-read-model/test-support.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  summaryLogFactory,
+  WITHIN_DEFAULT_TEMPLATE_YEAR
+} from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 
@@ -54,7 +57,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
     beforeEach(() => {
       vi.useFakeTimers({
         toFake: ['Date'],
-        now: new Date('2026-06-01T12:00:00.000Z')
+        now: WITHIN_DEFAULT_TEMPLATE_YEAR
       })
     })
 
