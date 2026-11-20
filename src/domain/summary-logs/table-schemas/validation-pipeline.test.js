@@ -11,6 +11,9 @@ import {
   CLASSIFICATION_REASON
 } from './shared/classify-helpers.js'
 import { customJoi } from '#common/validation/custom-joi.js'
+import { toYear } from '#common/helpers/dates/year.js'
+
+const IN_2026 = { summaryLogYear: toYear(2026) }
 
 describe('validation-pipeline', () => {
   describe('ROW_OUTCOME', () => {
@@ -156,7 +159,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = { ROW_ID: 9999, TEXT_FIELD: 'valid' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
         expect(result.issues).toBeDefined()
@@ -167,7 +170,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = { ROW_ID: 9999, DROPDOWN: 'Invalid Option' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
         expect(result.issues.length).toBe(2)
@@ -178,7 +181,7 @@ describe('validation-pipeline', () => {
         // DROPDOWN has unfilled value, so should not be validated
         const row = { ROW_ID: 10000, DROPDOWN: 'Please select...' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         // Should not be REJECTED because 'Please select...' is unfilled
         expect(result.outcome).not.toBe(ROW_OUTCOME.REJECTED)
@@ -190,7 +193,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = { ROW_ID: 10000 } // TEXT_FIELD missing
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.issues).toBeDefined()
@@ -201,7 +204,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = { ROW_ID: 10000, TEXT_FIELD: '' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
       })
@@ -210,7 +213,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = {} // Both ROW_ID and TEXT_FIELD missing
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.issues.length).toBe(2)
@@ -222,7 +225,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = { ROW_ID: 10000, TEXT_FIELD: 'value' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.issues).toEqual([])
@@ -236,7 +239,7 @@ describe('validation-pipeline', () => {
           DROPDOWN: 'Option A'
         }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
       })
@@ -248,7 +251,7 @@ describe('validation-pipeline', () => {
         // ROW_ID invalid AND TEXT_FIELD missing
         const row = { ROW_ID: 9999 }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         // VAL010 should fail first, resulting in REJECTED
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
@@ -270,7 +273,7 @@ describe('validation-pipeline', () => {
 
         const row = { ROW_ID: 10001, SOME_FIELD: 'valid value' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.issues).toEqual([])
@@ -289,7 +292,7 @@ describe('validation-pipeline', () => {
 
         const row = { ROW_ID: 9999 }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
         expect(result.issues.length).toBeGreaterThan(0)
@@ -301,7 +304,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = { ROW_ID: 10000 } // TEXT_FIELD missing
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.issues).toEqual([
@@ -323,7 +326,7 @@ describe('validation-pipeline', () => {
 
         const row = { SOME_FIELD: 'value' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.issues).toEqual([])
@@ -343,7 +346,7 @@ describe('validation-pipeline', () => {
 
         const row = { SOME_FIELD: 'value' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.issues).toEqual([])
@@ -365,7 +368,7 @@ describe('validation-pipeline', () => {
 
         const row = { SOME_FIELD: 'value' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.issues).toEqual([])
@@ -375,7 +378,7 @@ describe('validation-pipeline', () => {
         const schema = createTestSchema()
         const row = { ROW_ID: 10000, TEXT_FIELD: 'value' }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.issues).toEqual([])
@@ -429,7 +432,7 @@ describe('validation-pipeline', () => {
 
         const row = { VALUE_A: 10, VALUE_B: 5, RESULT: 100 } // Should be 50
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
         expect(result.issues).toStrictEqual([
@@ -465,7 +468,7 @@ describe('validation-pipeline', () => {
         const schema = createCoercedSchema()
         const row = { ROW_ID: 100, SUPPLIER_NAME: 0, EWC_CODE: 12345 }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.INCLUDED)
         expect(result.data).toEqual({
@@ -499,7 +502,7 @@ describe('validation-pipeline', () => {
           NULL_VALUE: null
         }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.data).toEqual({
           SUPPLIER_NAME: '0',
@@ -527,7 +530,7 @@ describe('validation-pipeline', () => {
         }
         const row = { SUPPLIER_NAME: 0 }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
         expect(result.data.SUPPLIER_NAME).toBe('0')
@@ -551,7 +554,7 @@ describe('validation-pipeline', () => {
         }
         const row = { ROW_ID: 1, SUPPLIER_NAME: 0 }
 
-        const result = classifyRow(row, schema)
+        const result = classifyRow(row, schema, IN_2026)
 
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
         expect(result.data.SUPPLIER_NAME).toBe('0')

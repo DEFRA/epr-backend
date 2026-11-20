@@ -312,8 +312,10 @@ const runValidationChecks = async (
   }
 
   // Data syntax validation returns validated data with issues attached to rows
-  const { issues: dataSyntaxIssues, validatedData } =
-    createDataSyntaxValidator(tableSchemas)(parsed)
+  const { issues: dataSyntaxIssues, validatedData } = createDataSyntaxValidator(
+    tableSchemas,
+    { summaryLogYear: summaryLog.year }
+  )(parsed)
   issues.merge(dataSyntaxIssues)
 
   if (issues.isFatal()) {

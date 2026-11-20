@@ -86,6 +86,20 @@ describe('SENT_ON_LOADS (REPROCESSOR_OUTPUT)', () => {
       expect(error).toBeUndefined()
     })
 
+    it('rejects an invalid DATE_LOAD_LEFT_SITE', () => {
+      const { error } = validationSchema.validate({
+        DATE_LOAD_LEFT_SITE: 'not-a-date'
+      })
+      expect(error?.details[0].path).toStrictEqual(['DATE_LOAD_LEFT_SITE'])
+    })
+
+    it('accepts a valid DATE_LOAD_LEFT_SITE', () => {
+      const { error } = validationSchema.validate({
+        DATE_LOAD_LEFT_SITE: '2026-03-01'
+      })
+      expect(error).toBeUndefined()
+    })
+
     it('does not add a value-format rule for EWC_CODE or WEIGHBRIDGE_TICKET', () => {
       const { error } = validationSchema.validate({
         EWC_CODE: '99 99 99',
