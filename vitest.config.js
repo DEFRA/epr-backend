@@ -1,6 +1,6 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 
-import { isolatedTestFiles, sharedTestFiles } from './.vite/split-test-files.js'
+import { sharedTestFiles, testFilePatterns } from './.vite/split-test-files.js'
 
 export default defineConfig({
   test: {
@@ -13,7 +13,11 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        test: { name: 'isolated', include: isolatedTestFiles }
+        test: {
+          name: 'isolated',
+          include: testFilePatterns,
+          exclude: [...configDefaults.exclude, ...sharedTestFiles]
+        }
       },
       {
         extends: true,
