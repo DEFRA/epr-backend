@@ -20,6 +20,7 @@ import {
   toOrganisationStatusTimeline,
   toRegistrationStatusTimeline
 } from './to-status-timeline.js'
+import { organisationInYear } from './organisation-in-year.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation } from '#domain/organisations/accreditation.js' */
@@ -117,12 +118,14 @@ const byRegistrationAndYear = (externalAccreditations, onDrop) =>
  *   overseasSitesRepository: Pick<OverseasSitesRepository, 'findByIds'>
  *   logger: Pick<TypedLogger, 'warn'>
  * }} dependencies
+ * @param {Year} [year]
  * @returns {Promise<Organisation[]>}
  */
 export async function toReadModelOrganisations(
   stored,
   externalAccreditations,
-  { overseasSitesRepository, logger }
+  { overseasSitesRepository, logger },
+  year
 ) {
   const siteIds = stored.flatMap(({ registrations }) =>
     registrations.flatMap((registration) =>
@@ -143,11 +146,17 @@ export async function toReadModelOrganisations(
     externalAccreditations,
     context.onDrop
   )
-  return stored
+  const organisations = stored
     .map((organisation) =>
       toOrganisation(organisation, context, externalByRegistration)
     )
     .filter((organisation) => organisation !== null)
+
+  return year === undefined
+    ? organisations
+    : organisations.map((organisation) =>
+        organisationInYear(organisation, year)
+      )
 }
 
 /**
