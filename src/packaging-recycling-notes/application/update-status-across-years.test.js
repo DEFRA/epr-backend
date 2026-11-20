@@ -18,16 +18,12 @@ import {
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import {
-  accreditationsByYear,
-  approvedStatusFrom,
-  buildReadAccreditation,
-  buildReadOrganisation,
-  buildReadReprocessorRegistration,
-  createInMemoryOrganisationReadRepository
-} from '#organisation-read-model/test-support.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { createMockLogger } from '#test/mock-logger.js'
+import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
+
+import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
 
 vi.mock('./metrics.js', () => ({
   prnMetrics: {
@@ -74,16 +70,6 @@ const ledgerIdOf = (year) => ({
   year: YEARS[year].year
 })
 
-const buildLogger = () => ({
-  info: vi.fn(),
-  error: vi.fn(),
-  warn: vi.fn(),
-  debug: vi.fn(),
-  trace: vi.fn(),
-  fatal: vi.fn(),
-  child: vi.fn()
-})
-
 /** @param {number} year */
 const draftPrnFor = (year) => ({
   ...buildDraftPrn({
@@ -103,7 +89,7 @@ const draftPrnFor = (year) => ({
 })
 
 const setup = async () => {
-  const logger = buildLogger()
+  const logger = createMockLogger()
   const prnRepository = createInMemoryPackagingRecyclingNotesRepository([
     draftPrnFor(2026),
     draftPrnFor(2027)
@@ -115,7 +101,7 @@ const setup = async () => {
       buildLedgerEvent({
         ...ledgerIdOf(year),
         payload: {
-          summaryLogId: `log-${year}`,
+          summaryLogId: toSummaryLogFileId(`log-${year}`),
           creditTotal: YEARS[year].opening
         },
         closingBalance: {
@@ -126,27 +112,10 @@ const setup = async () => {
     ])
   }
 
-  const organisationReadRepository = createInMemoryOrganisationReadRepository([
-    buildReadOrganisation({
-      organisationNumber: ORGANISATION_NUMBER,
-      name: 'Test Reprocessor',
-      registrations: {
-        [REGISTRATION_NUMBER]: buildReadReprocessorRegistration({
-          material: 'plastic',
-          reprocessingType: 'input',
-          accreditations: accreditationsByYear(
-            ...[2026, 2027].map((year) =>
-              buildReadAccreditation({
-                accreditationNumber: YEARS[year].accreditationNumber,
-                year: YEARS[year].year,
-                status: approvedStatusFrom(`${year}-01-01`)
-              })
-            )
-          )
-        })
-      }
-    })
-  ])()
+  const organisationReadRepository = readRepositoryHolding({
+    ...ledgerIdOf(2026),
+    alsoHeld: [ledgerIdOf(2027)]
+  })
 
   /**
    * @param {number} year

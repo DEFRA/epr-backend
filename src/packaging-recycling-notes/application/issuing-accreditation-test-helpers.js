@@ -25,7 +25,8 @@ import {
  *   status?: AccreditationStatus,
  *   wasteProcessingType?: 'reprocessor' | 'exporter',
  *   reprocessingType?: 'input' | 'output',
- *   withAccreditation?: boolean
+ *   withAccreditation?: boolean,
+ *   alsoHeld?: Array<{ accreditationNumber: AccreditationNumber, year: Year }>
  * }} HeldAccreditation
  */
 
@@ -39,17 +40,21 @@ const heldRegistration = ({
   status = 'approved',
   wasteProcessingType = WASTE_PROCESSING_TYPE.REPROCESSOR,
   reprocessingType = 'input',
-  withAccreditation = true
+  withAccreditation = true,
+  alsoHeld = []
 }) => {
-  const accreditation = {
-    accreditationNumber,
-    year,
-    status: { ...approvedStatusFrom(`${year}-01-01`), current: status }
-  }
+  const accreditations = [{ accreditationNumber, year }, ...alsoHeld].map(
+    (held) => ({
+      ...held,
+      status: { ...approvedStatusFrom(`${held.year}-01-01`), current: status }
+    })
+  )
   if (wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER) {
     return buildReadExporterRegistration({
       accreditations: withAccreditation
-        ? accreditationsByYear(buildReadExporterAccreditation(accreditation))
+        ? accreditationsByYear(
+            ...accreditations.map(buildReadExporterAccreditation)
+          )
         : {}
     })
   }
@@ -57,15 +62,16 @@ const heldRegistration = ({
     material: 'plastic',
     reprocessingType,
     accreditations: withAccreditation
-      ? accreditationsByYear(buildReadAccreditation(accreditation))
+      ? accreditationsByYear(...accreditations.map(buildReadAccreditation))
       : {}
   })
 }
 
 /**
  * An organisation read repository serving one organisation, with one
- * registration holding an accreditation for one year, for tests of PRN code
- * that reads the accreditation a PRN was raised against.
+ * registration holding an accreditation for one year, and for each of
+ * `alsoHeld` another, for tests of PRN code that reads the accreditation a PRN
+ * was raised against.
  *
  * @param {HeldAccreditation} held
  * @returns {OrganisationReadRepository}
