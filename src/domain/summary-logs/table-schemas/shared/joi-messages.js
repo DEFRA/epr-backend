@@ -9,6 +9,8 @@ export const MESSAGES = Object.freeze({
   MUST_BE_A_NUMBER: 'must be a number',
   MUST_BE_A_STRING: 'must be a string',
   MUST_BE_A_VALID_DATE: 'must be a valid date',
+  MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR:
+    'must not be in a later year than the summary log',
   MUST_BE_GREATER_THAN_ZERO: 'must be greater than 0',
   MUST_BE_AT_LEAST_ZERO: 'must be at least 0',
   MUST_BE_AT_MOST_1: 'must be at most 1',

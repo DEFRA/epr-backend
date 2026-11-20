@@ -46,6 +46,8 @@ import { signedCallback } from '#test/upload-callback.js'
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
+import { onTestFinished } from 'vitest'
+import { config } from '#root/config.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -635,6 +637,99 @@ export const createRegisteredOnlyMeta = (processingType) => {
       location: { sheet: 'Cover', row: 4, column: 'B' }
     }
   }
+}
+
+/**
+ * @param {Record<string, any>} meta
+ * @param {Year} year
+ */
+export const withTemplateYear = (meta, year) => ({
+  ...meta,
+  TEMPLATE_VERSION: {
+    ...meta.TEMPLATE_VERSION,
+    value: getTemplate(year, meta.PROCESSING_TYPE.value).minVersion
+  }
+})
+
+export const openNextYear = () => {
+  config.set('openNextYear', true)
+  onTestFinished(() => config.reset('openNextYear'))
+}
+
+export const EXPORTER_2027_HEADERS = [
+  ...EXPORTER_HEADERS,
+  'PREVIOUS_YEAR_ROW_ID',
+  'EXIT_PORT',
+  'DWT_EXPORT_ID',
+  'DWT_SUPPLY_ID'
+]
+
+/** @param {Record<string, any>[]} rows */
+export const exporter2027Loads = (rows) => ({
+  RECEIVED_LOADS_FOR_EXPORT: {
+    location: { sheet: 'Exported (sections 1, 2 and 3)', row: 7, column: 'A' },
+    headers: EXPORTER_2027_HEADERS,
+    rows: rows.map(
+      (
+        {
+          previousYearRowId = null,
+          exitPort = null,
+          dwtExportId = null,
+          dwtSupplyId = null,
+          ...row
+        },
+        index
+      ) => ({
+        rowNumber: 8 + index,
+        values: [
+          ...createExporterRowValues({
+            dateReceived: '2027-01-15',
+            dateReceivedByOsr: '2027-01-18',
+            exportDate: '2027-01-20',
+            ...row
+          }),
+          previousYearRowId,
+          exitPort,
+          dwtExportId,
+          dwtSupplyId
+        ]
+      })
+    )
+  }
+})
+
+/**
+ * @param {Awaited<ReturnType<typeof setupWasteBalanceIntegrationEnvironment>>} env
+ * @param {{ summaryLogId: string, fileId: string }} ids
+ * @param {object} parsed
+ */
+export const uploadAndValidate = async (
+  env,
+  { summaryLogId, fileId },
+  parsed
+) => {
+  env.fileDataMap[fileId] = parsed
+  await env.server.inject({
+    method: 'POST',
+    url: buildPostUrl(summaryLogId, {
+      accredited: env.accredited,
+      year: env.year
+    }),
+    payload: createUploadPayload(
+      env.organisationId,
+      env.registrationId,
+      UPLOAD_STATUS.COMPLETE,
+      fileId,
+      `${fileId}.xlsx`
+    )
+  })
+  await pollForValidation(env.server, summaryLogId)
+  const response = await env.server.inject({
+    method: 'GET',
+    url: buildGetUrl(summaryLogId),
+    ...asOperator()
+  })
+  return JSON.parse(response.payload)
 }
 
 /**
