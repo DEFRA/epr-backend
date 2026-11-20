@@ -1,5 +1,14 @@
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+  vi
+} from 'vitest'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
@@ -11,7 +20,10 @@ import {
   buildReadApprovedOrganisation,
   nextReadOrganisationNumber as nextOrganisationNumber
 } from '#organisation-read-model/test-support.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  summaryLogFactory,
+  WITHIN_DEFAULT_TEMPLATE_YEAR
+} from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 
@@ -42,6 +54,17 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   })
 
   describe('successful requests', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: WITHIN_DEFAULT_TEMPLATE_YEAR
+      })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     it('returns 200 with summary log uploads report data', async () => {
       const organisationNumber = nextOrganisationNumber()
       const org = buildReadApprovedOrganisation({ organisationNumber })

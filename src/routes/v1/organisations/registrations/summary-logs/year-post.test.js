@@ -16,6 +16,7 @@ import {
   onTestFinished,
   vi
 } from 'vitest'
+import { WITHIN_DEFAULT_TEMPLATE_YEAR } from '#repositories/summary-logs/contract/test-data.js'
 
 import { config } from '#root/config.js'
 
@@ -62,6 +63,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   describe('an active registration only the read model holds', () => {
+    beforeAll(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: WITHIN_DEFAULT_TEMPLATE_YEAR
+      })
+    })
+
+    afterAll(() => {
+      vi.useRealTimers()
+    })
+
     /** @type {Organisation} */
     const organisation = partialMock(
       buildOrganisation({ registrations: [reprocessor()] })
@@ -239,7 +251,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const uploadTo = (organisation, token = defraIdMockAuthTokens.validToken) =>
       server.inject({
         method: 'POST',
-        url: buildUrl(organisation, new Date().getFullYear()),
+        url: buildUrl(organisation, 2026),
         headers: {
           Authorization: `Bearer ${token}`
         },
