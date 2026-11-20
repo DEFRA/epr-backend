@@ -141,10 +141,25 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         ACTIVITIES_CARRIED_OUT_BY_SUPPLIER: 'anything at all',
         WAS_THE_WASTE_REFUSED: 'Maybe',
         WAS_THE_WASTE_STOPPED: 'Perhaps',
-        DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: 'not-a-date',
         LOADING_SITE_POSTCODE: 'café',
         OSR_COUNTRY: 'Somewhere-XX',
         TONNAGE_RECEIVED_BY_OSR: 'heavy'
+      })
+      expect(error).toBeUndefined()
+    })
+
+    it('rejects an invalid DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED', () => {
+      const { error } = validationSchema.validate({
+        DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: 'not-a-date'
+      })
+      expect(error?.details[0].path).toStrictEqual([
+        'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
+      ])
+    })
+
+    it('accepts a valid DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED', () => {
+      const { error } = validationSchema.validate({
+        DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: '2026-03-01'
       })
       expect(error).toBeUndefined()
     })

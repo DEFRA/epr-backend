@@ -7,6 +7,9 @@ describe('joi-messages', () => {
       expect(MESSAGES.MUST_BE_A_NUMBER).toBe('must be a number')
       expect(MESSAGES.MUST_BE_A_STRING).toBe('must be a string')
       expect(MESSAGES.MUST_BE_A_VALID_DATE).toBe('must be a valid date')
+      expect(MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR).toBe(
+        'must not be in a later year than the summary log'
+      )
       expect(MESSAGES.MUST_BE_GREATER_THAN_ZERO).toBe('must be greater than 0')
       expect(MESSAGES.MUST_BE_AT_LEAST_ZERO).toBe('must be at least 0')
       expect(MESSAGES.MUST_BE_LESS_THAN_ONE).toBe('must be less than 1')
