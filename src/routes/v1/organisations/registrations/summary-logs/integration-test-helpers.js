@@ -804,7 +804,7 @@ export const createTestInfrastructure = async (
     summaryLogRowStatesRepository,
     ledgerRepository,
     reportsService: /** @type {any} */ ({
-      findPeriodicReports: async () => []
+      findPeriodicReport: async () => null
     }),
     summaryLogExtractor,
     logger: mockLogger

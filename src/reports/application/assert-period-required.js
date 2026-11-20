@@ -13,7 +13,7 @@ import { hasStoredSubmission } from './submission-lookup.js'
  * Throws a 404 Boom when the registration owes no report for the period and
  * has none stored for it.
  *
- * @param {PeriodicReport[]} storedReports
+ * @param {PeriodicReport | null} storedReport
  * @param {GeneratedPeriod[]} requiredPeriods
  * @param {Year} year
  * @param {Cadence} cadence
@@ -21,7 +21,7 @@ import { hasStoredSubmission } from './submission-lookup.js'
  * @returns {void}
  */
 export const assertPeriodRequired = (
-  storedReports,
+  storedReport,
   requiredPeriods,
   year,
   cadence,
@@ -29,7 +29,7 @@ export const assertPeriodRequired = (
 ) => {
   const required = requiredPeriods.some((owed) => owed.period === period)
 
-  if (!required && !hasStoredSubmission(storedReports, year, cadence, period)) {
+  if (!required && !hasStoredSubmission(storedReport, cadence, period)) {
     throw notFound(
       `No report is required for ${cadence} period ${period} of ${year}`,
       errorCodes.periodNotRequired,

@@ -458,7 +458,7 @@ describe('Advanced validation scenarios', () => {
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
-          findPeriodicReports: async () => []
+          findPeriodicReport: async () => null
         })
       })
       server = await createTestServer({
@@ -626,7 +626,7 @@ describe('Advanced validation scenarios', () => {
         summaryLogExtractor,
         logger: mockLogger,
         reportsService: /** @type {any} */ ({
-          findPeriodicReports: async () => []
+          findPeriodicReport: async () => null
         })
       })
       server = await createTestServer({

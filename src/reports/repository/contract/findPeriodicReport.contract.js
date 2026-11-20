@@ -23,8 +23,8 @@ const DEFAULT_KEY = {
   year: DEFAULT_REPORT_YEAR
 }
 
-export const testFindPeriodicReportsBehaviour = (it) => {
-  describe('findPeriodicReports', () => {
+export const testFindPeriodicReportBehaviour = (it) => {
+  describe('findPeriodicReport', () => {
     let repository
 
     beforeEach(
@@ -37,43 +37,43 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       }
     )
 
-    it('returns empty array when no reports exist for org/reg', async () => {
-      const result = await repository.findPeriodicReports(DEFAULT_KEY)
+    it('returns null when no reports exist for org/reg/year', async () => {
+      const result = await repository.findPeriodicReport(DEFAULT_KEY)
 
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
     it('does not return reports belonging to a different organisation', async () => {
       await repository.createReport(buildCreateReportParams())
 
-      const result = await repository.findPeriodicReports({
+      const result = await repository.findPeriodicReport({
         ...DEFAULT_KEY,
         organisationNumber: uniqueOrganisationNumber()
       })
 
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
     it('does not return reports belonging to a different registration', async () => {
       await repository.createReport(buildCreateReportParams())
 
-      const result = await repository.findPeriodicReports({
+      const result = await repository.findPeriodicReport({
         ...DEFAULT_KEY,
         registrationNumber: uniqueRegistrationNumber()
       })
 
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
     it('does not return reports belonging to a different year', async () => {
       await repository.createReport(buildCreateReportParams())
 
-      const result = await repository.findPeriodicReports({
+      const result = await repository.findPeriodicReport({
         ...DEFAULT_KEY,
         year: NEXT_REPORT_YEAR
       })
 
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
     it('returns the full periodic report document', async () => {
@@ -81,7 +81,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         buildCreateReportParams()
       )
 
-      const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
+      const result = await repository.findPeriodicReport(DEFAULT_KEY)
 
       expect(result).toMatchObject({
         ...DEFAULT_KEY,
@@ -113,7 +113,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         buildCreateReportParams({ period: MONTHLY_PERIODS.February })
       )
 
-      const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
+      const result = await repository.findPeriodicReport(DEFAULT_KEY)
 
       expect(result).toMatchObject({
         ...DEFAULT_KEY,
@@ -162,7 +162,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
         })
       )
 
-      const [result] = await repository.findPeriodicReports(DEFAULT_KEY)
+      const result = await repository.findPeriodicReport(DEFAULT_KEY)
 
       expect(result).toMatchObject({
         ...DEFAULT_KEY,
@@ -196,7 +196,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
 
     it('throws on missing required params', async () => {
       await expect(
-        repository.findPeriodicReports({
+        repository.findPeriodicReport({
           organisationNumber: DEFAULT_ORG_NUMBER
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
@@ -204,7 +204,7 @@ export const testFindPeriodicReportsBehaviour = (it) => {
 
     it('throws when year is missing', async () => {
       await expect(
-        repository.findPeriodicReports({
+        repository.findPeriodicReport({
           organisationNumber: DEFAULT_ORG_NUMBER,
           registrationNumber: DEFAULT_REG_NUMBER
         })

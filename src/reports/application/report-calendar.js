@@ -211,13 +211,13 @@ const mergedPeriods = (
 
 /**
  * A registration's ended reporting periods in a year, merged with its stored
- * reports, registered-only (quarterly) and accredited (monthly) separately. A
- * stored report outside its kind's periods is listed unless the report routes
- * refuse it.
+ * report for that year, registered-only (quarterly) and accredited (monthly)
+ * separately. A stored report outside its kind's periods is listed unless the
+ * report routes refuse it.
  *
  * @param {{
  *   registration: Registration,
- *   storedReports: PeriodicReport[],
+ *   storedReport: PeriodicReport | null,
  *   year: Year,
  *   now?: Date
  * }} params
@@ -229,12 +229,12 @@ const mergedPeriods = (
  */
 export const reportingPeriodsByKind = ({
   registration,
-  storedReports,
+  storedReport,
   year,
   now = new Date()
 }) => {
   const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
-  const reportsInYear = storedReports.filter((report) => report.year === year)
+  const storedReports = storedReport ? [storedReport] : []
   const accreditation = accreditationForYear(registration, year)
   const options = { now, wholePeriods }
 
@@ -242,13 +242,13 @@ export const reportingPeriodsByKind = ({
     registeredOnly: mergedPeriods(
       CADENCE.quarterly,
       windows.registeredOnly,
-      reportsInYear,
+      storedReports,
       { ...options, served: () => true }
     ),
     accredited: mergedPeriods(
       CADENCE.monthly,
       windows.accredited,
-      reportsInYear,
+      storedReports,
       { ...options, served: servesAccreditedReport(registration, year) }
     ),
     accreditationNumber: accreditation?.accreditationNumber
@@ -293,7 +293,7 @@ export const requiredReportingPeriods = ({
  *
  * @param {{
  *   registration: Registration,
- *   storedReports: PeriodicReport[],
+ *   storedReport: PeriodicReport | null,
  *   year: Year,
  *   allSubmissions?: boolean,
  *   now?: Date
@@ -301,14 +301,14 @@ export const requiredReportingPeriods = ({
  */
 export const yearCalendar = ({
   registration,
-  storedReports,
+  storedReport,
   year,
   allSubmissions = false,
   now = new Date()
 }) => {
   const byKind = reportingPeriodsByKind({
     registration,
-    storedReports,
+    storedReport,
     year,
     now
   })

@@ -37,7 +37,7 @@ import {
  *
  * @typedef {object} ReportsService
  * @property {(params: HasReportSubmittedSinceParams) => Promise<boolean>} hasReportSubmittedSince
- * @property {(params: import('#reports/repository/port.js').FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
+ * @property {(params: import('#reports/repository/port.js').FindPeriodicReportParams) => Promise<PeriodicReport | null>} findPeriodicReport
  * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
 
@@ -49,8 +49,7 @@ export const createReportsService = (reportsRepository) => ({
   hasReportSubmittedSince: (params) =>
     reportsRepository.hasReportSubmittedSince(params),
 
-  findPeriodicReports: (params) =>
-    reportsRepository.findPeriodicReports(params),
+  findPeriodicReport: (params) => reportsRepository.findPeriodicReport(params),
 
   findReportById: (reportId) => reportsRepository.findReportById(reportId)
 })
@@ -73,15 +72,14 @@ export async function fetchReportBySubmissionNumber(
   period,
   submissionNumber
 ) {
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  const periodicReport = await reportsRepository.findPeriodicReport({
     organisationNumber,
     registrationNumber,
     year
   })
 
   const currentReportId = findReportIdBySubmissionNumber(
-    periodicReports,
-    year,
+    periodicReport,
     cadence,
     period,
     submissionNumber
@@ -150,16 +148,15 @@ function buildReportData(aggregated, registration) {
  * so the stored branch never carries it.
  *
  * @param {import('#reports/repository/port.js').Report} storedReport
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @returns {import('#reports/repository/port.js').Report & { canRequestResubmission: boolean }}
  */
-function buildStoredReportResult(storedReport, periodicReports) {
+function buildStoredReportResult(storedReport, periodicReport) {
   return {
     ...storedReport,
-    canRequestResubmission: canRequestResubmission(periodicReports, {
+    canRequestResubmission: canRequestResubmission(periodicReport, {
       status: storedReport.status.currentStatus,
       resubmissionRequired: storedReport.resubmissionRequired,
-      year: storedReport.year,
       cadence: /** @type {Cadence} */ (storedReport.cadence),
       period: storedReport.period,
       submissionNumber: storedReport.submissionNumber
@@ -201,15 +198,14 @@ export async function fetchOrGenerateReportForPeriod({
   reportDataValidationEnabled
 }) {
   const { cadence } = cadenceAccreditation
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  const periodicReport = await reportsRepository.findPeriodicReport({
     organisationNumber,
     registrationNumber,
     year
   })
 
   const currentReportId = findReportIdBySubmissionNumber(
-    periodicReports,
-    year,
+    periodicReport,
     cadence,
     period,
     submissionNumber
@@ -220,10 +216,10 @@ export async function fetchOrGenerateReportForPeriod({
     : null
 
   if (storedReport) {
-    return buildStoredReportResult(storedReport, periodicReports)
+    return buildStoredReportResult(storedReport, periodicReport)
   }
 
-  assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
+  assertPeriodRequired(periodicReport, requiredPeriods, year, cadence, period)
 
   const { latestSubmission, wasteRecordStates } = await readSubmissionRowStates(
     {
@@ -390,22 +386,22 @@ async function assertReportCreationAllowed({
   submissionNumber,
   requiredPeriods
 }) {
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  const periodicReport = await reportsRepository.findPeriodicReport({
     organisationNumber,
     registrationNumber,
     year
   })
 
-  assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
+  assertPeriodRequired(periodicReport, requiredPeriods, year, cadence, period)
   assertNoExistingReport(
-    periodicReports,
+    periodicReport,
     year,
     cadence,
     period,
     submissionNumber
   )
   assertResubmissionAllowed(
-    periodicReports,
+    periodicReport,
     year,
     cadence,
     period,

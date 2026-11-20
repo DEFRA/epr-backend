@@ -71,6 +71,16 @@ export function groupByRegistration(allPeriodicReports) {
 }
 
 /**
+ * A registration's periodic report for one year, from its reports of every year.
+ *
+ * @param {import('#reports/repository/port.js').PeriodicReport[]} storedReports
+ * @param {Year} year
+ * @returns {import('#reports/repository/port.js').PeriodicReport | null}
+ */
+export const periodicReportForYear = (storedReports, year) =>
+  storedReports.find((report) => report.year === year) ?? null
+
+/**
  * Builds a map of report compliance data for every registration of the
  * organisations, as the read model serves them, outside test organisations.
  *
@@ -130,7 +140,7 @@ function submittedDatesFor({ registration, storedReports, years, now }) {
   for (const year of years) {
     const { registeredOnly, accredited } = reportingPeriodsByKind({
       registration,
-      storedReports,
+      storedReport: periodicReportForYear(storedReports, year),
       year,
       now
     })

@@ -141,7 +141,7 @@ const baseParams = {
   submittedRowStatesByKey: /** @type {Map<string, WasteRecordState>} */ (
     new Map()
   ),
-  periodicReports: /** @type {PeriodicReport[]} */ ([])
+  periodicReport: /** @type {PeriodicReport | null} */ (null)
 }
 
 /**
@@ -384,9 +384,10 @@ describe('classifyByPeriodStatus', () => {
       const result = run({
         cadence: 'quarterly',
         operatorCategory: OPERATOR_CATEGORY.REPROCESSOR_REGISTERED_ONLY,
-        periodicReports: [
-          buildSubmittedReport({ cadence: 'quarterly', period: 1 })
-        ],
+        periodicReport: buildSubmittedReport({
+          cadence: 'quarterly',
+          period: 1
+        }),
         wasteRecords: [
           buildWasteRecord({
             data: {
@@ -434,7 +435,7 @@ describe('classifyByPeriodStatus', () => {
 
       const result = run({
         cadence: 'monthly',
-        periodicReports: [report],
+        periodicReport: report,
         wasteRecords: [buildWasteRecord()]
       })
 
@@ -465,7 +466,7 @@ describe('classifyByPeriodStatus', () => {
       )
 
       const result = run({
-        periodicReports: [report],
+        periodicReport: report,
         wasteRecords: [buildWasteRecord()]
       })
 
@@ -521,7 +522,7 @@ describe('classifyByPeriodStatus', () => {
       )
 
       const result = run({
-        periodicReports: [report],
+        periodicReport: report,
         wasteRecords: [buildWasteRecord()]
       })
 
@@ -564,7 +565,7 @@ describe('classifyByPeriodStatus', () => {
 
     it('returns the distinct closed periods that received added loads', () => {
       const result = run({
-        periodicReports: [submittedJan],
+        periodicReport: submittedJan,
         wasteRecords: [
           buildWasteRecord({
             data: {
@@ -582,7 +583,7 @@ describe('classifyByPeriodStatus', () => {
 
     it('deduplicates a period touched by more than one load', () => {
       const result = run({
-        periodicReports: [submittedJan],
+        periodicReport: submittedJan,
         wasteRecords: [
           buildWasteRecord({
             rowId: '10001',
@@ -617,7 +618,7 @@ describe('classifyByPeriodStatus', () => {
       ])
 
       const result = run({
-        periodicReports: [submittedJan],
+        periodicReport: submittedJan,
         submittedRowStatesByKey,
         wasteRecords: [
           buildWasteRecord({
@@ -637,7 +638,7 @@ describe('classifyByPeriodStatus', () => {
 
     it('is empty when no loads fall in a closed period', () => {
       const result = run({
-        periodicReports: [submittedJan],
+        periodicReport: submittedJan,
         wasteRecords: [
           buildWasteRecord({
             data: {

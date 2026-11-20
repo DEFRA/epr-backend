@@ -87,20 +87,20 @@ const withMidYearStatusTransition = (enabled) => {
 /**
  * @param {{
  *   registration: Registration,
- *   storedReports?: PeriodicReport[],
+ *   storedReport?: PeriodicReport | null,
  *   allSubmissions?: boolean,
  *   now?: Date
  * }} params
  */
 const calendar = ({
   registration,
-  storedReports = [],
+  storedReport = null,
   allSubmissions,
   now = AFTER_YEAR_END
 }) =>
   yearCalendar({
     registration,
-    storedReports,
+    storedReport,
     year: toYear(2026),
     allSubmissions,
     now
@@ -270,7 +270,7 @@ describe('yearCalendar', () => {
     it("shows a stored report on its period, without its id or the submitter's", () => {
       const result = calendar({
         registration: registeredSinceLastYear(),
-        storedReports: [storedQuarterOne(2026)]
+        storedReport: storedQuarterOne(2026)
       })
 
       expect(result.registeredOnly?.reportingPeriods[0].report).toEqual({
@@ -302,7 +302,7 @@ describe('yearCalendar', () => {
 
       const result = calendar({
         registration: registeredSinceLastYear(),
-        storedReports: [storedMarch]
+        storedReport: storedMarch
       })
 
       expect(result).not.toHaveProperty('accredited')
@@ -338,7 +338,7 @@ describe('yearCalendar', () => {
       const quarterOneSubmissions = (allSubmissions) =>
         calendar({
           registration: registeredSinceLastYear(),
-          storedReports: [resubmittedQuarterOne],
+          storedReport: resubmittedQuarterOne,
           allSubmissions
         })
           .registeredOnly?.reportingPeriods.filter(({ period }) => period === 1)
@@ -359,19 +359,6 @@ describe('yearCalendar', () => {
           { submissionNumber: 2, periodStatus: PERIOD_STATUS.SUBMITTED }
         ])
       })
-    })
-
-    it('ignores stored reports from other years', () => {
-      const result = calendar({
-        registration: registeredSinceLastYear(),
-        storedReports: [storedQuarterOne(2025)]
-      })
-
-      expect(
-        result.registeredOnly?.reportingPeriods.map(
-          (period) => 'report' in period
-        )
-      ).toEqual([false, false, false, false])
     })
   })
 })
@@ -506,12 +493,12 @@ describe('reportingPeriodsByKind', () => {
 
   /**
    * @param {Registration} registration
-   * @param {PeriodicReport[]} [storedReports]
+   * @param {PeriodicReport | null} [storedReport]
    */
-  const byKind = (registration, storedReports = []) =>
+  const byKind = (registration, storedReport = null) =>
     reportingPeriodsByKind({
       registration,
-      storedReports,
+      storedReport,
       year: toYear(2026),
       now: AFTER_YEAR_END
     })
@@ -541,7 +528,7 @@ describe('reportingPeriodsByKind', () => {
           approvedOn('2026-02-15'),
           cancelledOn('2026-07-10')
         ]),
-        [storedMarch]
+        storedMarch
       )
 
       expect(periodNumbers(result.accredited)).toEqual([3])
@@ -559,7 +546,7 @@ describe('reportingPeriodsByKind', () => {
   })
 
   it('leaves out a stored accredited report with no accreditation for the year', () => {
-    const result = byKind(registeredSinceLastYear(), [storedMarch])
+    const result = byKind(registeredSinceLastYear(), storedMarch)
 
     expect(result.accredited).toEqual([])
     expect(result.accreditationNumber).toBeUndefined()
@@ -573,7 +560,7 @@ describe('reportingPeriodsByKind', () => {
       it('leaves out a stored report for a month before the accreditation began', () => {
         const result = byKind(
           registeredSinceLastYear([approvedOn('2026-04-10')]),
-          [storedMarch]
+          storedMarch
         )
 
         expect(result.accredited.map(({ period }) => period)).not.toContain(3)
@@ -583,7 +570,7 @@ describe('reportingPeriodsByKind', () => {
       it('leaves out a stored report for a month approved before a re-creation', () => {
         const result = byKind(
           registeredSinceLastYear(recreatedAccreditation()),
-          [storedMarch]
+          storedMarch
         )
 
         expect(result.accredited.map(({ period }) => period)).not.toContain(3)
@@ -596,7 +583,7 @@ describe('reportingPeriodsByKind', () => {
             approvedOn('2026-02-15'),
             cancelledOn('2026-07-10')
           ]),
-          [storedMarch]
+          storedMarch
         )
 
         expect(result.accredited.map(({ period }) => period)).toContain(3)
@@ -605,7 +592,7 @@ describe('reportingPeriodsByKind', () => {
       it('lists a stored registered-only report from before the accreditation', () => {
         const result = byKind(
           registeredSinceLastYear([approvedOn('2026-01-01')]),
-          [storedFirstQuarter]
+          storedFirstQuarter
         )
 
         expect(result.registeredOnly.map(({ period }) => period)).toEqual([1])

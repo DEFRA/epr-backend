@@ -6,7 +6,7 @@ import { errorCodes } from '#reports/enums/error-codes.js'
 import {
   validateCreateReport,
   validateDeleteReportParams,
-  validateFindPeriodicReports,
+  validateFindPeriodicReport,
   validateFindPeriodicReportsForYear,
   validateFindReportById,
   validateHasReportSubmittedSince,
@@ -31,7 +31,7 @@ import {
  * @import {
  *   CreateReportParams,
  *   DeleteReportParams,
- *   FindPeriodicReportsParams,
+ *   FindPeriodicReportParams,
  *   PeriodicReport,
  *   Report,
  *   ReportsRepositoryFactory,
@@ -311,12 +311,12 @@ const performDeleteReport = async (db, params) => {
 
 /**
  * @param {Db} db
- * @param {FindPeriodicReportsParams} params
- * @returns {Promise<PeriodicReport[]>}
+ * @param {FindPeriodicReportParams} params
+ * @returns {Promise<PeriodicReport | null>}
  */
-const performFindPeriodicReports = async (db, params) => {
+const performFindPeriodicReport = async (db, params) => {
   const { organisationNumber, registrationNumber, year } =
-    validateFindPeriodicReports(params)
+    validateFindPeriodicReport(params)
 
   const docs = await reportsCollection(db)
     .find(
@@ -343,7 +343,10 @@ const performFindPeriodicReports = async (db, params) => {
     )
     .toArray()
 
-  return transformToPeriodicReports(docs.map(withBareDates))
+  const [periodicReport = null] = transformToPeriodicReports(
+    docs.map(withBareDates)
+  )
+  return periodicReport
 }
 
 /**
@@ -455,7 +458,7 @@ export const createReportsRepository = async (db) => {
     updateReport: (params) => performUpdateReport(db, params),
     updateReportStatus: (params) => performUpdateReportStatus(db, params),
     deleteReport: (params) => performDeleteReport(db, params),
-    findPeriodicReports: (params) => performFindPeriodicReports(db, params),
+    findPeriodicReport: (params) => performFindPeriodicReport(db, params),
     findAllPeriodicReports: () => performFindAllPeriodicReports(db),
     findPeriodicReportsForYear: (params) =>
       performFindPeriodicReportsForYear(db, params),

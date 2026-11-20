@@ -80,21 +80,19 @@ const defaultParams = () => {
 
 describe('resubmission-service', () => {
   describe('isLatestSubmission', () => {
-    const stubRepository = (periodicReports) =>
+    const stubRepository = (periodicReport) =>
       /** @type {any} */ ({
-        findPeriodicReports: vi.fn().mockResolvedValue(periodicReports)
+        findPeriodicReport: vi.fn().mockResolvedValue(periodicReport)
       })
 
-    const slotWith = (current, previousSubmissions = []) => [
-      {
-        year: toYear(2024),
-        reports: { monthly: { 1: { current, previousSubmissions } } }
-      }
-    ]
+    const slotWith = (current, previousSubmissions = []) => ({
+      year: toYear(2024),
+      reports: { monthly: { 1: { current, previousSubmissions } } }
+    })
 
     it('returns false when the period has no reports at all', async () => {
       const result = await isLatestSubmission(
-        stubRepository([]),
+        stubRepository(null),
         KEY,
         toYear(2024),
         'monthly',
@@ -124,7 +122,6 @@ describe('resubmission-service', () => {
 
   describe('canRequestResubmission', () => {
     const buildReport = (overrides = {}) => ({
-      year: toYear(2024),
       cadence: /** @type {import('#reports/domain/cadence.js').Cadence} */ (
         'monthly'
       ),
@@ -135,46 +132,44 @@ describe('resubmission-service', () => {
       ...overrides
     })
 
-    const periodicReportsWith = (current, previousSubmissions = []) => [
-      {
-        ...KEY,
-        year: toYear(2024),
-        reports: {
-          monthly: {
-            1: {
-              startDate: calendarDate('2024-01-01'),
-              endDate: calendarDate('2024-01-31'),
-              dueDate: calendarDate('2024-02-15'),
-              current,
-              previousSubmissions
-            }
+    const periodicReportWith = (current, previousSubmissions = []) => ({
+      ...KEY,
+      year: toYear(2024),
+      reports: {
+        monthly: {
+          1: {
+            startDate: calendarDate('2024-01-01'),
+            endDate: calendarDate('2024-01-31'),
+            dueDate: calendarDate('2024-02-15'),
+            current,
+            previousSubmissions
           }
         }
       }
-    ]
+    })
 
     it('returns true for a plain submitted report with no draft and no prior flag', () => {
       const report = buildReport()
-      const periodicReports = periodicReportsWith({
+      const periodicReport = periodicReportWith({
         id: 'report-1',
         submissionNumber: 1,
         status: REPORT_STATUS.SUBMITTED
       })
 
-      expect(canRequestResubmission(periodicReports, report)).toBe(true)
+      expect(canRequestResubmission(periodicReport, report)).toBe(true)
     })
 
     it('returns false when the report is not submitted', () => {
       const report = buildReport({
         status: REPORT_STATUS.READY_TO_SUBMIT
       })
-      const periodicReports = periodicReportsWith({
+      const periodicReport = periodicReportWith({
         id: 'report-1',
         submissionNumber: 1,
         status: REPORT_STATUS.READY_TO_SUBMIT
       })
 
-      expect(canRequestResubmission(periodicReports, report)).toBe(false)
+      expect(canRequestResubmission(periodicReport, report)).toBe(false)
     })
 
     it('returns false when resubmissionRequired.operatorRequested is already set', () => {
@@ -186,18 +181,18 @@ describe('resubmission-service', () => {
           }
         }
       })
-      const periodicReports = periodicReportsWith({
+      const periodicReport = periodicReportWith({
         id: 'report-1',
         submissionNumber: 1,
         status: REPORT_STATUS.SUBMITTED
       })
 
-      expect(canRequestResubmission(periodicReports, report)).toBe(false)
+      expect(canRequestResubmission(periodicReport, report)).toBe(false)
     })
 
     it('returns false when a later submission exists for the period', () => {
       const report = buildReport()
-      const periodicReports = periodicReportsWith(
+      const periodicReport = periodicReportWith(
         {
           id: 'report-2',
           submissionNumber: 2,
@@ -212,12 +207,12 @@ describe('resubmission-service', () => {
         ]
       )
 
-      expect(canRequestResubmission(periodicReports, report)).toBe(false)
+      expect(canRequestResubmission(periodicReport, report)).toBe(false)
     })
 
     it('returns false when a draft above the report makes it no longer the latest', () => {
       const report = buildReport()
-      const periodicReports = periodicReportsWith(
+      const periodicReport = periodicReportWith(
         {
           id: 'draft-1',
           submissionNumber: 2,
@@ -232,7 +227,7 @@ describe('resubmission-service', () => {
         ]
       )
 
-      expect(canRequestResubmission(periodicReports, report)).toBe(false)
+      expect(canRequestResubmission(periodicReport, report)).toBe(false)
     })
   })
 

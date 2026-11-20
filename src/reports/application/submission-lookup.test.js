@@ -12,23 +12,22 @@ const YEAR = toYear(2026)
 
 /**
  * @param {Pick<ReportPerPeriod, 'current' | 'previousSubmissions'>} slot
- * @returns {PeriodicReport[]}
+ * @returns {PeriodicReport}
  */
-const withQuarterOne = (slot) => [
+const withQuarterOne = (slot) =>
   partialMock({
     year: YEAR,
     reports: {
       quarterly: { 1: partialMock({ ...slot }) }
     }
   })
-]
 
 /** @type {ReportSummary} */
 const submission = partialMock({ id: 'report-1', submissionNumber: 1 })
 
 describe('hasStoredSubmission', () => {
   it.each([
-    ['no slot for the period', [], false],
+    ['no periodic report', null, false],
     [
       'a slot left empty',
       withQuarterOne({ current: null, previousSubmissions: [] }),
@@ -44,9 +43,7 @@ describe('hasStoredSubmission', () => {
       withQuarterOne({ current: null, previousSubmissions: [submission] }),
       true
     ]
-  ])('given %s, returns %s', (_, periodicReports, expected) => {
-    expect(hasStoredSubmission(periodicReports, YEAR, 'quarterly', 1)).toBe(
-      expected
-    )
+  ])('given %s, returns %s', (_, periodicReport, expected) => {
+    expect(hasStoredSubmission(periodicReport, 'quarterly', 1)).toBe(expected)
   })
 })
