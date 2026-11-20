@@ -146,7 +146,7 @@ const setup = async () => {
   return { moveTo, balanceOf }
 }
 
-describe('updatePrnStatus across accreditation years', () => {
+describe("a PRN draws only on its own year's waste balance", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
   })
@@ -164,7 +164,7 @@ describe('updatePrnStatus across accreditation years', () => {
       { year: 2026, other: 2027 },
       { year: 2027, other: 2026 }
     ])(
-      "raises and issues a $year PRN against $year's balance alone",
+      'raising and issuing a $year PRN leaves $other alone',
       async ({ year, other }) => {
         const { moveTo, balanceOf } = await setup()
         const opening = YEARS[year].opening
@@ -201,7 +201,7 @@ describe('updatePrnStatus across accreditation years', () => {
       vi.setSystemTime(new Date('2027-02-01T00:00:00.000Z'))
     })
 
-    it('refuses a 2026 PRN and leaves both balances alone', async () => {
+    it('refuses a 2026 PRN and leaves both years alone', async () => {
       const { moveTo, balanceOf } = await setup()
 
       await expect(
@@ -222,7 +222,7 @@ describe('updatePrnStatus across accreditation years', () => {
       })
     })
 
-    it("still raises a 2027 PRN against 2027's balance alone", async () => {
+    it('still raises a 2027 PRN and leaves 2026 alone', async () => {
       const { moveTo, balanceOf } = await setup()
 
       await moveTo(
