@@ -120,7 +120,7 @@ describe(`GET ${tonnageMonitoringPath} (integration)`, () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: `${tonnageMonitoringPath}?year=2026`,
+      url: tonnageMonitoringPath.replace('{year}', '2026'),
       headers: { Authorization: `Bearer ${validToken}` }
     })
 

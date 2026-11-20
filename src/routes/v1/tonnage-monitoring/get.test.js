@@ -24,7 +24,8 @@ vi.mock('#application/tonnage-monitoring/aggregate-tonnage.js', () => ({
 
 const { validToken } = entraIdMockAuthTokens
 
-const urlForYear = (year) => `${tonnageMonitoringPath}?year=${year}`
+const urlForYear = (year) =>
+  tonnageMonitoringPath.replace('{year}', String(year))
 
 describe(`GET ${tonnageMonitoringPath}`, () => {
   setupAuthContext()
@@ -51,8 +52,14 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
     expect(year).toBe(2026)
   })
 
+  it('has no route without a year', async () => {
+    const response = await get('/v1/tonnage-monitoring')
+
+    expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    expect(mockAggregateTonnageByMaterial).not.toHaveBeenCalled()
+  })
+
   it.for([
-    ['no year', tonnageMonitoringPath],
     ['a year that is not a number', urlForYear('last')],
     ['a year before the service holds data', urlForYear(2023)],
     ['a year not yet open', urlForYear(2099)]

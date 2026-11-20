@@ -242,19 +242,51 @@ describe('material-aggregation', () => {
     it('should sort results by type (DESC), then material (ASC)', () => {
       vi.setSystemTime(new Date('2027-02-15T10:00:00.000Z'))
 
-      const { materials } = formatTonnageMonitoringResults([], toYear(2027))
+      const results = [
+        {
+          material: 'aluminium',
+          year: 2027,
+          monthNumber: 1,
+          type: 'Exporter',
+          totalTonnage: 150
+        },
+        {
+          material: 'wood',
+          year: 2027,
+          monthNumber: 2,
+          type: 'Reprocessor',
+          totalTonnage: 200
+        }
+      ]
+
+      const { materials } = formatTonnageMonitoringResults(
+        results,
+        toYear(2027)
+      )
 
       expect(materials[0]).toMatchObject({
         type: 'Reprocessor',
-        material: 'aluminium'
+        material: 'aluminium',
+        months: [
+          { month: 'Jan', tonnage: 0 },
+          { month: 'Feb', tonnage: 0 }
+        ]
       })
       expect(materials[7]).toMatchObject({
         type: 'Reprocessor',
-        material: 'wood'
+        material: 'wood',
+        months: [
+          { month: 'Jan', tonnage: 0 },
+          { month: 'Feb', tonnage: 200 }
+        ]
       })
       expect(materials[8]).toMatchObject({
         type: 'Exporter',
-        material: 'aluminium'
+        material: 'aluminium',
+        months: [
+          { month: 'Jan', tonnage: 150 },
+          { month: 'Feb', tonnage: 0 }
+        ]
       })
     })
 

@@ -14,7 +14,7 @@ import { tonnageMonitoringResponseSchema } from './response.schema.js'
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
-export const tonnageMonitoringPath = '/v1/tonnage-monitoring'
+export const tonnageMonitoringPath = '/v1/tonnage-monitoring/{year}'
 
 export const getTonnageMonitoring = {
   method: 'GET',
@@ -25,14 +25,14 @@ export const getTonnageMonitoring = {
     },
     tags: ['api', 'admin'],
     validate: {
-      query: Joi.object({ year: openYearSchema().required() })
+      params: Joi.object({ year: openYearSchema().required() })
     },
     response: {
       schema: tonnageMonitoringResponseSchema
     }
   },
   /**
-   * @param {HapiRequest & { query: { year: Year } }} request
+   * @param {HapiRequest & { params: { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
@@ -41,7 +41,7 @@ export const getTonnageMonitoring = {
       ledgerRepository,
       organisationReadRepository,
       logger,
-      query: { year }
+      params: { year }
     } = request
 
     try {
