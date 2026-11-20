@@ -1,4 +1,4 @@
-import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
+import { nextYear, toYear } from '#common/helpers/dates/year.js'
 import {
   createInMemoryOrganisationReadRepository,
   accreditationsByYear,
@@ -552,9 +552,17 @@ describe('summary-log routes by natural key', () => {
   })
 
   describe('creating for next year', () => {
-    const nextYearUploads = `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${currentUtcYear() + 1}`
+    const nextYearUploads = `${registrations}/${REGISTERED_ONLY_NUMBER}/summary-logs/${nextYear(YEAR)}`
+
+    beforeEach(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: new Date(`${YEAR}-06-01T12:00:00.000Z`)
+      })
+    })
 
     afterEach(() => {
+      vi.useRealTimers()
       config.reset('openNextYear')
     })
 

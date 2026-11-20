@@ -62,6 +62,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   describe('an active registration only the read model holds', () => {
+    beforeAll(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: new Date('2026-06-01T12:00:00.000Z')
+      })
+    })
+
+    afterAll(() => {
+      vi.useRealTimers()
+    })
+
     /** @type {Organisation} */
     const organisation = partialMock(
       buildOrganisation({ registrations: [reprocessor()] })
@@ -239,7 +250,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const uploadTo = (organisation, token = defraIdMockAuthTokens.validToken) =>
       server.inject({
         method: 'POST',
-        url: buildUrl(organisation, new Date().getFullYear()),
+        url: buildUrl(organisation, 2026),
         headers: {
           Authorization: `Bearer ${token}`
         },

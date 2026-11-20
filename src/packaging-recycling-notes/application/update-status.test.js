@@ -18,7 +18,8 @@ import {
   PRN_YEAR,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION,
-  buildAccreditationSnapshot
+  buildAccreditationSnapshot,
+  WITHIN_PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -229,11 +230,13 @@ const callUpdate = (overrides) =>
 
 describe('updatePrnStatus', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'], now: WITHIN_PRN_YEAR })
     mockRecordStatusTransition.mockResolvedValue(undefined)
     mockOnCancelled.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.clearAllMocks()
   })
 

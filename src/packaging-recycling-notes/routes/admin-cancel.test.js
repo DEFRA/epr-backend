@@ -1,12 +1,13 @@
 import {
   PRN_YEAR,
-  buildAccreditationSnapshot
+  buildAccreditationSnapshot,
+  WITHIN_PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { randomUUID } from 'node:crypto'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -180,7 +181,12 @@ const startServer = async (
 describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
   setupAuthContext()
 
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'], now: WITHIN_PRN_YEAR })
+  })
+
   afterEach(async () => {
+    vi.useRealTimers()
     await server.stop()
     vi.clearAllMocks()
   })

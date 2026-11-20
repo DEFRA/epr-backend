@@ -1,5 +1,14 @@
 import { StatusCodes } from 'http-status-codes'
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+  vi
+} from 'vitest'
 
 import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
@@ -42,6 +51,17 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
   })
 
   describe('successful requests', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: new Date('2026-06-01T12:00:00.000Z')
+      })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     it('returns 200 with summary log uploads report data', async () => {
       const organisationNumber = nextOrganisationNumber()
       const org = buildReadApprovedOrganisation({ organisationNumber })

@@ -4,7 +4,7 @@ import {
   NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
-import { currentUtcYear } from '#common/helpers/dates/year.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import {
   toAccreditationNumber,
@@ -113,7 +113,7 @@ const createFactory = (status, getDefaults = () => ({})) => {
       status,
       expiresAt: calculateExpiresAt(status),
       createdAt: DEFAULT_CREATED_AT,
-      year: currentUtcYear(),
+      year: DEFAULT_TEMPLATE_YEAR,
       accreditationId: null,
       ...defaults,
       ...(file && { file }),
@@ -203,7 +203,7 @@ export const summaryLogFactory = {
       file,
       createdAt: DEFAULT_CREATED_AT,
       submittedAt: DEFAULT_SUBMITTED_AT,
-      year: currentUtcYear(),
+      year: DEFAULT_TEMPLATE_YEAR,
       accreditationId: null,
       ...rest
     })
