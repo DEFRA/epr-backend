@@ -1,3 +1,4 @@
+/** @import { Year } from '#common/helpers/dates/year.js' */
 import {
   CLASSIFICATION_REASON,
   ORS_VALIDATION_DISABLED
@@ -123,18 +124,35 @@ export const filterToFilled = (row, unfilledValues) => {
  *
  * @param {Record<string, any>} row - The row data
  * @param {{ unfilledValues: Record<string, readonly string[]>, validationSchema: import('joi').ObjectSchema }} tableSchema
+ * @param {RowValidationOptions} [options]
  * @returns {{ data: Record<string, any>, error: import('joi').ValidationError | undefined }} Coerced data merged with original row, plus any Joi error
  */
-export const coerceRowData = (row, { unfilledValues, validationSchema }) => {
+export const coerceRowData = (
+  row,
+  { unfilledValues, validationSchema },
+  options = {}
+) => {
   const filledFields = filterToFilled(row, unfilledValues)
-  const { value: coercedFields, error } =
-    validationSchema.validate(filledFields)
+  const { value: coercedFields, error } = validationSchema.validate(
+    filledFields,
+    { context: options }
+  )
   return { data: { ...row, ...coercedFields }, error }
 }
 
 /**
+ * @typedef {{ summaryLogYear?: Year }} RowValidationOptions
+ * Omitted, as when exporting stored rows, means dates are not checked against
+ * the summary log year.
+ */
+
+/**
+ * @typedef {Required<RowValidationOptions>} SummaryLogValidationOptions
+ */
+
+/**
  * Issue from validation pipeline when a field fails schema validation (VAL010)
- * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string }} ValidationErrorIssue
+ * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string, expected?: unknown }} ValidationErrorIssue
  */
 
 /**
@@ -211,13 +229,14 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Record<string, readonly string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance | null} [tableSchema.classifyForWasteBalance] - Waste balance classifier
+ * @param {SummaryLogValidationOptions} options
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[], data: Record<string, any> }}
  */
-export const classifyRow = (row, tableSchema) => {
+export const classifyRow = (row, tableSchema, options) => {
   // Steps 1 & 2: Filter to filled fields and run VAL010 validation.
   // The coerced data is propagated to all return paths so persistence sees
   // the schema's canonical types, not the raw shapes ExcelJS produced.
-  const { data, error } = coerceRowData(row, tableSchema)
+  const { data, error } = coerceRowData(row, tableSchema, options)
 
   if (error) {
     return {
@@ -229,7 +248,10 @@ export const classifyRow = (row, tableSchema) => {
         // path is empty but field is passed via context.field
         field: detail.path[0] ?? detail.context?.field,
         message: detail.message,
-        type: detail.type // Include Joi error type for application-layer mapping
+        type: detail.type, // Include Joi error type for application-layer mapping
+        ...(detail.context?.expected !== undefined && {
+          expected: detail.context.expected
+        })
       })),
       data
     }

@@ -3,6 +3,7 @@ import {
   createWeightFieldSchema,
   createYesNoFieldSchema,
   createDateFieldSchema,
+  createFirstOfMonthFieldSchema,
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createFreeTextFieldSchema,
@@ -138,6 +139,7 @@ describe('field-schemas', () => {
         description: 'date that rolls over (e.g. Feb 30)',
         input: '2024-02-30'
       },
+      { description: 'date with an impossible day', input: '2024-02-99' },
       { description: 'invalid date string', input: 'not-a-date' },
       { description: 'date before 2000', input: '1999-12-31' },
       { description: 'date after 2100', input: '2100-01-02' },
@@ -151,6 +153,86 @@ describe('field-schemas', () => {
     it('is optional', () => {
       const schema = createDateFieldSchema()
       expect(schema.validate(undefined).error).toBeUndefined()
+    })
+
+    describe('when the validation context has a summary log year', () => {
+      const context = { summaryLogYear: 2026 }
+
+      it.each([
+        { description: 'the last day of that year', input: '2026-12-31' },
+        { description: 'an earlier year', input: '2025-06-15' },
+        {
+          description: 'a Date object at UTC midnight on 31 December',
+          input: new Date('2026-12-31T00:00:00.000Z')
+        }
+      ])('accepts $description', ({ input }) => {
+        const schema = createDateFieldSchema()
+        expect(schema.validate(input, { context }).error).toBeUndefined()
+      })
+
+      it.each([
+        { description: 'the first day of the next year', input: '2027-01-01' },
+        {
+          description: 'a Date object at UTC midnight on 1 January',
+          input: new Date('2027-01-01T00:00:00.000Z')
+        },
+        { description: 'a much later year', input: '2028-02-03' }
+      ])('rejects $description', ({ input }) => {
+        const schema = createDateFieldSchema()
+        const { error } = schema.validate(input, { context })
+        expect(error?.details[0]).toMatchObject({
+          type: 'date.afterSummaryLogYear',
+          message: 'must not be in a later year than the summary log',
+          context: { expected: 2026 }
+        })
+      })
+
+      it('reports an invalid date as invalid, not as a later year', () => {
+        const schema = createDateFieldSchema()
+        const { error } = schema.validate('2027-02-30', { context })
+        expect(error?.details[0].message).toBe('must be a valid date')
+      })
+    })
+
+    it('accepts a later year when the context has no summary log year', () => {
+      const schema = createDateFieldSchema()
+      expect(schema.validate('2099-01-01').error).toBeUndefined()
+    })
+  })
+
+  describe('createFirstOfMonthFieldSchema', () => {
+    const context = { summaryLogYear: 2026 }
+
+    it('accepts December of the latest year', () => {
+      const schema = createFirstOfMonthFieldSchema()
+      const { error, value } = schema.validate('2026-12-01', { context })
+      expect(error).toBeUndefined()
+      expect(value).toBe('2026-12-01')
+    })
+
+    it('rejects January of the next year', () => {
+      const schema = createFirstOfMonthFieldSchema()
+      const { error } = schema.validate('2027-01-01', { context })
+      expect(error?.details[0]).toMatchObject({
+        type: 'date.afterSummaryLogYear',
+        context: { expected: 2026 }
+      })
+    })
+
+    it('reports a malformed month by its pattern only', () => {
+      const schema = createFirstOfMonthFieldSchema()
+      const { error } = schema.validate('2027-13-01', {
+        context,
+        abortEarly: false
+      })
+      expect(error?.details.map(({ type }) => type)).toStrictEqual([
+        'string.pattern.base'
+      ])
+    })
+
+    it('accepts a later year when the context has no summary log year', () => {
+      const schema = createFirstOfMonthFieldSchema()
+      expect(schema.validate('2099-01-01').error).toBeUndefined()
     })
   })
 

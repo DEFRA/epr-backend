@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import { DROPDOWN_PLACEHOLDER } from '../shared/index.js'
+import { DROPDOWN_PLACEHOLDER, createDateFieldSchema } from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
@@ -62,5 +62,9 @@ export const SENT_ON_LOADS = {
    * value-format rule and no unfilledValues entry, so they keep the pass-through
    * behaviour they had before being named (asserted in the schema tests).
    */
-  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false })
+  validationSchema: Joi.object({
+    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema()
+  })
+    .unknown(true)
+    .prefs({ abortEarly: false })
 }
