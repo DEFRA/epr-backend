@@ -784,8 +784,8 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     expect(result.total).toBe(130)
   })
 
-  it('counts a December 2026 export once when a 2027 summary log row also carries it', async () => {
-    vi.setSystemTime(new Date('2027-01-15T10:00:00.000Z'))
+  it("counts each ledger's rows only in months of that ledger's year", async () => {
+    vi.setSystemTime(new Date('2027-02-15T10:00:00.000Z'))
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(
@@ -794,7 +794,7 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         ])
       )
 
-    const exportedInDecember2026 = (year) =>
+    const exported = (year, tonnage, dateOfExport) =>
       createRowState({
         organisationId: orgId1,
         registrationId: regId1,
@@ -803,19 +803,32 @@ describe('aggregateTonnageByMaterial - Integration', () => {
         wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
         processingType: PROCESSING_TYPES.EXPORTER,
         data: {
-          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 40,
-          DATE_OF_EXPORT: '2026-12-28'
+          TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: tonnage,
+          DATE_OF_EXPORT: dateOfExport
         }
       })
 
     await submitRows([
-      exportedInDecember2026(2026),
-      exportedInDecember2026(2027)
+      exported(2026, 40, '2026-12-28'),
+      exported(2027, 38, '2026-12-28'),
+      exported(2027, 15, '2027-01-12')
     ])
 
     const result = await aggregate()
 
-    expect(result.total).toBe(40)
+    const plasticExporterTonnage = (year, month) =>
+      result.materials
+        .find(
+          (entry) =>
+            entry.material === MATERIAL.PLASTIC &&
+            entry.type === 'Exporter' &&
+            entry.year === year
+        )
+        ?.months.find((entry) => entry.month === month)?.tonnage
+
+    expect(plasticExporterTonnage(2026, 'Dec')).toBe(40)
+    expect(plasticExporterTonnage(2027, 'Jan')).toBe(15)
+    expect(result.total).toBe(55)
   })
 
   it('excludes records without dispatch date', async () => {
