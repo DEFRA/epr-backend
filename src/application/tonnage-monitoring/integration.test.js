@@ -19,6 +19,7 @@ import {
 } from '#waste-balances/repository/ledger-mongodb.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 
@@ -170,17 +171,21 @@ const createReprocessorOutputRowState = (
     }
   })
 
+const REPORT_YEAR = toYear(2026)
+
 const submittedSummaryLogEvent = ({
   organisationId,
   registrationId,
   registrationNumber = registrationNumberFor(registrationId),
   accreditationId,
   summaryLogId,
-  number
+  number,
+  year = REPORT_YEAR
 }) => ({
   organisationNumber: String(ORGANISATION_NUMBERS[organisationId]),
   registrationNumber,
   accreditationNumber: accreditationId,
+  year,
   number,
   kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
   payload: { summaryLogId, creditTotal: 0 }
@@ -201,7 +206,8 @@ describe('aggregateTonnageByMaterial - Integration', () => {
     aggregateTonnageByMaterial(
       createTonnageQuery(db),
       ledgerRepository,
-      organisationReadRepository
+      organisationReadRepository,
+      REPORT_YEAR
     )
 
   /**
@@ -664,6 +670,45 @@ describe('aggregateTonnageByMaterial - Integration', () => {
       ]
     })
     expect(result.total).toBe(250)
+  })
+
+  it('includes only the summary logs submitted for the year asked for', async () => {
+    await db
+      .collection(ORGANISATIONS_COLLECTION)
+      .insertOne(
+        createOrganisation(orgId1, [
+          createRegistration(regId1, MATERIAL.PLASTIC)
+        ])
+      )
+
+    await db
+      .collection(SUMMARY_LOG_ROW_STATES_COLLECTION_NAME)
+      .insertMany([
+        createExporterRowState(orgId1, regId1, 100, '2026-01-15', 'sl-2026'),
+        createExporterRowState(orgId1, regId1, 40, '2026-01-20', 'sl-2025')
+      ])
+
+    await db.collection(WASTE_BALANCE_EVENTS_COLLECTION_NAME).insertMany([
+      submittedSummaryLogEvent({
+        organisationId: orgId1,
+        registrationId: regId1,
+        accreditationId: null,
+        summaryLogId: 'sl-2026',
+        number: 1
+      }),
+      submittedSummaryLogEvent({
+        organisationId: orgId1,
+        registrationId: regId1,
+        accreditationId: null,
+        summaryLogId: 'sl-2025',
+        number: 1,
+        year: toYear(2025)
+      })
+    ])
+
+    const result = await aggregate()
+
+    expect(result.total).toBe(100)
   })
 
   it('excludes row states whose registration has no submitted summary log', async () => {

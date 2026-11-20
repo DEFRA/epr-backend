@@ -24,6 +24,8 @@ vi.mock('#application/tonnage-monitoring/aggregate-tonnage.js', () => ({
 
 const { validToken } = entraIdMockAuthTokens
 
+const urlForYear = (year) => `${tonnageMonitoringPath}?year=${year}`
+
 describe(`GET ${tonnageMonitoringPath}`, () => {
   setupAuthContext()
   let server
@@ -34,19 +36,40 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
     server = await createTestServer({ repositories: {} })
   })
 
+  const get = (url) =>
+    server.inject({
+      method: 'GET',
+      url,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+  it('reports the year asked for', async () => {
+    const response = await get(urlForYear(2026))
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const [, , , year] = mockAggregateTonnageByMaterial.mock.calls[0]
+    expect(year).toBe(2026)
+  })
+
+  it.for([
+    ['no year', tonnageMonitoringPath],
+    ['a year that is not a number', urlForYear('last')],
+    ['a year before the service holds data', urlForYear(2023)],
+    ['a year not yet open', urlForYear(2099)]
+  ])('refuses %s', async ([, url]) => {
+    const response = await get(url)
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(mockAggregateTonnageByMaterial).not.toHaveBeenCalled()
+  })
+
   describe('error handling', () => {
     it('returns 500 when aggregation fails', async () => {
       mockAggregateTonnageByMaterial.mockRejectedValue(
         new Error('Database error')
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: tonnageMonitoringPath,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
+      const response = await get(urlForYear(2026))
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       const result = JSON.parse(response.payload)
@@ -58,7 +81,7 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
     server: () => server,
     makeRequest: async () => ({
       method: 'GET',
-      url: tonnageMonitoringPath
+      url: urlForYear(2026)
     })
   })
 
@@ -66,7 +89,7 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
     server: () => server,
     makeRequest: async () => ({
       method: 'GET',
-      url: tonnageMonitoringPath
+      url: urlForYear(2026)
     }),
     successStatus: StatusCodes.OK
   })
