@@ -16,6 +16,7 @@ import {
   onTestFinished,
   vi
 } from 'vitest'
+import { WITHIN_DEFAULT_TEMPLATE_YEAR } from '#repositories/summary-logs/contract/test-data.js'
 
 import { config } from '#root/config.js'
 
@@ -65,7 +66,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     beforeAll(() => {
       vi.useFakeTimers({
         toFake: ['Date'],
-        now: new Date('2026-06-01T12:00:00.000Z')
+        now: WITHIN_DEFAULT_TEMPLATE_YEAR
       })
     })
 

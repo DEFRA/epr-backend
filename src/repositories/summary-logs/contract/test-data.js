@@ -90,6 +90,10 @@ export const buildSummaryLogCommitFor = async (
 // Summary Log Factory
 // ============================================================================
 
+export const WITHIN_DEFAULT_TEMPLATE_YEAR = new Date(
+  `${DEFAULT_TEMPLATE_YEAR}-06-01T12:00:00.000Z`
+)
+
 const DEFAULT_SUBMITTED_AT = '2024-01-01T00:00:00.000Z'
 const DEFAULT_CREATED_AT = '2024-01-01T00:00:00.000Z'
 

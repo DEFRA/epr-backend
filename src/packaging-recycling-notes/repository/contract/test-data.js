@@ -9,9 +9,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 
 const ACCREDITATION_YEAR = 2026
 export const PRN_YEAR = toYear(ACCREDITATION_YEAR)
-export const WITHIN_PRN_YEAR = new Date(
-  `${ACCREDITATION_YEAR}-06-01T12:00:00.000Z`
-)
+export const WITHIN_PRN_YEAR = new Date(`${PRN_YEAR}-06-01T12:00:00.000Z`)
 
 /** @import { AccreditationSnapshot, OrganisationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 
