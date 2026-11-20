@@ -21,9 +21,38 @@ const OUTER_LAYERS = [
 const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
-// A module of ADR 0027's modular monolith. Code outside it imports only its
-// public interface: index.js, vocabulary.js, and test-support.js in a test.
-const ORGANISATION_READ_MODEL = './src/organisation-read-model'
+// A module of ADR 0027's modular monolith lives at src/<module>/. Code outside
+// it imports only its public interface, the entry points its README names, and
+// only a test imports its test-support.js.
+/**
+ * @param {string} module
+ * @param {string} name
+ * @param {string[]} entryPoints
+ */
+const moduleFence = (module, name, entryPoints) => [
+  {
+    target: [
+      `./src/!(${module})/**/*`,
+      './src/*.js',
+      './.vite/**/*',
+      './scripts/**/*',
+      './benchmarks/**/*'
+    ],
+    from: `./src/${module}`,
+    except: entryPoints,
+    message: `Import ${name} only through the entry points its README names.`
+  },
+  {
+    target: [
+      './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-fixtures|test-support).js',
+      './src/!(*.test).js',
+      './scripts/**/!(*.test).*',
+      './benchmarks/**/*'
+    ],
+    from: `./src/${module}/test-support.js`,
+    message: `Only tests import ${name} through test-support.js.`
+  }
+]
 
 const ns = neostandard({
   env: ['node', 'vitest'],
@@ -76,26 +105,16 @@ export default [
               except: ['./organisations/contract'],
               message: DOMAIN_LAYERING_MESSAGE
             },
-            {
-              target: [
-                './src/!(organisation-read-model)/**/*',
-                './src/*.js',
-                './.vite/**/*'
-              ],
-              from: ORGANISATION_READ_MODEL,
-              except: ['./index.js', './vocabulary.js', './test-support.js'],
-              message:
-                'Import the organisation read model through its index.js, its vocabulary.js, or test-support.js in a test.'
-            },
-            {
-              target: [
-                './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-fixtures|test-support).js',
-                './src/!(*.test).js'
-              ],
-              from: `${ORGANISATION_READ_MODEL}/test-support.js`,
-              message:
-                'Only tests import the organisation read model through test-support.js.'
-            }
+            ...moduleFence(
+              'organisation-read-model',
+              'the organisation read model',
+              ['./index.js', './vocabulary.js', './test-support.js']
+            ),
+            ...moduleFence('waste-records-export', 'the waste records export', [
+              './index.js',
+              './vocabulary.js',
+              './test-support.js'
+            ])
           ]
         }
       ]
