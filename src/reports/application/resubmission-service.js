@@ -43,7 +43,8 @@ export async function isLatestSubmission(
 ) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationNumber,
-    registrationNumber
+    registrationNumber,
+    year
   })
   return isLatestSubmissionOf(
     periodicReports,
@@ -180,7 +181,8 @@ export async function requestOperatorResubmission({
 
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationNumber,
-    registrationNumber
+    registrationNumber,
+    year
   })
 
   const target = findSubmissionByNumber(

@@ -12,13 +12,15 @@ import {
   DEFAULT_REPORT_PERIOD,
   DEFAULT_REPORT_START_DATE,
   DEFAULT_REPORT_YEAR,
+  NEXT_REPORT_YEAR,
   uniqueOrganisationNumber,
   uniqueRegistrationNumber
 } from './test-data.js'
 
 const DEFAULT_KEY = {
   organisationNumber: DEFAULT_ORG_NUMBER,
-  registrationNumber: DEFAULT_REG_NUMBER
+  registrationNumber: DEFAULT_REG_NUMBER,
+  year: DEFAULT_REPORT_YEAR
 }
 
 export const testFindPeriodicReportsBehaviour = (it) => {
@@ -45,8 +47,8 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       await repository.createReport(buildCreateReportParams())
 
       const result = await repository.findPeriodicReports({
-        organisationNumber: uniqueOrganisationNumber(),
-        registrationNumber: DEFAULT_REG_NUMBER
+        ...DEFAULT_KEY,
+        organisationNumber: uniqueOrganisationNumber()
       })
 
       expect(result).toEqual([])
@@ -56,8 +58,19 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       await repository.createReport(buildCreateReportParams())
 
       const result = await repository.findPeriodicReports({
-        organisationNumber: DEFAULT_ORG_NUMBER,
+        ...DEFAULT_KEY,
         registrationNumber: uniqueRegistrationNumber()
+      })
+
+      expect(result).toEqual([])
+    })
+
+    it('does not return reports belonging to a different year', async () => {
+      await repository.createReport(buildCreateReportParams())
+
+      const result = await repository.findPeriodicReports({
+        ...DEFAULT_KEY,
+        year: NEXT_REPORT_YEAR
       })
 
       expect(result).toEqual([])
@@ -72,7 +85,6 @@ export const testFindPeriodicReportsBehaviour = (it) => {
 
       expect(result).toMatchObject({
         ...DEFAULT_KEY,
-        year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
             [DEFAULT_REPORT_PERIOD]: {
@@ -105,7 +117,6 @@ export const testFindPeriodicReportsBehaviour = (it) => {
 
       expect(result).toMatchObject({
         ...DEFAULT_KEY,
-        year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
             [MONTHLY_PERIODS.January]: {
@@ -155,7 +166,6 @@ export const testFindPeriodicReportsBehaviour = (it) => {
 
       expect(result).toMatchObject({
         ...DEFAULT_KEY,
-        year: DEFAULT_REPORT_YEAR,
         reports: {
           monthly: {
             [MONTHLY_PERIODS.January]: {
@@ -188,6 +198,15 @@ export const testFindPeriodicReportsBehaviour = (it) => {
       await expect(
         repository.findPeriodicReports({
           organisationNumber: DEFAULT_ORG_NUMBER
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
+    })
+
+    it('throws when year is missing', async () => {
+      await expect(
+        repository.findPeriodicReports({
+          organisationNumber: DEFAULT_ORG_NUMBER,
+          registrationNumber: DEFAULT_REG_NUMBER
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })

@@ -779,7 +779,10 @@ describe('report-service', () => {
         code: 'period_not_required'
       })
       expect(
-        await reportsRepository.findPeriodicReports(params.key)
+        await reportsRepository.findPeriodicReports({
+          ...params.key,
+          year: params.year
+        })
       ).toStrictEqual([])
     })
 
@@ -1091,7 +1094,8 @@ describe('createReportsService', () => {
 
     const params = {
       organisationNumber: toOrganisationNumber('500123'),
-      registrationNumber: toRegistrationNumber('R25SR500010912PL')
+      registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+      year: toYear(2024)
     }
     const result = await service.findPeriodicReports(params)
 

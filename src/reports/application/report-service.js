@@ -37,7 +37,7 @@ import {
  *
  * @typedef {object} ReportsService
  * @property {(params: HasReportSubmittedSinceParams) => Promise<boolean>} hasReportSubmittedSince
- * @property {(params: RegistrationKey) => Promise<PeriodicReport[]>} findPeriodicReports
+ * @property {(params: import('#reports/repository/port.js').FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
  * @property {(reportId: string) => Promise<import('#reports/repository/port.js').Report>} findReportById
  */
 
@@ -75,7 +75,8 @@ export async function fetchReportBySubmissionNumber(
 ) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationNumber,
-    registrationNumber
+    registrationNumber,
+    year
   })
 
   const currentReportId = findReportIdBySubmissionNumber(
@@ -202,7 +203,8 @@ export async function fetchOrGenerateReportForPeriod({
   const { cadence } = cadenceAccreditation
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationNumber,
-    registrationNumber
+    registrationNumber,
+    year
   })
 
   const currentReportId = findReportIdBySubmissionNumber(
@@ -390,7 +392,8 @@ async function assertReportCreationAllowed({
 }) {
   const periodicReports = await reportsRepository.findPeriodicReports({
     organisationNumber,
-    registrationNumber
+    registrationNumber,
+    year
   })
 
   assertPeriodRequired(periodicReports, requiredPeriods, year, cadence, period)
