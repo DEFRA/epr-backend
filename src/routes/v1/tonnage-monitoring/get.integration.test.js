@@ -69,6 +69,7 @@ const seedExporterRow = (db, tonnage, dateOfExport) =>
     organisationNumber: String(orgNumber),
     registrationNumber: regNumber,
     accreditationNumber: null,
+    year: 2026,
     rowId: 'row-1',
     wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
     processingType: PROCESSING_TYPES.EXPORTER,
@@ -90,6 +91,7 @@ const seedSubmittedSummaryLog = (db) =>
     organisationNumber: String(orgNumber),
     registrationNumber: regNumber,
     accreditationNumber: null,
+    year: 2026,
     number: 1,
     kind: LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED,
     payload: { summaryLogId, creditTotal: 0 }

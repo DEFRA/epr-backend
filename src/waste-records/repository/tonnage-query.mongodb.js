@@ -186,9 +186,14 @@ const buildValidRecordMatchStage = () => ({
   }
 })
 
+// A later year's rows can carry earlier-year dates; counting them would count
+// the same load in both years' ledgers.
+const buildOwnYearMatchStage = () => ({
+  $match: { $expr: { $eq: [buildYearExpression(), '$year'] } }
+})
+
 const buildDateFieldsStage = () => ({
   $addFields: {
-    year: buildYearExpression(),
     monthNumber: buildMonthNumberExpression(),
     month: buildMonthExpression()
   }
@@ -225,6 +230,7 @@ const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
   buildLatestSubmittedRowStateMatchStage(latestSubmittedSummaryLogIds),
   buildComputedFieldsStage(),
   buildValidRecordMatchStage(),
+  buildOwnYearMatchStage(),
   buildDateFieldsStage(),
   buildTonnageGroupStage(),
   buildFlattenStage()
@@ -232,7 +238,8 @@ const buildAggregationPipeline = (latestSubmittedSummaryLogIds) => [
 
 /**
  * Sums the tonnage of the row states in the given summary logs, by
- * registration, month and operator type.
+ * registration, month and operator type, counting each ledger's rows only in
+ * months of that ledger's year.
  *
  * @param {import('mongodb').Db} db
  * @returns {(summaryLogIds: string[]) => Promise<RegistrationTonnage[]>}
