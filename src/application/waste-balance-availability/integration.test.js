@@ -299,17 +299,15 @@ describe('aggregateAvailableBalance - Integration', () => {
     async ([year, expectedTotal]) => {
       config.set('openNextYear', true)
       onTestFinished(() => config.reset('openNextYear'))
-      await db
-        .collection(ORGANISATIONS_COLLECTION)
-        .insertOne(
-          storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
-            {
-              id: '1',
-              accreditationNumber: 'ACC-1',
-              material: MATERIAL.PLASTIC
-            }
-          ])
-        )
+      await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          {
+            id: '1',
+            accreditationNumber: 'ACC-1',
+            material: MATERIAL.PLASTIC
+          }
+        ])
+      )
       await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
         buildExternalAccreditation({
           organisationNumber: toOrganisationNumber(String(orgId1)),
