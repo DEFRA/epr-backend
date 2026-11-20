@@ -14,9 +14,11 @@ const count = Joi.number().integer().min(0).required()
  * @property {string} contextHash - The classification context validation read
  * @property {SummaryLogSubmittedTotals} payload - The summary-log-submitted payload, less its id
  * @property {{ created: number, updated: number, decemberWasteRowCount: number }} counts
+ * @property {true} rowStatesWritten - Commits were saved for a while before validation wrote row states, and those have none to commit
  */
 
 export const summaryLogCommitSchema = Joi.object({
+  rowStatesWritten: Joi.valid(true).required(),
   contextHash: Joi.string().hex().length(64).required(),
   payload: summaryLogSubmittedTotalsSchema.required(),
   counts: Joi.object({

@@ -55,6 +55,7 @@ export const buildRejectedFile = (overrides = {}) => {
  * @returns {SummaryLogCommit}
  */
 export const buildSummaryLogCommit = (overrides = {}) => ({
+  rowStatesWritten: true,
   contextHash: hashClassificationContext(
     classificationContextOf({ accreditation: null })
   ),

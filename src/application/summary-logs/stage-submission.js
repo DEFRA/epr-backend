@@ -64,5 +64,5 @@ export const stageSubmission = async ({
     summaryLogId
   })
 
-  return commit
+  return { ...commit, rowStatesWritten: true }
 }
