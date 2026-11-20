@@ -1,7 +1,6 @@
-/** @import {Accreditation} from '#domain/organisations/accreditation.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {Registration} from '#domain/organisations/registration.js' */
-/** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
+/** @import {OrganisationNumber} from '#domain/organisations/numbers.js' */
 
 /**
  * @typedef {Object} OrganisationIds
@@ -56,10 +55,7 @@
  * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
  * @property {(organisationNumbers: OrganisationNumber[]) => Promise<Organisation[]>} findByOrganisationNumbers - Find the organisations holding these numbers
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
- * @property {(accreditationNumber: AccreditationNumber) => Promise<boolean>} isAccreditationNumberInUse - Whether any accreditation in any organisation holds this number, regardless of the accreditation's status
- * @property {(registrationNumber: RegistrationNumber) => Promise<boolean>} isRegistrationNumberInUse - Whether any registration in any organisation holds this number, regardless of the registration's status
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration>} findRegistrationById
- * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
  * @property {(organisationNumber: OrganisationNumber, minimumVersion?: number) => Promise<Organisation|null>} findByOrganisationNumber - Find the organisation with this number. With `minimumVersion`, waits for that version to be readable, and throws 500 if it never is
  * @property {() => Promise<OrganisationNumber|null>} findHighestOrganisationNumber - The highest number any organisation holds, or null when there are no organisations

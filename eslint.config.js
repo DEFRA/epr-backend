@@ -25,6 +25,12 @@ const DOMAIN_LAYERING_MESSAGE =
 // public interface: index.js, vocabulary.js, and test-support.js in a test.
 const ORGANISATION_READ_MODEL = './src/organisation-read-model'
 
+// The registration and accreditation context's admin routes, which serve
+// records that have no number. The context leaves epr-backend whole, so code
+// outside the module imports only its index.js, and test-support.js in a test.
+const REGISTRATION_ACCREDITATION_ADMIN =
+  './src/registration-accreditation-admin'
+
 const ns = neostandard({
   env: ['node', 'vitest'],
   noJsx: true,
@@ -95,6 +101,26 @@ export default [
               from: `${ORGANISATION_READ_MODEL}/test-support.js`,
               message:
                 'Only tests import the organisation read model through test-support.js.'
+            },
+            {
+              target: [
+                './src/!(registration-accreditation-admin)/**/*',
+                './src/*.js',
+                './.vite/**/*'
+              ],
+              from: REGISTRATION_ACCREDITATION_ADMIN,
+              except: ['./index.js', './test-support.js'],
+              message:
+                'Import the registration and accreditation admin module through its index.js, or test-support.js in a test.'
+            },
+            {
+              target: [
+                './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-fixtures|test-support).js',
+                './src/!(*.test).js'
+              ],
+              from: `${REGISTRATION_ACCREDITATION_ADMIN}/test-support.js`,
+              message:
+                'Only tests import the registration and accreditation admin module through test-support.js.'
             }
           ]
         }
