@@ -103,7 +103,7 @@
     "obfuscate-mail": "1.5.1",
     "pino": "10.4.0",
     "pino-pretty": "13.2.0",
-    "safe-stable-stringify": "2.5.0",
+    "safe-stable-stringify": "3.0.1",
     "sqs-consumer": "15.0.4",
     "unzipper": "0.12.5"
   },
