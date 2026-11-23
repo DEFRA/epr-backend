@@ -24,6 +24,8 @@ import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repo
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
+import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
@@ -944,6 +946,10 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         organisationReadRepository,
         wasteBalanceService,
         reportsService: createReportsService(reportsRepository),
+        onSummaryLogUploaded: createOnSummaryLogUploaded({
+          reportsRepository,
+          systemLogsRepository: createSystemLogsRepository()(mockLogger)
+        }),
         validateSummaryLog
       })
     }
@@ -984,11 +990,13 @@ const TEST_SYNC_USER = {
 
 /**
  * @param {Omit<Parameters<typeof submitSummaryLog>[1], 'user' | 'onSummaryLogUploaded'> & {
- *   validateSummaryLog: (summaryLogId: import('#domain/summary-logs/ids.js').SummaryLogId) => Promise<void>
+ *   validateSummaryLog: (summaryLogId: import('#domain/summary-logs/ids.js').SummaryLogId) => Promise<void>,
+ *   onSummaryLogUploaded?: Parameters<typeof submitSummaryLog>[1]['onSummaryLogUploaded']
  * }} deps
  */
 export const createTestSubmitterWorker = ({
   validateSummaryLog,
+  onSummaryLogUploaded = async () => {},
   ...submitDeps
 }) => ({
   validate: validateSummaryLog,
@@ -997,7 +1005,7 @@ export const createTestSubmitterWorker = ({
     await submitSummaryLog(summaryLogId, {
       ...submitDeps,
       user: TEST_SYNC_USER,
-      onSummaryLogUploaded: async () => {}
+      onSummaryLogUploaded
     })
   }
 })

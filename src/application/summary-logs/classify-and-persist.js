@@ -100,7 +100,8 @@ export const classifyLoads = ({
 }
 
 /**
- * Fetches periodic reports for the validated summary log.
+ * Fetches the periodic reports of the validated summary log's year. A log can
+ * carry earlier-year dates, but it cannot change an earlier year's reports.
  *
  * The period-status split is core flow once the feature is live, so a failure
  * here must propagate: the queue consumer's onFailure marks the log
@@ -121,10 +122,11 @@ export const fetchPeriodicReports = async ({
   reportsService
 }) => {
   if (registration && status === SUMMARY_LOG_STATUS.VALIDATED) {
-    return reportsService.findPeriodicReports({
+    const periodicReports = await reportsService.findPeriodicReports({
       organisationNumber: summaryLog.organisationNumber,
       registrationNumber: summaryLog.registrationNumber
     })
+    return periodicReports.filter(({ year }) => year === summaryLog.year)
   }
   return []
 }
