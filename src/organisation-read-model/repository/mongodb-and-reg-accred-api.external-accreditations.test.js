@@ -140,41 +140,6 @@ describe('stored and external accreditations together', () => {
     expect(Object.keys(registration.standingByDate)).toEqual(['2026'])
   })
 
-  it('serves the external accreditation for a year both hold, and logs the stored one it drops', async ({
-    organisationReadRepositoryWith
-  }) => {
-    const stored2027 = accreditation({
-      validFrom: '2027-01-01',
-      validTo: '2027-12-31'
-    })
-    const stored = buildOrganisation({
-      registrations: [reprocessor({ accreditationId: stored2027.id })],
-      accreditations: [stored2027]
-    })
-    const logger = { warn: vi.fn() }
-    const repository = await organisationReadRepositoryWith({
-      organisations: [stored],
-      externalAccreditations: [
-        buildExternalAccreditationFor(stored, {
-          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
-        })
-      ],
-      logger
-    })
-
-    const organisation = await findOrganisation(
-      repository,
-      stored.organisationNumber
-    )
-
-    expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations
-    ).toStrictEqual({ 2027: externalAccreditation2027 })
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: `Registration ${REPROCESSOR_NUMBER} accreditation year 2027 is held as an external accreditation, so stored accreditation ${ACCREDITATION_NUMBER} is dropped`
-    })
-  })
-
   it('leaves out and logs an external accreditation with no status changes', async ({
     organisationReadRepositoryWith
   }) => {

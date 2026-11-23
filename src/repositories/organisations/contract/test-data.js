@@ -4,7 +4,7 @@ import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.
 import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
 import { STORED_ACCREDITATION_YEAR } from '../schema/accreditation.js'
-import { toYear, yearBounds } from '#common/helpers/dates/year.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -24,7 +24,7 @@ const FIRST_ORGANISATION_NUMBER = 500000
  * @returns {{ VALID_FROM: string, VALID_TO: string }}
  */
 export const getValidDateRange = () => {
-  const { start, end } = yearBounds(toYear(STORED_ACCREDITATION_YEAR))
+  const { start, end } = yearBounds(STORED_ACCREDITATION_YEAR)
   return { VALID_FROM: start, VALID_TO: end }
 }
 

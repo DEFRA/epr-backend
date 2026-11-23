@@ -25,6 +25,7 @@ import {
 import { normalisedAccreditationNumberSchema } from './numbers.js'
 
 /** @import { StringSchema } from 'joi' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 export const accreditationSiteSchema = Joi.object({
   address: Joi.object({
@@ -53,7 +54,7 @@ const prnIssuanceSchema = Joi.object({
  * The only year REEX stores accreditations for. Every later accreditation is
  * held by the registration and accreditation service.
  */
-export const STORED_ACCREDITATION_YEAR = 2026
+export const STORED_ACCREDITATION_YEAR = /** @type {Year} */ (2026)
 
 /** @param {StringSchema} schema */
 const inStoredAccreditationYear = (schema) =>

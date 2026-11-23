@@ -3,10 +3,10 @@ import {
   utcCalendarDate
 } from '#common/helpers/date-formatter.js'
 import { isOneOf } from '#common/helpers/is-one-of.js'
-import { deriveAccreditationYear } from '#common/helpers/dates/accreditation.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
+import { STORED_ACCREDITATION_YEAR } from '#repositories/organisations/schema/accreditation.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
@@ -246,11 +246,9 @@ export function toLinkedDefraOrganisation(linked) {
 }
 
 /**
- * A registration's stored and external accreditations by year, up to the open
- * year. An external accreditation replaces a stored one for the same year.
+ * A registration's stored and external accreditations by year.
  *
  * @param {{
- *   openYear: Year
  *   registration: StoredRegistration
  *   organisation: StoredOrganisation
  *   context: Context
@@ -258,34 +256,21 @@ export function toLinkedDefraOrganisation(linked) {
  * }} options
  * @returns {Record<Year, AccreditationCommon>}
  */
-function accreditationsUpTo({
-  openYear,
+function accreditationsOf({
   registration,
   organisation,
   context,
   externalAccreditations
 }) {
-  const { registrationNumber } = registration
-  const storedAccreditations = keyedRecords(
-    accreditationsForRegistration(registration, organisation),
-    (accreditation) => toAccreditationEntry(accreditation, context),
-    `Registration ${registrationNumber} accreditation year`,
-    context.onDrop
-  )
-  Object.values(externalAccreditations)
-    .map(({ year }) => year)
-    .filter((year) => Object.hasOwn(storedAccreditations, year))
-    .forEach((year) =>
-      context.onDrop(
-        `Registration ${registrationNumber} accreditation year ${year} is held as an external accreditation, so stored accreditation ${storedAccreditations[year].accreditationNumber} is dropped`
-      )
-    )
-  return Object.fromEntries(
-    Object.entries({
-      ...storedAccreditations,
-      ...externalAccreditations
-    }).filter(([, { year }]) => year <= openYear)
-  )
+  return {
+    ...keyedRecords(
+      accreditationsForRegistration(registration, organisation),
+      (accreditation) => toAccreditationEntry(accreditation, context),
+      `Registration ${registration.registrationNumber} accreditation year`,
+      context.onDrop
+    ),
+    ...externalAccreditations
+  }
 }
 
 /**
@@ -332,8 +317,7 @@ function toRegistrationEntry(
   }
 
   const openYear = latestOpenYear(new Date(context.today))
-  const accreditations = accreditationsUpTo({
-    openYear,
+  const accreditations = accreditationsOf({
     registration,
     organisation,
     context,
@@ -508,7 +492,7 @@ function toAccreditationEntry(accreditation, { onDrop }) {
     return null
   }
 
-  const year = deriveAccreditationYear(accreditation)
+  const year = STORED_ACCREDITATION_YEAR
   return [
     year,
     {
