@@ -2,7 +2,12 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
-import { nextYear, toYear, utcYearOf } from '#common/helpers/dates/year.js'
+import {
+  nextYear,
+  previousYear,
+  toYear,
+  utcYearOf
+} from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -578,6 +583,49 @@ export const pollForValidation = (server, summaryLogId) =>
     maxAttempts: DEFAULT_MAX_ATTEMPTS
   })
 
+/**
+ * An accredited reprocessor's 2027 received loads, each row defaulting to 100
+ * tonnes received in January 2027.
+ *
+ * @param {Array<Record<string, unknown> & { dwtSupplyId?: number | null }>} rows
+ */
+export const reprocessorReceivedLoads2027 = (rows) => ({
+  RECEIVED_LOADS_FOR_REPROCESSING: {
+    location: { sheet: 'Received', row: 7, column: 'A' },
+    headers: [...REPROCESSOR_RECEIVED_HEADERS, 'DWT_SUPPLY_ID'],
+    rows: rows.map(({ dwtSupplyId = null, ...row }, index) => ({
+      rowNumber: 8 + index,
+      values: [
+        ...createReprocessorReceivedRowValues({
+          dateReceived: '2027-01-15T00:00:00.000Z',
+          tonnageReceived: 100,
+          ...row
+        }),
+        dwtSupplyId
+      ]
+    }))
+  }
+})
+
+/**
+ * Submits a summary log as the operator and waits for the submission to
+ * finish, returning the submit response and the status it ends in.
+ *
+ * @param {{ server: HapiServer }} env
+ * @param {string} summaryLogId
+ */
+export const submitAndWait = async ({ server }, summaryLogId) => {
+  const response = await server.inject({
+    method: 'POST',
+    url: buildSubmitUrl(summaryLogId),
+    ...asOperator()
+  })
+  const status = await pollWhileStatus(server, summaryLogId, {
+    waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+  })
+  return { response, status }
+}
+
 export const createStandardMeta = (processingType) => ({
   REGISTRATION_NUMBER: {
     value: 'REG123',
@@ -701,21 +749,18 @@ export const exporter2027Loads = (rows) => ({
 
 /**
  * @param {Awaited<ReturnType<typeof setupWasteBalanceIntegrationEnvironment>>} env
- * @param {{ summaryLogId: string, fileId: string }} ids
+ * @param {{ summaryLogId: string, fileId: string, year?: Year, accredited?: boolean }} ids - the year and accreditation default to the environment's
  * @param {object} parsed
  */
 export const uploadAndValidate = async (
   env,
-  { summaryLogId, fileId },
+  { summaryLogId, fileId, year = env.year, accredited = env.accredited },
   parsed
 ) => {
   env.fileDataMap[fileId] = parsed
   await env.server.inject({
     method: 'POST',
-    url: buildPostUrl(summaryLogId, {
-      accredited: env.accredited,
-      year: env.year
-    }),
+    url: buildPostUrl(summaryLogId, { accredited, year }),
     payload: createUploadPayload(
       env.organisationId,
       env.registrationId,
@@ -834,6 +879,7 @@ export const createTestInfrastructure = async (
  *   reportsRepository?: ReturnType<ReturnType<typeof createInMemoryReportsRepository>>,
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
+ *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
  *   year?: Year,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
  * }} WasteBalanceEnvironmentOptions
@@ -850,6 +896,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   accredited = true,
   year = UPLOAD_YEAR,
   accreditationValidFrom = `${year}-01-01`,
+  previousYearAccreditationNumber,
   config
 } = {}) => {
   const accreditationId = 'ACC-123'
@@ -875,7 +922,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       reprocessingType,
       material,
       accredited,
-      accreditationValidFrom
+      accreditationValidFrom,
+      previousYearAccreditationNumber
     })
   ])()
 
@@ -944,6 +992,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         logger: mockLogger,
         summaryLogsRepository,
         organisationReadRepository,
+        ledgerRepository,
         wasteBalanceService,
         reportsService: createReportsService(reportsRepository),
         onSummaryLogUploaded: createOnSummaryLogUploaded({
@@ -1123,7 +1172,8 @@ const buildComplexTestOrg = ({
  * The organisation `buildComplexTestOrg` builds, as the read model serves it:
  * its registration under the test keys, approved from `VALID_FROM`, and its
  * accreditation for the year of `accreditationValidFrom` when accredited,
- * approved from `accreditationValidFrom`.
+ * approved from `accreditationValidFrom`, and, given its number, the
+ * accreditation for the year before, approved from the start of that year.
  *
  * @param {{
  *   processingType: string,
@@ -1132,7 +1182,8 @@ const buildComplexTestOrg = ({
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   withOverseasSites?: boolean,
- *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
+ *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
+ *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
  * }} options
  * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
  */
@@ -1143,7 +1194,8 @@ const buildComplexTestReadOrg = ({
   accredited = true,
   accreditationValidFrom = VALID_FROM,
   withOverseasSites = true,
-  accreditationNumber = TEST_ACCREDITATION_NUMBER
+  accreditationNumber = TEST_ACCREDITATION_NUMBER,
+  previousYearAccreditationNumber
 }) => {
   const isExporter = processingType === 'exporter'
   /** @param {string} approvedAt */
@@ -1159,11 +1211,22 @@ const buildComplexTestReadOrg = ({
   })
   const accreditationYear = utcYearOf(accreditationValidFrom)
   const followingYear = nextYear(accreditationYear)
-  const accreditation = buildReadAccreditation({
-    accreditationNumber,
-    status: approvedFrom(accreditationValidFrom),
-    year: accreditationYear
-  })
+  const accreditations = [
+    ...(previousYearAccreditationNumber
+      ? [
+          buildReadAccreditation({
+            accreditationNumber: previousYearAccreditationNumber,
+            status: approvedFrom(`${previousYear(accreditationYear)}-01-01`),
+            year: previousYear(accreditationYear)
+          })
+        ]
+      : []),
+    buildReadAccreditation({
+      accreditationNumber,
+      status: approvedFrom(accreditationValidFrom),
+      year: accreditationYear
+    })
+  ]
   const common = {
     material,
     status: approvedFrom(VALID_FROM)
@@ -1193,23 +1256,27 @@ const buildComplexTestReadOrg = ({
           : {},
         accreditations: accredited
           ? accreditationsByYear(
-              buildReadExporterAccreditation({
-                ...accreditation,
-                overseasSites: {
-                  100: { status: 'approved', approvedOn: VALID_FROM },
-                  200: {
-                    status: 'approved',
-                    approvedOn: UNAPPROVED_VALID_FROM
+              ...accreditations.map((accreditation) =>
+                buildReadExporterAccreditation({
+                  ...accreditation,
+                  overseasSites: {
+                    100: { status: 'approved', approvedOn: VALID_FROM },
+                    200: {
+                      status: 'approved',
+                      approvedOn: UNAPPROVED_VALID_FROM
+                    }
                   }
-                }
-              })
+                })
+              )
             )
           : {}
       })
     : buildReadReprocessorRegistration({
         ...common,
         reprocessingType,
-        accreditations: accredited ? accreditationsByYear(accreditation) : {}
+        accreditations: accredited
+          ? accreditationsByYear(...accreditations)
+          : {}
       })
   return buildServedOrganisation({
     organisationNumber: TEST_ORGANISATION_NUMBER,

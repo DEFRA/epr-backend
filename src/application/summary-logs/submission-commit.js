@@ -16,6 +16,7 @@ import { RECORD_CHANGE, recordChangeFor } from './record-change.js'
  * @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js'
  * @import {SummaryLogSubmittedTotals} from '#waste-balances/repository/ledger-schema.js'
  * @import {RecordChange} from './record-change.js'
+ * @import {SummaryLogContext} from './classification-context.js'
  */
 
 /**
@@ -83,7 +84,7 @@ const countsOf = (wasteRecords, classificationContext, recordChanges) => {
  *
  * @param {object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {RowClassificationContext} params.classificationContext
+ * @param {SummaryLogContext} params.classificationContext
  * @param {Map<string, RecordChange>} params.recordChanges
  * @returns {Omit<SummaryLogCommit, 'rowStatesWritten'>}
  */
