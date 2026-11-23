@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import {
   PRN_STATUS,
@@ -16,7 +16,7 @@ import {
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
   buildDraftPrn,
-  WITHIN_PRN_YEAR
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
@@ -135,13 +135,7 @@ const expectWasteBalanceLog = (
 }
 
 describe('updatePrnStatus system logging on successful balance update', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'], now: WITHIN_PRN_YEAR })
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
+  pinClockWithinPrnYear()
 
   it('logs deduct_available when a PRN is created from draft', async () => {
     const {

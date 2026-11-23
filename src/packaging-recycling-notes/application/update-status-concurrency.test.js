@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import {
   PRN_STATUS,
@@ -24,7 +24,7 @@ import {
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
   buildAwaitingAcceptancePrn,
-  WITHIN_PRN_YEAR
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   buildLedgerEvent,
@@ -288,13 +288,7 @@ const expectOneWinsOneDocumentConflict = async (
 }
 
 describe('updatePrnStatus concurrency', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'], now: WITHIN_PRN_YEAR })
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
+  pinClockWithinPrnYear()
 
   it('debits the waste balance only once when two issuances race for the same PRN', async () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([

@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
+import { beforeEach, describe, expect, vi } from 'vitest'
 
 import {
   toAccreditationNumber,
@@ -10,7 +10,7 @@ import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,
   underAccreditation,
-  WITHIN_PRN_YEAR
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { COLLECTION_NAME as PRNS_COLLECTION } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -187,16 +187,7 @@ describe('status history written, then read by the PRN routes (integration)', ()
   )
 
   describe('an accreditation status', () => {
-    beforeEach(() => {
-      vi.useFakeTimers({
-        toFake: ['Date'],
-        now: WITHIN_PRN_YEAR
-      })
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
+    pinClockWithinPrnYear()
 
     /**
      * Writes the accreditation status change, then asks to issue the PRN.

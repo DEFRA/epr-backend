@@ -6,10 +6,25 @@ import {
 } from '#domain/organisations/numbers.js'
 import { randomInt, randomUUID } from 'node:crypto'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { afterEach, beforeEach, vi } from 'vitest'
 
 const ACCREDITATION_YEAR = 2026
 export const PRN_YEAR = toYear(ACCREDITATION_YEAR)
 export const WITHIN_PRN_YEAR = new Date(`${PRN_YEAR}-06-01T12:00:00.000Z`)
+
+/**
+ * Pins the clock within `PRN_YEAR` for each test in the enclosing block, so
+ * PRNs for that year can still be raised and issued after it closes.
+ */
+export const pinClockWithinPrnYear = () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'], now: WITHIN_PRN_YEAR })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+}
 
 /** @import { AccreditationSnapshot, OrganisationSnapshot, PackagingRecyclingNote } from '#packaging-recycling-notes/domain/model.js' */
 

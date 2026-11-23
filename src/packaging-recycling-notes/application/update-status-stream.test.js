@@ -1,7 +1,7 @@
 import {
   PRN_YEAR,
   buildAccreditationSnapshot,
-  WITHIN_PRN_YEAR
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   toAccreditationNumber,
@@ -9,7 +9,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 
 import {
   PRN_STATUS,
@@ -143,12 +143,9 @@ const callUpdate = (overrides) =>
     ...overrides
   })
 
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ['Date'], now: WITHIN_PRN_YEAR })
-})
+pinClockWithinPrnYear()
 
 afterEach(() => {
-  vi.useRealTimers()
   vi.clearAllMocks()
 })
 
