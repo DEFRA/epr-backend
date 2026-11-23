@@ -17,27 +17,42 @@ import {
 import { buildExternalAccreditationFor } from './repository/contract/test-data.js'
 
 /** @import { MongoClient } from 'mongodb' */
-/** @import { ServerApp } from '#common/hapi-types.js' */
+/** @import { ServerApp, TypedLogger } from '#common/hapi-types.js' */
+/** @import { RegAccredApiConfig } from './repository/reg-accred-accreditations.js' */
 /** @import { OrganisationReadRepository } from './index.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
-const REG_ACCRED_BASE_URL = 'https://reg-accred.test'
+/** @type {RegAccredApiConfig} */
+const regAccredApi = {
+  baseUrl: 'https://reg-accred.test',
+  clientId: 'epr-ReEx-Client',
+  sharedSecret: 'secret'
+}
 const REG_ACCRED_ACCREDITATION_NUMBER = 'A27ER5000560001AL'
 
 const mswServer = setupMsw()
 
-const serveRegAccredAccreditation = () =>
+/**
+ * Serves one approved 2027 accreditation from Reg Accred.
+ *
+ * @returns {URL[]} the URLs requested
+ */
+const serveRegAccredAccreditation = () => {
+  /** @type {URL[]} */
+  const requested = []
   mswServer.use(
-    http.get(`${REG_ACCRED_BASE_URL}/v1/accreditations`, ({ request }) =>
-      HttpResponse.json({
+    http.get(`${regAccredApi.baseUrl}/v1/accreditations`, ({ request }) => {
+      const url = new URL(request.url)
+      requested.push(url)
+      return HttpResponse.json({
         pageNumber: 1,
         limit: 20,
         totalItems: 1,
         items: [
           {
             organisationNumber: Number(
-              new URL(request.url).searchParams.get('organisationNumber')
+              url.searchParams.get('organisationNumber')
             ),
             registrationNumber: REPROCESSOR_NUMBER,
             accreditationNumber: REG_ACCRED_ACCREDITATION_NUMBER,
@@ -49,8 +64,10 @@ const serveRegAccredAccreditation = () =>
           }
         ]
       })
-    )
+    })
   )
+  return requested
+}
 
 /**
  * @param {MongoClient} mongoClient
@@ -65,15 +82,13 @@ const registeredRepository = async (
   const settings = {
     'featureFlags.regAccredExternalAccreditations':
       regAccredExternalAccreditations,
-    regAccredApi: {
-      baseUrl: REG_ACCRED_BASE_URL,
-      clientId: 'epr-ReEx-Client',
-      sharedSecret: 'secret'
-    }
+    regAccredApi
   }
+  /** @type {Pick<TypedLogger, 'warn'>} */
+  const logger = { warn: () => {} }
   const database = mongoClient.db('epr-backend')
   const server = Object.assign(Hapi.server(), { db: database })
-  server.decorate('server', 'logger', { warn: () => {} })
+  server.decorate('server', 'logger', logger)
   const app = /** @type {ServerApp} */ (server.app)
   app.overseasSitesRepository = (
     await createOverseasSitesRepository(database)
@@ -94,17 +109,17 @@ describe('organisationReadRepositoryPlugin', () => {
   })
 
   it.for(
-    /** @type {[string, boolean, string][]} */ ([
-      ['off', false, 'A27ER5000560000AL'],
-      ['on', true, REG_ACCRED_ACCREDITATION_NUMBER]
+    /** @type {[string, boolean, string, number][]} */ ([
+      ['off', false, 'A27ER5000560000AL', 0],
+      ['on', true, REG_ACCRED_ACCREDITATION_NUMBER, 1]
     ])
   )(
-    'registers a repository that serves the 2027 accreditation by the Reg Accred flag, with it %s',
+    'registers a repository that asks Reg Accred for the 2027 accreditation only with the flag %s',
     async (
-      [, flag, expectedNumber],
+      [, flag, expectedNumber, expectedRequests],
       { organisationReadRepositoryWith, mongoClient }
     ) => {
-      serveRegAccredAccreditation()
+      const requested = serveRegAccredAccreditation()
       const stored = buildOrganisation({ registrations: [reprocessor()] })
       await organisationReadRepositoryWith({
         organisations: [stored],
@@ -125,6 +140,7 @@ describe('organisationReadRepositoryPlugin', () => {
           toYear(2027)
         ]?.accreditationNumber
       ).toBe(expectedNumber)
+      expect(requested).toHaveLength(expectedRequests)
     }
   )
 })
