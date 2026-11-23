@@ -336,6 +336,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
 export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
   ...RECEIVED_LOADS_FOR_EXPORT,
+  previousYearRowIdField: RECEIVED_LOADS_FIELDS_2027.PREVIOUS_YEAR_ROW_ID,
   requiredHeaders: [
     ...RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
     ...Object.values(RECEIVED_LOADS_FIELDS_2027)

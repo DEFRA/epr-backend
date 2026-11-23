@@ -6,56 +6,24 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  asOperator,
-  buildSubmitUrl,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
-  createReprocessorReceivedRowValues,
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
   exporter2027Loads,
   getWasteBalance,
   ledgerIdOf,
   openNextYear,
-  pollWhileStatus,
-  REPROCESSOR_RECEIVED_HEADERS,
+  reprocessorReceivedLoads2027,
   setupWasteBalanceIntegrationEnvironment,
+  submitAndWait,
   tableOf,
   uploadAndValidate,
   withTemplateYear
 } from './integration-test-helpers.js'
 
 const YEAR = toYear(2027)
-
-const reprocessorReceivedLoads = (rows) => ({
-  RECEIVED_LOADS_FOR_REPROCESSING: {
-    location: { sheet: 'Received', row: 7, column: 'A' },
-    headers: [...REPROCESSOR_RECEIVED_HEADERS, 'DWT_SUPPLY_ID'],
-    rows: rows.map(({ dwtSupplyId = null, ...row }, index) => ({
-      rowNumber: 8 + index,
-      values: [
-        ...createReprocessorReceivedRowValues({
-          dateReceived: '2027-01-15T00:00:00.000Z',
-          tonnageReceived: 100,
-          ...row
-        }),
-        dwtSupplyId
-      ]
-    }))
-  }
-})
-
-const submit = async (env, summaryLogId) => {
-  await env.server.inject({
-    method: 'POST',
-    url: buildSubmitUrl(summaryLogId),
-    ...asOperator()
-  })
-  return pollWhileStatus(env.server, summaryLogId, {
-    waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
-  })
-}
 
 const storedRows = (env, ledgerId, fileId) =>
   env.summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
@@ -106,7 +74,7 @@ describe('2027 summary logs', () => {
       })
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(await submit(env, ids.summaryLogId)).toBe(
+      expect((await submitAndWait(env, ids.summaryLogId)).status).toBe(
         SUMMARY_LOG_STATUS.SUBMITTED
       )
 
@@ -297,7 +265,7 @@ describe('2027 summary logs', () => {
       })
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(await submit(env, ids.summaryLogId)).toBe(
+      expect((await submitAndWait(env, ids.summaryLogId)).status).toBe(
         SUMMARY_LOG_STATUS.SUBMITTED
       )
 
@@ -360,7 +328,7 @@ describe('2027 summary logs', () => {
       })
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(await submit(env, ids.summaryLogId)).toBe(
+      expect((await submitAndWait(env, ids.summaryLogId)).status).toBe(
         SUMMARY_LOG_STATUS.SUBMITTED
       )
 
@@ -405,14 +373,14 @@ describe('2027 summary logs', () => {
 
       const validated = await uploadAndValidate(env, ids, {
         meta: withTemplateYear(createWasteBalanceMeta(processingType), YEAR),
-        data: reprocessorReceivedLoads([
+        data: reprocessorReceivedLoads2027([
           { rowId: 1001, dwtSupplyId: 12345678 },
           { rowId: 1002 }
         ])
       })
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(await submit(env, ids.summaryLogId)).toBe(
+      expect((await submitAndWait(env, ids.summaryLogId)).status).toBe(
         SUMMARY_LOG_STATUS.SUBMITTED
       )
 
