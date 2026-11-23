@@ -7,6 +7,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { buildRowStateLink } from '#waste-records/repository/test-data.js'
 
 const overseasSites = /** @type {any} */ (new Map())
 
@@ -29,12 +30,7 @@ const buildWasteRecord = (
     }
   })
 
-const link = {
-  year: 2026,
-  rowId: '1500',
-  rowStateId: 'state-2026',
-  suppliedFields: []
-}
+const link = buildRowStateLink()
 
 /**
  * A submitted row state as the read model projects it — the write-path
@@ -126,7 +122,7 @@ describe('classifyRecordChanges', () => {
     const data = { supplierName: 'Acme', TONNAGE_RECEIVED_FOR_RECYCLING: 10 }
     const submittedRecord = buildWasteRecord(data, { link })
     const currentRecord = buildWasteRecord(data, {
-      link: { ...link, rowStateId: 'state-2026-b' }
+      link: buildRowStateLink({ rowStateId: 'state-1500-b' })
     })
     const submittedRowStatesByKey = new Map([
       [key(submittedRecord.record), submittedStateOf(submittedRecord.record)]

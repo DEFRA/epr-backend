@@ -6,16 +6,12 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { SummaryLogRowStateConflictError } from '../port.js'
 
 import {
+  buildRowStateLink,
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID
 } from '../test-data.js'
 
-const LINK = {
-  year: 2026,
-  rowId: '1500',
-  rowStateId: 'state-2026',
-  suppliedFields: ['DATE_OF_EXPORT']
-}
+const LINK = buildRowStateLink()
 
 const excludedClassification = {
   outcome: ROW_OUTCOME.EXCLUDED,
@@ -198,7 +194,7 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
           DEFAULT_LEDGER_ID,
           [
             buildSummaryLogRowStateEntry({
-              link: { ...LINK, rowStateId: 'state-2026-b' }
+              link: buildRowStateLink({ rowStateId: 'state-1500-b' })
             })
           ],
           'log-2'

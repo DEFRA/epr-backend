@@ -135,7 +135,6 @@ const hashSummaryLogRowState = (candidate) =>
         canonicalise({
           processingType: candidate.processingType,
           data: candidate.data,
-          // Absent on an unlinked row, so its hash is unchanged.
           ...(candidate.link && { link: candidate.link }),
           classification: candidate.classification
         })
