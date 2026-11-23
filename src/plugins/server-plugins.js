@@ -51,7 +51,7 @@ function getSwaggerPlugins() {
  * The plugins every server registers, around the infrastructure plugins that
  * differ between production and tests.
  *
- * @param {import('convict').Config<Record<string, any>>} config
+ * @param {ReturnType<typeof import('#root/config.js').getConfig>} config
  * @param {any[]} infrastructure - the repository and worker plugins, and the
  *   plugins that depend on repositories, which the legacy apply-routes server
  *   registers none of
@@ -81,7 +81,6 @@ export function serverPlugins(config, infrastructure) {
     externalApiErrorFormatter
   ]
 
-  /* istanbul ignore next */
   if (config.get('isSwaggerEnabled')) {
     plugins.push(...getSwaggerPlugins())
   }
