@@ -127,8 +127,12 @@ describe('aggregateAvailableBalance - Integration', () => {
   /** @type {import('#organisation-read-model/index.js').OrganisationReadRepository} */
   let organisationReadRepository
 
-  const aggregate = () =>
-    aggregateAvailableBalance(organisationReadRepository, ledgerRepository)
+  const aggregate = (year = toYear(2026)) =>
+    aggregateAvailableBalance(
+      organisationReadRepository,
+      ledgerRepository,
+      year
+    )
 
   beforeEach(
     async (
@@ -278,7 +282,7 @@ describe('aggregateAvailableBalance - Integration', () => {
       )
     ])
 
-    const result = await aggregate()
+    const result = await aggregate(toYear(2027))
 
     expect(result.materials).toContainEqual({
       material: MATERIAL.PLASTIC,
@@ -286,6 +290,53 @@ describe('aggregateAvailableBalance - Integration', () => {
     })
     expect(result.total).toBe(80)
   })
+
+  it.for([
+    [2026, 100],
+    [2027, 80]
+  ])(
+    'reports only the balance of accreditations held for the year asked for, %i',
+    async ([year, expectedTotal]) => {
+      config.set('openNextYear', true)
+      onTestFinished(() => config.reset('openNextYear'))
+      await db.collection(ORGANISATIONS_COLLECTION).insertOne(
+        storedOrganisation('507f1f77bcf86cd799439011', orgId1, [
+          {
+            id: '1',
+            accreditationNumber: 'ACC-1',
+            material: MATERIAL.PLASTIC
+          }
+        ])
+      )
+      await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+        buildExternalAccreditation({
+          organisationNumber: toOrganisationNumber(String(orgId1)),
+          registrationNumber: toRegistrationNumber('REG-1'),
+          year: toYear(2027),
+          accreditationNumber: toAccreditationNumber('ACC-EXTERNAL'),
+          status: {
+            current: 'approved',
+            lastUpdatedAt: '2027-01-01T00:00:00.000Z',
+            timeline: [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+          }
+        })
+      )
+      await ledgerRepository.appendEvents([
+        ledgerEvent(ledgerIdOf(orgId1, '1', 'ACC-1'), 1, 100)
+      ])
+      await ledgerRepository.appendEvents([
+        ledgerEvent(
+          { ...ledgerIdOf(orgId1, '1', 'ACC-EXTERNAL'), year: toYear(2027) },
+          1,
+          80
+        )
+      ])
+
+      const result = await aggregate(toYear(year))
+
+      expect(result.total).toBe(expectedTotal)
+    }
+  )
 
   it('excludes ledgers no accreditation in the read model holds', async () => {
     await db
