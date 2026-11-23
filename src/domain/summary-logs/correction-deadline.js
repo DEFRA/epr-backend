@@ -37,4 +37,4 @@ export const lastCorrectionDay = (year, { registeredOnly }) =>
  * @param {Date} at
  */
 export const isBeforeCorrectionDeadline = (year, registration, at) =>
-  utcCalendarDate(at) <= lastCorrectionDay(year, registration)
+  utcCalendarDate(at).localeCompare(lastCorrectionDay(year, registration)) <= 0
