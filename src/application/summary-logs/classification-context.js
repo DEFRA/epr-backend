@@ -3,7 +3,7 @@ import {
   linksYears,
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import {
   classificationContextOf,

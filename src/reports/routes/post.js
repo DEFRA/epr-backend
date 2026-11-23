@@ -14,7 +14,7 @@ import { extractChangedBy, withRegistrationDetails } from './shared.js'
 import { reportDetailResponseSchema } from './response.schema.js'
 import { reportResponseFailAction } from './response-fail-action.js'
 import { cadenceAccreditationFor } from '#reports/domain/cadence.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 
 /**
  * @import { HapiResponseToolkit, TypedLogger } from '#common/hapi-types.js'

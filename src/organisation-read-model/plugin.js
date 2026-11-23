@@ -1,11 +1,13 @@
 import { registerDependency } from '#plugins/register-dependency.js'
-import { createOrganisationReadRepository } from './mongodb-and-reg-accred-api.js'
+import { createOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { RegAccredApiConfig } from './reg-accred-accreditations.js' */
+/** @import { RegAccredApiConfig } from './repository/reg-accred-accreditations.js' */
 
 /**
+ * The organisation read model's Hapi plugin, which registers its repository.
+ *
  * Reads exporters' sites through `server.app.overseasSitesRepository`, so it
  * must register before this plugin.
  *

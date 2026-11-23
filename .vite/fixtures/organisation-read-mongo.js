@@ -10,8 +10,7 @@ import { createOrganisationReadRepository } from '#organisation-read-model/test-
 /** @import { TestAPI } from 'vitest' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
+/** @import { ExternalAccreditation, OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
  * Stores the organisations, overseas sites and external accreditations as the

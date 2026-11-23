@@ -5,7 +5,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 import {
   accreditationsByYear,
   approvedStatusFrom,

@@ -6,9 +6,10 @@ import {
   findPage
 } from '#repositories/organisations/mongodb-find.js'
 import {
-  REG_ACCRED_ACCREDITATION_YEAR,
-  createRegAccredAccreditationsLoader
-} from './reg-accred-accreditations.js'
+  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
+  REG_ACCRED_ACCREDITATION_YEAR
+} from './external-accreditation-sources.js'
+import { createRegAccredAccreditationsLoader } from './reg-accred-accreditations.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
 /** @import { Collection, Db } from 'mongodb' */
@@ -20,8 +21,6 @@ import { toReadModelOrganisations } from './to-read-model.js'
 /** @import { OrganisationReadRepository } from './port.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */
 /** @import { RegAccredApiConfig } from './reg-accred-accreditations.js' */
-
-export const EXTERNAL_ACCREDITATIONS_COLLECTION_NAME = 'external-accreditations'
 
 /**
  * Loads the external accreditations for a year of the given organisation, or

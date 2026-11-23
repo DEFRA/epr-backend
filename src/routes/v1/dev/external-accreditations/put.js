@@ -11,8 +11,7 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExternalAccreditationsRepository } from '#external-accreditations/repository/port.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
+/** @import { ExternalAccreditation, OrganisationReadRepository } from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {{ registrationNumber: RegistrationNumber, year: Year }} ExternalAccreditationParams

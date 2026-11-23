@@ -2,7 +2,7 @@ import { isRegistrationActiveInYear } from '#domain/organisations/registration-u
 import { hasTemplatesForYear } from '#domain/summary-logs/table-schemas/index.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import {Registration} from '#organisation-read-model/vocabulary.js' */
+/** @import {Registration} from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {{ eligible: true } | { eligible: false, reason: string }} UploadEligibilityResult

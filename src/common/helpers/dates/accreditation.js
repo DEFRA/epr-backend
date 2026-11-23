@@ -1,7 +1,7 @@
 import { calendarDate, toCalendarDate } from '#common/helpers/date-formatter.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
-import { statusOn } from '#organisation-read-model/vocabulary.js'
+import { statusOn } from '#organisation-read-model/index.js'
 
 /** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */

@@ -78,7 +78,7 @@ describe('generateReportSubmissions (integration)', () => {
       material: 'Glass-remelt',
       reportType: 'Monthly'
     }
-    /** @param {import('#organisation-read-model/vocabulary.js').Organisation} org */
+    /** @param {import('#organisation-read-model/index.js').Organisation} org */
     const rowFor = (org) => ({
       ...baseRow,
       registrationNumber: `REG${org.organisationNumber}`,
@@ -449,7 +449,7 @@ const approvedFromJanuary = approvedStatusFrom('2026-01-01')
  * @param {{
  *   organisationNumber?: string,
  *   name?: string,
- *   registration?: Partial<import('#organisation-read-model/vocabulary.js').ReprocessorRegistration>
+ *   registration?: Partial<import('#organisation-read-model/index.js').ReprocessorRegistration>
  * }} [options]
  */
 const buildOrg = ({
@@ -485,7 +485,7 @@ const buildOrg = ({
  * A registration accredited for 2026 in `status`.
  *
  * @param {string} accreditationNumber
- * @param {import('#organisation-read-model/vocabulary.js').Status<'approved' | 'suspended'>} [status]
+ * @param {import('#organisation-read-model/index.js').Status<'approved' | 'suspended'>} [status]
  */
 const accreditedAs = (accreditationNumber, status = approvedFromJanuary) => ({
   accreditations: accreditationsByYear(
@@ -496,7 +496,7 @@ const accreditedAs = (accreditationNumber, status = approvedFromJanuary) => ({
   )
 })
 
-/** @param {import('#organisation-read-model/vocabulary.js').Organisation[]} orgs */
+/** @param {import('#organisation-read-model/index.js').Organisation[]} orgs */
 const makeOrgsRepo = (orgs) => createInMemoryOrganisationReadRepository(orgs)()
 
 const makeReportsRepo = (allPeriodicReports = []) =>

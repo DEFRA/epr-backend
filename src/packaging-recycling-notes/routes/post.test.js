@@ -94,7 +94,7 @@ const seedStream = (closingBalance = SEED_BALANCE, year = PRN_YEAR) =>
       : []
   )()
 
-/** @type {import('#organisation-read-model/vocabulary.js').StatusTimeline<import('#organisation-read-model/vocabulary.js').AccreditationStatus>} */
+/** @type {import('#organisation-read-model/index.js').StatusTimeline<import('#organisation-read-model/index.js').AccreditationStatus>} */
 const cancelledTimeline = [
   { status: 'approved', at: '2026-01-01T00:00:00.000Z' },
   { status: 'cancelled', at: '2026-03-01T00:00:00.000Z' }
@@ -135,7 +135,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
    *   year?: number,
    *   material?: Material,
    *   reprocessingType?: 'input' | 'output',
-   *   status?: import('#organisation-read-model/vocabulary.js').Status<import('#organisation-read-model/vocabulary.js').AccreditationStatus>,
+   *   status?: import('#organisation-read-model/index.js').Status<import('#organisation-read-model/index.js').AccreditationStatus>,
    *   tradingName?: string
    * }} [options]
    */
@@ -153,7 +153,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       status: status ?? approvedStatusFrom(validFrom),
       year: toYear(year)
     })
-    /** @type {Partial<import('#organisation-read-model/vocabulary.js').RegistrationCommon>} */
+    /** @type {Partial<import('#organisation-read-model/index.js').RegistrationCommon>} */
     const registrationFields = {
       material,
       status: approvedStatusFrom(validFrom)

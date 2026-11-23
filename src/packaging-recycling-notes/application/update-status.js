@@ -22,7 +22,7 @@ import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { toIssuingAccreditation } from '#packaging-recycling-notes/domain/issuing-accreditation.js'
 import { reservePrnNumber } from './reserve-prn-number.js'
 import { catchUpPrnProjection } from './get-projected-prn.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository

@@ -26,7 +26,7 @@ import {
 import { countOutstandingReturns } from './outstanding-returns.js'
 
 /** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
-/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
+/** @import { AccreditationStatus, Organisation, StatusTimeline } from '#organisation-read-model/index.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 

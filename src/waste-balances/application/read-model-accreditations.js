@@ -4,10 +4,10 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { firstApprovedAt } from '#organisation-read-model/vocabulary.js'
+import { firstApprovedAt } from '#organisation-read-model/index.js'
 
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
-/** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/vocabulary.js' */
+/** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/index.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */

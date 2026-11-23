@@ -121,7 +121,7 @@ export default [
             ...moduleFence(
               'organisation-read-model',
               'the organisation read model',
-              ['./index.js', './vocabulary.js', './test-support.js']
+              ['./index.js', './plugin.js', './test-support.js']
             ),
             ...moduleFence('waste-records-export', 'the waste records export', [
               './index.js',

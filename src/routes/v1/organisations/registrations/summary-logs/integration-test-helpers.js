@@ -1185,7 +1185,7 @@ const buildComplexTestOrg = ({
  *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
  *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
  * }} options
- * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
+ * @returns {import('#organisation-read-model/index.js').Organisation}
  */
 const buildComplexTestReadOrg = ({
   processingType,
