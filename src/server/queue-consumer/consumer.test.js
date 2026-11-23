@@ -23,15 +23,19 @@ import {
   DEFAULT_ORG_NUMBER,
   DEFAULT_REG_ID,
   DEFAULT_REG_NUMBER,
-  DEFAULT_REPORT_YEAR,
-  NEXT_YEAR_REPORT,
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
+import { calendarDate } from '#common/helpers/date-formatter.js'
+import { nextYear, toYear } from '#common/helpers/dates/year.js'
 import {
   buildSummaryLogCommit,
   summaryLogFactory
 } from '#repositories/summary-logs/contract/test-data.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import {
+  PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
@@ -69,6 +73,22 @@ const insertSubmitting = async (repository, id, overrides) => {
   })
   await waitForVersion(repository, summaryLogId, 2)
 }
+
+const REGISTERED_ONLY_META = {
+  [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+    PROCESSING_TYPES.REPROCESSOR_REGISTERED_ONLY
+}
+
+/** A year with templates, as the year of a log that validation passed. */
+const LOG_YEAR = toYear(2026)
+
+/** @param {import('#common/helpers/dates/year.js').Year} year */
+const reportIn = (year) => ({
+  year,
+  startDate: calendarDate(`${year}-01-01`),
+  endDate: calendarDate(`${year}-01-31`),
+  dueDate: calendarDate(`${year}-02-15`)
+})
 
 const TEST_USER = {
   id: 'test-user',
@@ -704,7 +724,7 @@ describe('createCommandQueueConsumer', () => {
         logger.child.mockReturnValue(childLogger)
 
         await insertSubmitting(summaryLogsRepository, 'log-123', {
-          meta: {},
+          meta: REGISTERED_ONLY_META,
           file: { id: 'file-456', name: 'test-file.xlsx' }
         })
 
@@ -1082,7 +1102,7 @@ describe('createCommandQueueConsumer', () => {
     describe('submit command', () => {
       const seedSubmitting = (id = 'log-123') =>
         insertSubmitting(summaryLogsRepository, id, {
-          meta: {},
+          meta: REGISTERED_ONLY_META,
           file: { id: 'file-456', name: 'test-file.xlsx' }
         })
 
@@ -1207,15 +1227,18 @@ describe('createCommandQueueConsumer', () => {
          * @param {string} createdAt
          * @param {Partial<import('#reports/repository/port.js').CreateReportParams>} [reportOverrides]
          */
-        const submitLogCreatedAt = async (createdAt, reportOverrides = {}) => {
+        const submitLogCreatedAt = async (
+          createdAt,
+          reportOverrides = reportIn(LOG_YEAR)
+        ) => {
           await insertSubmitting(summaryLogsRepository, 'log-123', {
             organisationId: DEFAULT_ORG_ID,
             registrationId: DEFAULT_REG_ID,
             organisationNumber: DEFAULT_ORG_NUMBER,
             registrationNumber: DEFAULT_REG_NUMBER,
-            year: DEFAULT_REPORT_YEAR,
+            year: LOG_YEAR,
             createdAt,
-            meta: {}
+            meta: REGISTERED_ONLY_META
           })
           await createAndSubmitReport(reportsRepository, reportOverrides)
 
@@ -1265,7 +1288,7 @@ describe('createCommandQueueConsumer', () => {
         it('submits when the report submitted after the log was created is for a different year', async () => {
           const summaryLog = await submitLogCreatedAt(
             '2024-01-01T00:00:00.000Z',
-            NEXT_YEAR_REPORT
+            reportIn(nextYear(LOG_YEAR))
           )
 
           expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)

@@ -44,6 +44,13 @@ export function currentUtcYear(now = new Date()) {
 export const nextYear = (year) => toYear(year + 1)
 
 /**
+ * The year before `year`.
+ * @param {Year} year
+ * @returns {Year}
+ */
+export const previousYear = (year) => toYear(year - 1)
+
+/**
  * Every year from `first` to `last`, both included.
  * @param {Year} first
  * @param {Year} last
