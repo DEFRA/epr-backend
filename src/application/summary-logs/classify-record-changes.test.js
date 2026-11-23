@@ -14,19 +14,27 @@ const tableSchemas = tableSchemasOf(toYear(2026), 'REPROCESSOR_REGISTERED_ONLY')
 
 /**
  * @param {Record<string, any>} data
- * @param {{ rowId?: string, type?: string }} [ids]
+ * @param {{ rowId?: string, type?: string, link?: object }} [ids]
  */
 const buildWasteRecord = (
   data,
-  { rowId = '1', type = WASTE_RECORD_TYPE.RECEIVED } = {}
+  { rowId = '1', type = WASTE_RECORD_TYPE.RECEIVED, link } = {}
 ) =>
   /** @type {any} */ ({
     record: {
       type,
       rowId,
-      data: { processingType: 'REPROCESSOR_REGISTERED_ONLY', ...data }
+      data: { processingType: 'REPROCESSOR_REGISTERED_ONLY', ...data },
+      ...(link && { link })
     }
   })
+
+const link = {
+  year: 2026,
+  rowId: '1500',
+  rowStateId: 'state-2026',
+  suppliedFields: []
+}
 
 /**
  * A submitted row state as the read model projects it — the write-path
@@ -35,13 +43,20 @@ const buildWasteRecord = (
  * @returns {import('#waste-records/application/read-summary-log-row-states.js').WasteRecordState}
  */
 const submittedStateOf = (record) => {
-  const { rowId, wasteRecordType, processingType, data, classification } =
+  const { rowId, wasteRecordType, processingType, data, link, classification } =
     projectSummaryLogRowState(record, {
       tableSchemas,
       accreditation: null,
       overseasSites
     })
-  return { rowId, wasteRecordType, processingType, data, classification }
+  return {
+    rowId,
+    wasteRecordType,
+    processingType,
+    data,
+    ...(link && { link }),
+    classification
+  }
 }
 
 const key = (record) => `${record.type}:${record.rowId}`
@@ -83,6 +98,51 @@ describe('classifyRecordChanges', () => {
     })
 
     expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)
+  })
+
+  it('classifies a linked row filled in from the same previous-year row state as unchanged', () => {
+    const wasteRecord = buildWasteRecord(
+      { supplierName: 'Acme', TONNAGE_RECEIVED_FOR_RECYCLING: 10 },
+      { link }
+    )
+    const submittedRowStatesByKey = new Map([
+      [key(wasteRecord.record), submittedStateOf(wasteRecord.record)]
+    ])
+
+    const changes = classifyRecordChanges({
+      wasteRecords: [wasteRecord],
+      submittedRowStatesByKey,
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
+    })
+
+    expect(changes.get(key(wasteRecord.record))).toBe(RECORD_CHANGE.UNCHANGED)
+  })
+
+  it('classifies a row filled in from a different previous-year row state as adjusted, though its content matches', () => {
+    const data = { supplierName: 'Acme', TONNAGE_RECEIVED_FOR_RECYCLING: 10 }
+    const submittedRecord = buildWasteRecord(data, { link })
+    const currentRecord = buildWasteRecord(data, {
+      link: { ...link, rowStateId: 'state-2026-b' }
+    })
+    const submittedRowStatesByKey = new Map([
+      [key(submittedRecord.record), submittedStateOf(submittedRecord.record)]
+    ])
+
+    const changes = classifyRecordChanges({
+      wasteRecords: [currentRecord],
+      submittedRowStatesByKey,
+      classificationContext: {
+        tableSchemas,
+        accreditation: null,
+        overseasSites
+      }
+    })
+
+    expect(changes.get(key(currentRecord.record))).toBe(RECORD_CHANGE.ADJUSTED)
   })
 
   it('classifies a row whose content differs from the submitted state as adjusted', () => {

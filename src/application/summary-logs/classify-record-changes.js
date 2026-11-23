@@ -14,8 +14,8 @@ import { RECORD_CHANGE } from './record-change.js'
  * the row through the identical pipeline and compare its content and reading
  * against the submitted row state for the same row identity.
  *
- * A row with no submitted state is added. A row whose projected data and
- * classification both equal the submitted state is unchanged — the write folds
+ * A row with no submitted state is added. A row whose projected data, link and
+ * classification all equal the submitted state is unchanged — the write folds
  * it onto the existing document. Any difference in either is adjusted, exactly
  * as a differing projection writes a new state document. Anchoring to the latest
  * submitted state, rather than the last-written waste record, is what removes
@@ -48,6 +48,7 @@ export const classifyRecordChanges = ({
 
     const unchanged =
       isDeepStrictEqual(projected.data, submitted.data) &&
+      isDeepStrictEqual(projected.link, submitted.link) &&
       isDeepStrictEqual(projected.classification, submitted.classification)
 
     changes.set(

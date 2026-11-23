@@ -135,6 +135,8 @@ const hashSummaryLogRowState = (candidate) =>
         canonicalise({
           processingType: candidate.processingType,
           data: candidate.data,
+          // Absent on an unlinked row, so its hash is unchanged.
+          ...(candidate.link && { link: candidate.link }),
           classification: candidate.classification
         })
       )
@@ -193,6 +195,7 @@ const buildUpsertOperation = (candidate, contentHash, summaryLogId) => ({
       $setOnInsert: {
         processingType: candidate.processingType,
         data: candidate.data,
+        ...(candidate.link && { link: candidate.link }),
         classification: candidate.classification
       },
       $addToSet: { summaryLogIds: summaryLogId }
@@ -213,6 +216,7 @@ const prepareRowState = (ledgerId, entry, summaryLogId) => {
     rowId: entry.rowId,
     processingType: entry.processingType,
     data: entry.data,
+    ...(entry.link && { link: entry.link }),
     classification: entry.classification,
     summaryLogIds: [summaryLogId]
   })
@@ -308,6 +312,7 @@ const WASTE_RECORD_STATE_PROJECTION = {
   wasteRecordType: 1,
   processingType: 1,
   data: 1,
+  link: 1,
   classification: 1
 }
 
@@ -320,8 +325,16 @@ const toWasteRecordState = ({
   wasteRecordType,
   processingType,
   data,
+  link,
   classification
-}) => ({ rowId, wasteRecordType, processingType, data, classification })
+}) => ({
+  rowId,
+  wasteRecordType,
+  processingType,
+  data,
+  ...(link && { link }),
+  classification
+})
 
 /**
  * Projecting in the query rather than reading whole documents skips
@@ -357,6 +370,28 @@ const performFindRowStatesForSummaryLogFile =
     const docs = await collection
       .find({ organisationNumber, registrationNumber, summaryLogIds: fileId })
       .sort({ _id: 1 })
+      .toArray()
+    return docs.map(toSummaryLogRowState)
+  }
+
+/**
+ * Rides the `summary_log_row_state_identity_by_year` index on the ledger
+ * identity, row ids and waste record type, with the summary log a residual
+ * filter.
+ *
+ * @param {Collection} collection
+ * @returns {import('./port.js').SummaryLogRowStatesRepository['findRowStatesInSummaryLog']}
+ */
+const performFindRowStatesInSummaryLog =
+  (collection) =>
+  async (ledgerId, summaryLogId, { wasteRecordType, rowIds }) => {
+    const docs = await collection
+      .find({
+        ...pickLedgerId(ledgerId),
+        rowId: { $in: rowIds },
+        wasteRecordType,
+        summaryLogIds: summaryLogId
+      })
       .toArray()
     return docs.map(toSummaryLogRowState)
   }
@@ -430,6 +465,7 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
       performFindWasteRecordStatesForSummaryLog(collection),
     findRowStatesForSummaryLogFile:
       performFindRowStatesForSummaryLogFile(collection),
+    findRowStatesInSummaryLog: performFindRowStatesInSummaryLog(collection),
     streamRowStatesForSummaryLogs:
       performStreamRowStatesForSummaryLogs(collection)
   })

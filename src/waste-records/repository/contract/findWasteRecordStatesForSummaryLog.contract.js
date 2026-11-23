@@ -58,6 +58,27 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
       ])
     })
 
+    it('returns where a linked row was filled in from', async () => {
+      const link = {
+        year: 2026,
+        rowId: '1500',
+        rowStateId: 'state-2026',
+        suppliedFields: ['DATE_OF_EXPORT']
+      }
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [buildSummaryLogRowStateEntry({ rowId: 'row-1', link })],
+        'log-1'
+      )
+
+      const [state] = await repository.findWasteRecordStatesForSummaryLog(
+        DEFAULT_LEDGER_ID,
+        'log-1'
+      )
+
+      expect(state.link).toEqual(link)
+    })
+
     it('returns every row of the summary log', async () => {
       await repository.upsertSummaryLogRowStates(
         DEFAULT_LEDGER_ID,

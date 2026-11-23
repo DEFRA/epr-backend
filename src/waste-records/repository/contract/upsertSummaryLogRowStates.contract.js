@@ -10,6 +10,13 @@ import {
   DEFAULT_LEDGER_ID
 } from '../test-data.js'
 
+const LINK = {
+  year: 2026,
+  rowId: '1500',
+  rowStateId: 'state-2026',
+  suppliedFields: ['DATE_OF_EXPORT']
+}
+
 const excludedClassification = {
   outcome: ROW_OUTCOME.EXCLUDED,
   reasons: [{ code: 'PRN_ISSUED' }],
@@ -179,6 +186,58 @@ export const testUpsertSummaryLogRowStatesBehaviour = (it) => {
         )
 
         expect(await storedStates('log-1', 'log-2')).toHaveLength(2)
+      })
+
+      it('inserts a new document when only the link changes', async () => {
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [buildSummaryLogRowStateEntry({ link: LINK })],
+          'log-1'
+        )
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [
+            buildSummaryLogRowStateEntry({
+              link: { ...LINK, rowStateId: 'state-2026-b' }
+            })
+          ],
+          'log-2'
+        )
+
+        expect(await storedStates('log-1', 'log-2')).toHaveLength(2)
+      })
+
+      it('inserts a new document when a row gains a link', async () => {
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [buildSummaryLogRowStateEntry()],
+          'log-1'
+        )
+        await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [buildSummaryLogRowStateEntry({ link: LINK })],
+          'log-2'
+        )
+
+        expect(await storedStates('log-1', 'log-2')).toHaveLength(2)
+      })
+
+      it('reuses the existing document when a linked row recommits unchanged', async () => {
+        const entry = buildSummaryLogRowStateEntry({ link: LINK })
+
+        const [first] = await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [entry],
+          'log-1'
+        )
+        const [second] = await repository.upsertSummaryLogRowStates(
+          DEFAULT_LEDGER_ID,
+          [entry],
+          'log-2'
+        )
+
+        expect(second.id).toBe(first.id)
+        expect(second.link).toEqual(LINK)
       })
 
       it('reuses the original document when a row reverts A→B→A', async () => {
