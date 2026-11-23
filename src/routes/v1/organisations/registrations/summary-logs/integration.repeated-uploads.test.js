@@ -233,6 +233,7 @@ describe('Repeated uploads of identical data', () => {
         logger: mockLogger,
         summaryLogsRepository,
         organisationReadRepository,
+        ledgerRepository,
         wasteBalanceService: createWasteBalanceService(ledgerRepository),
         reportsService: createReportsService(
           createInMemoryReportsRepository()()

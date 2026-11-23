@@ -8,11 +8,6 @@ import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
 import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 import * as wasteBalanceRoutes from '#waste-balances/routes/index.js'
 import { wasteBalanceRoutesByNaturalKey } from '#waste-balances/routes/by-natural-key.js'
-import {
-  wasteRecordsExportRoute,
-  registrationWasteRecordsExportByNumber,
-  availableWasteRecordYearsGet
-} from '#waste-records-export/index.js'
 import { generateLatestPublicRegister } from '#public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
@@ -65,9 +60,6 @@ const router = {
         ...Object.values(systemLogsRoutes),
         ...Object.values(wasteBalanceRoutes),
         ...wasteBalanceRoutesByNaturalKey,
-        wasteRecordsExportRoute,
-        registrationWasteRecordsExportByNumber,
-        availableWasteRecordYearsGet,
         generateLatestPublicRegister,
         ...Object.values(tonnageMonitoringRoutes),
         ...Object.values(prnTonnageRoutes),

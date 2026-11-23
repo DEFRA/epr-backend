@@ -18,10 +18,9 @@ import {
   REGISTERED_ONLY_PROCESSING_TYPES,
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
-import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
+import { summaryLogContextOf } from './classification-context.js'
 import {
   classifyLoads,
   fetchPeriodicReports,
@@ -59,6 +58,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
+/** @import {PreviousYearSubmission, SummaryLogContext} from './classification-context.js' */
 /** @import {SummaryLogCommit} from '#domain/summary-logs/commit.js' */
 
 /**
@@ -131,7 +131,8 @@ const fetchRegistration = async ({
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {SummaryLogRegistration} [registration] - Registration fetched during validation
- * @property {RowClassificationContext} [classificationContext] - The template's table schemas and the read model's accreditation for classifying rows, once meta syntax has chosen the template and the registration is read
+ * @property {SummaryLogContext} [classificationContext] - What the rows are read against, once meta syntax has chosen the template and the registration is read
+ * @property {PreviousYearSubmission | null} [previousYearSubmission] - The previous-year submission the context was read from, for a template that links years
  */
 
 /**
@@ -294,8 +295,6 @@ const runValidationChecks = async (
     return
   }
 
-  const tableSchemas = tableSchemasOf(summaryLog.year, meta.PROCESSING_TYPE)
-
   const registration = await fetchRegistration({
     organisationReadRepository,
     summaryLog,
@@ -303,11 +302,16 @@ const runValidationChecks = async (
     logger
   })
   result.registration = registration
-  const classificationContext = {
-    tableSchemas,
-    ...classificationContextOf(registration)
-  }
+  const { context: classificationContext, previousYearSubmission } =
+    await summaryLogContextOf({
+      ledgerRepository,
+      summaryLog,
+      registration,
+      processingType: meta.PROCESSING_TYPE
+    })
+  const { tableSchemas } = classificationContext
   result.classificationContext = classificationContext
+  result.previousYearSubmission = previousYearSubmission
   issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
   if (issues.isFatal()) {

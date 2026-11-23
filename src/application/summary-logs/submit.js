@@ -25,6 +25,7 @@ import { supersedeIfStale } from './supersede-if-stale.js'
  * @import { OrganisationReadRepository } from '#organisation-read-model/index.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  * @import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
+ * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
  */
 
 /**
@@ -32,6 +33,7 @@ import { supersedeIfStale } from './supersede-if-stale.js'
  * @property {TypedLogger} logger
  * @property {SummaryLogsRepository} summaryLogsRepository
  * @property {OrganisationReadRepository} organisationReadRepository
+ * @property {WasteBalanceLedgerRepository} ledgerRepository
  * @property {ReturnType<typeof createWasteBalanceService>} wasteBalanceService
  * @property {ReportsService} reportsService
  * @property {SubmitUser} user
@@ -203,6 +205,7 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
     logger,
     summaryLogsRepository,
     organisationReadRepository,
+    ledgerRepository,
     reportsService
   } = deps
 
@@ -231,6 +234,7 @@ export const submitSummaryLog = async (summaryLogId, deps) => {
   const { commit } = await supersedeIfStale({
     summaryLogsRepository,
     organisationReadRepository,
+    ledgerRepository,
     logger,
     summaryLog,
     summaryLogId,
