@@ -19,7 +19,6 @@ import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter
 import { router } from '#plugins/router.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
-/* istanbul ignore next */
 function getSwaggerPlugins() {
   return [
     Inert,
@@ -53,24 +52,13 @@ function getSwaggerPlugins() {
  * differ between production and tests.
  *
  * @param {import('convict').Config<Record<string, any>>} config
- * Hapi's typings for `server.register` accept no array that mixes bare and
- * wrapped plugins, so the list is untyped.
- *
- * @param {any[]} infrastructure - the repository and worker plugins
- * @returns {any[]}
+ * @param {any[]} infrastructure - the repository and worker plugins, and the
+ *   plugins that depend on repositories, which the legacy apply-routes server
+ *   registers none of
+ * @returns {any[]} untyped, because Hapi's typings for `server.register`
+ *   accept no array that mixes bare and wrapped plugins
  */
 export function serverPlugins(config, infrastructure) {
-  // requestLogger  - automatically logs incoming requests
-  // requestTracing - trace header logging and propagation
-  // cacheControl   - adds Cache-Control headers to prevent caching
-  // secureContext  - loads CA certificates from environment config
-  // pulse          - provides shutdown handlers
-  // Jwt            - JWT authentication plugin
-  // authPlugin     - sets up authentication strategies
-  // authFailureLogger - logs 401 authentication failures
-  // boomErrorLogger    - logs other Boom errors with PII-safe ECS error fields
-  // router         - routes used in the app
-  // wasteRecordsExport - the waste records export module's routes
   const plugins = [
     requestLogger,
     requestTracing,
