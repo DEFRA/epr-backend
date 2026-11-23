@@ -7,7 +7,7 @@ description: Use when adding, changing or reviewing an HTTP API endpoint, its re
 
 An API must stay extensible without breaking the clients that depend on it, some of which the team may not know about, and without resorting to versioning. These rules say what an endpoint should look like. Apply them to what you are adding or changing. They are not a licence to audit existing routes, and an existing route is not a precedent.
 
-**Every new API follows [JSON:API 1.1](https://jsonapi.org/format/1.1/)** and returns full JSON:API documents. The rules below say how our domain maps onto JSON:API. Where JSON:API leaves a choice open, they make it.
+**Every new API follows [JSON:API 1.1](https://jsonapi.org/format/1.1/)** and returns full JSON:API documents. The rules below say how our domain maps onto JSON:API. Where JSON:API leaves a choice open, they make it. Every document is served as `application/vnd.api+json`, and a response paged by cursor names the profile in that media type's `profile` parameter.
 
 **REQUIRED BACKGROUND:** the API is built on the domain model that `designing-domain-models` defines. Design or check that model first, then adapt it to the API with the rules below.
 
@@ -59,7 +59,7 @@ The examples use a service where a customer owns its orders and an order owns it
 
 9. **Build new routes beside the existing ones, and retire the old ones later.** Never narrow or reshape a live route in place. That includes moving a route to JSON:API. Clients the team does not know about may read a route, so a search of the known clients does not prove it unused.
 
-10. **Declare every response, including its errors.** Each endpoint declares its response schema, and it returns what the schema declares and nothing else. Nothing reaches a client by passing the stored document through. The schema states each date as an ISO 8601 date or date-time, each collection's default order, and the order of each list inside an attribute. Where the store is looser than the schema, such as a reference to a record that no longer exists, the design says what the endpoint does. An error response is a JSON:API document with a top-level `errors` member. Each error object carries its `status`, a `code` that stays the same for every occurrence of that kind of error, a `title`, and a `source` with the `parameter` or `pointer` at fault where there is one.
+10. **Declare every response, including its errors.** Each endpoint declares its response schema, and it returns what the schema declares and nothing else. Nothing reaches a client by passing the stored document through. The schema states each date as an ISO 8601 date or date-time, each collection's default order, the order of each list inside an attribute, and the order of each relationship's `data`. Where the store is looser than the schema, such as a reference to a record that no longer exists, the design says what the endpoint does. An error response is a JSON:API document with a top-level `errors` member. Each error object carries its `status`, a `code` that stays the same for every occurrence of that kind of error, a `title`, and a `source` with the `parameter` or `pointer` at fault where there is one.
 
 ## How to review a design against these rules
 
