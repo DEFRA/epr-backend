@@ -6,6 +6,7 @@ import {
   formatTonnageMonitoringResults
 } from './material-aggregation.js'
 import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
 /**
  * `formatMaterialResults` keys the metric dynamically (`totalTonnage` /
@@ -115,7 +116,7 @@ describe('material-aggregation', () => {
     it('should return all materials and types with zero tonnage when no results', () => {
       vi.setSystemTime(new Date('2026-01-15T10:00:00.000Z'))
 
-      const result = formatTonnageMonitoringResults([])
+      const result = formatTonnageMonitoringResults([], toYear(2026))
 
       // 8 materials × 2 types = 16 entries
       expect(result.materials).toHaveLength(16)
@@ -157,7 +158,7 @@ describe('material-aggregation', () => {
         }
       ]
 
-      const result = formatTonnageMonitoringResults(results)
+      const result = formatTonnageMonitoringResults(results, toYear(2026))
 
       // 8 materials × 2 types = 16 entries
       expect(result.materials).toHaveLength(16)
@@ -206,7 +207,7 @@ describe('material-aggregation', () => {
         }
       ]
 
-      const result = formatTonnageMonitoringResults(results)
+      const result = formatTonnageMonitoringResults(results, toYear(2026))
 
       // 8 materials × 2 types = 16 entries (each with 2 months)
       expect(result.materials).toHaveLength(16)
@@ -238,44 +239,103 @@ describe('material-aggregation', () => {
       ])
     })
 
-    it('should sort results by year (DESC), type (DESC), and material (ASC)', () => {
+    it('should sort results by type (DESC), then material (ASC)', () => {
       vi.setSystemTime(new Date('2027-02-15T10:00:00.000Z'))
 
       const results = [
         {
           material: 'aluminium',
           year: 2027,
-          month: 'Jan',
+          monthNumber: 1,
           type: 'Exporter',
           totalTonnage: 150
         },
         {
           material: 'wood',
           year: 2027,
-          month: 'Feb',
+          monthNumber: 2,
           type: 'Reprocessor',
           totalTonnage: 200
         }
       ]
 
-      const { materials } = formatTonnageMonitoringResults(results)
+      const { materials } = formatTonnageMonitoringResults(
+        results,
+        toYear(2027)
+      )
 
       expect(materials[0]).toMatchObject({
-        year: 2027,
         type: 'Reprocessor',
-        material: 'aluminium'
+        material: 'aluminium',
+        months: [
+          { month: 'Jan', tonnage: 0 },
+          { month: 'Feb', tonnage: 0 }
+        ]
       })
-
       expect(materials[7]).toMatchObject({
-        year: 2027,
         type: 'Reprocessor',
-        material: 'wood'
+        material: 'wood',
+        months: [
+          { month: 'Jan', tonnage: 0 },
+          { month: 'Feb', tonnage: 200 }
+        ]
       })
       expect(materials[8]).toMatchObject({
-        year: 2027,
         type: 'Exporter',
-        material: 'aluminium'
+        material: 'aluminium',
+        months: [
+          { month: 'Jan', tonnage: 150 },
+          { month: 'Feb', tonnage: 0 }
+        ]
       })
+    })
+
+    it('reports a year opened early for every month, with its tonnage, before that year begins', () => {
+      vi.setSystemTime(new Date('2026-11-20T09:00:00.000Z'))
+
+      const { materials, total } = formatTonnageMonitoringResults(
+        [
+          {
+            material: 'paper',
+            year: 2027,
+            monthNumber: 1,
+            type: 'Reprocessor',
+            totalTonnage: 40
+          }
+        ],
+        toYear(2027)
+      )
+
+      const paperReprocessor = materials.find(
+        (m) => m.material === 'paper' && m.type === 'Reprocessor'
+      )
+      assertPresent(paperReprocessor)
+      expect(paperReprocessor.year).toBe(2027)
+      expect(paperReprocessor.months).toHaveLength(12)
+      expect(paperReprocessor.months[0]).toEqual({ month: 'Jan', tonnage: 40 })
+      expect(total).toBe(40)
+    })
+
+    it('leaves out tonnage of any other year', () => {
+      vi.setSystemTime(new Date('2027-02-15T10:00:00.000Z'))
+
+      const { materials, total } = formatTonnageMonitoringResults(
+        [
+          {
+            material: 'paper',
+            year: 2026,
+            monthNumber: 1,
+            type: 'Reprocessor',
+            totalTonnage: 40
+          }
+        ],
+        toYear(2027)
+      )
+
+      expect(new Set(materials.map(({ year }) => year))).toEqual(
+        new Set([2027])
+      )
+      expect(total).toBe(0)
     })
   })
 })

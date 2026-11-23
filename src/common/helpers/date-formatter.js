@@ -158,26 +158,22 @@ export const getMonthNames = () =>
   )
 
 /**
- * Generates an array of month objects from a start year to the current month.
+ * The months of a year a report shows: up to the current month in the current
+ * year, every month in any other.
  *
- * @param {number} [startYear=2026] - The year to start generating months from (January of that year)
- * @returns {Array<{monthNumber: number, month: string, year: number}>} Array of month objects, each containing:
- *   - monthNumber: The month number (1-12)
- *   - month: Short month name  (e.g., 'Jan', 'Feb', 'Sept')
- *   - year: The four-digit year
+ * @param {number} year
+ * @param {Date} [now]
+ * @returns {Array<{monthNumber: number, month: string}>}
  */
-export const getMonthRange = (startYear = REFERENCE_YEAR) => {
-  const now = new Date()
+export const getMonthsOfYear = (year, now = new Date()) => {
+  const count =
+    year === now.getUTCFullYear() ? now.getUTCMonth() + 1 : MONTHS_IN_YEAR
 
-  const totalMonths =
-    (now.getUTCFullYear() - startYear) * MONTHS_IN_YEAR + now.getUTCMonth() + 1
-
-  return Array.from({ length: totalMonths }, (_, i) => {
-    const d = new Date(Date.UTC(startYear, i, 1))
-    return {
-      monthNumber: d.getUTCMonth() + 1,
-      month: d.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' }),
-      year: d.getUTCFullYear()
-    }
-  })
+  return Array.from({ length: count }, (_, i) => ({
+    monthNumber: i + 1,
+    month: new Date(Date.UTC(year, i, 1)).toLocaleString('en-GB', {
+      month: 'short',
+      timeZone: 'UTC'
+    })
+  }))
 }

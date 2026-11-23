@@ -6,6 +6,7 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * @typedef {{
@@ -99,22 +100,27 @@ const sumByMaterial = (registrationTonnages, materials) => {
  * @param {(summaryLogIds: string[]) => Promise<RegistrationTonnage[]>} findRegistrationTonnages
  * @param {WasteBalanceLedgerRepository} ledgerRepository
  * @param {OrganisationReadRepository} organisationReadRepository
+ * @param {Year} year
  */
 export const aggregateTonnageByMaterial = async (
   findRegistrationTonnages,
   ledgerRepository,
-  organisationReadRepository
+  organisationReadRepository,
+  year
 ) => {
   const [latestSubmitted, organisations] = await Promise.all([
     ledgerRepository.findLatestSubmittedSummaryLogPerLedger(),
-    organisationReadRepository.findAll()
+    organisationReadRepository.findAll({ year })
   ])
   const registrationTonnages = await findRegistrationTonnages(
-    latestSubmitted.map((entry) => entry.summaryLogId)
+    latestSubmitted
+      .filter(({ ledgerId }) => ledgerId.year === year)
+      .map(({ summaryLogId }) => summaryLogId)
   )
 
   const { materials, total } = formatTonnageMonitoringResults(
-    sumByMaterial(registrationTonnages, materialByRegistration(organisations))
+    sumByMaterial(registrationTonnages, materialByRegistration(organisations)),
+    year
   )
 
   return {
