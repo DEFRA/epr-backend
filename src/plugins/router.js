@@ -1,6 +1,9 @@
 import { health } from '#routes/health.js'
 import { apply } from '#routes/v1/apply/index.js'
-import * as organisationRoutes from '#routes/v1/organisations/index.js'
+import {
+  registrationAccreditationAdminDevRoutes,
+  registrationAccreditationAdminRoutes
+} from '#registration-accreditation-admin/index.js'
 import * as organisationViewRoutes from '#routes/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
 import * as devRoutes from '#routes/v1/dev/index.js'
@@ -39,7 +42,10 @@ const router = {
       const devRoutesBehindFeatureFlag = options.config.get(
         'featureFlags.devEndpoints'
       )
-        ? Object.values(devRoutes)
+        ? [
+            ...Object.values(devRoutes),
+            ...registrationAccreditationAdminDevRoutes
+          ]
         : []
 
       const prnAdminCancellationRoutesBehindFeatureFlag = options.config.get(
@@ -54,7 +60,7 @@ const router = {
         ...Object.values(meRoutes),
         ...summaryLogRoutesByNaturalKey,
         ...devRoutesBehindFeatureFlag,
-        ...Object.values(organisationRoutes),
+        ...registrationAccreditationAdminRoutes,
         ...Object.values(organisationViewRoutes),
         ...formSubmissionsRoutes,
         ...Object.values(systemLogsRoutes),

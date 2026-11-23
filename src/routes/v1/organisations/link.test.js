@@ -336,22 +336,11 @@ describe('POST /organisations/{organisationNumber}/link', () => {
 
         expect(addUser2Response.statusCode).toBe(StatusCodes.NO_CONTENT)
 
-        await waitForVersion(
+        const { users } = await waitForVersion(
           organisationAdministrationRepository,
           org.id,
           org.version + 2
         )
-
-        // read users
-        const getOrganisationResponseUser1 = await server.inject({
-          method: 'GET',
-          url: `/v1/organisations/${org.id}`,
-          headers: {
-            Authorization: `Bearer ${user1DefraIdToken}`
-          }
-        })
-
-        const users = JSON.parse(getOrganisationResponseUser1.payload).users
 
         expect(users).toContainEqual(
           expect.objectContaining({
