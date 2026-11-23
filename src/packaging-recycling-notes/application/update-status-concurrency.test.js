@@ -23,7 +23,8 @@ import {
   buildAccreditationSnapshot,
   buildDraftPrn,
   buildAwaitingAuthorisationPrn,
-  buildAwaitingAcceptancePrn
+  buildAwaitingAcceptancePrn,
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   buildLedgerEvent,
@@ -287,6 +288,8 @@ const expectOneWinsOneDocumentConflict = async (
 }
 
 describe('updatePrnStatus concurrency', () => {
+  pinClockWithinPrnYear()
+
   it('debits the waste balance only once when two issuances race for the same PRN', async () => {
     const prnFactory = createInMemoryPackagingRecyclingNotesRepository([
       buildIssuableSeed()
