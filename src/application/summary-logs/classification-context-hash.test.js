@@ -1,4 +1,5 @@
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
+import { partialMock } from '#test/type-helpers.js'
 
 import { hashClassificationContext } from './classification-context-hash.js'
 
@@ -54,6 +55,50 @@ describe('hashClassificationContext', () => {
     expect(hashClassificationContext(exporterContext(null))).not.toBe(
       hashClassificationContext(exporterContext())
     )
+  })
+
+  it('hashes a context with no previous year position as it did before the position existed', () => {
+    expect(hashClassificationContext(exporterContext())).toBe(
+      '1026bf230e28907fb685d39bc3ccc2fa55e202116c5dbfc77b80c4af94a6659c'
+    )
+  })
+
+  it('leaves the table schemas out', () => {
+    expect(
+      hashClassificationContext({
+        ...exporterContext(),
+        tableSchemas: partialMock({ RECEIVED_LOADS_FOR_EXPORT: {} })
+      })
+    ).toBe(hashClassificationContext(exporterContext()))
+  })
+
+  it.each([
+    [14, 16],
+    [null, 14]
+  ])(
+    'reads a previous year position of %s as a different context from %s',
+    (position, other) => {
+      expect(
+        hashClassificationContext({
+          ...exporterContext(),
+          previousYearPosition: position
+        })
+      ).not.toBe(
+        hashClassificationContext({
+          ...exporterContext(),
+          previousYearPosition: other
+        })
+      )
+    }
+  )
+
+  it('tells a previous year with no submission from a template that does not link years', () => {
+    expect(
+      hashClassificationContext({
+        ...exporterContext(),
+        previousYearPosition: null
+      })
+    ).not.toBe(hashClassificationContext(exporterContext()))
   })
 
   it('tells a registered-only context from an accredited one with no overseas sites', () => {

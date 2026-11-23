@@ -6,7 +6,7 @@ import { submissionCommitOf } from './submission-commit.js'
 /**
  * @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js'
  * @import {SummaryLogCommit} from '#domain/summary-logs/commit.js'
- * @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js'
+ * @import {SummaryLogContext} from './classification-context.js'
  * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  * @import {RecordChange} from './record-change.js'
  * @import {SubmittedSummaryLog} from './validate-issue-logging.js'
@@ -20,7 +20,7 @@ import { submissionCommitOf } from './submission-commit.js'
  * @param {object} params
  * @param {SubmittedSummaryLog} params.summaryLog
  * @param {ValidatedWasteRecord[]} params.wasteRecords
- * @param {RowClassificationContext} params.classificationContext
+ * @param {SummaryLogContext} params.classificationContext
  * @param {Map<string, RecordChange>} params.recordChanges
  * @param {SummaryLogRowStatesRepository} params.summaryLogRowStatesRepository
  * @returns {Promise<SummaryLogCommit>}

@@ -8,6 +8,7 @@ import {
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { resolveOverseasSiteDetails } from '#overseas-sites/application/resolve-overseas-site-details.js'
+import { findAccreditationById } from '../find-accreditation-by-id.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
@@ -62,7 +63,8 @@ export const accreditationOverseasSitesList = {
           organisationId,
           registrationId
         ),
-        organisationAdministrationRepository.findAccreditationById(
+        findAccreditationById(
+          organisationAdministrationRepository,
           organisationId,
           accreditationId
         )

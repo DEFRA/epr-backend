@@ -18,6 +18,7 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
 /**
  * @typedef {Object} TableSchema
  * @property {string} rowIdField - Field name containing the row identifier
+ * @property {string} [previousYearRowIdField] - Field name naming the previous year's row this row is linked to, on a table that links years (ADR-0060)
  * @property {WasteRecordType} wasteRecordType - The waste record type this table maps to (e.g. 'received', 'exported')
  * @property {string} sheetName - The spreadsheet sheet name for this table (e.g. 'Received', 'Exported')
  * @property {(rowData: Record<string, any>, rowIndex?: number) => {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform a parsed row into waste record metadata
@@ -202,6 +203,17 @@ export const unfilledValuesForYear = (year) => {
   }
   return aggregateUnfilledValues(templatesForYear)
 }
+
+/**
+ * Whether any of a template's tables links years (ADR-0060).
+ *
+ * @param {Record<string, Pick<TableSchema, 'previousYearRowIdField'>>} tableSchemas
+ * @returns {boolean}
+ */
+export const linksYears = (tableSchemas) =>
+  Object.values(tableSchemas).some(
+    ({ previousYearRowIdField }) => previousYearRowIdField !== undefined
+  )
 
 /**
  * Finds a table by waste record type in a template's table schemas.

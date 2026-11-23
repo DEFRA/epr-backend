@@ -1,6 +1,9 @@
 import { health } from '#routes/health.js'
 import { apply } from '#routes/v1/apply/index.js'
-import * as organisationRoutes from '#routes/v1/organisations/index.js'
+import {
+  registrationAccreditationAdminDevRoutes,
+  registrationAccreditationAdminRoutes
+} from '#registration-accreditation-admin/index.js'
 import * as organisationViewRoutes from '#routes/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
 import * as devRoutes from '#routes/v1/dev/index.js'
@@ -8,11 +11,6 @@ import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
 import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 import * as wasteBalanceRoutes from '#waste-balances/routes/index.js'
 import { wasteBalanceRoutesByNaturalKey } from '#waste-balances/routes/by-natural-key.js'
-import {
-  wasteRecordsExportRoute,
-  registrationWasteRecordsExportByNumber,
-  availableWasteRecordYearsGet
-} from '#waste-records-export/index.js'
 import { generateLatestPublicRegister } from '#public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
@@ -44,7 +42,10 @@ const router = {
       const devRoutesBehindFeatureFlag = options.config.get(
         'featureFlags.devEndpoints'
       )
-        ? Object.values(devRoutes)
+        ? [
+            ...Object.values(devRoutes),
+            ...registrationAccreditationAdminDevRoutes
+          ]
         : []
 
       const prnAdminCancellationRoutesBehindFeatureFlag = options.config.get(
@@ -59,15 +60,12 @@ const router = {
         ...Object.values(meRoutes),
         ...summaryLogRoutesByNaturalKey,
         ...devRoutesBehindFeatureFlag,
-        ...Object.values(organisationRoutes),
+        ...registrationAccreditationAdminRoutes,
         ...Object.values(organisationViewRoutes),
         ...formSubmissionsRoutes,
         ...Object.values(systemLogsRoutes),
         ...Object.values(wasteBalanceRoutes),
         ...wasteBalanceRoutesByNaturalKey,
-        wasteRecordsExportRoute,
-        registrationWasteRecordsExportByNumber,
-        availableWasteRecordYearsGet,
         generateLatestPublicRegister,
         ...Object.values(tonnageMonitoringRoutes),
         ...Object.values(prnTonnageRoutes),

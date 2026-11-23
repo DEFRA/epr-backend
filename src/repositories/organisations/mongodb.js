@@ -275,19 +275,6 @@ const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
   return toLinkedOrganisationSummary(doc)
 }
 
-const isInUse = async (db, filter) => {
-  const doc = await db
-    .collection(COLLECTION_NAME)
-    .findOne(filter, { projection: { _id: 1 } })
-  return doc !== null
-}
-
-const performIsAccreditationNumberInUse = (db) => async (accreditationNumber) =>
-  isInUse(db, { 'accreditations.accreditationNumber': accreditationNumber })
-
-const performIsRegistrationNumberInUse = (db) => async (registrationNumber) =>
-  isInUse(db, { 'registrations.registrationNumber': registrationNumber })
-
 const performFindAllLinkableForUser = (db) => async (email) => {
   const docs = await db
     .collection(COLLECTION_NAME)
@@ -415,20 +402,6 @@ const performFindRegistrationById =
     return registration
   }
 
-const performFindAccreditationById =
-  (findById) => async (organisationId, accreditationId, minimumOrgVersion) => {
-    const org = await findById(organisationId, minimumOrgVersion)
-    const accreditation = org.accreditations?.find(
-      (a) => a.id === accreditationId
-    )
-
-    if (!accreditation) {
-      throw Boom.notFound(`Accreditation with id ${accreditationId} not found`)
-    }
-
-    return accreditation
-  }
-
 const performReplaceRegistrationOverseasSites =
   (db) => async (id, version, registrationId, entries) => {
     const result = await db.collection(COLLECTION_NAME).updateOne(
@@ -480,11 +453,8 @@ export const createOrganisationsRepository = async (
       findByOrganisationNumbers: performFindByOrganisationNumbers(db),
       findAllIds: findAllIds(db),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
-      isAccreditationNumberInUse: performIsAccreditationNumberInUse(db),
-      isRegistrationNumberInUse: performIsRegistrationNumberInUse(db),
       findAllLinkableForUser: performFindAllLinkableForUser(db),
       findRegistrationById: performFindRegistrationById(findById),
-      findAccreditationById: performFindAccreditationById(findById),
       findByOrganisationNumber: performFindByOrganisationNumber(
         db,
         maxRetries,

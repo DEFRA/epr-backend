@@ -30,7 +30,7 @@ describe('latestSubmittedSummaryLog', () => {
     ).toBeNull()
   })
 
-  it('returns the latest submitted summaryLogId and its submitted timestamp', async () => {
+  it('returns the latest submitted summaryLogId, its submitted timestamp and its event number', async () => {
     const submittedAt = new Date('2026-02-15T15:09:00.000Z')
     const ledgerRepository = createInMemoryLedgerRepository([
       partialMock(
@@ -44,7 +44,7 @@ describe('latestSubmittedSummaryLog', () => {
 
     expect(
       await latestSubmittedSummaryLog(ledgerRepository, LEDGER_ID)
-    ).toEqual({ summaryLogId: 'log-1', submittedAt })
+    ).toEqual({ summaryLogId: 'log-1', submittedAt, number: 1 })
   })
 
   it('returns the latest submission, ignoring a later PRN event', async () => {
@@ -68,7 +68,7 @@ describe('latestSubmittedSummaryLog', () => {
 
     expect(
       await latestSubmittedSummaryLog(ledgerRepository, LEDGER_ID)
-    ).toEqual({ summaryLogId: 'log-2', submittedAt })
+    ).toEqual({ summaryLogId: 'log-2', submittedAt, number: 2 })
   })
 
   it('resolves the head for a registered-only ledger', async () => {
@@ -89,6 +89,6 @@ describe('latestSubmittedSummaryLog', () => {
         ledgerRepository,
         buildLedgerId({ accreditationNumber: null })
       )
-    ).toEqual({ summaryLogId: 'log-1', submittedAt })
+    ).toEqual({ summaryLogId: 'log-1', submittedAt, number: 1 })
   })
 })
