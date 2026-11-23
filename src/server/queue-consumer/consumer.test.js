@@ -6,7 +6,10 @@ import {
 
 import { createCommandQueueConsumer } from './consumer.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  calculateExpiresAt,
+  SUMMARY_LOG_STATUS
+} from '#domain/summary-logs/status.js'
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -24,7 +27,11 @@ import {
   NEXT_YEAR_REPORT,
   createAndSubmitReport
 } from '#reports/repository/contract/test-data.js'
-import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  buildSummaryLogCommit,
+  summaryLogFactory
+} from '#repositories/summary-logs/contract/test-data.js'
+import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
@@ -34,8 +41,34 @@ vi.mock('@aws-sdk/client-sqs', () => ({
   GetQueueAttributesCommand: vi.fn()
 }))
 vi.mock('#application/summary-logs/validate.js')
-vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#application/summary-logs/metrics.js')
+
+/**
+ * Stores a registered-only summary log as submission finds it: validated
+ * against no prior submission, carrying the commit validation saved, and
+ * submitting.
+ *
+ * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} repository
+ * @param {string} id
+ * @param {Record<string, unknown>} overrides
+ */
+const insertSubmitting = async (repository, id, overrides) => {
+  const summaryLogId = toSummaryLogId(id)
+  await repository.insert(
+    summaryLogId,
+    summaryLogFactory.validating({
+      organisationNumber: DEFAULT_ORG_NUMBER,
+      registrationNumber: DEFAULT_REG_NUMBER,
+      ...overrides
+    })
+  )
+  await repository.update(summaryLogId, 1, {
+    status: SUMMARY_LOG_STATUS.SUBMITTING,
+    expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.SUBMITTING),
+    commit: buildSummaryLogCommit()
+  })
+  await waitForVersion(repository, summaryLogId, 2)
+}
 
 const TEST_USER = {
   id: 'test-user',
@@ -46,8 +79,6 @@ const TEST_USER = {
 
 const { createSummaryLogsValidator } =
   await import('#application/summary-logs/validate.js')
-const { syncFromSummaryLog } =
-  await import('#application/waste-records/sync-from-summary-log.js')
 const { summaryLogMetrics } =
   await import('#application/summary-logs/metrics.js')
 
@@ -56,6 +87,7 @@ describe('createCommandQueueConsumer', () => {
   let logger
   let summaryLogsRepository
   let organisationAdministrationRepository
+  let organisationReadRepository
   let wasteBalanceService
   let reportsRepository
   let summaryLogExtractor
@@ -86,7 +118,14 @@ describe('createCommandQueueConsumer', () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     organisationAdministrationRepository = {}
-    wasteBalanceService = {}
+    organisationReadRepository = {
+      findByOrganisationNumber: async () => ({
+        registrations: { [DEFAULT_REG_NUMBER]: {} }
+      })
+    }
+    wasteBalanceService = {
+      commitSummaryLogSubmittedEvent: vi.fn().mockResolvedValue([])
+    }
     reportsRepository = createInMemoryReportsRepository()()
     summaryLogExtractor = {}
     onSummaryLogUploaded = vi.fn().mockResolvedValue(undefined)
@@ -110,9 +149,6 @@ describe('createCommandQueueConsumer', () => {
     })
     vi.mocked(GetQueueAttributesCommand).mockImplementation(function () {})
     vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
-    vi.mocked(syncFromSummaryLog).mockReturnValue(
-      vi.fn().mockResolvedValue({ created: 0, updated: 0 })
-    )
     vi.mocked(summaryLogMetrics.timedSubmission).mockImplementation((_, fn) =>
       Promise.resolve(fn())
     )
@@ -133,6 +169,7 @@ describe('createCommandQueueConsumer', () => {
         logger,
         summaryLogsRepository,
         organisationAdministrationRepository,
+        organisationReadRepository,
         wasteBalanceService,
         reportsService: createReportsService(reportsRepository),
         summaryLogExtractor,
@@ -666,13 +703,10 @@ describe('createCommandQueueConsumer', () => {
         }
         logger.child.mockReturnValue(childLogger)
 
-        await summaryLogsRepository.insert(
-          'log-123',
-          summaryLogFactory.submitting({
-            meta: {},
-            file: { id: 'file-456', name: 'test-file.xlsx' }
-          })
-        )
+        await insertSubmitting(summaryLogsRepository, 'log-123', {
+          meta: {},
+          file: { id: 'file-456', name: 'test-file.xlsx' }
+        })
 
         const message = {
           MessageId: 'msg-123',
@@ -1047,13 +1081,10 @@ describe('createCommandQueueConsumer', () => {
 
     describe('submit command', () => {
       const seedSubmitting = (id = 'log-123') =>
-        summaryLogsRepository.insert(
-          id,
-          summaryLogFactory.submitting({
-            meta: {},
-            file: { id: 'file-456', name: 'test-file.xlsx' }
-          })
-        )
+        insertSubmitting(summaryLogsRepository, id, {
+          meta: {},
+          file: { id: 'file-456', name: 'test-file.xlsx' }
+        })
 
       it('processes submit command successfully', async () => {
         await seedSubmitting()
@@ -1072,7 +1103,7 @@ describe('createCommandQueueConsumer', () => {
         const { summaryLog } = await waitForVersion(
           summaryLogsRepository,
           'log-123',
-          2
+          3
         )
         expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
         expect(logger.info).toHaveBeenCalledWith(
@@ -1100,8 +1131,6 @@ describe('createCommandQueueConsumer', () => {
       it('records metrics during submission', async () => {
         await seedSubmitting()
 
-        const mockSync = vi.fn().mockResolvedValue({ created: 5, updated: 3 })
-        vi.mocked(syncFromSummaryLog).mockReturnValue(mockSync)
         vi.mocked(summaryLogMetrics.timedSubmission).mockImplementation(
           (_, fn) => Promise.resolve(fn())
         )
@@ -1179,18 +1208,15 @@ describe('createCommandQueueConsumer', () => {
          * @param {Partial<import('#reports/repository/port.js').CreateReportParams>} [reportOverrides]
          */
         const submitLogCreatedAt = async (createdAt, reportOverrides = {}) => {
-          await summaryLogsRepository.insert(
-            'log-123',
-            summaryLogFactory.submitting({
-              organisationId: DEFAULT_ORG_ID,
-              registrationId: DEFAULT_REG_ID,
-              organisationNumber: DEFAULT_ORG_NUMBER,
-              registrationNumber: DEFAULT_REG_NUMBER,
-              year: DEFAULT_REPORT_YEAR,
-              createdAt,
-              meta: {}
-            })
-          )
+          await insertSubmitting(summaryLogsRepository, 'log-123', {
+            organisationId: DEFAULT_ORG_ID,
+            registrationId: DEFAULT_REG_ID,
+            organisationNumber: DEFAULT_ORG_NUMBER,
+            registrationNumber: DEFAULT_REG_NUMBER,
+            year: DEFAULT_REPORT_YEAR,
+            createdAt,
+            meta: {}
+          })
           await createAndSubmitReport(reportsRepository, reportOverrides)
 
           await handleMessage({
@@ -1205,7 +1231,7 @@ describe('createCommandQueueConsumer', () => {
           const { summaryLog } = await waitForVersion(
             summaryLogsRepository,
             'log-123',
-            2
+            3
           )
           return summaryLog
         }
@@ -1291,7 +1317,7 @@ describe('createCommandQueueConsumer', () => {
           await handleMessage(message).catch(() => {})
 
           const result = await summaryLogsRepository.findById('log-123')
-          expect(result.version).toBe(1)
+          expect(result.version).toBe(2)
           expect(result.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTING)
         })
 
@@ -1319,7 +1345,7 @@ describe('createCommandQueueConsumer', () => {
           const { summaryLog } = await waitForVersion(
             summaryLogsRepository,
             'log-123',
-            2
+            3
           )
           expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
         })

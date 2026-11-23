@@ -22,6 +22,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 /**
  * @import { SummaryLogsS3Config } from './mongodb.js'
  * @import { SummaryLogsRepositoryFactory, SummaryLogsRepository } from './port.js'
+ * @import { SummaryLog } from '#domain/summary-logs/model.js'
  * @typedef {{ mongoClient: MongoClient, summaryLogsRepositoryFactory: SummaryLogsRepositoryFactory, summaryLogsRepository: SummaryLogsRepository }} SummaryLogsFixtures
  */
 
@@ -82,13 +83,18 @@ describe('MongoDB summary logs repository', () => {
     /**
      * @param {SummaryLogsRepository} repository
      * @param {Record<string, unknown>} [overrides]
+     * @param {(overrides: Record<string, unknown>) => SummaryLog} [build]
      * @returns {Promise<string>}
      */
-    const insertSubmitted = async (repository, overrides = {}) => {
+    const insertLog = async (
+      repository,
+      overrides = {},
+      build = summaryLogFactory.submitted
+    ) => {
       const id = `mongo-${randomUUID()}`
       await repository.insert(
         toSummaryLogId(id),
-        summaryLogFactory.submitted({
+        build({
           organisationId: 'org-1',
           registrationId: 'reg-1',
           file: { uri: 's3://re-ex-summary-logs/uploads/test-file.xlsx' },
@@ -102,7 +108,7 @@ describe('MongoDB summary logs repository', () => {
     it('names it for the registration and the moment it was submitted', async ({
       summaryLogsRepository
     }) => {
-      const id = await insertSubmitted(summaryLogsRepository)
+      const id = await insertLog(summaryLogsRepository)
 
       await summaryLogsRepository.getDownloadUrl(
         toSummaryLogId(id),
@@ -117,10 +123,10 @@ describe('MongoDB summary logs repository', () => {
     it('names a resubmission on the same day differently', async ({
       summaryLogsRepository
     }) => {
-      const morning = await insertSubmitted(summaryLogsRepository, {
+      const morning = await insertLog(summaryLogsRepository, {
         submittedAt: '2024-01-01T09:15:30.000Z'
       })
-      const afternoon = await insertSubmitted(summaryLogsRepository, {
+      const afternoon = await insertLog(summaryLogsRepository, {
         submittedAt: '2024-01-01T16:42:07.000Z'
       })
 
@@ -143,10 +149,38 @@ describe('MongoDB summary logs repository', () => {
       )
     })
 
+    it.for([
+      { status: 'invalid', build: summaryLogFactory.invalid },
+      {
+        status: 'validation failed',
+        build: summaryLogFactory.validationFailed
+      },
+      { status: 'validated', build: summaryLogFactory.validated },
+      { status: 'superseded', build: summaryLogFactory.superseded }
+    ])(
+      'names an upload never submitted ($status) for the moment it was uploaded',
+      async ({ build }, { summaryLogsRepository }) => {
+        const id = await insertLog(
+          summaryLogsRepository,
+          { createdAt: '2024-02-03T04:05:06.000Z' },
+          build
+        )
+
+        await summaryLogsRepository.getDownloadUrl(
+          toSummaryLogId(id),
+          toRegistrationNumber('R26ER5000000002PA')
+        )
+
+        expect(await lastSignedDisposition()).toBe(
+          'attachment; filename="R26ER5000000002PA-2024-02-03-040506.xlsx"'
+        )
+      }
+    )
+
     it('names it not at all where the registration carries no number', async ({
       summaryLogsRepository
     }) => {
-      const id = await insertSubmitted(summaryLogsRepository)
+      const id = await insertLog(summaryLogsRepository)
 
       await summaryLogsRepository.getDownloadUrl(toSummaryLogId(id))
 

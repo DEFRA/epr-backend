@@ -1,12 +1,11 @@
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
+import { submitSummaryLog } from '#application/summary-logs/submit.js'
 import { nextYear, toYear, utcYearOf } from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS,
-  transitionStatus
+  UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { REGULATOR } from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
@@ -46,6 +45,8 @@ import { signedCallback } from '#test/upload-callback.js'
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
+import { onTestFinished } from 'vitest'
+import { config } from '#root/config.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -638,6 +639,99 @@ export const createRegisteredOnlyMeta = (processingType) => {
 }
 
 /**
+ * @param {Record<string, any>} meta
+ * @param {Year} year
+ */
+export const withTemplateYear = (meta, year) => ({
+  ...meta,
+  TEMPLATE_VERSION: {
+    ...meta.TEMPLATE_VERSION,
+    value: getTemplate(year, meta.PROCESSING_TYPE.value).minVersion
+  }
+})
+
+export const openNextYear = () => {
+  config.set('openNextYear', true)
+  onTestFinished(() => config.reset('openNextYear'))
+}
+
+export const EXPORTER_2027_HEADERS = [
+  ...EXPORTER_HEADERS,
+  'PREVIOUS_YEAR_ROW_ID',
+  'EXIT_PORT',
+  'DWT_EXPORT_ID',
+  'DWT_SUPPLY_ID'
+]
+
+/** @param {Record<string, any>[]} rows */
+export const exporter2027Loads = (rows) => ({
+  RECEIVED_LOADS_FOR_EXPORT: {
+    location: { sheet: 'Exported (sections 1, 2 and 3)', row: 7, column: 'A' },
+    headers: EXPORTER_2027_HEADERS,
+    rows: rows.map(
+      (
+        {
+          previousYearRowId = null,
+          exitPort = null,
+          dwtExportId = null,
+          dwtSupplyId = null,
+          ...row
+        },
+        index
+      ) => ({
+        rowNumber: 8 + index,
+        values: [
+          ...createExporterRowValues({
+            dateReceived: '2027-01-15',
+            dateReceivedByOsr: '2027-01-18',
+            exportDate: '2027-01-20',
+            ...row
+          }),
+          previousYearRowId,
+          exitPort,
+          dwtExportId,
+          dwtSupplyId
+        ]
+      })
+    )
+  }
+})
+
+/**
+ * @param {Awaited<ReturnType<typeof setupWasteBalanceIntegrationEnvironment>>} env
+ * @param {{ summaryLogId: string, fileId: string }} ids
+ * @param {object} parsed
+ */
+export const uploadAndValidate = async (
+  env,
+  { summaryLogId, fileId },
+  parsed
+) => {
+  env.fileDataMap[fileId] = parsed
+  await env.server.inject({
+    method: 'POST',
+    url: buildPostUrl(summaryLogId, {
+      accredited: env.accredited,
+      year: env.year
+    }),
+    payload: createUploadPayload(
+      env.organisationId,
+      env.registrationId,
+      UPLOAD_STATUS.COMPLETE,
+      fileId,
+      `${fileId}.xlsx`
+    )
+  })
+  await pollForValidation(env.server, summaryLogId)
+  const response = await env.server.inject({
+    method: 'GET',
+    url: buildGetUrl(summaryLogId),
+    ...asOperator()
+  })
+  return JSON.parse(response.payload)
+}
+
+/**
  * @param {string} sheet
  * @param {Record<string, unknown>[]} rows
  */
@@ -830,15 +924,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     logger: mockLogger
   })
 
-  const syncWasteRecords = syncFromSummaryLog({
-    extractor: dynamicExtractor,
-    wasteBalanceService,
-    organisationReadRepository,
-    summaryLogRowStatesRepository,
-    ledgerRepository,
-    logger: mockLogger
-  })
-
   const server = await createTestServer({
     config,
     repositories: {
@@ -854,8 +939,11 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     },
     workers: {
       summaryLogsWorker: createTestSubmitterWorker({
+        logger: mockLogger,
         summaryLogsRepository,
-        syncWasteRecords,
+        organisationReadRepository,
+        wasteBalanceService,
+        reportsService: createReportsService(reportsRepository),
         validateSummaryLog
       })
     }
@@ -890,25 +978,27 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 const TEST_SYNC_USER = {
   id: 'test-user',
   email: 'test-user@example.com',
-  scope: ['some-scope']
+  scope: ['some-scope'],
+  role: null
 }
 
-const createTestSubmitterWorker = ({
-  summaryLogsRepository,
-  syncWasteRecords,
-  validateSummaryLog
+/**
+ * @param {Omit<Parameters<typeof submitSummaryLog>[1], 'user' | 'onSummaryLogUploaded'> & {
+ *   validateSummaryLog: (summaryLogId: import('#domain/summary-logs/ids.js').SummaryLogId) => Promise<void>
+ * }} deps
+ */
+export const createTestSubmitterWorker = ({
+  validateSummaryLog,
+  ...submitDeps
 }) => ({
   validate: validateSummaryLog,
   submit: async (summaryLogId) => {
     await new Promise((resolve) => setImmediate(resolve))
-    const existing = await summaryLogsRepository.findById(summaryLogId)
-    const { version, summaryLog } = existing
-    await syncWasteRecords(summaryLog, TEST_SYNC_USER)
-    await summaryLogsRepository.update(
-      summaryLogId,
-      version,
-      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-    )
+    await submitSummaryLog(summaryLogId, {
+      ...submitDeps,
+      user: TEST_SYNC_USER,
+      onSummaryLogUploaded: async () => {}
+    })
   }
 })
 

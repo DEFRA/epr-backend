@@ -632,6 +632,26 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         registrationId: new ObjectId().toString()
       })
 
+      // Validation now rejects a non-date, so the row is stored as an upload
+      // from before dates were read would have stored it.
+      const repository = env.summaryLogRowStatesRepository
+      const upsert = repository.upsertSummaryLogRowStates
+      vi.spyOn(repository, 'upsertSummaryLogRowStates').mockImplementationOnce(
+        (ledgerId, entries, summaryLogId) =>
+          upsert(
+            ledgerId,
+            entries.map((entry) => ({
+              ...entry,
+              data: {
+                ...entry.data,
+                DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED:
+                  storedDateRepatriated
+              }
+            })),
+            summaryLogId
+          )
+      )
+
       await upload(
         env,
         'sl-first',
@@ -639,14 +659,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         createExporterUploadData([refusedJanuaryExport]),
         exporterMeta
       )
-      // Submit stores rows without reading their dates, so swapping the file
-      // here stores the value as an upload from before dates were read would.
-      env.fileDataMap['file-first'] = {
-        meta: exporterMeta,
-        data: createExporterUploadData([
-          { ...refusedJanuaryExport, dateRepatriated: storedDateRepatriated }
-        ])
-      }
       await submitAndPoll(env, 'sl-first')
       await generateAndSubmitReport(env, JANUARY_2026)
       await generateAndSubmitReport(env, FEBRUARY_2026)
@@ -655,12 +667,11 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
     }
 
     it.each([46063, true, '2026/02/10', '2026-02-99', '2026-02-30'])(
-      'places the load by its other dates when the cell holds %j',
+      'rejects the upload when the cell holds %j',
       async (dateRepatriated) => {
         const env = await setupWithJanuaryAndFebruarySubmitted()
 
-        const infoMessages = captureInfoMessages(env)
-        const loadsByReportingPeriod = await uploadAndValidate(
+        await upload(
           env,
           'sl-bad-date',
           'file-bad-date',
@@ -669,11 +680,21 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
           ]),
           exporterMeta
         )
+        const response = await env.server.inject({
+          method: 'GET',
+          url: buildGetUrl('sl-bad-date'),
+          ...asOperator()
+        })
+        const { status, validation } = JSON.parse(response.payload)
 
-        expect(periodsFoundUnchanged(infoMessages())).toEqual([
-          '2026 monthly 1'
+        expect(status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(validation.failures).toStrictEqual([
+          expect.objectContaining({
+            location: expect.objectContaining({
+              header: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
+            })
+          })
         ])
-        expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
       }
     )
 

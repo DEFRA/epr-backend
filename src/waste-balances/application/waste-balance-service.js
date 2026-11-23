@@ -1,6 +1,5 @@
 /**
  * @import {SummaryLogFileId} from '#domain/summary-logs/ids.js'
- * @import {AccreditedRowClassificationContext} from './update-via-ledger.js'
  */
 import Boom from '@hapi/boom'
 
@@ -213,36 +212,22 @@ export const createWasteBalanceService = (
     commitSummaryLogSubmittedEvent,
 
     /**
-     * Credit the ledger from a summary log's waste records: mark each row's
-     * balance inclusion, then fold, decide, and append the aggregate
-     * submission. The sole write entry the summary-log worker calls.
+     * Credit an accredited ledger with a submitted summary log's totals, then
+     * audit the balance it leaves.
      *
-     * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
-     * @param {Object} options
-     * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} options.user
-     * @param {AccreditedRowClassificationContext} options.classificationContext
-     * @param {SummaryLogFileId} options.summaryLogId
-     * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} options.ledgerId
+     * @param {Object} submission
+     * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} submission.ledgerId
+     * @param {SummaryLogFileId} submission.summaryLogId
+     * @param {import('#waste-balances/repository/ledger-schema.js').SummaryLogSubmittedTotals} submission.totals
+     * @param {import('#domain/summary-logs/worker/port.js').SubmitUser} submission.user
      * @returns {Promise<void>}
      */
-    submitSummaryLog: async (
-      wasteRecords,
-      { user, classificationContext, summaryLogId, ledgerId }
-    ) => {
-      if (wasteRecords.length === 0) {
-        return
-      }
-
-      await performUpdateViaLedger({
-        wasteRecords,
-        classificationContext,
+    submitSummaryLog: (submission) =>
+      performUpdateViaLedger({
+        ...submission,
         commitSummaryLogSubmittedEvent,
-        dependencies: { systemLogsRepository },
-        user,
-        summaryLogId,
-        ledgerId
-      })
-    },
+        dependencies: { systemLogsRepository }
+      }),
 
     readBalanceForUpdate,
 

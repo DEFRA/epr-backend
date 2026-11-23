@@ -487,20 +487,6 @@ describe('createWasteBalanceService', () => {
     })
   })
 
-  describe('submitSummaryLog', () => {
-    it('does not touch the ledger when there are no waste records to credit', async () => {
-      await service.submitSummaryLog([], {
-        user: createdBy,
-        accreditation: { id: 'acc-1' },
-        overseasSites: /** @type {*} */ (new Map()),
-        summaryLogId: 'log-A'
-      })
-
-      const all = await ledgerRepository.findAllInLedger(ledgerId)
-      expect(all).toHaveLength(0)
-    })
-  })
-
   describe('currentBalance', () => {
     it('resolves to null for a ledger with no events', async () => {
       expect(await service.currentBalance(ledgerId)).toBeNull()

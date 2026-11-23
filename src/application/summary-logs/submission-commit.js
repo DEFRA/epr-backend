@@ -85,7 +85,7 @@ const countsOf = (wasteRecords, classificationContext, recordChanges) => {
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {RowClassificationContext} params.classificationContext
  * @param {Map<string, RecordChange>} params.recordChanges
- * @returns {SummaryLogCommit}
+ * @returns {Omit<SummaryLogCommit, 'rowStatesWritten'>}
  */
 export const submissionCommitOf = ({
   wasteRecords,

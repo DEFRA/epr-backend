@@ -1,10 +1,12 @@
 import { http, HttpResponse } from 'msw'
+import { vi } from 'vitest'
 
-import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { toSummaryLogFileId, toSummaryLogId } from '#domain/summary-logs/ids.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
@@ -15,6 +17,7 @@ import {
   createUploadPayload,
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
+  ledgerIdOf,
   pollForValidation,
   pollWhileStatus,
   setupWasteBalanceIntegrationEnvironment
@@ -121,6 +124,7 @@ describe('Validation saves what submission will commit', () => {
     ).toBe(SUMMARY_LOG_STATUS.VALIDATED)
 
     expect((await storedLog(env, 'sl-second'))?.commit).toStrictEqual({
+      rowStatesWritten: true,
       contextHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       payload: { creditTotal: 210, decemberCreditTotal: 0 },
       counts: { created: 1, updated: 1, decemberWasteRowCount: 0 }
@@ -139,5 +143,42 @@ describe('Validation saves what submission will commit', () => {
     ).toBe(SUMMARY_LOG_STATUS.INVALID)
 
     expect(await storedLog(env, 'sl-invalid')).not.toHaveProperty('commit')
+    expect(
+      await env.summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
+        ledgerIdOf(env),
+        toSummaryLogFileId(fileIdOf('sl-invalid'))
+      )
+    ).toEqual([])
+  })
+
+  it('fails permanently when a retry finds the rows an earlier attempt saved', async () => {
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter'
+    })
+    vi.spyOn(env.summaryLogsRepository, 'update').mockRejectedValueOnce(
+      new Error('lost connection before the log was marked validated')
+    )
+    env.fileDataMap[fileIdOf('sl-retried')] = {
+      meta: createWasteBalanceMeta('EXPORTER'),
+      data: exportedLoads([{ rowId: 7001, exportTonnage: 100 }])
+    }
+    await env.server.inject({
+      method: 'POST',
+      url: buildPostUrl('sl-retried'),
+      payload: createUploadPayload(
+        env.organisationId,
+        env.registrationId,
+        UPLOAD_STATUS.COMPLETE,
+        fileIdOf('sl-retried'),
+        'waste-data.xlsx'
+      )
+    })
+    expect((await storedLog(env, 'sl-retried'))?.status).toBe(
+      SUMMARY_LOG_STATUS.VALIDATING
+    )
+
+    await expect(
+      env.validateSummaryLog(toSummaryLogId('sl-retried'))
+    ).rejects.toBeInstanceOf(PermanentError)
   })
 })
