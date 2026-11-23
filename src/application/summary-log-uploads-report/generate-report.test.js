@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { generateSummaryLogUploadsReport } from './generate-report.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
@@ -9,7 +9,8 @@ import {
   registrationOf,
   servedOrganisations
 } from '#organisation-read-model/test-support.js'
-import { currentUtcYear } from '#common/helpers/dates/year.js'
+import { DEFAULT_TEMPLATE_YEAR as YEAR } from '#domain/summary-logs/template-year.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
@@ -38,7 +39,7 @@ describe('generateSummaryLogUploadsReport', () => {
 
     org = served.approved({
       organisationNumber: nextOrganisationNumber(),
-      year: currentUtcYear()
+      year: YEAR
     })
     registration = registrationOf(org)
     accreditation = { accreditationNumber: `ACC${org.organisationNumber}` }
@@ -47,7 +48,8 @@ describe('generateSummaryLogUploadsReport', () => {
   it('generates empty report when no SL uploads exist', async () => {
     const result = await generateSummaryLogUploadsReport(
       served.repository(),
-      summaryLogsRepo
+      summaryLogsRepo,
+      YEAR
     )
 
     expect(result.summaryLogUploads).toEqual([])
@@ -70,7 +72,8 @@ describe('generateSummaryLogUploadsReport', () => {
 
     const result = await generateSummaryLogUploadsReport(
       served.repository(),
-      summaryLogsRepo
+      summaryLogsRepo,
+      YEAR
     )
 
     expect(result.summaryLogUploads).toEqual([
@@ -106,7 +109,8 @@ describe('generateSummaryLogUploadsReport', () => {
 
     const result = await generateSummaryLogUploadsReport(
       served.repository(),
-      summaryLogsRepo
+      summaryLogsRepo,
+      YEAR
     )
 
     expect(result.summaryLogUploads).toEqual([
@@ -127,7 +131,7 @@ describe('generateSummaryLogUploadsReport', () => {
     // Create second org
     const org2 = served.approved({
       organisationNumber: nextOrganisationNumber(),
-      year: currentUtcYear()
+      year: YEAR
     })
     const registration2 = registrationOf(org2)
     const org2Id = new ObjectId().toString()
@@ -217,7 +221,8 @@ describe('generateSummaryLogUploadsReport', () => {
 
     const result = await generateSummaryLogUploadsReport(
       served.repository(),
-      summaryLogsRepo
+      summaryLogsRepo,
+      YEAR
     )
 
     expect(result.summaryLogUploads).toEqual(
@@ -271,7 +276,8 @@ describe('generateSummaryLogUploadsReport', () => {
 
     const result = await generateSummaryLogUploadsReport(
       served.repository(),
-      summaryLogsRepo
+      summaryLogsRepo,
+      YEAR
     )
 
     expect(result.summaryLogUploads).toEqual([
@@ -297,7 +303,8 @@ describe('generateSummaryLogUploadsReport', () => {
 
     const result = await generateSummaryLogUploadsReport(
       served.repository(),
-      summaryLogsRepo
+      summaryLogsRepo,
+      YEAR
     )
 
     expect(result.summaryLogUploads).toEqual([])
@@ -326,7 +333,8 @@ describe('generateSummaryLogUploadsReport', () => {
 
     const result = await generateSummaryLogUploadsReport(
       served.repository(),
-      summaryLogsRepo
+      summaryLogsRepo,
+      YEAR
     )
 
     expect(result.summaryLogUploads).toEqual([
@@ -338,69 +346,97 @@ describe('generateSummaryLogUploadsReport', () => {
   })
 
   describe('from a read model holding an exporter with three accreditation years', () => {
-    beforeEach(() => {
-      vi.useFakeTimers({ toFake: ['Date'] })
-      vi.setSystemTime(new Date('2026-06-01T12:00:00Z'))
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    it("shows no reprocessing site and the current year's accreditation", async () => {
-      const organisationNumber = nextOrganisationNumber()
-      const registrationNumber = toRegistrationNumber('R26EX5000000001PA')
-      const accreditation = (accreditationNumber) => ({
-        accreditationNumber,
-        prnIssuance: { tonnageBand: 'up_to_500' },
-        status: { current: 'approved', timeline: [] },
-        overseasSites: {}
-      })
-      const exporter = {
-        wasteProcessingType: 'exporter',
-        material: 'plastic',
-        submittedToRegulator: { code: 'nrw' },
-        accreditations: {
-          2025: accreditation('ACC-2025'),
-          2026: accreditation('ACC-2026'),
-          2027: accreditation('ACC-2027')
-        }
-      }
-      const readModel = {
-        findAll: async () => [
-          {
-            organisationNumber,
-            name: 'Exporter ltd',
-            registrations: { [registrationNumber]: exporter }
+    it.for([toYear(2026), toYear(2027)])(
+      'shows no reprocessing site and the %s accreditation when asked for that year',
+      async (year) => {
+        const organisationNumber = nextOrganisationNumber()
+        const registrationNumber = toRegistrationNumber('R26EX5000000001PA')
+        const accreditation = (accreditationNumber) => ({
+          accreditationNumber,
+          prnIssuance: { tonnageBand: 'up_to_500' },
+          status: { current: 'approved', timeline: [] },
+          overseasSites: {}
+        })
+        const exporter = {
+          wasteProcessingType: 'exporter',
+          material: 'plastic',
+          submittedToRegulator: { code: 'nrw' },
+          accreditations: {
+            2025: accreditation('ACC-2025'),
+            2026: accreditation('ACC-2026'),
+            2027: accreditation('ACC-2027')
           }
-        ]
+        }
+        const readModel = {
+          findAll: async () => [
+            {
+              organisationNumber,
+              name: 'Exporter ltd',
+              registrations: { [registrationNumber]: exporter }
+            }
+          ]
+        }
+
+        await summaryLogsRepo.insert(
+          new ObjectId().toString(),
+          summaryLogFactory.submitted({
+            organisationId: new ObjectId().toString(),
+            registrationId: new ObjectId().toString(),
+            organisationNumber,
+            registrationNumber,
+            year
+          })
+        )
+
+        const result = await generateSummaryLogUploadsReport(
+          /** @type {any} */ (readModel),
+          summaryLogsRepo,
+          year
+        )
+
+        expect(result.summaryLogUploads).toEqual([
+          expect.objectContaining({
+            appropriateAgency: 'NRW',
+            type: 'Exporter',
+            businessName: 'Exporter ltd',
+            accreditationNumber: `ACC-${year}`,
+            reprocessingSite: '',
+            packagingWasteCategory: 'Plastic'
+          })
+        ])
       }
+    )
+  })
 
-      await summaryLogsRepo.insert(
-        new ObjectId().toString(),
-        summaryLogFactory.submitted({
-          organisationId: new ObjectId().toString(),
-          registrationId: new ObjectId().toString(),
-          organisationNumber,
-          registrationNumber
-        })
-      )
+  it('reads the read model for the year asked for', async () => {
+    const readModel = { findAll: vi.fn(async () => []) }
 
-      const result = await generateSummaryLogUploadsReport(
-        /** @type {any} */ (readModel),
-        summaryLogsRepo
-      )
+    await generateSummaryLogUploadsReport(
+      /** @type {any} */ (readModel),
+      summaryLogsRepo,
+      YEAR
+    )
 
-      expect(result.summaryLogUploads).toEqual([
-        expect.objectContaining({
-          appropriateAgency: 'NRW',
-          type: 'Exporter',
-          businessName: 'Exporter ltd',
-          accreditationNumber: 'ACC-2026',
-          reprocessingSite: '',
-          packagingWasteCategory: 'Plastic'
-        })
-      ])
-    })
+    expect(readModel.findAll).toHaveBeenCalledWith({ year: YEAR })
+  })
+
+  it('leaves out summary logs of other years', async () => {
+    await summaryLogsRepo.insert(
+      new ObjectId().toString(),
+      summaryLogFactory.submitted({
+        organisationId: orgId,
+        registrationId,
+        ...numbersOf(org, registration),
+        year: toYear(YEAR + 1)
+      })
+    )
+
+    const result = await generateSummaryLogUploadsReport(
+      served.repository(),
+      summaryLogsRepo,
+      YEAR
+    )
+
+    expect(result.summaryLogUploads).toEqual([])
   })
 })

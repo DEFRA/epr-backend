@@ -3,6 +3,7 @@
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 /** @import {SummaryLogKey} from '#domain/summary-logs/numbers.js' */
 /** @import {SummaryLogFileId, SummaryLogId} from '#domain/summary-logs/ids.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 
 /**
  * A summary log document as the collection may hold it, before it is read
@@ -90,7 +91,7 @@
  * @property {(fileId: SummaryLogFileId) => Promise<SummaryLogVersion|null>} findByFileId - The summary log holding the uploaded file, whose id is the one the waste balance ledger records
  * @property {(key: SummaryLogKey) => Promise<KeyedSubmittedSummaryLogWithId|null>} findLatestSubmitted - The latest submitted, in the key's year when it names one
  * @property {(key: SummaryLogKey) => Promise<KeyedSummaryLogWithId[]>} findAll - Submitted and failed summary logs, newest upload first
- * @property {() => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration
+ * @property {(year: Year) => Promise<SummaryLogStats[]>} findAllSummaryLogStatsByRegistration - Upload stats for the summary logs of one year
  * @property {(logId: SummaryLogId) => Promise<TransitionResult>} transitionToSubmittingExclusive
  * @property {(summaryLogId: SummaryLogId, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrl
  * @property {(fileId: SummaryLogFileId, registrationNumber?: RegistrationNumber) => Promise<DownloadUrlResult>} getDownloadUrlByFileId
