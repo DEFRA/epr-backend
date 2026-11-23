@@ -3,7 +3,10 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
@@ -29,6 +32,7 @@ const regAccredApi = {
   clientId: 'epr-ReEx-Client',
   sharedSecret: 'secret'
 }
+const STORED_ACCREDITATION_NUMBER = 'A27ER5000560000AL'
 const REG_ACCRED_ACCREDITATION_NUMBER = 'A27ER5000560001AL'
 
 const mswServer = setupMsw()
@@ -110,7 +114,7 @@ describe('organisationReadRepositoryPlugin', () => {
 
   it.for(
     /** @type {[string, boolean, string, number][]} */ ([
-      ['off', false, 'A27ER5000560000AL', 0],
+      ['off', false, STORED_ACCREDITATION_NUMBER, 0],
       ['on', true, REG_ACCRED_ACCREDITATION_NUMBER, 1]
     ])
   )(
@@ -125,7 +129,10 @@ describe('organisationReadRepositoryPlugin', () => {
         organisations: [stored],
         externalAccreditations: [
           buildExternalAccreditationFor(stored, {
-            registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER)
+            registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+            accreditationNumber: toAccreditationNumber(
+              STORED_ACCREDITATION_NUMBER
+            )
           })
         ]
       })
