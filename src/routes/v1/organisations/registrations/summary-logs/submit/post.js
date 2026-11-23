@@ -24,12 +24,14 @@ import {
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
 
 /**
  * @typedef {HapiRequest & {
  *   params: RegistrationParams & { summaryLogId: SummaryLogId },
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationReadRepository: OrganisationReadRepository,
+ *   ledgerRepository: WasteBalanceLedgerRepository,
  *   summaryLogsWorker: SummaryLogsCommandExecutor,
  *   systemLogsRepository: SystemLogsRepository
  * }} SummaryLogsSubmitRequest
@@ -41,11 +43,16 @@ const FAILURE_MESSAGE = 'Failure submitting summary log'
  * Moves the summary log to submitting, unless another submission is in
  * progress or it can no longer be committed as validated.
  *
- * @param {Pick<SummaryLogsSubmitRequest, 'summaryLogsRepository' | 'organisationReadRepository' | 'logger'>} request
+ * @param {Pick<SummaryLogsSubmitRequest, 'summaryLogsRepository' | 'organisationReadRepository' | 'ledgerRepository' | 'logger'>} request
  * @param {SummaryLogId} summaryLogId
  */
 const startSubmitting = async (
-  { summaryLogsRepository, organisationReadRepository, logger },
+  {
+    summaryLogsRepository,
+    organisationReadRepository,
+    ledgerRepository,
+    logger
+  },
   summaryLogId
 ) => {
   // Atomically transition to submitting - fails if another submission in progress
@@ -61,6 +68,7 @@ const startSubmitting = async (
   const { reason } = await supersedeIfStale({
     summaryLogsRepository,
     organisationReadRepository,
+    ledgerRepository,
     logger,
     summaryLog,
     summaryLogId,

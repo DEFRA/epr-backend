@@ -12,7 +12,7 @@ import {
 import { savedCommitOf } from '#domain/summary-logs/commit.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogKeyOf } from '#domain/summary-logs/numbers.js'
-import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
+import { summaryLogContextOf } from './classification-context.js'
 import { hashClassificationContext } from './classification-context-hash.js'
 import { summaryLogMetrics } from './metrics.js'
 import { registrationForSummaryLog } from './registration-for-summary-log.js'
@@ -22,6 +22,8 @@ import { registrationForSummaryLog } from './registration-for-summary-log.js'
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
+/** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
 /** @import { SubmittedSummaryLog } from './validate-issue-logging.js' */
 
 /**
@@ -52,6 +54,7 @@ export const staleSubmissionConflict = (reason) => {
  * @typedef {{
  *   summaryLogsRepository: SummaryLogsRepository,
  *   organisationReadRepository: OrganisationReadRepository,
+ *   ledgerRepository: WasteBalanceLedgerRepository,
  *   logger: TypedLogger,
  *   summaryLog: SummaryLog,
  *   summaryLogId: SummaryLogId,
@@ -60,12 +63,13 @@ export const staleSubmissionConflict = (reason) => {
  */
 
 /**
- * @param {Pick<SupersedeParams, 'summaryLogsRepository' | 'organisationReadRepository' | 'summaryLog'>} params
+ * @param {Pick<SupersedeParams, 'summaryLogsRepository' | 'organisationReadRepository' | 'ledgerRepository' | 'summaryLog'>} params
  * @returns {Promise<{ reason: SupersedeReason, commit: null } | { reason: null, commit: SummaryLogCommit }>}
  */
 const committableAs = async ({
   summaryLogsRepository,
   organisationReadRepository,
+  ledgerRepository,
   summaryLog
 }) => {
   const currentLatest = await summaryLogsRepository.findLatestSubmitted(
@@ -83,12 +87,20 @@ const committableAs = async ({
     return { reason: SUPERSEDE_REASON.NO_COMMIT, commit: null }
   }
 
-  const registration = await registrationForSummaryLog(
-    organisationReadRepository,
-    /** @type {SubmittedSummaryLog} */ (summaryLog)
-  )
-  return hashClassificationContext(classificationContextOf(registration)) ===
-    commit.contextHash
+  const submittedLog = /** @type {SubmittedSummaryLog} */ (summaryLog)
+  const { context } = await summaryLogContextOf({
+    ledgerRepository,
+    summaryLog: submittedLog,
+    registration: await registrationForSummaryLog(
+      organisationReadRepository,
+      submittedLog
+    ),
+    // A log with a saved commit was validated, which recorded its meta.
+    processingType: /** @type {ProcessingType} */ (
+      summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+    )
+  })
+  return hashClassificationContext(context) === commit.contextHash
     ? { reason: null, commit }
     : { reason: SUPERSEDE_REASON.CONTEXT_CHANGED, commit: null }
 }
