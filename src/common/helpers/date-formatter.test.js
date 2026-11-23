@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { invalidArg } from '#test/type-helpers.js'
 import {
   calendarDate,
@@ -11,7 +11,7 @@ import {
   toISOString,
   utcCalendarDate,
   getMonthNames,
-  getMonthRange
+  getMonthsOfYear
 } from './date-formatter.js'
 
 describe('formatDate', () => {
@@ -180,65 +180,40 @@ describe('getMonthNames', () => {
   })
 })
 
-describe('getMonthRange', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
+describe('getMonthsOfYear', () => {
+  const allMonths = [
+    { monthNumber: 1, month: 'Jan' },
+    { monthNumber: 2, month: 'Feb' },
+    { monthNumber: 3, month: 'Mar' },
+    { monthNumber: 4, month: 'Apr' },
+    { monthNumber: 5, month: 'May' },
+    { monthNumber: 6, month: 'Jun' },
+    { monthNumber: 7, month: 'Jul' },
+    { monthNumber: 8, month: 'Aug' },
+    { monthNumber: 9, month: 'Sept' },
+    { monthNumber: 10, month: 'Oct' },
+    { monthNumber: 11, month: 'Nov' },
+    { monthNumber: 12, month: 'Dec' }
+  ]
+
+  it('gives the current year up to the current month', () => {
+    expect(getMonthsOfYear(2026, new Date('2026-03-20T14:30:00.000Z'))).toEqual(
+      allMonths.slice(0, 3)
+    )
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
+  it('gives only January in the current year in January', () => {
+    expect(getMonthsOfYear(2026, new Date('2026-01-10T09:00:00.000Z'))).toEqual(
+      allMonths.slice(0, 1)
+    )
   })
 
-  it('should return all 12 months when system date is end of first year', () => {
-    vi.setSystemTime(new Date('2026-12-15T10:00:00.000Z'))
-
-    const result = getMonthRange(2026)
-
-    expect(result).toEqual([
-      { monthNumber: 1, month: 'Jan', year: 2026 },
-      { monthNumber: 2, month: 'Feb', year: 2026 },
-      { monthNumber: 3, month: 'Mar', year: 2026 },
-      { monthNumber: 4, month: 'Apr', year: 2026 },
-      { monthNumber: 5, month: 'May', year: 2026 },
-      { monthNumber: 6, month: 'Jun', year: 2026 },
-      { monthNumber: 7, month: 'Jul', year: 2026 },
-      { monthNumber: 8, month: 'Aug', year: 2026 },
-      { monthNumber: 9, month: 'Sept', year: 2026 },
-      { monthNumber: 10, month: 'Oct', year: 2026 },
-      { monthNumber: 11, month: 'Nov', year: 2026 },
-      { monthNumber: 12, month: 'Dec', year: 2026 }
+  it.for(
+    /** @type {[string, number, string][]} */ ([
+      ['a past year', 2026, '2027-03-20T14:30:00.000Z'],
+      ['a year opened early', 2027, '2026-11-20T09:00:00.000Z']
     ])
-  })
-
-  it('should handle different start years', () => {
-    vi.setSystemTime(new Date('2027-03-20T14:30:00.000Z'))
-
-    const result = getMonthRange(2026)
-
-    expect(result).toEqual([
-      { monthNumber: 1, month: 'Jan', year: 2026 },
-      { monthNumber: 2, month: 'Feb', year: 2026 },
-      { monthNumber: 3, month: 'Mar', year: 2026 },
-      { monthNumber: 4, month: 'Apr', year: 2026 },
-      { monthNumber: 5, month: 'May', year: 2026 },
-      { monthNumber: 6, month: 'Jun', year: 2026 },
-      { monthNumber: 7, month: 'Jul', year: 2026 },
-      { monthNumber: 8, month: 'Aug', year: 2026 },
-      { monthNumber: 9, month: 'Sept', year: 2026 },
-      { monthNumber: 10, month: 'Oct', year: 2026 },
-      { monthNumber: 11, month: 'Nov', year: 2026 },
-      { monthNumber: 12, month: 'Dec', year: 2026 },
-      { monthNumber: 1, month: 'Jan', year: 2027 },
-      { monthNumber: 2, month: 'Feb', year: 2027 },
-      { monthNumber: 3, month: 'Mar', year: 2027 }
-    ])
-  })
-
-  it('should return only current month when system date is in the start month', () => {
-    vi.setSystemTime(new Date('2026-01-10T09:00:00.000Z'))
-
-    const result = getMonthRange(2026)
-
-    expect(result).toEqual([{ monthNumber: 1, month: 'Jan', year: 2026 }])
+  )('gives every month of %s', ([, year, now]) => {
+    expect(getMonthsOfYear(year, new Date(now))).toEqual(allMonths)
   })
 })

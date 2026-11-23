@@ -1,6 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
+import Joi from 'joi'
 import { SCOPES } from '#common/helpers/auth/constants.js'
+import { openYearSchema } from '#common/validation/year-schema.js'
 import { aggregateTonnageByMaterial } from '#application/tonnage-monitoring/aggregate-tonnage.js'
 import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mongodb.js'
 import {
@@ -10,8 +12,9 @@ import {
 import { tonnageMonitoringResponseSchema } from './response.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
-export const tonnageMonitoringPath = '/v1/tonnage-monitoring'
+export const tonnageMonitoringPath = '/v1/tonnage-monitoring/{year}'
 
 export const getTonnageMonitoring = {
   method: 'GET',
@@ -21,22 +24,32 @@ export const getTonnageMonitoring = {
       scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
+    validate: {
+      params: Joi.object({ year: openYearSchema().required() })
+    },
     response: {
       schema: tonnageMonitoringResponseSchema
     }
   },
   /**
-   * @param {HapiRequest} request
+   * @param {HapiRequest & { params: { year: Year } }} request
    * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { db, ledgerRepository, organisationReadRepository, logger } = request
+    const {
+      db,
+      ledgerRepository,
+      organisationReadRepository,
+      logger,
+      params: { year }
+    } = request
 
     try {
       const result = await aggregateTonnageByMaterial(
         createTonnageQuery(db),
         ledgerRepository,
-        organisationReadRepository
+        organisationReadRepository,
+        year
       )
 
       logger.info({
@@ -50,7 +63,7 @@ export const getTonnageMonitoring = {
       return h.response(result).code(StatusCodes.OK)
     } catch (error) {
       logger.error({
-        err: error,
+        err: /** @type {Error} */ (error),
         message: `Failure on ${tonnageMonitoringPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
