@@ -92,7 +92,14 @@ export const createAccreditedOperatorInserter = (builders) => {
       { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
     )
 
-    const reportKey = reportKeyOf(organisation, organisation.registrations[0])
+    const [storedRegistration] = organisation.registrations
+    const [storedAccreditation] = organisation.accreditations
+    if (!storedRegistration || !storedAccreditation) {
+      throw new Error(
+        'The approved organisation was stored without its accreditation'
+      )
+    }
+    const reportKey = reportKeyOf(organisation, storedRegistration)
     const served = buildReadApprovedOrganisation({
       organisationNumber: organisation.organisationNumber,
       year: 2026,
@@ -126,7 +133,7 @@ export const createAccreditedOperatorInserter = (builders) => {
       ledgerId: {
         ...reportKey,
         accreditationNumber: /** @type {AccreditationNumber} */ (
-          organisation.accreditations[0].accreditationNumber
+          storedAccreditation.accreditationNumber
         ),
         year: utcYearOf(validFrom)
       }
