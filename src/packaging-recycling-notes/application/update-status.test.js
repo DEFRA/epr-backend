@@ -18,7 +18,8 @@ import {
   PRN_YEAR,
   TEST_ORGANISATION_NUMBER,
   TEST_REGISTRATION,
-  buildAccreditationSnapshot
+  buildAccreditationSnapshot,
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -228,6 +229,8 @@ const callUpdate = (overrides) =>
   })
 
 describe('updatePrnStatus', () => {
+  pinClockWithinPrnYear()
+
   beforeEach(() => {
     mockRecordStatusTransition.mockResolvedValue(undefined)
     mockOnCancelled.mockResolvedValue(undefined)

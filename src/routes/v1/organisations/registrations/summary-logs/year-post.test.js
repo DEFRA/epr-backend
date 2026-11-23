@@ -28,6 +28,7 @@ import { createMockLogger } from '#test/mock-logger.js'
 import { asOperator } from '#test/inject-auth.js'
 import { partialMock } from '#test/type-helpers.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import { nextYear, toYear } from '#common/helpers/dates/year.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
   COMPANY_2_ID,
@@ -43,6 +44,8 @@ const buildActiveOrg = createActiveOrgBuilder(organisationBuilders)
 /** @import { Organisation } from '#domain/organisations/model.js' */
 
 const mockLogger = createMockLogger()
+
+const YEAR = toYear(2026)
 
 /**
  * @param {Organisation} organisation
@@ -62,6 +65,17 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
   })
 
   describe('an active registration only the read model holds', () => {
+    beforeAll(() => {
+      vi.useFakeTimers({
+        toFake: ['Date'],
+        now: new Date(`${YEAR}-06-01T12:00:00.000Z`)
+      })
+    })
+
+    afterAll(() => {
+      vi.useRealTimers()
+    })
+
     /** @type {Organisation} */
     const organisation = partialMock(
       buildOrganisation({ registrations: [reprocessor()] })
@@ -91,7 +105,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('returns 201 for a year the registration is active in', async () => {
       const response = await server.inject({
         method: 'POST',
-        url: buildUrl(organisation, 2026),
+        url: buildUrl(organisation, YEAR),
         ...asOperator(),
         payload: { redirectUrl: 'https://frontend.test/redirect' }
       })
@@ -102,7 +116,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('returns 404 for a registration the read model does not hold', async () => {
       const response = await server.inject({
         method: 'POST',
-        url: `/organisations/${organisation.organisationNumber}/registrations/R26ER5001189999PL/summary-logs/2026`,
+        url: `/organisations/${organisation.organisationNumber}/registrations/R26ER5001189999PL/summary-logs/${YEAR}`,
         ...asOperator(),
         payload: { redirectUrl: 'https://frontend.test/redirect' }
       })
@@ -117,7 +131,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await server.inject({
         method: 'POST',
-        url: buildUrl(organisation, 2026),
+        url: buildUrl(organisation, YEAR),
         ...asOperator(),
         payload: { redirectUrl: 'https://frontend.test/redirect' }
       })
@@ -132,7 +146,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
 
       const response = await server.inject({
         method: 'POST',
-        url: buildUrl(organisation, 2026),
+        url: buildUrl(organisation, YEAR),
         ...asOperator(),
         payload: { redirectUrl: 'https://frontend.test/redirect' }
       })
@@ -143,7 +157,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('returns 422 for a year before the registration was approved', async () => {
       const response = await server.inject({
         method: 'POST',
-        url: buildUrl(organisation, 2025),
+        url: buildUrl(organisation, toYear(YEAR - 1)),
         ...asOperator(),
         payload: { redirectUrl: 'https://frontend.test/redirect' }
       })
@@ -151,13 +165,13 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('returns 201 for 2027 once it is open', async () => {
+    it('returns 201 for next year once it is open', async () => {
       config.set('openNextYear', true)
       onTestFinished(() => config.reset('openNextYear'))
 
       const response = await server.inject({
         method: 'POST',
-        url: buildUrl(organisation, 2027),
+        url: buildUrl(organisation, nextYear(YEAR)),
         ...asOperator(),
         payload: { redirectUrl: 'https://frontend.test/redirect' }
       })
@@ -179,7 +193,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     it('returns 422 when redirectUrl is missing', async () => {
       const response = await server.inject({
         method: 'POST',
-        url: buildUrl(organisation, 2026),
+        url: buildUrl(organisation, YEAR),
         ...asOperator(),
         payload: {}
       })
@@ -239,7 +253,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
     const uploadTo = (organisation, token = defraIdMockAuthTokens.validToken) =>
       server.inject({
         method: 'POST',
-        url: buildUrl(organisation, new Date().getFullYear()),
+        url: buildUrl(organisation, YEAR),
         headers: {
           Authorization: `Bearer ${token}`
         },

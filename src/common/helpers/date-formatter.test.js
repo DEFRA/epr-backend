@@ -159,11 +159,8 @@ describe('toISOString', () => {
 })
 
 describe('getMonthNames', () => {
-  it('should return array of 12 month names in British English format', () => {
-    const monthNames = getMonthNames()
-
-    expect(monthNames).toHaveLength(12)
-    expect(monthNames).toEqual([
+  it('names the twelve months with three letters', () => {
+    expect(getMonthNames()).toEqual([
       'Jan',
       'Feb',
       'Mar',
@@ -172,7 +169,7 @@ describe('getMonthNames', () => {
       'Jun',
       'Jul',
       'Aug',
-      'Sept',
+      'Sep',
       'Oct',
       'Nov',
       'Dec'
@@ -190,7 +187,7 @@ describe('getMonthsOfYear', () => {
     { monthNumber: 6, month: 'Jun' },
     { monthNumber: 7, month: 'Jul' },
     { monthNumber: 8, month: 'Aug' },
-    { monthNumber: 9, month: 'Sept' },
+    { monthNumber: 9, month: 'Sep' },
     { monthNumber: 10, month: 'Oct' },
     { monthNumber: 11, month: 'Nov' },
     { monthNumber: 12, month: 'Dec' }

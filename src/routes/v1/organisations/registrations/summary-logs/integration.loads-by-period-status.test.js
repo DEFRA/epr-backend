@@ -1,6 +1,8 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { http, HttpResponse } from 'msw'
+import { onTestFinished } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
+import { config } from '#root/config.js'
 import { ObjectId } from 'mongodb'
 
 import {
@@ -86,7 +88,10 @@ describe('loadsByReportingPeriod population at validate time', () => {
 
     await server.inject({
       method: 'POST',
-      url: buildPostUrl(summaryLogId, { accredited: env.accredited }),
+      url: buildPostUrl(summaryLogId, {
+        accredited: env.accredited,
+        year: env.year
+      }),
       payload: createUploadPayload(
         organisationId,
         registrationId,
@@ -618,6 +623,91 @@ describe('loadsByReportingPeriod population at validate time', () => {
       ]
     })
     expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
+  })
+
+  it('places a 2027 load received in December 2026 in no period of 2026, so submitting the log leaves the December 2026 report as it was', async () => {
+    config.set('openNextYear', true)
+    onTestFinished(() => config.reset('openNextYear'))
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      year: toYear(2027)
+    })
+    const december2026ReportId = await createAndSubmitReport(
+      env.reportsRepository,
+      {
+        ...env.reportKey,
+        year: toYear(2026),
+        cadence: 'monthly',
+        period: MONTHLY_PERIODS.December,
+        startDate: calendarDate('2026-12-01'),
+        endDate: calendarDate('2026-12-31'),
+        dueDate: calendarDate('2027-01-20')
+      }
+    )
+    const december2026ReportBefore =
+      await env.reportsRepository.findReportById(december2026ReportId)
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-2027-received-december-2026',
+      'file-2027-received-december-2026',
+      {
+        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
+          {
+            ...Object.fromEntries(
+              EXPORTER_HEADERS.map((header, index) => [
+                header,
+                createExporterRowValues({
+                  rowId: 1001,
+                  osrId: 100,
+                  exportTonnage: 25,
+                  dateReceived: '2026-12-20T00:00:00.000Z',
+                  exportDate: '2027-01-12T00:00:00.000Z',
+                  dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
+                })[index]
+              ])
+            ),
+            PREVIOUS_YEAR_ROW_ID: null,
+            EXIT_PORT: null,
+            DWT_EXPORT_ID: null,
+            DWT_SUPPLY_ID: null
+          }
+        ])
+      },
+      {
+        ...sharedMeta,
+        TEMPLATE_VERSION: { ...sharedMeta.TEMPLATE_VERSION, value: 2027.01 }
+      }
+    )
+
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting
+    ).toEqual({
+      count: 1,
+      tonnageDelta: 25,
+      rows: [
+        {
+          rowId: '1001',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [],
+          tonnageDelta: 25
+        }
+      ]
+    })
+    expect(loadsByReportingPeriod.closedPeriodLoads).toEqual({
+      added: emptyChange(),
+      adjusted: emptyChange()
+    })
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+
+    await submitAndPoll(env, 'sl-2027-received-december-2026')
+    expect(
+      (await getCheckPage(env, 'sl-2027-received-december-2026')).status
+    ).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+
+    expect(
+      await env.reportsRepository.findReportById(december2026ReportId)
+    ).toEqual(december2026ReportBefore)
   })
 
   it('aggregates count and tonnageDelta across multiple loads in the same period', async () => {
