@@ -1,26 +1,11 @@
 import Hapi from '@hapi/hapi'
-import Jwt from '@hapi/jwt'
 import { vi } from 'vitest'
-
-import { secureContext } from '@defra/hapi-secure-context'
 
 import { mockSqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/mock.plugin.js'
 import { mockDlqAdminPlugin } from '#plugins/dlq-admin.mock.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
-import { requestLogger } from '#common/helpers/logging/request-logger.js'
-import { pulse } from '#common/helpers/pulse.js'
-import { requestTracing } from '#common/helpers/request-tracing.js'
-import { authFailureLogger } from '#plugins/auth-failure-logger.js'
-import { boomErrorLogger } from '#plugins/boom-error-logger.js'
-import { authPlugin } from '#plugins/auth/auth-plugin.js'
-import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
-import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
-import { uploadCallbackAuthPlugin } from '#plugins/auth/upload-callback-auth-plugin.js'
-import { cacheControl } from '#plugins/cache-control.js'
-import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { registerDependency } from '#plugins/register-dependency.js'
-import { router } from '#plugins/router.js'
-import { wasteRecordsExport } from '#waste-records-export/plugin.js'
+import { serverPlugins } from '#plugins/server-plugins.js'
 import { getConfig } from '#root/config.js'
 import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 
@@ -317,26 +302,7 @@ export async function createTestServer(options = {}) {
 
   server.decorate('request', 'config', () => config, { apply: true })
 
-  const plugins = [
-    requestLogger,
-    requestTracing,
-    cacheControl,
-    secureContext,
-    pulse,
-    Jwt,
-    authPlugin,
-    {
-      plugin: basicAuthPlugin.plugin,
-      options: { config }
-    },
-    {
-      plugin: externalApiAuthPlugin.plugin,
-      options: { config }
-    },
-    uploadCallbackAuthPlugin,
-    authFailureLogger,
-    boomErrorLogger,
-    externalApiErrorFormatter,
+  const infrastructure = [
     ...buildRepositoryPlugins(repositoryConfigs, options.repositories ?? {}),
     ...buildRepositoryPlugins(
       config.get('featureFlags.devEndpoints')
@@ -350,12 +316,10 @@ export async function createTestServer(options = {}) {
       plugin: mockDlqAdminPlugin,
       options: { dlqService: options.dlqService }
     },
-    ...(options.db ? [createDbPlugin(options.db)] : []),
-    { plugin: router, options: { config } },
-    wasteRecordsExport
+    ...(options.db ? [createDbPlugin(options.db)] : [])
   ]
 
-  await server.register(plugins)
+  await server.register(serverPlugins(config, infrastructure))
   await server.initialize()
 
   /** @type {TestServer} */

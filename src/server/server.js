@@ -1,21 +1,12 @@
 import Hapi from '@hapi/hapi'
-import Inert from '@hapi/inert'
-import Jwt from '@hapi/jwt'
-import Vision from '@hapi/vision'
-import HapiSwagger from 'hapi-swagger'
-
-import { secureContext } from '@defra/hapi-secure-context'
 
 import { dlqAdminPlugin } from '#plugins/dlq-admin.js'
 import { s3PublicRegisterRepositoryPlugin } from '#public-register/index.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
-import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
-import { pulse } from '#common/helpers/pulse.js'
-import { requestTracing } from '#common/helpers/request-tracing.js'
 import { mongoExternalAccreditationsRepositoryPlugin } from '#external-accreditations/repository/mongodb.plugin.js'
 import { nonProdDataResetPlugin } from '#non-prod-data-reset/mongodb.plugin.js'
 import {
@@ -24,16 +15,7 @@ import {
 } from '#overseas-sites/index.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
-import { authFailureLogger } from '#plugins/auth-failure-logger.js'
-import { authPlugin } from '#plugins/auth/auth-plugin.js'
-import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
-import { externalApiAuthPlugin } from '#plugins/auth/external-api-auth-plugin.js'
-import { uploadCallbackAuthPlugin } from '#plugins/auth/upload-callback-auth-plugin.js'
-import { boomErrorLogger } from '#plugins/boom-error-logger.js'
-import { cacheControl } from '#plugins/cache-control.js'
-import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
-import { router } from '#plugins/router.js'
-import { wasteRecordsExport } from '#waste-records-export/plugin.js'
+import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/index.js'
@@ -82,35 +64,6 @@ function getServerConfig(config) {
       stripTrailingSlash: true
     }
   }
-}
-
-/* istanbul ignore next */
-function getSwaggerPlugins() {
-  return [
-    Inert,
-    Vision,
-    {
-      plugin: HapiSwagger,
-      options: {
-        info: {
-          title: 'API Documentation',
-          version: '1'
-        },
-        documentationPath: '/swagger',
-        grouping: 'tags',
-        tags: [{ name: 'admin', description: 'Admin UI endpoints' }],
-        securityDefinitions: {
-          Bearer: {
-            type: 'apiKey',
-            name: 'Authorization',
-            in: 'header',
-            description: 'Enter your Bearer token in the format: Bearer {token}'
-          }
-        },
-        security: [{ Bearer: [] }]
-      }
-    }
-  ]
 }
 
 function getProductionPlugins(config) {
@@ -165,61 +118,15 @@ async function createServer(options = {}) {
 
   server.decorate('request', 'config', () => config, { apply: true })
 
-  // Hapi Plugins:
-  // requestLogger  - automatically logs incoming requests
-  // requestTracing - trace header logging and propagation
-  // cacheControl   - adds Cache-Control headers to prevent caching
-  // secureContext  - loads CA certificates from environment config
-  // pulse          - provides shutdown handlers
-  // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
-  // mongo*Plugin   - individual repository plugins
-  // s3*Plugin      - S3 repository plugins
-  // sqsCommandExecutor - sets up SQS command executor and attaches to `request` objects
-  // dlqAdmin       - sets up DLQ admin service and attaches to `request` objects
-  // router         - routes used in the app
-  // wasteRecordsExport - the waste records export module's routes
-  // Jwt            - JWT authentication plugin
-  // authPlugin     - sets up authentication strategies
-  // authFailureLogger - logs 401 authentication failures
-  // boomErrorLogger    - logs other Boom errors with PII-safe ECS error fields
-  const plugins = [
-    requestLogger,
-    requestTracing,
-    cacheControl,
-    secureContext,
-    pulse,
-    Jwt,
-    authPlugin,
-    {
-      plugin: basicAuthPlugin.plugin,
-      options: { config }
-    },
-    {
-      plugin: externalApiAuthPlugin.plugin,
-      options: { config }
-    },
-    uploadCallbackAuthPlugin,
-    authFailureLogger,
-    boomErrorLogger,
-    externalApiErrorFormatter
-  ]
-
-  /* istanbul ignore next */
-  if (config.get('isSwaggerEnabled')) {
-    plugins.push(...getSwaggerPlugins())
-  }
-
   // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
   // These routes reach their collections directly and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
   // See: src/routes/v1/apply/*.js
-  if (!options._testOnlyLegacyApplyRoutes) {
-    plugins.push(...getProductionPlugins(config))
-  }
+  const infrastructure = options._testOnlyLegacyApplyRoutes
+    ? []
+    : getProductionPlugins(config)
 
-  plugins.push({ plugin: router, options: { config } }, wasteRecordsExport)
-
-  await server.register(plugins)
+  await server.register(serverPlugins(config, infrastructure))
 
   server.ext('onPostStart', () => {
     const startedServer = /** @type {StartedServer} */ (
