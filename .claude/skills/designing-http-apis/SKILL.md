@@ -30,17 +30,17 @@ The examples use a service where a customer owns its orders and an order owns it
 
 2. **Give every owned resource its own address under its ancestors, and link to it.** An order line can be read, changed or sent a command at `/customers/{customerNumber}/orders/{orderNumber}/lines/{lineNumber}`. Clients follow links rather than build addresses, so the address can change without breaking them.
    - Every resource object has a `links.self` holding its address.
-   - Its `type` is the plural collection name, such as `lines`. Its `id` joins its ancestors' keys and its own with `/`, in path order, such as `C1001/O2002/3`.
-   - Its owner, and each collection it owns, is a relationship with `links.related`. A line has an `order` relationship, and an order has a `lines` relationship.
-   - A thing the domain model treats as shared is a relationship too, holding its resource identifier, so a client can tell it is the same thing wherever it appears. An order's products are a `products` relationship.
-   - A client that wants related resources in the same response asks with `include`, and they arrive in `included`. A parent never folds its children into its attributes.
+   - Its `type` is a plural name that means one kind of resource across the whole API, such as `orderLines`. Its `id` joins its ancestors' keys and its own with `/`, in path order, such as `C1001/O2002/3`.
+   - Its owner, each collection it owns, and each shared thing it names is a relationship, and every relationship has `links.related`. A line has an `order` relationship, an order has a `lines` relationship, and an order's products are a `products` relationship.
+   - A relationship to one resource, or to a bounded set, also carries `data` with the resource identifiers, so a client can tell it is the same thing wherever it appears. A relationship to an unbounded collection carries only its link.
+   - A client that wants related resources in the same response asks with `include`, and they arrive in `included`. Only a relationship that carries `data` can be included. A parent never folds its children into its attributes.
 
 3. **Serve anything unbounded as a collection under its parent.** Events, invoices and reports grow without limit. Serve them from a collection at the parent's address, such as `/customers/{customerNumber}/invoices`, rather than as a relationship holding every identifier. Where a client reads them across owners, such as every overdue invoice, serve a top-level collection as well, which a client can filter by owner. A collection takes these query parameters:
-   - `filter[<field>]` for each filter, where `<field>` is the dotted path of the attribute it applies to. Filters combine with AND. A comma-separated value matches any of its values.
+   - `filter[<field>]` for each filter, where `<field>` is the dotted path of an attribute, or the name of a relationship matched by its related resource's `id`. Filters combine with AND. A comma-separated value matches any of its values.
    - `sort`, a comma-separated list of fields, with a `-` prefix for descending. The server adds a unique tie-break after them, so the same query always gives the same pages.
-   - `page[number]` and `page[size]` for a client that shows pages to people. The response gives `links.first`, `prev`, `next` and `last`, and the totals in `meta.page`.
-   - `page[size]` and `page[after]` for a system that walks every matching record, following the [cursor pagination profile](https://jsonapi.org/profiles/ethanresnick/cursor-pagination/). The response gives `links.next`, which is `null` at the end.
-   - One collection address serves both kinds of paging. A `page[size]` above the maximum returns a `400`.
+   - `page[number]` and `page[size]` for a client that shows pages to people. A request that carries `page[number]` pages by number. The response gives `links.first`, `prev`, `next` and `last`, and the totals in `meta.page`.
+   - Every other request pages by cursor, as the [cursor pagination profile](https://jsonapi.org/profiles/ethanresnick/cursor-pagination/) defines, for a system that walks every matching record.
+   - A `page[size]` above the maximum returns the profile's `max-size-exceeded` error, whichever way the request pages.
 
 4. **Keep the domain model's shapes in the representation.** Be pedantic. A precise representation is cheap to change before anyone consumes it and expensive afterwards.
    - Each state is its own shape, discriminated by its status, and carries exactly the attributes that state has. Never use `null` to mean "does not apply".
@@ -49,7 +49,7 @@ The examples use a service where a customer owns its orders and an order owns it
    - Keys that form one value stay in one object, and every key stays grouped under what owns it.
    - An attribute that is required in the store is not thereby required in the response. Decide from the domain.
 
-5. **Make changes additive only.** Never remove, rename or reuse an attribute or relationship. Clients ignore members they do not know. Enumerations are open, so clients handle a value they do not know. A value that could plausibly gain attributes is an object from the start, because turning a scalar into an object later breaks every client.
+5. **Make changes additive only.** Never remove, rename or reuse an attribute, a relationship, or a member at any depth inside an attribute. Clients ignore members they do not know. Enumerations are open, so clients handle a value they do not know. A value that could plausibly gain attributes is an object from the start, because turning a scalar into an object later breaks every client.
 
 6. **Send writes to the smallest owned resource, or make them commands on it.** A `PATCH` names only the attributes and relationships it changes. Never replace a whole customer. A state change, such as cancelling an order, is a command on that order: a `POST` that creates a resource in a collection under it, such as `/customers/{customerNumber}/orders/{orderNumber}/cancellations`.
 
@@ -59,7 +59,7 @@ The examples use a service where a customer owns its orders and an order owns it
 
 9. **Build new routes beside the existing ones, and retire the old ones later.** Never narrow or reshape a live route in place. That includes moving a route to JSON:API. Clients the team does not know about may read a route, so a search of the known clients does not prove it unused.
 
-10. **Declare every response, including its errors.** Each endpoint declares its response schema, and it returns what the schema declares and nothing else. Nothing reaches a client by passing the stored document through. The schema states each date as an ISO 8601 date or date-time, and each collection's default order. Where the store is looser than the schema, such as a reference to a record that no longer exists, the design says what the endpoint does. An error response is a JSON:API `errors` array. Each error object carries its `status`, a `code` that stays the same for every occurrence of that kind of error, a `title`, and a `source` naming the parameter or body member at fault where there is one.
+10. **Declare every response, including its errors.** Each endpoint declares its response schema, and it returns what the schema declares and nothing else. Nothing reaches a client by passing the stored document through. The schema states each date as an ISO 8601 date or date-time, each collection's default order, and the order of each list inside an attribute. Where the store is looser than the schema, such as a reference to a record that no longer exists, the design says what the endpoint does. An error response is a JSON:API document with a top-level `errors` member. Each error object carries its `status`, a `code` that stays the same for every occurrence of that kind of error, a `title`, and a `source` with the `parameter` or `pointer` at fault where there is one.
 
 ## How to review a design against these rules
 
