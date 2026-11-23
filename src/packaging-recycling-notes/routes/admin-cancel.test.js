@@ -1,6 +1,7 @@
 import {
   PRN_YEAR,
-  buildAccreditationSnapshot
+  buildAccreditationSnapshot,
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toYear } from '#common/helpers/dates/year.js'
@@ -179,6 +180,8 @@ const startServer = async (
 
 describe(`POST ${adminPackagingRecyclingNotesCancelPath}`, () => {
   setupAuthContext()
+
+  pinClockWithinPrnYear()
 
   afterEach(async () => {
     await server.stop()

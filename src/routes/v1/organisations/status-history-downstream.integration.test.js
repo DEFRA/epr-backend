@@ -9,7 +9,8 @@ import {
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
   buildAwaitingAuthorisationPrn,
-  underAccreditation
+  underAccreditation,
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { COLLECTION_NAME as PRNS_COLLECTION } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
@@ -186,6 +187,8 @@ describe('status history written, then read by the PRN routes (integration)', ()
   )
 
   describe('an accreditation status', () => {
+    pinClockWithinPrnYear()
+
     /**
      * Writes the accreditation status change, then asks to issue the PRN.
      *

@@ -1,4 +1,4 @@
-import { currentUtcYear, toYear } from '#common/helpers/dates/year.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
@@ -35,7 +35,7 @@ const organisation = buildReadOrganisation({
 const organisationNumber = organisation.organisationNumber
 const registrations = `/organisations/${organisation.organisationNumber}/registrations`
 const url = `${registrations}/${REPROCESSOR_NUMBER}/summary-logs`
-const year = currentUtcYear()
+const year = toYear(2026)
 const urlForYear = `${url}?year=${year}`
 
 describe('GET /organisations/{organisationNumber}/registrations/{registrationNumber}/summary-logs', () => {
