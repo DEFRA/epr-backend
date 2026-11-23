@@ -8,6 +8,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
+import { createRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
 
 /**
  * @import { TestAPI } from 'vitest'
@@ -24,8 +25,9 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 
 /**
  * A real Hapi server whose `request.db`, `request.ledgerRepository`,
- * `request.organisationAdministrationRepository`, `request.organisationReadRepository` and
- * `request.packagingRecyclingNotesRepository` are all backed by one in-memory
+ * `request.organisationAdministrationRepository`, `request.organisationReadRepository`,
+ * `request.packagingRecyclingNotesRepository` and
+ * `request.registrationAccreditationAdminRepository` are all backed by one in-memory
  * Mongo, so reporting routes can be exercised end-to-end through
  * `server.inject`. Seed and assert against the same
  * db via `server.db`.
@@ -66,7 +68,9 @@ export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
               ledgerRepository,
               organisationAdministrationRepository,
               organisationReadRepository,
-              packagingRecyclingNotesRepository
+              packagingRecyclingNotesRepository,
+              registrationAccreditationAdminRepository:
+                createRegistrationAccreditationAdminRepository(mongoDb)()
             }
           })
 

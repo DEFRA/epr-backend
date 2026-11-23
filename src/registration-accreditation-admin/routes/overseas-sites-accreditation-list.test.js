@@ -530,7 +530,8 @@ describe('GET accreditation overseas-sites', () => {
         organisationAdministrationRepository: () => ({
           findRegistrationById: () =>
             Promise.reject(new Error('database unavailable')),
-          findAccreditationById: () => Promise.resolve({})
+          findById: () =>
+            Promise.resolve({ accreditations: [{ id: accreditationId }] })
         })
       }
     })

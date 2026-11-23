@@ -301,22 +301,6 @@ const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
   return toLinkedOrganisationSummary(found)
 }
 
-const performIsAccreditationNumberInUse =
-  (staleCache) => async (accreditationNumber) =>
-    staleCache.some((org) =>
-      org.accreditations.some(
-        (acc) => acc.accreditationNumber === accreditationNumber
-      )
-    )
-
-const performIsRegistrationNumberInUse =
-  (staleCache) => async (registrationNumber) =>
-    staleCache.some((org) =>
-      org.registrations.some(
-        (reg) => reg.registrationNumber === registrationNumber
-      )
-    )
-
 const caseInsensitiveEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
 
@@ -469,20 +453,6 @@ const performFindRegistrationById =
     return structuredClone(registration)
   }
 
-const performFindAccreditationById =
-  (findById) => async (organisationId, accreditationId, minimumOrgVersion) => {
-    const org = await findById(organisationId, minimumOrgVersion)
-    const accreditation = org.accreditations?.find(
-      (a) => a.id === accreditationId
-    )
-
-    if (!accreditation) {
-      throw Boom.notFound(`Accreditation with id ${accreditationId} not found`)
-    }
-
-    return structuredClone(accreditation)
-  }
-
 /**
  * Create an in-memory organisations repository.
  * Ensures data isolation by deep-cloning on store and on read.
@@ -531,8 +501,6 @@ export const createInMemoryOrganisationsRepository = (
       findById,
       findByOrganisationNumbers: performFindByOrganisationNumbers(staleCache),
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
-      isAccreditationNumberInUse: performIsAccreditationNumberInUse(staleCache),
-      isRegistrationNumberInUse: performIsRegistrationNumberInUse(staleCache),
       findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findByOrganisationNumber: performFindByOrganisationNumber(staleCache),
       findHighestOrganisationNumber:
@@ -547,7 +515,6 @@ export const createInMemoryOrganisationsRepository = (
         pendingSyncRef
       ),
       findRegistrationById: performFindRegistrationById(findById),
-      findAccreditationById: performFindAccreditationById(findById),
       // Test-only method to access internal storage (not part of the port interface)
       _getStorageForTesting: () => storage
     }
