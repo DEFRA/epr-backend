@@ -2,6 +2,7 @@
 /** @import {Organisation, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogStats} from '#repositories/summary-logs/port.js' */
 /** @import {OrganisationNumber, RegistrationNumber, AccreditationNumber} from '#domain/organisations/numbers.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 
 import {
   capitalize,
@@ -12,7 +13,6 @@ import {
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { toISOString } from '#common/helpers/date-formatter.js'
-import { currentUtcYear } from '#common/helpers/dates/year.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -60,13 +60,11 @@ function transformRow(formattedInfo, summaryLogStats) {
 
 /**
  * @param {Registration} registration
+ * @param {Year} year
  * @returns {AccreditationNumber | ''}
  */
-function accreditationNumberOf(registration) {
-  return (
-    accreditationForYear(registration, currentUtcYear())?.accreditationNumber ??
-    ''
-  )
+function accreditationNumberOf(registration, year) {
+  return accreditationForYear(registration, year)?.accreditationNumber ?? ''
 }
 
 /**
@@ -81,9 +79,10 @@ function reprocessingSiteOf(registration) {
 
 /**
  * @param {Organisation[]} organisations
+ * @param {Year} year
  * @returns {Map<string, FormattedRegistrationInfo>}
  */
-function buildRegistrationLookup(organisations) {
+function buildRegistrationLookup(organisations, year) {
   return new Map(
     organisations
       .filter((org) => !isTestOrganisation(org))
@@ -100,7 +99,7 @@ function buildRegistrationLookup(organisations) {
               businessName: org.name,
               organisationNumber: org.organisationNumber,
               registrationNumber,
-              accreditationNumber: accreditationNumberOf(registration),
+              accreditationNumber: accreditationNumberOf(registration, year),
               reprocessingSite: reprocessingSiteOf(registration),
               packagingWasteCategory: formatResolvedMaterial(
                 registration.material
@@ -147,27 +146,29 @@ async function transform(summaryLogsStatsList, registrationLookup) {
 /**
  * @param {import('#organisation-read-model/index.js').OrganisationReadRepository} organisationReadRepository - Organisation read model
  * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepository} summaryLogsRepo - Summary logs repository
+ * @param {Year} year
  * @returns {Promise<{summaryLogUploads: SummaryLogUploadReportRow[], generatedAt: string}>} Report data with generation timestamp
  */
 export async function generateSummaryLogUploadsReport(
   organisationReadRepository,
-  summaryLogsRepo
+  summaryLogsRepo,
+  year
 ) {
   const generatedAt = new Date().toISOString()
   logger.info({ message: 'Summary log uploads report generation started' })
 
   const summaryLogsStatsList =
-    await summaryLogsRepo.findAllSummaryLogStatsByRegistration()
+    await summaryLogsRepo.findAllSummaryLogStatsByRegistration(year)
   logger.info({
     message: `Retrieved stats for ${summaryLogsStatsList.length} registrations from repository`
   })
 
-  const organisations = await organisationReadRepository.findAll()
+  const organisations = await organisationReadRepository.findAll({ year })
   logger.info({
     message: `Retrieved ${organisations.length} organisations from the read model`
   })
 
-  const registrationLookup = buildRegistrationLookup(organisations)
+  const registrationLookup = buildRegistrationLookup(organisations, year)
   const summaryLogUploads = await transform(
     summaryLogsStatsList,
     registrationLookup

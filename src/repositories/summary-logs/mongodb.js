@@ -159,6 +159,7 @@ const update = (db, logger) => async (id, version, updates) => {
 /**
  * @import { Collection, Db, Filter } from 'mongodb'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
@@ -301,65 +302,69 @@ const findAll =
   async (key) =>
     (await uploads(db, keyFilter(key))).map(keyedBy(key))
 
-const findAllSummaryLogStatsByRegistration = (db) => async () => {
-  const docs = await db
-    .collection(COLLECTION_NAME)
-    .aggregate([
-      {
-        $match: {
-          status: {
-            $in: [SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS]
-          }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            organisationNumber: '$organisationNumber',
-            registrationNumber: '$registrationNumber'
-          },
-          lastSuccessful: {
-            $max: {
-              $cond: [
-                { $not: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }] },
-                '$submittedAt',
-                null
-              ]
-            }
-          },
-          lastFailed: {
-            $max: {
-              $cond: [
-                { $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] },
-                '$createdAt',
-                null
-              ]
-            }
-          },
-          successfulCount: {
-            $sum: {
-              $cond: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }, 0, 1]
-            }
-          },
-          failedCount: {
-            $sum: {
-              $cond: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }, 1, 0]
+const findAllSummaryLogStatsByRegistration =
+  (db) =>
+  /** @param {Year} year */
+  async (year) => {
+    const docs = await db
+      .collection(COLLECTION_NAME)
+      .aggregate([
+        {
+          $match: {
+            year,
+            status: {
+              $in: [SUMMARY_LOG_STATUS.SUBMITTED, ...SUMMARY_LOG_FAILURE_STATUS]
             }
           }
+        },
+        {
+          $group: {
+            _id: {
+              organisationNumber: '$organisationNumber',
+              registrationNumber: '$registrationNumber'
+            },
+            lastSuccessful: {
+              $max: {
+                $cond: [
+                  { $not: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }] },
+                  '$submittedAt',
+                  null
+                ]
+              }
+            },
+            lastFailed: {
+              $max: {
+                $cond: [
+                  { $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] },
+                  '$createdAt',
+                  null
+                ]
+              }
+            },
+            successfulCount: {
+              $sum: {
+                $cond: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }, 0, 1]
+              }
+            },
+            failedCount: {
+              $sum: {
+                $cond: [{ $in: ['$status', SUMMARY_LOG_FAILURE_STATUS] }, 1, 0]
+              }
+            }
+          }
         }
-      }
-    ])
-    .toArray()
+      ])
+      .toArray()
 
-  return docs.map((doc) => ({
-    organisationNumber: doc._id.organisationNumber,
-    registrationNumber: doc._id.registrationNumber,
-    lastSuccessful: doc.lastSuccessful ? new Date(doc.lastSuccessful) : null,
-    lastFailed: doc.lastFailed ? new Date(doc.lastFailed) : null,
-    successfulCount: doc.successfulCount,
-    failedCount: doc.failedCount
-  }))
-}
+    return docs.map((doc) => ({
+      organisationNumber: doc._id.organisationNumber,
+      registrationNumber: doc._id.registrationNumber,
+      lastSuccessful: doc.lastSuccessful ? new Date(doc.lastSuccessful) : null,
+      lastFailed: doc.lastFailed ? new Date(doc.lastFailed) : null,
+      successfulCount: doc.successfulCount,
+      failedCount: doc.failedCount
+    }))
+  }
 
 const transitionToSubmittingExclusive = (db) => async (logId) => {
   const validatedId = validateId(logId)
