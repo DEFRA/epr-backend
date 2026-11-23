@@ -125,6 +125,7 @@ const findByFileId =
 /**
  * @import { SummaryLogStatus } from '#domain/summary-logs/status.js'
  * @import { SummaryLogKey } from '#domain/summary-logs/numbers.js'
+ * @import { Year } from '#common/helpers/dates/year.js'
  * @import { SummaryLogVersion, SummaryLogWithId } from './port.js'
  * @import { SummaryLogFileId, SummaryLogId } from '#domain/summary-logs/ids.js'
  *
@@ -247,42 +248,44 @@ const findAll =
   async (key) =>
     uploads(staleCache, matchesKey(key)).map(keyedBy(key))
 
-const findAllSummaryLogStatsByRegistration = (staleCache) => async () => {
-  const statsMap = Array.from(staleCache.values()).reduce(
-    (acc, { summaryLog: doc }) => {
-      const { organisationNumber, registrationNumber, status } = doc
-      const key = `${organisationNumber}:${registrationNumber}`
+const findAllSummaryLogStatsByRegistration =
+  (staleCache) =>
+  /** @param {Year} year */
+  async (year) => {
+    const statsMap = Array.from(staleCache.values())
+      .filter(({ summaryLog }) => summaryLog.year === year)
+      .reduce((acc, { summaryLog: doc }) => {
+        const { organisationNumber, registrationNumber, status } = doc
+        const key = `${organisationNumber}:${registrationNumber}`
 
-      const group = acc.get(key) || {
-        organisationNumber,
-        registrationNumber,
-        lastSuccessful: null,
-        lastFailed: null,
-        successfulCount: 0,
-        failedCount: 0
-      }
+        const group = acc.get(key) || {
+          organisationNumber,
+          registrationNumber,
+          lastSuccessful: null,
+          lastFailed: null,
+          successfulCount: 0,
+          failedCount: 0
+        }
 
-      const prefix = FAILURE_STATUS.has(status) ? 'failed' : 'successful'
-      const dateKey = prefix === 'failed' ? 'lastFailed' : 'lastSuccessful'
-      group[`${prefix}Count`]++
-      const dateField = prefix === 'successful' ? 'submittedAt' : 'createdAt'
-      if (!group[dateKey] || doc[dateField] > group[dateKey]) {
-        group[dateKey] = doc[dateField]
-      }
+        const prefix = FAILURE_STATUS.has(status) ? 'failed' : 'successful'
+        const dateKey = prefix === 'failed' ? 'lastFailed' : 'lastSuccessful'
+        group[`${prefix}Count`]++
+        const dateField = prefix === 'successful' ? 'submittedAt' : 'createdAt'
+        if (!group[dateKey] || doc[dateField] > group[dateKey]) {
+          group[dateKey] = doc[dateField]
+        }
 
-      return acc.set(key, group)
-    },
-    new Map()
-  )
+        return acc.set(key, group)
+      }, new Map())
 
-  return Array.from(statsMap.values(), (stats) => ({
-    ...stats,
-    lastSuccessful: stats.lastSuccessful
-      ? new Date(stats.lastSuccessful)
-      : null,
-    lastFailed: stats.lastFailed ? new Date(stats.lastFailed) : null
-  }))
-}
+    return Array.from(statsMap.values(), (stats) => ({
+      ...stats,
+      lastSuccessful: stats.lastSuccessful
+        ? new Date(stats.lastSuccessful)
+        : null,
+      lastFailed: stats.lastFailed ? new Date(stats.lastFailed) : null
+    }))
+  }
 
 const SIXTY_SECONDS = 60
 
