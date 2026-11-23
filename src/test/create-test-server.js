@@ -20,6 +20,7 @@ import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import { router } from '#plugins/router.js'
+import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 import { getConfig } from '#root/config.js'
 import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 
@@ -350,7 +351,8 @@ export async function createTestServer(options = {}) {
       options: { dlqService: options.dlqService }
     },
     ...(options.db ? [createDbPlugin(options.db)] : []),
-    { plugin: router, options: { config } }
+    { plugin: router, options: { config } },
+    wasteRecordsExport
   ]
 
   await server.register(plugins)
