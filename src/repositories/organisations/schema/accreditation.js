@@ -56,7 +56,10 @@ const prnIssuanceSchema = Joi.object({
  */
 export const STORED_ACCREDITATION_YEAR = /** @type {Year} */ (2026)
 
-/** @param {StringSchema} schema */
+/**
+ * @param {StringSchema} schema
+ * @returns {StringSchema}
+ */
 const inStoredAccreditationYear = (schema) =>
   schema
     .custom((value, helpers) =>
