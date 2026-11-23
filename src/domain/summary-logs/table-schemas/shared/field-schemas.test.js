@@ -210,40 +210,50 @@ describe('field-schemas', () => {
     '%s rejecting an open earlier year',
     (_name, create, earlierYearDate) => {
       const schema = create({ rejectOpenEarlierYear: true })
-      const contextOn = (uploadedAt) => ({
+      /**
+       * @param {string} createdAt
+       * @param {boolean} [registeredOnly]
+       */
+      const contextOn = (createdAt, registeredOnly = false) => ({
         summaryLogYear: toYear(2027),
-        uploadedAt: new Date(uploadedAt)
+        createdAt: new Date(createdAt),
+        registeredOnly
       })
 
-      it.each(['2027-01-10T09:00:00.000Z', '2027-02-28T23:59:00.000Z'])(
-        'rejects a 2026 date uploaded on %s, while 2026 is open',
-        (uploadedAt) => {
+      it.each([
+        [false, '2027-02-27T23:59:59.999Z', '2027-02-27'],
+        [true, '2027-03-20T23:59:59.999Z', '2027-03-20']
+      ])(
+        'rejects a 2026 date when registered-only is %s and created at %s, before the correction deadline',
+        (registeredOnly, createdAt, deadline) => {
           const { error } = schema.validate(earlierYearDate, {
-            context: contextOn(uploadedAt)
+            context: contextOn(createdAt, registeredOnly)
           })
           expect(error?.details[0]).toMatchObject({
             type: 'date.beforeSummaryLogYear',
             message:
               'must not be in an earlier year whose summary log is still open',
-            context: { expected: 2027, deadline: '2027-02-28' }
+            context: { expected: 2027, deadline }
           })
         }
       )
 
-      it('accepts a 2026 date uploaded on 1 March 2027, once 2026 has closed', () => {
-        expect(
-          schema.validate(earlierYearDate, {
-            context: contextOn('2027-03-01T00:00:00.000Z')
-          }).error
-        ).toBeUndefined()
-      })
+      it.each([
+        [false, '2027-02-28T00:00:00.000Z'],
+        [true, '2027-03-21T00:00:00.000Z']
+      ])(
+        'accepts a 2026 date when registered-only is %s and created at %s, after the correction deadline',
+        (registeredOnly, createdAt) => {
+          expect(
+            schema.validate(earlierYearDate, {
+              context: contextOn(createdAt, registeredOnly)
+            }).error
+          ).toBeUndefined()
+        }
+      )
 
-      it('accepts a 2026 date when the context has no upload date', () => {
-        expect(
-          schema.validate(earlierYearDate, {
-            context: { summaryLogYear: toYear(2027) }
-          }).error
-        ).toBeUndefined()
+      it('accepts a 2026 date when the context has no summary log year', () => {
+        expect(schema.validate(earlierYearDate).error).toBeUndefined()
       })
 
       it('still rejects a later year as later', () => {
@@ -263,7 +273,8 @@ describe('field-schemas', () => {
           create().validate(earlierYearDate, {
             context: {
               summaryLogYear: toYear(2027),
-              uploadedAt: new Date('2027-01-10T09:00:00.000Z')
+              createdAt: new Date('2027-01-10T09:00:00.000Z'),
+              registeredOnly: false
             }
           }).error
         ).toBeUndefined()

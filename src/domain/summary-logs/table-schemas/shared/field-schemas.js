@@ -2,7 +2,10 @@ import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
 import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
-import { summaryLogWindow } from '#domain/year-activities/rules.js'
+import {
+  isBeforeCorrectionDeadline,
+  lastCorrectionDay
+} from '#domain/summary-logs/correction-deadline.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 
 /**
@@ -31,8 +34,9 @@ export const BEFORE_SUMMARY_LOG_YEAR_ERROR = 'date.beforeSummaryLogYear'
 
 /**
  * @typedef {{ rejectOpenEarlierYear?: boolean }} DateFieldOptions
- * `rejectOpenEarlierYear` rejects a date in an earlier year whose summary
- * logs were still open on the upload date: it belongs in that year's log.
+ * `rejectOpenEarlierYear` rejects a date in an earlier year whose correction
+ * deadline had not passed when the summary log was created: it belongs in
+ * that year's log.
  */
 
 /**
@@ -52,24 +56,26 @@ const rejectAfterSummaryLogYear = (dateStr, helpers) => {
 
 /**
  * Rejects a YYYY-MM-DD date in an earlier year than the `summaryLogYear` in
- * the Joi validation context while that year was still open on its
- * `uploadedAt`. Without both, the date is not checked.
+ * the Joi validation context while that year's correction deadline had not
+ * passed at `createdAt`. Without a `summaryLogYear`, the date is not checked.
  *
  * @param {string} dateStr
  * @param {import('joi').CustomHelpers} helpers
  * @returns {string | import('joi').ErrorReport}
  */
 const rejectOpenEarlierYear = (dateStr, helpers) => {
-  const { summaryLogYear, uploadedAt } = helpers.prefs.context ?? {}
-  if (summaryLogYear === undefined || uploadedAt === undefined) {
+  const { summaryLogYear, createdAt, registeredOnly } =
+    helpers.prefs.context ?? {}
+  if (summaryLogYear === undefined) {
     return dateStr
   }
   const dateYear = utcYearOf(dateStr)
-  const { open, lastOpenDay } = summaryLogWindow(dateYear, uploadedAt)
-  return dateYear < summaryLogYear && open
+  const registration = { registeredOnly }
+  return dateYear < summaryLogYear &&
+    isBeforeCorrectionDeadline(dateYear, registration, createdAt)
     ? helpers.error(BEFORE_SUMMARY_LOG_YEAR_ERROR, {
         expected: summaryLogYear,
-        deadline: lastOpenDay
+        deadline: lastCorrectionDay(dateYear, registration)
       })
     : dateStr
 }

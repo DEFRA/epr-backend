@@ -178,89 +178,41 @@ describe('GET /organisations/{organisationNumber}', () => {
     testRegulatorCanRead({ server, makeRequest: request })
   })
 
-  describe('year activities', () => {
-    /** @param {'input' | 'output'} [reprocessingType] */
-    const accreditedFor2026 = (reprocessingType = 'input') =>
+  describe('relevant year', () => {
+    const accreditedFor2026 = () =>
       buildReadOrganisation({
         registrations: {
           [REPROCESSOR_NUMBER]: buildReadReprocessorRegistration({
-            reprocessingType,
             accreditations: accreditationsByYear(buildReadAccreditation())
           })
         }
       })
 
-    /**
-     * @param {string} asOf
-     * @param {'input' | 'output'} [reprocessingType]
-     */
-    const registrationAsOf = async (asOf, reprocessingType = 'input') => {
-      vi.useFakeTimers({ toFake: ['Date'], now: new Date(asOf) })
-      const organisation = accreditedFor2026(reprocessingType)
+    it.for([
+      {
+        description: 'open during the year',
+        now: '2026-10-01T00:00:00.000Z',
+        open: true
+      },
+      {
+        description: 'open on the last instant of 31 January after it',
+        now: '2027-01-31T23:59:59.999Z',
+        open: true
+      },
+      {
+        description: 'closed from 1 February after it',
+        now: '2027-02-01T00:00:00.000Z',
+        open: false
+      }
+    ])('serves the accreditation as $description', async ({ now, open }) => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date(now) })
+      const organisation = accreditedFor2026()
       await serve(organisation)
-      return body(await get(urlOf(organisation))).registrations[
-        REPROCESSOR_NUMBER
-      ]
-    }
 
-    it.for([
-      { asOf: '2026-10-01T00:00:00.000Z', open: true },
-      { asOf: '2027-01-31T23:59:59.999Z', open: true },
-      { asOf: '2027-02-01T00:00:00.000Z', open: false }
-    ])(
-      'serves PRNs for 2026 as open $open as of $asOf',
-      async ({ asOf, open }) => {
-        const registration = await registrationAsOf(asOf)
+      const response = await get(urlOf(organisation))
 
-        expect(registration.accreditations[2026].prns).toStrictEqual({
-          open,
-          lastOpenDay: '2027-01-31'
-        })
-      }
-    )
-
-    it.for([
-      { asOf: '2027-02-28T23:59:59.999Z', open: true },
-      { asOf: '2027-03-01T00:00:00.000Z', open: false }
-    ])(
-      'serves summary logs for 2026 as open $open as of $asOf',
-      async ({ asOf, open }) => {
-        const registration = await registrationAsOf(asOf)
-
-        expect(registration.summaryLogs).toStrictEqual({
-          2026: { open, lastOpenDay: '2027-02-28' }
-        })
-      }
-    )
-
-    it.for([
-      { asOf: '2026-11-30T23:59:59.999Z', open: false },
-      { asOf: '2026-12-01T00:00:00.000Z', open: true },
-      { asOf: '2027-01-31T23:59:59.999Z', open: true },
-      { asOf: '2027-02-01T00:00:00.000Z', open: false }
-    ])(
-      'serves December Waste for 2026 as open $open as of $asOf',
-      async ({ asOf, open }) => {
-        const registration = await registrationAsOf(asOf)
-
-        expect(registration.accreditations[2026].decemberWaste).toStrictEqual({
-          open,
-          firstOpenDay: '2026-12-01',
-          lastOpenDay: '2027-01-31',
-          mode: 'pool'
-        })
-      }
-    )
-
-    it('serves the manual December Waste control to a reprocessor on output', async () => {
-      const registration = await registrationAsOf(
-        '2026-12-01T00:00:00.000Z',
-        'output'
-      )
-
-      expect(registration.accreditations[2026].decemberWaste.mode).toBe(
-        'manual'
-      )
+      const registration = body(response).registrations[REPROCESSOR_NUMBER]
+      expect(registration.accreditations[2026].prns).toStrictEqual({ open })
     })
   })
 
@@ -298,28 +250,18 @@ describe('GET /organisations/{organisationNumber}', () => {
       )
     })
 
-    it('serves the organisation the repository gives for the year, keyed by year, with its activities closed once the year has closed', async () => {
+    it('serves the organisation the repository gives for the year, with its PRNs closed once the year has closed', async () => {
       const organisation = buildAccreditedOrganisation()
       await serve(organisation)
 
       const response = await get(`${urlOf(organisation)}?year=2026`)
 
-      const closed = (registration) => {
-        const accreditation = registration.accreditations[2026]
-        return {
-          ...registration,
-          summaryLogs: {
-            2026: { ...registration.summaryLogs[2026], open: false }
-          },
-          accreditations: {
-            2026: {
-              ...accreditation,
-              prns: { ...accreditation.prns, open: false },
-              decemberWaste: { ...accreditation.decemberWaste, open: false }
-            }
-          }
+      const closed = (registration) => ({
+        ...registration,
+        accreditations: {
+          2026: { ...registration.accreditations[2026], prns: { open: false } }
         }
-      }
+      })
       expect(body(response).registrations).toEqual({
         [REPROCESSOR_NUMBER]: closed(reprocessorResponse),
         [EXPORTER_NUMBER]: closed(exporterResponse)

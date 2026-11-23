@@ -142,13 +142,13 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear?: Year, uploadedAt?: Date }} RowValidationOptions
+ * @typedef {{ summaryLogYear?: Year, createdAt?: Date, registeredOnly?: boolean }} RowValidationOptions
  * Omitted, as when exporting stored rows, means dates are not checked against
- * the summary log year. `uploadedAt` is when the summary log was uploaded.
+ * the summary log year.
  */
 
 /**
- * @typedef {{ summaryLogYear: Year, uploadedAt?: Date }} SummaryLogValidationOptions
+ * @typedef {Required<RowValidationOptions>} SummaryLogValidationOptions
  */
 
 /**

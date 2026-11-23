@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
+import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -265,7 +266,8 @@ const assertCreatable = async ({
   assertDecemberWasteDeclarable({
     accreditation,
     isDecemberWaste: payload.isDecemberWaste,
-    now
+    now,
+    config: config.get('decemberWaste')
   })
 
   await assertSufficientAvailableBalance({

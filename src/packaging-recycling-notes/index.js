@@ -12,7 +12,7 @@
 export { PRN_STATUS } from './domain/model.js'
 /** @moduleBoundaryPending */
 export { PRN_STATUS_TRANSITIONS } from './domain/model.js'
-export { decemberWasteControlModeFor } from './domain/december-waste-control-mode.js'
+export { isRelevantYearOpen } from './domain/closed-year.js'
 
 // Application exports
 export { getIssuedTonnage } from './application/get-issued-tonnage.js'

@@ -3,13 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { openYearSchema } from '#common/validation/year-schema.js'
-import { toYear } from '#common/helpers/dates/year.js'
-import {
-  decemberWasteWindow,
-  prnWindow,
-  summaryLogWindow
-} from '#domain/year-activities/rules.js'
-import { decemberWasteControlModeFor } from '#packaging-recycling-notes/index.js'
+import { isRelevantYearOpen } from '#packaging-recycling-notes/index.js'
 import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
 
@@ -18,8 +12,7 @@ import { organisationViewSchema } from './response.schema.js'
 /** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @typedef {{ year?: Year }} OrganisationQuery */
-/** @import { Registration } from '#organisation-read-model/vocabulary.js' */
-/** @import { StandingByYear } from '#organisation-read-model/domain/model.js' */
+/** @typedef {{ prns: { open: boolean } }} PrnYearState */
 
 const organisationQuery = { year: openYearSchema() }
 
@@ -30,63 +23,47 @@ const organisationQuery = { year: openYearSchema() }
 const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
 
 /**
- * @param {StandingByYear} standingByDate
+ * Each accreditation, keyed by its year, with whether PRNs and PERNs are still
+ * open for that year.
+ * @template {{ year: Year }} A
+ * @param {Record<string, A>} accreditations
+ * @param {Date} now
+ * @returns {Record<string, A & PrnYearState>}
  */
-const yearsOf = (standingByDate) =>
-  Object.keys(standingByDate).map((year) => toYear(Number(year)))
+const withPrnYearState = (accreditations, now) =>
+  Object.fromEntries(
+    Object.entries(accreditations).map(([key, accreditation]) => [
+      key,
+      {
+        ...accreditation,
+        prns: { open: isRelevantYearOpen(accreditation.year, now) }
+      }
+    ])
+  )
 
 /**
- * The registration with, for each of its years, whether each activity is open
- * as of `asOf`.
- * @param {Registration} registration
- * @param {Date} asOf
+ * @param {Organisation['registrations']} registrations
+ * @param {Date} now
  */
-const registrationAsOf = (registration, asOf) => {
-  const mode = decemberWasteControlModeFor(registration)
-  return {
-    ...registration,
-    summaryLogs: Object.fromEntries(
-      yearsOf(registration.standingByDate).map((year) => [
-        year,
-        summaryLogWindow(year, asOf)
-      ])
-    ),
-    accreditations: Object.fromEntries(
-      Object.entries(registration.accreditations).map(
-        ([key, accreditation]) => [
-          key,
-          {
-            ...accreditation,
-            prns: prnWindow(accreditation.year, asOf),
-            decemberWaste: {
-              ...decemberWasteWindow(accreditation.year, asOf),
-              mode
-            }
-          }
-        ]
-      )
-    )
-  }
-}
+const registrationsAt = (registrations, now) =>
+  Object.fromEntries(
+    Object.entries(registrations).map(([number, registration]) => [
+      number,
+      {
+        ...registration,
+        accreditations: withPrnYearState(registration.accreditations, now)
+      }
+    ])
+  )
 
 /**
  * @param {Organisation} organisation
  */
-export const organisationFor = (organisation) => {
-  const asOf = new Date()
-  return {
-    ...organisation,
-    displayName: displayNameOf(organisation),
-    registrations: Object.fromEntries(
-      Object.entries(organisation.registrations).map(
-        ([number, registration]) => [
-          number,
-          registrationAsOf(registration, asOf)
-        ]
-      )
-    )
-  }
-}
+export const organisationFor = (organisation) => ({
+  ...organisation,
+  displayName: displayNameOf(organisation),
+  registrations: registrationsAt(organisation.registrations, new Date())
+})
 
 export const organisationViewGet = {
   method: 'GET',

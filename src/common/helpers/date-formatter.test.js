@@ -9,7 +9,6 @@ import {
   startOfDay,
   toCalendarDate,
   toISOString,
-  ukCalendarDate,
   utcCalendarDate,
   getMonthNames,
   getMonthsOfYear
@@ -89,24 +88,6 @@ describe('utcCalendarDate', () => {
     expect(utcCalendarDate(new Date('2025-07-01T00:30:00+01:00'))).toBe(
       '2025-06-30'
     )
-  })
-})
-
-describe('ukCalendarDate', () => {
-  it.each([
-    ['a GMT instant', '2027-01-31T23:59:59.999Z', '2027-01-31'],
-    [
-      'a BST instant after UTC midnight',
-      '2026-06-30T23:30:00.000Z',
-      '2026-07-01'
-    ],
-    [
-      'a BST instant before UTC midnight',
-      '2026-06-30T22:59:00.000Z',
-      '2026-06-30'
-    ]
-  ])('%s', (_label, iso, expected) => {
-    expect(ukCalendarDate(new Date(iso))).toBe(expected)
   })
 })
 

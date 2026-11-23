@@ -20,6 +20,7 @@
  */
 
 import { toYear } from '#common/helpers/dates/year.js'
+import { validationOptionsIn } from '#domain/summary-logs/table-schemas/validation-options-test-helpers.js'
 import ExcelJS from 'exceljs'
 import Joi from 'joi'
 import { parse } from './exceljs-parser.js'
@@ -587,9 +588,11 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         VALUE: null // Normalised from 'Choose option'
       }
 
-      const result = classifyRow(parsedRow, schema, {
-        summaryLogYear: toYear(2026)
-      })
+      const result = classifyRow(
+        parsedRow,
+        schema,
+        validationOptionsIn(toYear(2026))
+      )
 
       // Row is EXCLUDED because VALUE is missing (required for waste balance)
       expect(result.outcome).toBe('EXCLUDED')
@@ -631,7 +634,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
 
       const validateDataSyntax = createDataSyntaxValidator(
         schemaRegistry.TEST_TYPE,
-        { summaryLogYear: toYear(2026) }
+        validationOptionsIn(toYear(2026))
       )
       const { validatedData } = validateDataSyntax({
         ...parsed,
