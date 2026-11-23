@@ -33,6 +33,7 @@ import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
+import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/index.js'
@@ -178,6 +179,7 @@ async function createServer(options = {}) {
   // sqsCommandExecutor - sets up SQS command executor and attaches to `request` objects
   // dlqAdmin       - sets up DLQ admin service and attaches to `request` objects
   // router         - routes used in the app
+  // wasteRecordsExport - the waste records export module's routes
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies
   // authFailureLogger - logs 401 authentication failures
@@ -217,7 +219,7 @@ async function createServer(options = {}) {
     plugins.push(...getProductionPlugins(config))
   }
 
-  plugins.push({ plugin: router, options: { config } })
+  plugins.push({ plugin: router, options: { config } }, wasteRecordsExport)
 
   await server.register(plugins)
 
