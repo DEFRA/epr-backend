@@ -17,7 +17,8 @@ import {
 import {
   PRN_YEAR,
   buildAccreditationSnapshot,
-  buildAwaitingAcceptancePrn
+  buildAwaitingAcceptancePrn,
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   createMongoLedgerRepository,
@@ -153,6 +154,8 @@ describe('PRN status concurrency against real MongoDB', () => {
   let prnRepositoryFactory
   let ledgerRepository
   let prnId
+
+  pinClockWithinPrnYear()
 
   beforeEach(async (/** @type {*} */ { mongoClient }) => {
     database = mongoClient.db(DATABASE_NAME)
