@@ -90,7 +90,7 @@ const buildServedOrgWithAccreditationStatus = (status) => ({
   ...buildOrgWithAccreditationStatus(status, {
     registrationStatus: 'approved',
     // The year a test PRN is raised in, so the PRN finds its accreditation.
-    accreditationOverrides: { validFrom: '2026-01-01', validTo: '2027-01-01' }
+    accreditationOverrides: { validFrom: '2026-01-01', validTo: '2026-12-31' }
   }),
   statusHistory: /** @type {Organisation['statusHistory']} */ ([
     { status: 'approved', updatedAt: new Date('2024-01-01') }

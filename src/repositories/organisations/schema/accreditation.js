@@ -17,13 +17,14 @@ import {
 } from './base.js'
 import {
   dateRequiredWhenApprovedOrSuspended,
-  notBeforeMinYear,
   requiredWhenApprovedOrSuspended,
   whenExporter,
   whenMaterial,
   whenReprocessor
 } from './helpers.js'
 import { normalisedAccreditationNumberSchema } from './numbers.js'
+
+/** @import { StringSchema } from 'joi' */
 
 export const accreditationSiteSchema = Joi.object({
   address: Joi.object({
@@ -48,13 +49,31 @@ const prnIssuanceSchema = Joi.object({
     .length(REQUIRED_NUMBER_OF_BUSINESS_INCOME_PLAN)
 })
 
+/**
+ * The only year REEX stores accreditations for. Every later accreditation is
+ * held by the registration and accreditation service.
+ */
+export const STORED_ACCREDITATION_YEAR = 2026
+
+/** @param {StringSchema} schema */
+const inStoredAccreditationYear = (schema) =>
+  schema
+    .custom((value, helpers) =>
+      Number(value.slice(0, 4)) === STORED_ACCREDITATION_YEAR
+        ? value
+        : helpers.error('date.outsideStoredAccreditationYear')
+    )
+    .messages({
+      'date.outsideStoredAccreditationYear': `must be in ${STORED_ACCREDITATION_YEAR}`
+    })
+
 export const accreditationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
     .valid(...Object.values(ACCREDITATION_STATUS))
     .forbidden(),
-  validFrom: notBeforeMinYear(dateRequiredWhenApprovedOrSuspended()),
-  validTo: dateRequiredWhenApprovedOrSuspended(),
+  validFrom: inStoredAccreditationYear(dateRequiredWhenApprovedOrSuspended()),
+  validTo: inStoredAccreditationYear(dateRequiredWhenApprovedOrSuspended()),
   accreditationNumber: normalisedAccreditationNumberSchema.when(
     'status',
     requiredWhenApprovedOrSuspended
