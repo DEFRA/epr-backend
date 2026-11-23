@@ -18,6 +18,7 @@ import { organisationViewSchema } from './response.schema.js'
 /** @import { YearActivity } from '#domain/year-activities/rules.js' */
 /** @typedef {{ year?: Year }} OrganisationQuery */
 /** @import { Registration } from '#organisation-read-model/vocabulary.js' */
+/** @import { StandingByYear } from '#organisation-read-model/domain/model.js' */
 
 const organisationQuery = { year: openYearSchema() }
 
@@ -28,7 +29,7 @@ const organisationQuery = { year: openYearSchema() }
 const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
 
 /**
- * @param {Record<string, unknown>} byYear
+ * @param {StandingByYear} byYear
  */
 const yearsOf = (byYear) =>
   Object.keys(byYear).map((year) => toYear(Number(year)))

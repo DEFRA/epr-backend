@@ -8,8 +8,6 @@ import {
   isDecemberWasteOpen,
   isPrnYearOpen,
   isSummaryLogYearOpen,
-  prnYearLastOpenDay,
-  summaryLogYearLastOpenDay,
   yearActivityState
 } from './rules.js'
 
@@ -27,12 +25,15 @@ describe('isSummaryLogYearOpen', () => {
   })
 })
 
-describe('summaryLogYearLastOpenDay', () => {
+describe('summary logs lastOpenDay', () => {
   it.each([
     [2026, '2027-02-28'],
     [2027, '2028-02-29']
   ])('%i -> %s', (year, expected) => {
-    expect(summaryLogYearLastOpenDay(toYear(year))).toBe(expected)
+    expect(
+      yearActivityState('summaryLogs', toYear(year), calendarDate('2026-01-01'))
+        .lastOpenDay
+    ).toBe(expected)
   })
 })
 
@@ -43,10 +44,6 @@ describe('isPrnYearOpen', () => {
     ['2027-02-01', false]
   ])('2026 on %s -> %s', (date, expected) => {
     expect(isPrnYearOpen(toYear(2026), calendarDate(date))).toBe(expected)
-  })
-
-  it('closes after 31 January of the next year', () => {
-    expect(prnYearLastOpenDay(toYear(2026))).toBe('2027-01-31')
   })
 })
 

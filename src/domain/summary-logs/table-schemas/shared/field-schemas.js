@@ -2,10 +2,7 @@ import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
 import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
-import {
-  isSummaryLogYearOpen,
-  summaryLogYearLastOpenDay
-} from '#domain/year-activities/rules.js'
+import { yearActivityState } from '#domain/year-activities/rules.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 
 /**
@@ -64,14 +61,19 @@ const rejectAfterSummaryLogYear = (dateStr, helpers) => {
  */
 const rejectOpenEarlierYear = (dateStr, helpers) => {
   const { summaryLogYear, uploadDate } = helpers.prefs.context ?? {}
+  if (summaryLogYear === undefined || uploadDate === undefined) {
+    return dateStr
+  }
   const year = utcYearOf(dateStr)
-  return summaryLogYear !== undefined &&
-    uploadDate !== undefined &&
-    year < summaryLogYear &&
-    isSummaryLogYearOpen(year, uploadDate)
+  const { open, lastOpenDay } = yearActivityState(
+    'summaryLogs',
+    year,
+    uploadDate
+  )
+  return year < summaryLogYear && open
     ? helpers.error(BEFORE_SUMMARY_LOG_YEAR_ERROR, {
         expected: summaryLogYear,
-        deadline: summaryLogYearLastOpenDay(year)
+        deadline: lastOpenDay
       })
     : dateStr
 }

@@ -53,12 +53,8 @@ export const YEAR_ACTIVITY_RULES = {
  * @param {Year} year
  * @param {CalendarDate} date - a UK calendar date
  */
-const isOpen = (activity, year, date) => {
-  const { firstOpenDay, lastOpenDay } = YEAR_ACTIVITY_RULES[activity]
-  return (
-    (!firstOpenDay || date >= firstOpenDay(year)) && date <= lastOpenDay(year)
-  )
-}
+const isOpen = (activity, year, date) =>
+  yearActivityState(activity, year, date).open
 
 /**
  * @param {Year} year
@@ -67,10 +63,6 @@ const isOpen = (activity, year, date) => {
 export const isSummaryLogYearOpen = (year, date) =>
   isOpen('summaryLogs', year, date)
 
-/** @param {Year} year */
-export const summaryLogYearLastOpenDay = (year) =>
-  YEAR_ACTIVITY_RULES.summaryLogs.lastOpenDay(year)
-
 /**
  * Whether PRNs and PERNs for the year can still be raised, issued or
  * cancelled by an admin.
@@ -78,10 +70,6 @@ export const summaryLogYearLastOpenDay = (year) =>
  * @param {CalendarDate} date - a UK calendar date
  */
 export const isPrnYearOpen = (year, date) => isOpen('prns', year, date)
-
-/** @param {Year} year */
-export const prnYearLastOpenDay = (year) =>
-  YEAR_ACTIVITY_RULES.prns.lastOpenDay(year)
 
 /**
  * @param {Year} year
@@ -97,10 +85,12 @@ export const isDecemberWasteOpen = (year, date) =>
  * @returns {{ open: boolean, firstOpenDay?: CalendarDate, lastOpenDay: CalendarDate }}
  */
 export const yearActivityState = (activity, year, date) => {
-  const { firstOpenDay, lastOpenDay } = YEAR_ACTIVITY_RULES[activity]
+  const rule = YEAR_ACTIVITY_RULES[activity]
+  const firstOpenDay = rule.firstOpenDay?.(year)
+  const lastOpenDay = rule.lastOpenDay(year)
   return {
-    open: isOpen(activity, year, date),
-    ...(firstOpenDay && { firstOpenDay: firstOpenDay(year) }),
-    lastOpenDay: lastOpenDay(year)
+    open: (!firstOpenDay || date >= firstOpenDay) && date <= lastOpenDay,
+    ...(firstOpenDay && { firstOpenDay }),
+    lastOpenDay
   }
 }
