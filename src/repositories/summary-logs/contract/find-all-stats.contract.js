@@ -8,6 +8,10 @@ import {
 } from '#domain/organisations/numbers.js'
 import { summaryLogFactory } from './test-data.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
+import { toYear } from '#common/helpers/dates/year.js'
+
+const OTHER_YEAR = toYear(DEFAULT_TEMPLATE_YEAR + 1)
 
 /**
  * @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
@@ -55,7 +59,9 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
     it('returns empty array when no summary log uploads exist', async () => {
       const { organisationNumber, registrationNumber } = generateOrgReg()
 
-      const stats = await repo.findAllSummaryLogStatsByRegistration()
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
 
       const matchingStats = getMatchingStats(
         stats,
@@ -98,7 +104,9 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
         })
       )
 
-      const stats = await repo.findAllSummaryLogStatsByRegistration()
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
 
       const expectedStats = getMatchingStats(
         stats,
@@ -152,7 +160,9 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
         })
       )
 
-      const stats = await repo.findAllSummaryLogStatsByRegistration()
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
 
       const expectedStats = getMatchingStats(
         stats,
@@ -233,7 +243,9 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
         })
       )
 
-      const stats = await repo.findAllSummaryLogStatsByRegistration()
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
 
       const expectedStats = getMatchingStats(
         stats,
@@ -308,7 +320,9 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
         })
       )
 
-      const stats = await repo.findAllSummaryLogStatsByRegistration()
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
 
       const org1Stats = getMatchingStats(
         stats,
@@ -346,6 +360,93 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
       ])
     })
 
+    it('counts only the summary logs of the year asked for', async () => {
+      const {
+        organisationId,
+        registrationId,
+        organisationNumber,
+        registrationNumber
+      } = generateOrgReg()
+      const askedYearSubmittedAt = '2024-01-10T10:00:00.000Z'
+      const otherYearFailedAt = '2024-03-10T10:00:00.000Z'
+      const numbers = {
+        organisationId,
+        registrationId,
+        organisationNumber,
+        registrationNumber
+      }
+
+      await repo.insert(
+        toSummaryLogId(new ObjectId().toString()),
+        summaryLogFactory.submitted({
+          ...numbers,
+          year: DEFAULT_TEMPLATE_YEAR,
+          submittedAt: askedYearSubmittedAt
+        })
+      )
+      await repo.insert(
+        toSummaryLogId(new ObjectId().toString()),
+        summaryLogFactory.submitted({
+          ...numbers,
+          year: OTHER_YEAR,
+          submittedAt: '2024-05-10T10:00:00.000Z'
+        })
+      )
+      await repo.insert(
+        toSummaryLogId(new ObjectId().toString()),
+        summaryLogFactory.submissionFailed({
+          ...numbers,
+          year: OTHER_YEAR,
+          createdAt: otherYearFailedAt
+        })
+      )
+
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
+
+      expect(
+        getMatchingStats(stats, organisationNumber, registrationNumber)
+      ).toEqual([
+        {
+          organisationNumber,
+          registrationNumber,
+          lastSuccessful: new Date(askedYearSubmittedAt),
+          lastFailed: null,
+          successfulCount: 1,
+          failedCount: 0
+        }
+      ])
+    })
+
+    it('returns nothing for a registration with summary logs only in other years', async () => {
+      const {
+        organisationId,
+        registrationId,
+        organisationNumber,
+        registrationNumber
+      } = generateOrgReg()
+
+      await repo.insert(
+        toSummaryLogId(new ObjectId().toString()),
+        summaryLogFactory.submitted({
+          organisationId,
+          registrationId,
+          organisationNumber,
+          registrationNumber,
+          year: OTHER_YEAR
+        })
+      )
+
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
+
+      expect(
+        getMatchingStats(stats, organisationNumber, registrationNumber)
+      ).toEqual([])
+    })
+
     it('return latest successful timestamp even when its out of order', async () => {
       const {
         organisationId,
@@ -379,7 +480,9 @@ export const testFindAllSummaryLogStatsByRegistration = (it) => {
         })
       )
 
-      const stats = await repo.findAllSummaryLogStatsByRegistration()
+      const stats = await repo.findAllSummaryLogStatsByRegistration(
+        DEFAULT_TEMPLATE_YEAR
+      )
       const matchingStats = getMatchingStats(
         stats,
         organisationNumber,

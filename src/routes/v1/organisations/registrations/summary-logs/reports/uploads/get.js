@@ -8,6 +8,10 @@ import {
 } from '#common/enums/index.js'
 import Boom from '@hapi/boom'
 import { summaryLogUploadsReportResponseSchema } from './response.schema.js'
+import { openYearSchema } from '#common/validation/year-schema.js'
+import Joi from 'joi'
+
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
@@ -25,21 +29,29 @@ export const getSummaryLogUploadsReport = {
       scope: [SCOPES.adminRead]
     },
     tags: ['api', 'admin'],
+    validate: {
+      query: Joi.object({ year: openYearSchema().required() })
+    },
     response: {
       schema: summaryLogUploadsReportResponseSchema
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationReadRepository: OrganisationReadRepository, summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationReadRepository: OrganisationReadRepository, summaryLogsRepository: SummaryLogsRepository, query: { year: Year }}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { organisationReadRepository, summaryLogsRepository, logger } =
-      request
+    const {
+      organisationReadRepository,
+      summaryLogsRepository,
+      logger,
+      query: { year }
+    } = request
     try {
       const reportData = await generateSummaryLogUploadsReport(
         organisationReadRepository,
-        summaryLogsRepository
+        summaryLogsRepository,
+        year
       )
 
       logger.info({
