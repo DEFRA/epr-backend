@@ -89,7 +89,9 @@ export const yearActivityState = (activity, year, date) => {
   const firstOpenDay = rule.firstOpenDay?.(year)
   const lastOpenDay = rule.lastOpenDay(year)
   return {
-    open: (!firstOpenDay || date >= firstOpenDay) && date <= lastOpenDay,
+    open:
+      (!firstOpenDay || date.localeCompare(firstOpenDay) >= 0) &&
+      date.localeCompare(lastOpenDay) <= 0,
     ...(firstOpenDay && { firstOpenDay }),
     lastOpenDay
   }
