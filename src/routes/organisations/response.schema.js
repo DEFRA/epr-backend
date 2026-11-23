@@ -12,6 +12,7 @@ import {
   accreditedOverseasSitesSchema,
   orsIdKey
 } from '#common/validation/overseas-site-schema.js'
+import { DECEMBER_WASTE_CONTROL_MODE } from '#packaging-recycling-notes/domain/december-waste-control-mode.js'
 import {
   ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
@@ -90,14 +91,34 @@ const statusSchema = (statuses) =>
     timeline: statusTimelineSchema(statuses)
   }).required()
 
+const lastOpenDay = isoDate
+  .required()
+  .description('The last UK calendar day the activity is open for the year.')
+
 const accreditationCommon = {
   accreditationNumber: Joi.string().required(),
+  decemberWaste: Joi.object({
+    open: Joi.boolean()
+      .required()
+      .description(
+        'Whether a PRN or PERN for the year can be declared as December Waste today.'
+      ),
+    firstOpenDay: isoDate
+      .required()
+      .description('The first UK calendar day December Waste is open.'),
+    lastOpenDay,
+    mode: Joi.string()
+      .valid(...Object.values(DECEMBER_WASTE_CONTROL_MODE))
+      .required()
+      .description('Which December Waste control the accreditation is shown.')
+  }).required(),
   prns: Joi.object({
     open: Joi.boolean()
       .required()
       .description(
-        'Whether PRNs and PERNs can still be raised and issued for the year: until the end of 31 January after it.'
-      )
+        'Whether PRNs and PERNs can still be raised, issued and cancelled by an admin for the year today.'
+      ),
+    lastOpenDay
   }).required(),
   status: statusSchema(ACCREDITATION_STATUSES)
 }
@@ -139,9 +160,21 @@ const standingByDateSchema = keyedByYear(
   'By year, the date each standing starts. A standing holds until the next date, or the end of the year.'
 )
 
+const summaryLogsSchema = keyedByYear(
+  Joi.object({
+    open: Joi.boolean()
+      .required()
+      .description(
+        'Whether loads dated in the year still belong in its summary log today, rather than a later one.'
+      ),
+    lastOpenDay
+  })
+).description('By year, whether summary logs for the year are open.')
+
 const registrationCommon = {
   material: materialSchema.required(),
   standingByDate: standingByDateSchema,
+  summaryLogs: summaryLogsSchema,
   status: statusSchema(REGISTRATION_STATUSES),
   submittedToRegulator: regulatorSchema
 }

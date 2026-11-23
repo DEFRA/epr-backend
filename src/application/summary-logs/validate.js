@@ -1,4 +1,5 @@
 /** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
+import { ukCalendarDate } from '#common/helpers/dates/uk-calendar-date.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -314,7 +315,12 @@ const runValidationChecks = async (
   // Data syntax validation returns validated data with issues attached to rows
   const { issues: dataSyntaxIssues, validatedData } = createDataSyntaxValidator(
     tableSchemas,
-    { summaryLogYear: summaryLog.year }
+    {
+      summaryLogYear: summaryLog.year,
+      ...(summaryLog.createdAt && {
+        uploadDate: ukCalendarDate(new Date(summaryLog.createdAt))
+      })
+    }
   )(parsed)
   issues.merge(dataSyntaxIssues)
 

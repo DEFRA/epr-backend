@@ -200,6 +200,71 @@ describe('field-schemas', () => {
     })
   })
 
+  describe.each([
+    ['createDateFieldSchema', createDateFieldSchema, '2026-12-30'],
+    [
+      'createFirstOfMonthFieldSchema',
+      createFirstOfMonthFieldSchema,
+      '2026-12-01'
+    ]
+  ])('%s rejecting an open earlier year', (_name, create, earlierYearDate) => {
+    const schema = create({ rejectOpenEarlierYear: true })
+    const contextOn = (uploadDate) => ({ summaryLogYear: 2027, uploadDate })
+
+    it.each(['2027-01-10', '2027-02-28'])(
+      'rejects a 2026 date uploaded on %s, while 2026 is open',
+      (uploadDate) => {
+        const { error } = schema.validate(earlierYearDate, {
+          context: contextOn(uploadDate)
+        })
+        expect(error?.details[0]).toMatchObject({
+          type: 'date.beforeSummaryLogYear',
+          message:
+            'must not be in an earlier year whose summary log is still open',
+          context: { expected: 2027, deadline: '2027-02-28' }
+        })
+      }
+    )
+
+    it('accepts a 2026 date uploaded on 1 March 2027, once 2026 has closed', () => {
+      expect(
+        schema.validate(earlierYearDate, { context: contextOn('2027-03-01') })
+          .error
+      ).toBeUndefined()
+    })
+
+    it('accepts a 2026 date when the context has no upload date', () => {
+      expect(
+        schema.validate(earlierYearDate, { context: { summaryLogYear: 2027 } })
+          .error
+      ).toBeUndefined()
+    })
+
+    it('still rejects a later year as later', () => {
+      const { error } = schema.validate('2028-01-01', {
+        context: contextOn('2027-01-10')
+      })
+      expect(error?.details[0].type).toBe('date.afterSummaryLogYear')
+    })
+  })
+
+  describe.each([
+    ['createDateFieldSchema', createDateFieldSchema, '2026-12-30'],
+    [
+      'createFirstOfMonthFieldSchema',
+      createFirstOfMonthFieldSchema,
+      '2026-12-01'
+    ]
+  ])('%s without rejectOpenEarlierYear', (_name, create, earlierYearDate) => {
+    it('accepts a date in an open earlier year', () => {
+      expect(
+        create().validate(earlierYearDate, {
+          context: { summaryLogYear: 2027, uploadDate: '2027-01-10' }
+        }).error
+      ).toBeUndefined()
+    })
+  })
+
   describe('createFirstOfMonthFieldSchema', () => {
     const context = { summaryLogYear: 2026 }
 

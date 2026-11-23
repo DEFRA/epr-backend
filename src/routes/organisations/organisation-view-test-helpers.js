@@ -86,10 +86,23 @@ export const buildAccreditedOrganisation = (overrides = {}) =>
     ...overrides
   })
 
-/** What `buildAccreditedOrganisation` serves for its reprocessor while 2026 is open. */
+/** What `buildAccreditedOrganisation` serves for each 2026 year activity on 1 October 2026. */
+const activitiesOn1October2026 = {
+  summaryLogs: { 2026: { open: true, lastOpenDay: '2027-02-28' } },
+  prns: { open: true, lastOpenDay: '2027-01-31' },
+  decemberWaste: {
+    open: false,
+    firstOpenDay: '2026-12-01',
+    lastOpenDay: '2027-01-31',
+    mode: 'pool'
+  }
+}
+
+/** What `buildAccreditedOrganisation` serves for its reprocessor on 1 October 2026. */
 export const reprocessorResponse = {
   status: approvedStatusFrom('2026-02-01'),
   standingByDate,
+  summaryLogs: activitiesOn1October2026.summaryLogs,
   material: 'glass_re_melt',
   submittedToRegulator: { code: 'ea' },
   wasteProcessingType: 'reprocessor',
@@ -104,16 +117,18 @@ export const reprocessorResponse = {
   accreditations: {
     2026: {
       accreditationNumber: ACCREDITATION_NUMBER,
-      prns: { open: true },
+      prns: activitiesOn1October2026.prns,
+      decemberWaste: activitiesOn1October2026.decemberWaste,
       status: approvedStatusFrom('2026-07-01')
     }
   }
 }
 
-/** What `buildAccreditedOrganisation` serves for its exporter while 2026 is open. */
+/** What `buildAccreditedOrganisation` serves for its exporter on 1 October 2026. */
 export const exporterResponse = {
   status: approvedStatusFrom('2026-02-01'),
   standingByDate,
+  summaryLogs: activitiesOn1October2026.summaryLogs,
   material: 'plastic',
   submittedToRegulator: { code: 'ea' },
   wasteProcessingType: 'exporter',
@@ -121,7 +136,8 @@ export const exporterResponse = {
   accreditations: {
     2026: {
       accreditationNumber: EXPORTER_ACCREDITATION_NUMBER,
-      prns: { open: true },
+      prns: activitiesOn1October2026.prns,
+      decemberWaste: activitiesOn1October2026.decemberWaste,
       status: approvedStatusFrom('2026-07-01'),
       overseasSites: {
         '001': { status: 'approved', approvedOn: '2026-01-01' },

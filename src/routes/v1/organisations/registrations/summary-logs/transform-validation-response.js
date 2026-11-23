@@ -26,6 +26,10 @@ const transformFatalIssue = (issue) => {
     result.expected = issue.context.expected
   }
 
+  if (issue.context?.deadline !== undefined) {
+    result.deadline = issue.context.deadline
+  }
+
   return result
 }
 
@@ -60,6 +64,10 @@ const transformDataIssue = (issue) => {
 
   if (issue.context?.expected !== undefined) {
     result.expected = issue.context.expected
+  }
+
+  if (issue.context?.deadline !== undefined) {
+    result.deadline = issue.context.deadline
   }
 
   return result

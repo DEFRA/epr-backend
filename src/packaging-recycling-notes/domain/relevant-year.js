@@ -1,4 +1,6 @@
 import { nextYear } from '#common/helpers/dates/year.js'
+import { ukCalendarDate } from '#common/helpers/dates/uk-calendar-date.js'
+import { isPrnYearOpen } from '#domain/year-activities/rules.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -11,10 +13,7 @@ import { nextYear } from '#common/helpers/dates/year.js'
  * only one, so this module holds the general year-boundary arithmetic rather
  * than anything cancellation-specific.
  *
- * Evaluated in UTC. There is no date library in this codebase, and every
- * existing date helper (`#common/helpers/date-formatter.js`) is UTC-pinned.
- * 31 January is in GMT every year (BST does not start until late March), so
- * UTC and Europe/London name the same instant for this specific boundary.
+ * The window itself is stated in `#domain/year-activities/rules.js`.
  */
 
 /**
@@ -33,50 +32,21 @@ export class RelevantYearWindowExpiredError extends Error {
   }
 }
 
-// Month index 0 = January.
-const JANUARY = 0
-const LAST_DAY_OF_JANUARY = 31
-const END_OF_DAY_HOURS = 23
-const END_OF_DAY_MINUTES = 59
-const END_OF_DAY_SECONDS = 59
-const END_OF_DAY_MILLISECONDS = 999
-
 /**
- * The last instant (UTC) of 31 January in the year immediately following
- * `relevantYear` — inclusive.
- *
- * @param {Year} relevantYear
- * @returns {Date}
- */
-function endOfRelevantYear(relevantYear) {
-  if (!Number.isFinite(relevantYear)) {
-    throw new TypeError(
-      `Cannot compute the end of a relevant year: relevantYear must be a finite number, got ${relevantYear}`
-    )
-  }
-  return new Date(
-    Date.UTC(
-      nextYear(relevantYear),
-      JANUARY,
-      LAST_DAY_OF_JANUARY,
-      END_OF_DAY_HOURS,
-      END_OF_DAY_MINUTES,
-      END_OF_DAY_SECONDS,
-      END_OF_DAY_MILLISECONDS
-    )
-  )
-}
-
-/**
- * Whether `now` falls on or before the end of `relevantYear` (31 January of
- * the following year, inclusive).
+ * Whether `now` falls on or before the last UK calendar day PRNs and PERNs
+ * are open for `relevantYear` (31 January of the following year).
  *
  * @param {Year} relevantYear
  * @param {Date} now
  * @returns {boolean}
  */
 export function isBeforeEndOfRelevantYear(relevantYear, now) {
-  return now.getTime() <= endOfRelevantYear(relevantYear).getTime()
+  if (!Number.isFinite(relevantYear)) {
+    throw new TypeError(
+      `Cannot compute the end of a relevant year: relevantYear must be a finite number, got ${relevantYear}`
+    )
+  }
+  return isPrnYearOpen(relevantYear, ukCalendarDate(now))
 }
 
 /**

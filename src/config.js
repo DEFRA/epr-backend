@@ -547,7 +547,7 @@ const baseConfig = {
   },
   decemberWaste: {
     windowStart: {
-      doc: 'Recurring annual start (inclusive) of the December Waste declaration window, as MM-DDTHH:mm in UK local time (Europe/London), for the accreditation relevant year. The window always closes 31 January the year after relevantYear.',
+      doc: 'Recurring annual start (inclusive) of the December Waste declaration window, as MM-DDTHH:mm, for the accreditation relevant year. The window opens at the start of that UK day (the time is ignored) and always closes 31 January the year after relevantYear.',
       format: 'december-waste-window-bound',
       default: '12-01T00:00',
       env: 'DECEMBER_WASTE_WINDOW_START'

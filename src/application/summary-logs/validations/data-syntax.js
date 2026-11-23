@@ -11,7 +11,10 @@ import {
 } from '#domain/summary-logs/markers.js'
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
-import { AFTER_SUMMARY_LOG_YEAR_ERROR } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
+import {
+  AFTER_SUMMARY_LOG_YEAR_ERROR,
+  BEFORE_SUMMARY_LOG_YEAR_ERROR
+} from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
 import {
@@ -65,6 +68,7 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'date.max': VALIDATION_CODE.INVALID_DATE,
   'any.calendarDate': VALIDATION_CODE.INVALID_DATE,
   [AFTER_SUMMARY_LOG_YEAR_ERROR]: VALIDATION_CODE.INVALID_DATE,
+  [BEFORE_SUMMARY_LOG_YEAR_ERROR]: VALIDATION_CODE.INVALID_DATE,
   'string.threeDigitId': VALIDATION_CODE.INVALID_TYPE,
   'custom.netWeightCalculationMismatch':
     VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
@@ -98,6 +102,8 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   [MESSAGES.MUST_BE_A_VALID_DATE]: VALIDATION_CODE.MUST_BE_A_VALID_DATE,
   [MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR]:
     VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
+  [MESSAGES.MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR]:
+    VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR,
   [MESSAGES.MUST_BE_GREATER_THAN_ZERO]:
     VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO,
   [MESSAGES.MUST_BE_AT_LEAST_ZERO]: VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO,
@@ -281,6 +287,8 @@ const toApplicationIssue = ({
     actual: rowObject[fieldName],
     ...(isValidationError &&
       issue.expected !== undefined && { expected: issue.expected }),
+    ...(isValidationError &&
+      issue.deadline !== undefined && { deadline: issue.deadline }),
     ...(errorCode && { errorCode })
   }
 

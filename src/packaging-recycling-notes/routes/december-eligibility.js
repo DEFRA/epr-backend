@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { config } from '#root/config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { isWithinDecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
@@ -31,11 +30,7 @@ export const packagingRecyclingNotesDecemberEligibility = {
     h
       .response({
         mode: decemberWasteControlModeFor(request.app.registration),
-        windowOpen: isWithinDecemberWasteWindow(
-          request.params.year,
-          new Date(),
-          config.get('decemberWaste')
-        )
+        windowOpen: isWithinDecemberWasteWindow(request.params.year, new Date())
       })
       .code(StatusCodes.OK)
 }

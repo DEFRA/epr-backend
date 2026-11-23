@@ -1,4 +1,5 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 import {
   CLASSIFICATION_REASON,
   ORS_VALIDATION_DISABLED
@@ -141,18 +142,19 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear?: Year }} RowValidationOptions
+ * @typedef {{ summaryLogYear?: Year, uploadDate?: CalendarDate }} RowValidationOptions
  * Omitted, as when exporting stored rows, means dates are not checked against
- * the summary log year.
+ * the summary log year. `uploadDate` is the UK calendar date the summary log
+ * was uploaded.
  */
 
 /**
- * @typedef {Required<RowValidationOptions>} SummaryLogValidationOptions
+ * @typedef {{ summaryLogYear: Year, uploadDate?: CalendarDate }} SummaryLogValidationOptions
  */
 
 /**
  * Issue from validation pipeline when a field fails schema validation (VAL010)
- * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string, expected?: unknown }} ValidationErrorIssue
+ * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string, expected?: unknown, deadline?: CalendarDate }} ValidationErrorIssue
  */
 
 /**
@@ -251,6 +253,9 @@ export const classifyRow = (row, tableSchema, options) => {
         type: detail.type, // Include Joi error type for application-layer mapping
         ...(detail.context?.expected !== undefined && {
           expected: detail.context.expected
+        }),
+        ...(detail.context?.deadline !== undefined && {
+          deadline: detail.context.deadline
         })
       })),
       data
