@@ -1,6 +1,7 @@
 import {
   PRN_YEAR,
-  buildAccreditationSnapshot
+  buildAccreditationSnapshot,
+  pinClockWithinPrnYear
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import {
   toAccreditationNumber,
@@ -141,6 +142,8 @@ const callUpdate = (overrides) =>
     prnEvents: { onCancelled: vi.fn().mockResolvedValue(undefined) },
     ...overrides
   })
+
+pinClockWithinPrnYear()
 
 afterEach(() => {
   vi.clearAllMocks()
