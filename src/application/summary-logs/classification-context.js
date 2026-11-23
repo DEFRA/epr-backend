@@ -68,15 +68,15 @@ const previousYearOf = async ({
   const ledgerId = { ...pickLedgerId(summaryLog), year }
 
   if (registration.accreditation === null) {
-    const previousYearSubmission = await latestSubmissionIn(ledgerRepository, {
-      ...ledgerId,
-      accreditationNumber: null
-    })
+    const registeredOnlySubmission = await latestSubmissionIn(
+      ledgerRepository,
+      { ...ledgerId, accreditationNumber: null }
+    )
     return {
       previousYearKeys: {
-        previousYearPosition: previousYearSubmission?.number ?? null
+        previousYearPosition: registeredOnlySubmission?.number ?? null
       },
-      previousYearSubmission
+      previousYearSubmission: registeredOnlySubmission
     }
   }
 
