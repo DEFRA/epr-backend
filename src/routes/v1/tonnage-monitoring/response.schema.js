@@ -20,7 +20,7 @@ const monthTonnageSchema = Joi.object({
       'Jun',
       'Jul',
       'Aug',
-      'Sept',
+      'Sep',
       'Oct',
       'Nov',
       'Dec'
