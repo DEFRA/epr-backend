@@ -22,13 +22,14 @@ const DOMAIN_LAYERING_MESSAGE =
   'The domain must not import from an outer layer. Move the shared code into the domain, or pass it in.'
 
 // A module of ADR 0027's modular monolith lives at src/<module>/. Code outside
-// it imports only the entry points its README names. Only the server setup and
-// the test servers import its plugin.js, and only a test imports its
+// it imports only the entry points its README names. Only code in src/server,
+// src/plugins and src/test imports its plugin.js, and only a test imports its
 // test-support.js.
 /**
  * @param {string} module
  * @param {string} name
  * @param {string[]} entryPoints
+ * @returns {object[]} the module's no-restricted-paths zones
  */
 const moduleFence = (module, name, entryPoints) => [
   {
@@ -47,11 +48,12 @@ const moduleFence = (module, name, entryPoints) => [
     target: [
       `./src/!(${module}|server|plugins|test)/**/*`,
       './src/*.js',
+      './.vite/**/*',
       './scripts/**/*',
       './benchmarks/**/*'
     ],
     from: `./src/${module}/plugin.js`,
-    message: `Only the server setup and the test servers import ${name} through plugin.js.`
+    message: `Only code in src/server, src/plugins and src/test imports ${name} through plugin.js.`
   },
   {
     target: [

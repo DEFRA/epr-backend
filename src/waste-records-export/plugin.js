@@ -10,6 +10,7 @@ import { availableWasteRecordYearsGet } from './routes/available-years.js'
 const wasteRecordsExport = {
   plugin: {
     name: 'waste-records-export',
+    /** @param {import('#common/hapi-types.js').HapiServer} server */
     register: (server) => {
       server.route([
         wasteRecordsExportRoute,
