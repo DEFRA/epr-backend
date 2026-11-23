@@ -439,7 +439,7 @@ const signDownload =
       ...(registrationNumber && {
         ResponseContentDisposition: buildDownloadDisposition(
           registrationNumber,
-          doc.submittedAt,
+          doc.submittedAt ?? doc.createdAt,
           XLSX_EXTENSION
         )
       })

@@ -632,6 +632,26 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         registrationId: new ObjectId().toString()
       })
 
+      // Validation now rejects a non-date, so the row is stored as an upload
+      // from before dates were read would have stored it.
+      const repository = env.summaryLogRowStatesRepository
+      const upsert = repository.upsertSummaryLogRowStates
+      vi.spyOn(repository, 'upsertSummaryLogRowStates').mockImplementationOnce(
+        (ledgerId, entries, summaryLogId) =>
+          upsert(
+            ledgerId,
+            entries.map((entry) => ({
+              ...entry,
+              data: {
+                ...entry.data,
+                DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED:
+                  storedDateRepatriated
+              }
+            })),
+            summaryLogId
+          )
+      )
+
       await upload(
         env,
         'sl-first',
@@ -639,14 +659,6 @@ describe('periodsRequiringResubmission (figure-gated resubmission)', () => {
         createExporterUploadData([refusedJanuaryExport]),
         exporterMeta
       )
-      // Submit stores rows without reading their dates, so swapping the file
-      // here stores the value as an upload from before dates were read would.
-      env.fileDataMap['file-first'] = {
-        meta: exporterMeta,
-        data: createExporterUploadData([
-          { ...refusedJanuaryExport, dateRepatriated: storedDateRepatriated }
-        ])
-      }
       await submitAndPoll(env, 'sl-first')
       await generateAndSubmitReport(env, JANUARY_2026)
       await generateAndSubmitReport(env, FEBRUARY_2026)

@@ -6,12 +6,10 @@ import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS,
-  transitionStatus
+  UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
@@ -35,6 +33,7 @@ import {
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
+  createTestSubmitterWorker,
   createUploadPayload,
   pollForValidation,
   servedTestReadOrganisation,
@@ -186,7 +185,7 @@ describe('Submission and placeholder tests', () => {
                 'Actual weight (100%)',
                 45,
                 0.85,
-                611.028, // (765-45)*0.9985*0.85
+                611.082, // (765-45)*0.9985*0.85
                 // Supplementary fields left empty
                 '',
                 '',
@@ -307,12 +306,7 @@ describe('Submission and placeholder tests', () => {
         }
       }
 
-      const validationExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: { meta: sharedMeta, data: {} },
-        [secondFileId]: { meta: sharedMeta, data: secondUploadData }
-      })
-
-      const transformationExtractor = createInMemorySummaryLogExtractor({
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: { meta: sharedMeta, data: firstUploadData },
         [secondFileId]: { meta: sharedMeta, data: secondUploadData }
       })
@@ -336,48 +330,23 @@ describe('Submission and placeholder tests', () => {
         organisationReadRepository,
         summaryLogRowStatesRepository,
         ledgerRepository,
-        summaryLogExtractor: validationExtractor,
+        summaryLogExtractor,
         logger: mockLogger,
         reportsService: createReportsService(
           createInMemoryReportsRepository()()
         )
       })
 
-      const syncWasteRecords = syncFromSummaryLog({
-        extractor: transformationExtractor,
-        wasteBalanceService: createWasteBalanceService(ledgerRepository),
-        summaryLogRowStatesRepository,
-        ledgerRepository,
+      const submitterWorker = createTestSubmitterWorker({
+        logger: mockLogger,
+        summaryLogsRepository,
         organisationReadRepository,
-        logger: mockLogger
+        wasteBalanceService: createWasteBalanceService(ledgerRepository),
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        ),
+        validateSummaryLog
       })
-
-      const syncUser = {
-        id: 'test-user',
-        email: 'test-user@example.com',
-        scope: ['some-scope']
-      }
-
-      const submitterWorker = {
-        validate: validateSummaryLog,
-        submit: async (summaryLogId) => {
-          await new Promise((resolve) => setImmediate(resolve))
-
-          const existing = await summaryLogsRepository.findById(summaryLogId)
-          const { version, summaryLog } =
-            /** @type {import('#repositories/summary-logs/port.js').SummaryLogVersion} */ (
-              existing
-            )
-
-          await syncWasteRecords(summaryLog, syncUser)
-
-          await summaryLogsRepository.update(
-            summaryLogId,
-            version,
-            transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-          )
-        }
-      }
 
       server = await createTestServer({
         repositories: {

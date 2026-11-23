@@ -13,24 +13,41 @@ import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
 import { summaryLogMetrics } from '#application/summary-logs/metrics.js'
-import { supersedeIfStale } from '#application/summary-logs/supersede-if-stale.js'
+import {
+  staleSubmissionConflict,
+  supersedeIfStale
+} from '#application/summary-logs/supersede-if-stale.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
+
+/**
+ * @typedef {HapiRequest & {
+ *   params: RegistrationParams & { summaryLogId: SummaryLogId },
+ *   summaryLogsRepository: SummaryLogsRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
+ *   summaryLogsWorker: SummaryLogsCommandExecutor,
+ *   systemLogsRepository: SystemLogsRepository
+ * }} SummaryLogsSubmitRequest
+ */
 
 const FAILURE_MESSAGE = 'Failure submitting summary log'
 
 /**
  * Moves the summary log to submitting, unless another submission is in
- * progress or its waste records have changed since the preview.
+ * progress or it can no longer be committed as validated.
  *
- * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {Pick<SummaryLogsSubmitRequest, 'summaryLogsRepository' | 'organisationReadRepository' | 'logger'>} request
  * @param {SummaryLogId} summaryLogId
  */
-const startSubmitting = async (summaryLogsRepository, summaryLogId) => {
+const startSubmitting = async (
+  { summaryLogsRepository, organisationReadRepository, logger },
+  summaryLogId
+) => {
   // Atomically transition to submitting - fails if another submission in progress
   const result =
     await summaryLogsRepository.transitionToSubmittingExclusive(summaryLogId)
@@ -41,17 +58,17 @@ const startSubmitting = async (summaryLogsRepository, summaryLogId) => {
 
   const { summaryLog, version } = result
 
-  const isStale = await supersedeIfStale({
+  const { reason } = await supersedeIfStale({
     summaryLogsRepository,
+    organisationReadRepository,
+    logger,
     summaryLog,
     summaryLogId,
     version
   })
 
-  if (isStale) {
-    throw Boom.conflict(
-      'Waste records have changed since preview was generated. Please re-upload.'
-    )
+  if (reason) {
+    throw staleSubmissionConflict(reason)
   }
 
   return summaryLog
@@ -67,24 +84,16 @@ export const summaryLogsSubmit = {
     tags: ['api']
   },
   /**
-   * @param {HapiRequest & {
-   *   params: RegistrationParams & { summaryLogId: SummaryLogId },
-   *   summaryLogsRepository: SummaryLogsRepository,
-   *   summaryLogsWorker: SummaryLogsCommandExecutor,
-   *   systemLogsRepository: SystemLogsRepository
-   * }} request
+   * @param {SummaryLogsSubmitRequest} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, summaryLogsWorker, params, logger } = request
+    const { summaryLogsWorker, params, logger } = request
 
     const { summaryLogId, organisationNumber, registrationNumber } = params
 
     try {
-      const summaryLog = await startSubmitting(
-        summaryLogsRepository,
-        summaryLogId
-      )
+      const summaryLog = await startSubmitting(request, summaryLogId)
 
       // Trigger async submission worker (fire-and-forget)
       await summaryLogsWorker.submit(summaryLogId, request)
