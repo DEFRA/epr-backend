@@ -14,6 +14,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { summaryLogUploadsReportPath } from './get.js'
+import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import {
   createInMemoryOrganisationReadRepository,
@@ -26,6 +27,8 @@ import {
 } from '#repositories/summary-logs/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
+
+const urlForYear = (year) => `${summaryLogUploadsReportPath}?year=${year}`
 
 describe(`${summaryLogUploadsReportPath} route`, () => {
   setupAuthContext()
@@ -85,7 +88,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: summaryLogUploadsReportPath,
+        url: urlForYear(DEFAULT_TEMPLATE_YEAR),
         ...asServiceMaintainer()
       })
 
@@ -114,6 +117,31 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
     })
   })
 
+  describe('year', () => {
+    it.for([
+      ['no year', summaryLogUploadsReportPath],
+      ['a year that is not a number', urlForYear('last')],
+      ['a year before the service holds data', urlForYear(2023)],
+      ['a year not yet open', urlForYear(2099)]
+    ])('refuses %s', async ([, url]) => {
+      const statsSpy = vi.spyOn(
+        summaryLogsRepository,
+        'findAllSummaryLogStatsByRegistration'
+      )
+
+      const response = await server.inject({
+        method: 'GET',
+        url,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(statsSpy).not.toHaveBeenCalled()
+
+      statsSpy.mockRestore()
+    })
+  })
+
   describe('error scenarios', () => {
     it('returns 500 when summary log report generation fails', async () => {
       const errorSpy = vi
@@ -122,7 +150,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: summaryLogUploadsReportPath,
+        url: urlForYear(DEFAULT_TEMPLATE_YEAR),
         ...asServiceMaintainer()
       })
 
@@ -148,7 +176,7 @@ describe(`${summaryLogUploadsReportPath} route`, () => {
     it('returns 403 when user is not a service maintainer', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: summaryLogUploadsReportPath,
+        url: urlForYear(DEFAULT_TEMPLATE_YEAR),
         ...asServiceMaintainer({ scope: ['standardUser'] })
       })
 
