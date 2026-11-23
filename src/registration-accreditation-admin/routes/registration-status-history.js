@@ -6,6 +6,7 @@ import { assertRegistrationStatusTransitionValid } from '#domain/organisations/s
 import { registrationStatusHistoryPayloadSchema } from './registration-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
+/** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').StoredRegistrationStatus} StoredRegistrationStatus */
@@ -38,6 +39,7 @@ export const registrationStatusHistory = {
    *    }
    * > & {
    *    organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *    registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string }
    * }} request
@@ -45,7 +47,10 @@ export const registrationStatusHistory = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationAdministrationRepository } = request
+    const {
+      organisationAdministrationRepository,
+      registrationAccreditationAdminRepository
+    } = request
     const { organisationId, registrationId } = request.params
     const payload = request.payload
     const { fromStatus, toStatus } = payload
@@ -82,7 +87,7 @@ export const registrationStatusHistory = {
       // The unique index on registrations.registrationNumber also blocks
       // concurrent grants of the same number; this check gives the clear 422.
       const inUse =
-        await organisationAdministrationRepository.isRegistrationNumberInUse(
+        await registrationAccreditationAdminRepository.isRegistrationNumberInUse(
           grant.registrationNumber
         )
       if (inUse) {

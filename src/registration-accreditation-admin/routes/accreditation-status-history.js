@@ -10,6 +10,7 @@ import { assertAccreditationStatusTransitionValid } from '#domain/organisations/
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
+/** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').StoredAccreditationStatus} StoredAccreditationStatus */
@@ -25,12 +26,12 @@ export const accreditationStatusHistoryPath =
  * accreditation in any organisation, whatever its status. The unique index on
  * accreditations.accreditationNumber also blocks concurrent grants of the
  * same number; this check gives the clear 422.
- * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
+ * @param {RegistrationAccreditationAdminRepository} registrationAccreditationAdminRepository
  * @param {{ validFrom: string, validTo: string, accreditationNumber: AccreditationNumber }} grant
  * @returns {Promise<void>}
  */
 const assertGrantAllowed = async (
-  organisationAdministrationRepository,
+  registrationAccreditationAdminRepository,
   grant
 ) => {
   if (new Date(grant.validFrom) > new Date(grant.validTo)) {
@@ -40,7 +41,7 @@ const assertGrantAllowed = async (
   }
 
   const inUse =
-    await organisationAdministrationRepository.isAccreditationNumberInUse(
+    await registrationAccreditationAdminRepository.isAccreditationNumberInUse(
       grant.accreditationNumber
     )
   if (inUse) {
@@ -75,6 +76,7 @@ export const accreditationStatusHistory = {
    *    }
    * > & {
    *    organisationAdministrationRepository: OrganisationAdministrationRepository,
+   *    registrationAccreditationAdminRepository: RegistrationAccreditationAdminRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { organisationId: string, registrationId: string, accreditationId: string }
    * }} request
@@ -82,7 +84,10 @@ export const accreditationStatusHistory = {
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
-    const { organisationAdministrationRepository } = request
+    const {
+      organisationAdministrationRepository,
+      registrationAccreditationAdminRepository
+    } = request
     const { organisationId, registrationId, accreditationId } = request.params
     const payload = request.payload
     const { fromStatus, toStatus } = payload
@@ -138,7 +143,7 @@ export const accreditationStatusHistory = {
     assertAccreditationStatusTransitionValid(fromStatus, toStatus)
 
     if (grant) {
-      await assertGrantAllowed(organisationAdministrationRepository, grant)
+      await assertGrantAllowed(registrationAccreditationAdminRepository, grant)
     }
 
     const grantFields = grant

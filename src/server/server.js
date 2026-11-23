@@ -19,6 +19,7 @@ import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/index.js'
+import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
@@ -78,6 +79,7 @@ function getProductionPlugins(config) {
       plugin: mongoOrganisationsRepositoryPlugin,
       options: { eventualConsistency }
     },
+    registrationAccreditationAdminRepositoryPlugin,
     mongoSummaryLogsRepositoryPlugin,
     mongoFormSubmissionsRepositoryPlugin,
     mongoLedgerRepositoryPlugin,
