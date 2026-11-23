@@ -27,6 +27,8 @@ vi.mock(
 
 const { validToken } = entraIdMockAuthTokens
 
+const urlForYear = (year) => `${wasteBalanceAvailabilityPath}?year=${year}`
+
 describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
   setupAuthContext()
   let server
@@ -37,19 +39,40 @@ describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
     server = await createTestServer({ repositories: {} })
   })
 
+  const get = (url) =>
+    server.inject({
+      method: 'GET',
+      url,
+      headers: { Authorization: `Bearer ${validToken}` }
+    })
+
+  it('reports the year asked for', async () => {
+    const response = await get(urlForYear(2026))
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const [, , year] = mockAggregateAvailableBalance.mock.calls[0]
+    expect(year).toBe(2026)
+  })
+
+  it.for([
+    ['no year', wasteBalanceAvailabilityPath],
+    ['a year that is not a number', urlForYear('last')],
+    ['a year before the service holds data', urlForYear(2023)],
+    ['a year not yet open', urlForYear(2099)]
+  ])('refuses %s', async ([, url]) => {
+    const response = await get(url)
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(mockAggregateAvailableBalance).not.toHaveBeenCalled()
+  })
+
   describe('error handling', () => {
     it('returns 500 when aggregation fails', async () => {
       mockAggregateAvailableBalance.mockRejectedValue(
         new Error('Database error')
       )
 
-      const response = await server.inject({
-        method: 'GET',
-        url: wasteBalanceAvailabilityPath,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
+      const response = await get(urlForYear(2026))
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       const result = JSON.parse(response.payload)
@@ -61,7 +84,7 @@ describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
     server: () => server,
     makeRequest: async () => ({
       method: 'GET',
-      url: wasteBalanceAvailabilityPath
+      url: urlForYear(2026)
     })
   })
 
@@ -69,7 +92,7 @@ describe(`GET ${wasteBalanceAvailabilityPath}`, () => {
     server: () => server,
     makeRequest: async () => ({
       method: 'GET',
-      url: wasteBalanceAvailabilityPath
+      url: urlForYear(2026)
     }),
     successStatus: StatusCodes.OK
   })

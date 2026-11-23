@@ -7,6 +7,7 @@ import { indexByLedger } from '#waste-balances/application/read-model-accreditat
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 
 /**
  * The available amount at each accreditation's latest ledger event, summed by
@@ -14,13 +15,15 @@ import { indexByLedger } from '#waste-balances/application/read-model-accreditat
  *
  * @param {OrganisationReadRepository} organisationReadRepository
  * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {Year} year
  */
 export const aggregateAvailableBalance = async (
   organisationReadRepository,
-  ledgerRepository
+  ledgerRepository,
+  year
 ) => {
   const accreditations = indexByLedger(
-    await organisationReadRepository.findAll()
+    await organisationReadRepository.findAll({ year })
   )
 
   const latestEvents = await ledgerRepository.findLatestInLedgers(
@@ -29,7 +32,7 @@ export const aggregateAvailableBalance = async (
         organisationNumber: organisation.organisationNumber,
         registrationNumber,
         accreditationNumber: accreditation.accreditationNumber,
-        year: accreditation.year
+        year
       })
     )
   )
