@@ -122,26 +122,22 @@ function createOrganisationsRepositoryPlugin(repositoryOrFactory) {
 }
 
 /**
- * Serves the registration and accreditation admin repository over the store
- * of the in-memory organisations repository, so a test that seeds
- * organisations through that repository reaches them through the admin
- * routes. With any other organisations repository it serves nothing, and a
- * test that reaches the admin routes overrides it.
+ * Serves the registration and accreditation admin repository over whichever
+ * organisations repository the test server holds, so a test that seeds
+ * organisations through that repository reaches them through the admin routes.
  */
 const createInMemoryRegistrationAccreditationAdminRepositoryPlugin = () => ({
   name: 'registrationAccreditationAdminRepository',
+  dependencies: ['organisationsRepository'],
   /** @param {import('@hapi/hapi').Server & HapiServer} server */
   register: (server) => {
-    const organisations = server.app.organisationAdministrationRepository
-    if ('_getStorageForTesting' in organisations) {
-      const createRepository =
-        createInMemoryRegistrationAccreditationAdminRepository(organisations)
-      registerDependency(
-        server,
-        'registrationAccreditationAdminRepository',
-        () => createRepository()
+    const createRepository =
+      createInMemoryRegistrationAccreditationAdminRepository(
+        server.app.organisationAdministrationRepository
       )
-    }
+    registerDependency(server, 'registrationAccreditationAdminRepository', () =>
+      createRepository()
+    )
   }
 })
 

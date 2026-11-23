@@ -1,3 +1,4 @@
+import { DATABASE_NAME } from '#vite/fixtures/mongo-client.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { beforeEach, describe } from 'vitest'
@@ -10,8 +11,6 @@ import { testRegistrationAccreditationAdminRepositoryContract } from './port.con
  * @import { OrganisationsRepositoryFactory } from '#repositories/organisations/port.js'
  * @typedef {{ mongoClient: MongoClient, organisationsRepository: OrganisationsRepositoryFactory }} MongoFixtures
  */
-
-const DATABASE_NAME = 'epr-backend'
 
 const it = /** @type {import('vitest').TestAPI<MongoFixtures>} */ (
   mongoIt.extend({

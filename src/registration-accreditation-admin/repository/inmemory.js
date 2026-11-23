@@ -1,36 +1,25 @@
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import { RegistrationAccreditationAdminRepository } from './port.js' */
 
 /**
- * Reads the store of an in-memory organisations repository, as the MongoDB
- * adapter reads the organisations repository's collection.
+ * Reads the organisations an in-memory organisations repository holds, with
+ * the same lag behind its writes as the rest of its reads.
  *
- * @param {object} organisationsRepository - from createInMemoryOrganisationsRepository
+ * @param {Pick<OrganisationAdministrationRepository, 'findAll'>} organisationsRepository
  * @returns {() => RegistrationAccreditationAdminRepository}
  */
-export const createInMemoryRegistrationAccreditationAdminRepository = (
-  organisationsRepository
-) => {
-  if (
-    !('_getStorageForTesting' in organisationsRepository) ||
-    typeof organisationsRepository._getStorageForTesting !== 'function'
-  ) {
-    throw new TypeError('Expected an in-memory organisations repository')
-  }
-  /** @type {Array<{ accreditations: Array<{ accreditationNumber?: string }>, registrations: Array<{ registrationNumber?: string }> }>} */
-  const storage = organisationsRepository._getStorageForTesting()
-
-  return () => ({
+export const createInMemoryRegistrationAccreditationAdminRepository =
+  (organisationsRepository) => () => ({
     isAccreditationNumberInUse: async (accreditationNumber) =>
-      storage.some((org) =>
+      (await organisationsRepository.findAll()).some((org) =>
         org.accreditations.some(
           (acc) => acc.accreditationNumber === accreditationNumber
         )
       ),
     isRegistrationNumberInUse: async (registrationNumber) =>
-      storage.some((org) =>
+      (await organisationsRepository.findAll()).some((org) =>
         org.registrations.some(
           (reg) => reg.registrationNumber === registrationNumber
         )
       )
   })
-}

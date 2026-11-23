@@ -20,10 +20,4 @@ const it = base.extend({
 
 describe('In-memory registration and accreditation admin repository', () => {
   testRegistrationAccreditationAdminRepositoryContract(it)
-
-  it('refuses an organisations repository that is not in memory', () => {
-    expect(() =>
-      createInMemoryRegistrationAccreditationAdminRepository({})
-    ).toThrow('Expected an in-memory organisations repository')
-  })
 })
