@@ -5,7 +5,13 @@ import { setupServer } from 'msw/node'
  * @import { SetupServer } from 'msw/node'
  */
 
-let unhandledFrames = 0
+/**
+ * Kept on the global, not in this module: a worker that runs files without
+ * isolation loads this module again for each file, while helpers that import
+ * it keep the first copy.
+ */
+globalThis.__mswUnhandledFrames ??= { count: 0 }
+const unhandledFrames = globalThis.__mswUnhandledFrames
 
 /**
  * Pass to every msw `listen()`, so a test whose request has no handler fails
@@ -13,7 +19,7 @@ let unhandledFrames = 0
  * @param {{ defaults: { error: () => void } }} args
  */
 export const onUnhandledFrame = ({ defaults }) => {
-  unhandledFrames++
+  unhandledFrames.count++
   defaults.error()
 }
 
@@ -42,8 +48,8 @@ export const setupMsw = (...handlers) => {
 }
 
 afterEach(() => {
-  const count = unhandledFrames
-  unhandledFrames = 0
+  const { count } = unhandledFrames
+  unhandledFrames.count = 0
 
   if (count > 0) {
     throw new Error(
