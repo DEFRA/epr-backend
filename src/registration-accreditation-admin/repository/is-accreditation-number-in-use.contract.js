@@ -1,21 +1,22 @@
 import { beforeEach, describe, expect } from 'vitest'
-import { buildAccreditation } from './test-data.js'
+import { buildAccreditation } from '#repositories/organisations/contract/test-data.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 
-/** @import { OrganisationBuilders } from './test-data.js' */
+/** @import { OrganisationBuilders } from '#repositories/organisations/contract/test-data.js' */
 
-/** @import { OrganisationsRepository, OrganisationsRepositoryFactory } from '../port.js' */
+/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
+/** @import { RegistrationAccreditationAdminRepository } from './port.js' */
 
 export const testIsAccreditationNumberInUseBehaviour = (it) => {
   describe('isAccreditationNumberInUse', () => {
-    /** @type {OrganisationsRepository} */
+    /** @type {OrganisationsRepository & RegistrationAccreditationAdminRepository} */
     let repository
     /** @type {OrganisationBuilders['buildOrganisation']} */
     let buildOrganisation
 
     beforeEach(
       async (
-        /** @type {{ organisationsRepository: OrganisationsRepositoryFactory, organisationBuilders: OrganisationBuilders }} */ {
+        /** @type {{ organisationsRepository: () => OrganisationsRepository & RegistrationAccreditationAdminRepository, organisationBuilders: OrganisationBuilders }} */ {
           organisationsRepository,
           organisationBuilders
         }

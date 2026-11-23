@@ -17,14 +17,16 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/server/queue-consumer/queue-consumer.plugin.js',
 
   // Registration and accreditation administration
+  'src/registration-accreditation-admin/find-accreditation-by-id.js',
+  'src/registration-accreditation-admin/repository/inmemory.js',
+  'src/registration-accreditation-admin/routes/accreditation-status-history.js',
+  'src/registration-accreditation-admin/routes/get-by-id.js',
+  'src/registration-accreditation-admin/routes/overseas-sites-accreditation-list.js',
+  'src/registration-accreditation-admin/routes/overseas-sites-registration-list.js',
+  'src/registration-accreditation-admin/routes/put-by-id.js',
+  'src/registration-accreditation-admin/routes/registration-status-history.js',
   'src/overseas-sites/application/process-import-file.js',
   'src/overseas-sites/application/process-import.js',
-  'src/overseas-sites/routes/accreditation-list.js',
-  'src/overseas-sites/routes/registration-list.js',
-  'src/routes/v1/organisations/accreditation-status-history.js',
-  'src/routes/v1/organisations/get-by-id.js',
-  'src/routes/v1/organisations/put-by-id.js',
-  'src/routes/v1/organisations/registration-status-history.js',
   'src/routes/v1/system-logs/get-search.js',
   'src/server/queue-consumer/ors-import-commands.js',
 
