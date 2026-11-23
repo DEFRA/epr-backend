@@ -32,6 +32,7 @@ import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/import
 import { createInMemoryOrganisationReadRepositoryPlugin } from '#organisation-read-model/test-support.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
+import { createInMemoryRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
@@ -43,7 +44,7 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 
 /** @import { Lifecycle, Plugin } from '@hapi/hapi' */
 /** @import { Db } from 'mongodb' */
-/** @import { ServerApp } from '#common/hapi-types.js' */
+/** @import { HapiServer, ServerApp } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
 
@@ -122,6 +123,26 @@ function createOrganisationsRepositoryPlugin(repositoryOrFactory) {
 }
 
 /**
+ * Serves the registration and accreditation admin repository over whichever
+ * organisations repository the test server holds, so a test that seeds
+ * organisations through that repository reaches them through the admin routes.
+ */
+const createInMemoryRegistrationAccreditationAdminRepositoryPlugin = () => ({
+  name: 'registrationAccreditationAdminRepository',
+  dependencies: ['organisationsRepository'],
+  /** @param {import('@hapi/hapi').Server & HapiServer} server */
+  register: (server) => {
+    const createRepository =
+      createInMemoryRegistrationAccreditationAdminRepository(
+        server.app.organisationAdministrationRepository
+      )
+    registerDependency(server, 'registrationAccreditationAdminRepository', () =>
+      createRepository()
+    )
+  }
+})
+
+/**
  * Decorates `server` and `request` with a real Mongo `Db`, for route tests that
  * exercise raw `request.db` access instead of a repository.
  *
@@ -150,6 +171,10 @@ const repositoryConfigs = [
     name: 'organisationAdministrationRepository',
     createDefault: createInMemoryOrganisationsRepositoryPlugin,
     createOverride: createOrganisationsRepositoryPlugin
+  },
+  {
+    name: 'registrationAccreditationAdminRepository',
+    createDefault: createInMemoryRegistrationAccreditationAdminRepositoryPlugin
   },
   {
     name: 'summaryLogsRepository',
