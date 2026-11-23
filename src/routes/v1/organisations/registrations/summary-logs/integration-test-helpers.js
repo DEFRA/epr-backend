@@ -2,7 +2,12 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
-import { nextYear, toYear, utcYearOf } from '#common/helpers/dates/year.js'
+import {
+  nextYear,
+  previousYear,
+  toYear,
+  utcYearOf
+} from '#common/helpers/dates/year.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -578,6 +583,49 @@ export const pollForValidation = (server, summaryLogId) =>
     maxAttempts: DEFAULT_MAX_ATTEMPTS
   })
 
+/**
+ * An accredited reprocessor's 2027 received loads, each row defaulting to 100
+ * tonnes received in January 2027.
+ *
+ * @param {Array<Record<string, unknown> & { dwtSupplyId?: number | null }>} rows
+ */
+export const reprocessorReceivedLoads2027 = (rows) => ({
+  RECEIVED_LOADS_FOR_REPROCESSING: {
+    location: { sheet: 'Received', row: 7, column: 'A' },
+    headers: [...REPROCESSOR_RECEIVED_HEADERS, 'DWT_SUPPLY_ID'],
+    rows: rows.map(({ dwtSupplyId = null, ...row }, index) => ({
+      rowNumber: 8 + index,
+      values: [
+        ...createReprocessorReceivedRowValues({
+          dateReceived: '2027-01-15T00:00:00.000Z',
+          tonnageReceived: 100,
+          ...row
+        }),
+        dwtSupplyId
+      ]
+    }))
+  }
+})
+
+/**
+ * Submits a summary log as the operator and waits for the submission to
+ * finish, returning the submit response and the status it ends in.
+ *
+ * @param {{ server: HapiServer }} env
+ * @param {string} summaryLogId
+ */
+export const submitAndWait = async ({ server }, summaryLogId) => {
+  const response = await server.inject({
+    method: 'POST',
+    url: buildSubmitUrl(summaryLogId),
+    ...asOperator()
+  })
+  const status = await pollWhileStatus(server, summaryLogId, {
+    waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+  })
+  return { response, status }
+}
+
 export const createStandardMeta = (processingType) => ({
   REGISTRATION_NUMBER: {
     value: 'REG123',
@@ -701,21 +749,18 @@ export const exporter2027Loads = (rows) => ({
 
 /**
  * @param {Awaited<ReturnType<typeof setupWasteBalanceIntegrationEnvironment>>} env
- * @param {{ summaryLogId: string, fileId: string }} ids
+ * @param {{ summaryLogId: string, fileId: string, year?: Year, accredited?: boolean }} ids - the year and accreditation default to the environment's
  * @param {object} parsed
  */
 export const uploadAndValidate = async (
   env,
-  { summaryLogId, fileId },
+  { summaryLogId, fileId, year = env.year, accredited = env.accredited },
   parsed
 ) => {
   env.fileDataMap[fileId] = parsed
   await env.server.inject({
     method: 'POST',
-    url: buildPostUrl(summaryLogId, {
-      accredited: env.accredited,
-      year: env.year
-    }),
+    url: buildPostUrl(summaryLogId, { accredited, year }),
     payload: createUploadPayload(
       env.organisationId,
       env.registrationId,
@@ -1166,14 +1211,13 @@ const buildComplexTestReadOrg = ({
   })
   const accreditationYear = utcYearOf(accreditationValidFrom)
   const followingYear = nextYear(accreditationYear)
-  const previousYear = toYear(accreditationYear - 1)
   const accreditations = [
     ...(previousYearAccreditationNumber
       ? [
           buildReadAccreditation({
             accreditationNumber: previousYearAccreditationNumber,
-            status: approvedFrom(`${previousYear}-01-01`),
-            year: previousYear
+            status: approvedFrom(`${previousYear(accreditationYear)}-01-01`),
+            year: previousYear(accreditationYear)
           })
         ]
       : []),

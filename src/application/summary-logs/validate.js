@@ -55,7 +55,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
-/** @import {SummaryLogContext} from './classification-context.js' */
+/** @import {PreviousYearSubmission, SummaryLogContext} from './classification-context.js' */
 /** @import {SummaryLogCommit} from '#domain/summary-logs/commit.js' */
 
 /**
@@ -129,6 +129,7 @@ const fetchRegistration = async ({
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {SummaryLogRegistration} [registration] - Registration fetched during validation
  * @property {SummaryLogContext} [classificationContext] - What the rows are read against, once meta syntax has chosen the template and the registration is read
+ * @property {PreviousYearSubmission | null} [previousYearSubmission] - The previous-year submission the context was read from, for a template that links years
  */
 
 /**
@@ -298,14 +299,16 @@ const runValidationChecks = async (
     logger
   })
   result.registration = registration
-  const classificationContext = await summaryLogContextOf({
-    ledgerRepository,
-    summaryLog,
-    registration,
-    processingType: meta.PROCESSING_TYPE
-  })
+  const { context: classificationContext, previousYearSubmission } =
+    await summaryLogContextOf({
+      ledgerRepository,
+      summaryLog,
+      registration,
+      processingType: meta.PROCESSING_TYPE
+    })
   const { tableSchemas } = classificationContext
   result.classificationContext = classificationContext
+  result.previousYearSubmission = previousYearSubmission
   issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
   if (issues.isFatal()) {

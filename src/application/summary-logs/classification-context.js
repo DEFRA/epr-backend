@@ -4,80 +4,106 @@ import {
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
 import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
-import { classificationContextOf } from '#waste-balances/application/read-model-accreditations.js'
+import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import {
-  LEDGER_EVENT_KIND,
-  pickLedgerId
-} from '#waste-balances/repository/ledger-schema.js'
+  classificationContextOf,
+  validityOf
+} from '#waste-balances/application/read-model-accreditations.js'
+import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 
+/** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
 /** @import { SummaryLogFileId } from '#domain/summary-logs/ids.js' */
 /** @import { RowClassificationContext } from '#waste-balances/domain/waste-balance-classification.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
-/** @import { SummaryLogSubmittedPayload } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { SummaryLogRegistration } from './registration-for-summary-log.js' */
 /** @import { SubmittedSummaryLog } from './validate-issue-logging.js' */
 
 /**
  * Everything outside the workbook a summary log's reading depends on
- * (ADR-0058, ADR-0060). `previousYearPosition` is present only for a template
- * that links years, so other templates' contexts hash as they did before it.
+ * (ADR-0058, ADR-0060). The previous year's keys are absent, not null, for a
+ * template that does not link years, so its hash is unchanged.
  *
- * @typedef {RowClassificationContext & { previousYearPosition?: number | null }} SummaryLogContext
+ * @typedef {RowClassificationContext & {
+ *   previousYearPosition?: number | null,
+ *   previousYearAccreditation?: AccreditationValidity | null
+ * }} SummaryLogContext
  */
+
+/** @typedef {{ number: number, summaryLogId: SummaryLogFileId }} PreviousYearSubmission */
 
 /**
  * @typedef {{
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   summaryLog: Pick<SubmittedSummaryLog, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber' | 'year'>,
- *   registration: SummaryLogRegistration
- * }} PreviousYearParams
+ *   registration: SummaryLogRegistration,
+ *   processingType: ProcessingType
+ * }} SummaryLogContextParams
  */
 
 /**
- * The previous year's latest submission in the summary log's own stream, none
- * when the previous year has no such stream or no submission in it. An
- * accredited log reads the previous year's accreditation, which can have a
- * different number.
- *
- * @param {PreviousYearParams} params
- * @returns {Promise<{ number: number, summaryLogId: SummaryLogFileId } | null>}
+ * @param {WasteBalanceLedgerRepository} ledgerRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+ * @returns {Promise<PreviousYearSubmission | null>}
  */
-export const previousYearSubmissionOf = async ({
+const latestSubmissionIn = async (ledgerRepository, ledgerId) => {
+  const latest = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
+  return latest && { number: latest.number, summaryLogId: latest.summaryLogId }
+}
+
+/**
+ * The previous year's keys of the context, read from the summary log's own
+ * stream. An accredited log's previous-year stream is that year's
+ * accreditation, whose number can differ.
+ *
+ * @param {Omit<SummaryLogContextParams, 'processingType'>} params
+ * @returns {Promise<{ previousYearKeys: Pick<SummaryLogContext, 'previousYearPosition' | 'previousYearAccreditation'>, previousYearSubmission: PreviousYearSubmission | null }>}
+ */
+const previousYearOf = async ({
   ledgerRepository,
   summaryLog,
   registration
 }) => {
   const year = previousYear(summaryLog.year)
-  const accreditationNumber =
-    registration.accreditation === null
-      ? null
-      : accreditationForYear(registration.registration, year)
-          ?.accreditationNumber
-  if (accreditationNumber === undefined) {
-    return null
+  const ledgerId = { ...pickLedgerId(summaryLog), year }
+
+  if (registration.accreditation === null) {
+    const previousYearSubmission = await latestSubmissionIn(ledgerRepository, {
+      ...ledgerId,
+      accreditationNumber: null
+    })
+    return {
+      previousYearKeys: {
+        previousYearPosition: previousYearSubmission?.number ?? null
+      },
+      previousYearSubmission
+    }
   }
 
-  const latest = await ledgerRepository.findLatestInLedgerByKind(
-    { ...pickLedgerId(summaryLog), accreditationNumber, year },
-    LEDGER_EVENT_KIND.SUMMARY_LOG_SUBMITTED
-  )
-  if (latest === null) {
-    return null
+  const accreditation =
+    accreditationForYear(registration.registration, year) ?? null
+  const previousYearSubmission =
+    accreditation &&
+    (await latestSubmissionIn(ledgerRepository, {
+      ...ledgerId,
+      accreditationNumber: accreditation.accreditationNumber
+    }))
+  return {
+    previousYearKeys: {
+      previousYearPosition: previousYearSubmission?.number ?? null,
+      previousYearAccreditation: accreditation && validityOf(accreditation)
+    },
+    previousYearSubmission
   }
-
-  const { summaryLogId } = /** @type {SummaryLogSubmittedPayload} */ (
-    latest.payload
-  )
-  return { number: latest.number, summaryLogId }
 }
 
 /**
  * The context a summary log is read against, built the same way at validation
- * and at submission so their hashes compare.
+ * and at submission so their hashes compare, and the previous-year submission
+ * it was read from, so filling in linked rows reads the same one.
  *
- * @param {PreviousYearParams & { processingType: ProcessingType }} params
- * @returns {Promise<SummaryLogContext>}
+ * @param {SummaryLogContextParams} params
+ * @returns {Promise<{ context: SummaryLogContext, previousYearSubmission: PreviousYearSubmission | null }>}
  */
 export const summaryLogContextOf = async ({ processingType, ...params }) => {
   const tableSchemas = tableSchemasOf(params.summaryLog.year, processingType)
@@ -86,12 +112,13 @@ export const summaryLogContextOf = async ({ processingType, ...params }) => {
     ...classificationContextOf(params.registration)
   }
   if (!linksYears(tableSchemas)) {
-    return context
+    return { context, previousYearSubmission: null }
   }
 
-  const previousYearSubmission = await previousYearSubmissionOf(params)
+  const { previousYearKeys, previousYearSubmission } =
+    await previousYearOf(params)
   return {
-    ...context,
-    previousYearPosition: previousYearSubmission?.number ?? null
+    context: { ...context, ...previousYearKeys },
+    previousYearSubmission
   }
 }

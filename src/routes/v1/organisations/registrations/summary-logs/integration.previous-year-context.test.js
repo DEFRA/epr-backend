@@ -1,94 +1,35 @@
 import { http, HttpResponse } from 'msw'
-import { onTestFinished } from 'vitest'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
-import {
-  SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
-} from '#domain/summary-logs/status.js'
-import { config } from '#root/config.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  asOperator,
-  buildGetUrl,
-  buildPostUrl,
-  buildSubmitUrl,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createReprocessorReceivedRowValues,
-  createUploadPayload,
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
-  pollForValidation,
-  pollWhileStatus,
+  exporter2027Loads,
+  openNextYear,
   REPROCESSOR_RECEIVED_HEADERS,
+  reprocessorReceivedLoads2027,
   setupWasteBalanceIntegrationEnvironment,
-  tableOf
+  submitAndWait,
+  tableOf,
+  uploadAndValidate,
+  withTemplateYear
 } from './integration-test-helpers.js'
 
 const PREVIOUS_YEAR = toYear(2026)
 const YEAR = toYear(2027)
 const PREVIOUS_YEAR_ACCREDITATION_NUMBER = toAccreditationNumber('ACC-122')
 
-const openYear2027 = () => {
-  config.set('openNextYear', true)
-  onTestFinished(() => config.reset('openNextYear'))
-}
-
-const withTemplateVersion = (meta, value) => ({
-  ...meta,
-  TEMPLATE_VERSION: { ...meta.TEMPLATE_VERSION, value }
-})
-
 const withAccreditationNumber = (meta, value) => ({
   ...meta,
   ACCREDITATION_NUMBER: { ...meta.ACCREDITATION_NUMBER, value }
 })
-
-const exporterLoads2026 = (exportTonnage) => ({
-  RECEIVED_LOADS_FOR_EXPORT: {
-    location: { sheet: 'Exported (sections 1, 2 and 3)', row: 7, column: 'A' },
-    headers: EXPORTER_HEADERS,
-    rows: [
-      {
-        rowNumber: 8,
-        values: createExporterRowValues({ rowId: 1500, exportTonnage })
-      }
-    ]
-  }
-})
-
-const exporterLoads2027 = {
-  RECEIVED_LOADS_FOR_EXPORT: {
-    location: { sheet: 'Exported (sections 1, 2 and 3)', row: 7, column: 'A' },
-    headers: [
-      ...EXPORTER_HEADERS,
-      'PREVIOUS_YEAR_ROW_ID',
-      'EXIT_PORT',
-      'DWT_EXPORT_ID',
-      'DWT_SUPPLY_ID'
-    ],
-    rows: [
-      {
-        rowNumber: 8,
-        values: [
-          ...createExporterRowValues({
-            rowId: 1001,
-            dateReceived: '2027-01-15T00:00:00.000Z',
-            dateReceivedByOsr: '2027-01-18T00:00:00.000Z',
-            exportDate: '2027-01-20T00:00:00.000Z'
-          }),
-          null,
-          null,
-          null,
-          null
-        ]
-      }
-    ]
-  }
-}
 
 const accreditedExporterLog = (year, exportTonnage = 100) =>
   year === PREVIOUS_YEAR
@@ -97,11 +38,26 @@ const accreditedExporterLog = (year, exportTonnage = 100) =>
           createWasteBalanceMeta('EXPORTER'),
           PREVIOUS_YEAR_ACCREDITATION_NUMBER
         ),
-        data: exporterLoads2026(exportTonnage)
+        data: {
+          RECEIVED_LOADS_FOR_EXPORT: {
+            location: {
+              sheet: 'Exported (sections 1, 2 and 3)',
+              row: 7,
+              column: 'A'
+            },
+            headers: EXPORTER_HEADERS,
+            rows: [
+              {
+                rowNumber: 8,
+                values: createExporterRowValues({ rowId: 1500, exportTonnage })
+              }
+            ]
+          }
+        }
       }
     : {
-        meta: withTemplateVersion(createWasteBalanceMeta('EXPORTER'), 2027.01),
-        data: exporterLoads2027
+        meta: withTemplateYear(createWasteBalanceMeta('EXPORTER'), YEAR),
+        data: exporter2027Loads([{ rowId: 1001 }])
       }
 
 const registeredOnlyExportedRow = (year, tonnage) => ({
@@ -130,9 +86,9 @@ const registeredOnlyExporterLog = (year, tonnage = 9.5) =>
         }
       }
     : {
-        meta: withTemplateVersion(
+        meta: withTemplateYear(
           createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY'),
-          2027.01
+          YEAR
         ),
         data: {
           LOADS_EXPORTED: tableOf('Exported', [
@@ -146,81 +102,52 @@ const registeredOnlyExporterLog = (year, tonnage = 9.5) =>
         }
       }
 
-const reprocessorLog = (year, tonnageReceived = 100) => ({
-  meta:
-    year === PREVIOUS_YEAR
-      ? withAccreditationNumber(
+const reprocessorLog = (year, tonnageReceived = 100) =>
+  year === PREVIOUS_YEAR
+    ? {
+        meta: withAccreditationNumber(
           createWasteBalanceMeta('REPROCESSOR_INPUT'),
           PREVIOUS_YEAR_ACCREDITATION_NUMBER
-        )
-      : withTemplateVersion(
-          createWasteBalanceMeta('REPROCESSOR_INPUT'),
-          2027.01
         ),
-  data: {
-    RECEIVED_LOADS_FOR_REPROCESSING: {
-      location: { sheet: 'Received', row: 7, column: 'A' },
-      headers:
-        year === PREVIOUS_YEAR
-          ? REPROCESSOR_RECEIVED_HEADERS
-          : [...REPROCESSOR_RECEIVED_HEADERS, 'DWT_SUPPLY_ID'],
-      rows: [
-        {
-          rowNumber: 8,
-          values: [
-            ...createReprocessorReceivedRowValues({
-              rowId: 1001,
-              dateReceived: `${year}-01-15T00:00:00.000Z`,
-              tonnageReceived
-            }),
-            ...(year === PREVIOUS_YEAR ? [] : [null])
-          ]
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Received', row: 7, column: 'A' },
+            headers: REPROCESSOR_RECEIVED_HEADERS,
+            rows: [
+              {
+                rowNumber: 8,
+                values: createReprocessorReceivedRowValues({
+                  rowId: 1001,
+                  dateReceived: '2026-01-15T00:00:00.000Z',
+                  tonnageReceived
+                })
+              }
+            ]
+          }
         }
-      ]
-    }
-  }
-})
+      }
+    : {
+        meta: withTemplateYear(
+          createWasteBalanceMeta('REPROCESSOR_INPUT'),
+          YEAR
+        ),
+        data: reprocessorReceivedLoads2027([{ rowId: 1001, tonnageReceived }])
+      }
 
-const upload = async (env, year, summaryLogId, parsed) => {
-  const fileId = `file-${summaryLogId}`
-  env.fileDataMap[fileId] = parsed
-  await env.server.inject({
-    method: 'POST',
-    url: buildPostUrl(summaryLogId, { accredited: env.accredited, year }),
-    payload: createUploadPayload(
-      env.organisationId,
-      env.registrationId,
-      UPLOAD_STATUS.COMPLETE,
-      fileId,
-      `${fileId}.xlsx`
+const upload = async (env, year, summaryLogId, parsed) =>
+  (
+    await uploadAndValidate(
+      env,
+      { summaryLogId, fileId: `file-${summaryLogId}`, year },
+      parsed
     )
-  })
-  await pollForValidation(env.server, summaryLogId)
-  const response = await env.server.inject({
-    method: 'GET',
-    url: buildGetUrl(summaryLogId),
-    ...asOperator()
-  })
-  return JSON.parse(response.payload).status
-}
-
-const submit = async (env, summaryLogId) => {
-  const response = await env.server.inject({
-    method: 'POST',
-    url: buildSubmitUrl(summaryLogId),
-    ...asOperator()
-  })
-  const status = await pollWhileStatus(env.server, summaryLogId, {
-    waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
-  })
-  return { response, status }
-}
+  ).status
 
 const submitted = async (env, year, summaryLogId, parsed) => {
   expect(await upload(env, year, summaryLogId, parsed)).toBe(
     SUMMARY_LOG_STATUS.VALIDATED
   )
-  expect((await submit(env, summaryLogId)).status).toBe(
+  expect((await submitAndWait(env, summaryLogId)).status).toBe(
     SUMMARY_LOG_STATUS.SUBMITTED
   )
 }
@@ -231,7 +158,32 @@ const expectSupersededAsContextChanged = ({ response, status }) => {
   expect(status).toBe(SUMMARY_LOG_STATUS.SUPERSEDED)
 }
 
-describe('2027 summary logs and the previous year position', () => {
+/**
+ * From now on the read model serves the registration's 2026 accreditation as
+ * suspended from 1 November 2026.
+ */
+const suspendPreviousYearAccreditation = (env) => {
+  const { organisationReadRepository, registrationNumber } = env
+  const served = organisationReadRepository.findByOrganisationNumber
+  vi.spyOn(
+    organisationReadRepository,
+    'findByOrganisationNumber'
+  ).mockImplementation(async (...args) => {
+    const organisation = await served(...args)
+    const { status } =
+      organisation.registrations[registrationNumber].accreditations[
+        PREVIOUS_YEAR
+      ]
+    status.current = 'suspended'
+    status.timeline.push({
+      status: 'suspended',
+      at: '2026-11-01T00:00:00.000Z'
+    })
+    return organisation
+  })
+}
+
+describe('2027 summary logs and the previous year', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
@@ -252,7 +204,7 @@ describe('2027 summary logs and the previous year position', () => {
       })
 
     it('has the 2027 log uploaded again when 2026 is resubmitted between its upload and its submission', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setup()
       await submitted(
         env,
@@ -271,11 +223,11 @@ describe('2027 summary logs and the previous year position', () => {
         accreditedExporterLog(PREVIOUS_YEAR, 90)
       )
 
-      expectSupersededAsContextChanged(await submit(env, 'log-2027'))
+      expectSupersededAsContextChanged(await submitAndWait(env, 'log-2027'))
     })
 
     it('has the 2027 log uploaded again when 2026 is first submitted between its upload and its submission', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setup()
 
       expect(
@@ -288,11 +240,23 @@ describe('2027 summary logs and the previous year position', () => {
         accreditedExporterLog(PREVIOUS_YEAR)
       )
 
-      expectSupersededAsContextChanged(await submit(env, 'log-2027'))
+      expectSupersededAsContextChanged(await submitAndWait(env, 'log-2027'))
+    })
+
+    it('has the 2027 log uploaded again when the 2026 accreditation changes between its upload and its submission', async () => {
+      openNextYear()
+      const env = await setup()
+
+      expect(
+        await upload(env, YEAR, 'log-2027', accreditedExporterLog(YEAR))
+      ).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      suspendPreviousYearAccreditation(env)
+
+      expectSupersededAsContextChanged(await submitAndWait(env, 'log-2027'))
     })
 
     it('submits the 2027 log when 2026 is unchanged since its upload', async () => {
-      openYear2027()
+      openNextYear()
       const env = await setup()
       await submitted(
         env,
@@ -304,14 +268,14 @@ describe('2027 summary logs and the previous year position', () => {
       expect(
         await upload(env, YEAR, 'log-2027', accreditedExporterLog(YEAR))
       ).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect((await submit(env, 'log-2027')).status).toBe(
+      expect((await submitAndWait(env, 'log-2027')).status).toBe(
         SUMMARY_LOG_STATUS.SUBMITTED
       )
     })
   })
 
   it('submits an accredited exporter 2027 log whatever 2026 registered-only submissions happen meanwhile', async () => {
-    openYear2027()
+    openNextYear()
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       year: YEAR
@@ -327,13 +291,13 @@ describe('2027 summary logs and the previous year position', () => {
       registeredOnlyExporterLog(PREVIOUS_YEAR)
     )
 
-    expect((await submit(env, 'log-2027')).status).toBe(
+    expect((await submitAndWait(env, 'log-2027')).status).toBe(
       SUMMARY_LOG_STATUS.SUBMITTED
     )
   })
 
   it('has a registered-only exporter upload 2027 again when 2026 is resubmitted between its upload and its submission', async () => {
-    openYear2027()
+    openNextYear()
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       accredited: false,
@@ -356,11 +320,11 @@ describe('2027 summary logs and the previous year position', () => {
       registeredOnlyExporterLog(PREVIOUS_YEAR, 8.5)
     )
 
-    expectSupersededAsContextChanged(await submit(env, 'log-2027'))
+    expectSupersededAsContextChanged(await submitAndWait(env, 'log-2027'))
   })
 
   it('submits a 2027 log whose template does not link years after a 2026 resubmission', async () => {
-    openYear2027()
+    openNextYear()
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       year: YEAR,
@@ -383,7 +347,7 @@ describe('2027 summary logs and the previous year position', () => {
       reprocessorLog(PREVIOUS_YEAR, 90)
     )
 
-    expect((await submit(env, 'log-2027')).status).toBe(
+    expect((await submitAndWait(env, 'log-2027')).status).toBe(
       SUMMARY_LOG_STATUS.SUBMITTED
     )
   })

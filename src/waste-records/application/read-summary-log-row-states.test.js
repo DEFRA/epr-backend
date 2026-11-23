@@ -194,7 +194,8 @@ describe('latestSubmittedSummaryLogRowStates', () => {
 
     expect(previousSubmission?.summaryLog).toEqual({
       summaryLogId: 'log-2',
-      submittedAt
+      submittedAt,
+      number: 2
     })
 
     const dataByRowId = Object.fromEntries(
