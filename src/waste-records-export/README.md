@@ -4,8 +4,8 @@ This module streams waste records as CSV: every waste record in the system, the 
 
 Code outside the module imports from three entry points, and each lists its exports by name:
 
-- **`index.js`** holds the routes and the submission CSV stream.
-- **`vocabulary.js`** holds the pure CSV rules other modules use. It loads no route or adapter.
+- **`index.js`** is the public interface: the submission CSV stream and the CSV rules other modules use. It loads no route, adapter or Hapi code.
+- **`plugin.js`** holds the routes, and only the server setup and the test servers may import it.
 - **`test-support.js`** holds what a test needs to build an expected CSV, and only a test may import it.
 
 Lint refuses any other import into the module, but it cannot see a JSDoc `@import`.

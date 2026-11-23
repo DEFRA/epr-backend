@@ -12,7 +12,7 @@ import {
   wasteRecordsExportRoute,
   registrationWasteRecordsExportByNumber,
   availableWasteRecordYearsGet
-} from '#waste-records-export/index.js'
+} from '#waste-records-export/plugin.js'
 import { generateLatestPublicRegister } from '#public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
