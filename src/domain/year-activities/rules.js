@@ -1,4 +1,8 @@
-import { calendarDate, formatDateISO } from '#common/helpers/date-formatter.js'
+import {
+  calendarDate,
+  formatDateISO,
+  ukCalendarDate
+} from '#common/helpers/date-formatter.js'
 import { nextYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
 
@@ -12,87 +16,92 @@ const LAST_DAY_OF_PREVIOUS_MONTH = 0
 
 /**
  * @typedef {{
- *   firstOpenDay?: (year: Year) => CalendarDate,
- *   lastOpenDay: (year: Year) => CalendarDate
- * }} YearActivityRule
+ *   firstOpenDay?: (activityYear: Year) => CalendarDate,
+ *   lastOpenDay: (activityYear: Year) => CalendarDate
+ * }} ActivityWindowRule
  */
 
-/** @type {YearActivityRule} */
+/** @type {ActivityWindowRule} */
 const prns = {
-  lastOpenDay: (year) =>
-    formatDateISO(nextYear(year), JANUARY, LAST_DAY_OF_JANUARY)
+  lastOpenDay: (activityYear) =>
+    formatDateISO(nextYear(activityYear), JANUARY, LAST_DAY_OF_JANUARY)
 }
 
 /**
  * The UK calendar days, both included, on which each activity is open for a
  * year. An activity without `firstOpenDay` is open from the start of time.
- *
- * @type {{
- *   summaryLogs: YearActivityRule,
- *   prns: YearActivityRule,
- *   decemberWaste: YearActivityRule
- * }}
  */
-export const YEAR_ACTIVITY_RULES = {
+const ACTIVITY_WINDOW_RULES = {
   summaryLogs: {
-    lastOpenDay: (year) =>
-      formatDateISO(nextYear(year), MARCH, LAST_DAY_OF_PREVIOUS_MONTH)
+    lastOpenDay: (activityYear) =>
+      formatDateISO(nextYear(activityYear), MARCH, LAST_DAY_OF_PREVIOUS_MONTH)
   },
   prns,
   decemberWaste: {
-    firstOpenDay: (year) =>
-      calendarDate(`${year}-${config.get('decemberWaste.windowStart')}`),
+    firstOpenDay: (activityYear) =>
+      calendarDate(
+        `${activityYear}-${config.get('decemberWaste.windowStart')}`
+      ),
     lastOpenDay: prns.lastOpenDay
   }
 }
 
-/** @typedef {keyof typeof YEAR_ACTIVITY_RULES} YearActivity */
+/**
+ * @typedef {{ open: boolean, firstOpenDay?: CalendarDate, lastOpenDay: CalendarDate }} ActivityWindow
+ */
 
 /**
- * @param {YearActivity} activity
- * @param {Year} year
- * @param {CalendarDate} date - a UK calendar date
+ * @param {ActivityWindowRule} rule
+ * @param {Year} activityYear
+ * @param {Date} asOf
+ * @returns {ActivityWindow}
  */
-const isOpen = (activity, year, date) =>
-  yearActivityState(activity, year, date).open
-
-/**
- * @param {Year} year
- * @param {CalendarDate} date - a UK calendar date
- */
-export const isSummaryLogYearOpen = (year, date) =>
-  isOpen('summaryLogs', year, date)
-
-/**
- * Whether PRNs and PERNs for the year can still be raised, issued or
- * cancelled by an admin.
- * @param {Year} year
- * @param {CalendarDate} date - a UK calendar date
- */
-export const isPrnYearOpen = (year, date) => isOpen('prns', year, date)
-
-/**
- * @param {Year} year
- * @param {CalendarDate} date - a UK calendar date
- */
-export const isDecemberWasteOpen = (year, date) =>
-  isOpen('decemberWaste', year, date)
-
-/**
- * @param {YearActivity} activity
- * @param {Year} year
- * @param {CalendarDate} date - a UK calendar date
- * @returns {{ open: boolean, firstOpenDay?: CalendarDate, lastOpenDay: CalendarDate }}
- */
-export const yearActivityState = (activity, year, date) => {
-  const rule = YEAR_ACTIVITY_RULES[activity]
-  const firstOpenDay = rule.firstOpenDay?.(year)
-  const lastOpenDay = rule.lastOpenDay(year)
+const windowOf = (rule, activityYear, asOf) => {
+  const ukDay = ukCalendarDate(asOf)
+  const firstOpenDay = rule.firstOpenDay?.(activityYear)
+  const lastOpenDay = rule.lastOpenDay(activityYear)
   return {
     open:
-      (!firstOpenDay || date.localeCompare(firstOpenDay) >= 0) &&
-      date.localeCompare(lastOpenDay) <= 0,
+      (!firstOpenDay || ukDay.localeCompare(firstOpenDay) >= 0) &&
+      ukDay.localeCompare(lastOpenDay) <= 0,
     ...(firstOpenDay && { firstOpenDay }),
     lastOpenDay
   }
 }
+
+/**
+ * @param {Year} summaryLogYear
+ * @param {Date} asOf
+ */
+export const summaryLogWindow = (summaryLogYear, asOf) =>
+  windowOf(ACTIVITY_WINDOW_RULES.summaryLogs, summaryLogYear, asOf)
+
+/**
+ * When PRNs and PERNs for the year can be raised, issued or cancelled by an
+ * admin.
+ * @param {Year} relevantYear
+ * @param {Date} asOf
+ */
+export const prnWindow = (relevantYear, asOf) =>
+  windowOf(ACTIVITY_WINDOW_RULES.prns, relevantYear, asOf)
+
+/**
+ * @param {Year} relevantYear
+ * @param {Date} asOf
+ */
+export const decemberWasteWindow = (relevantYear, asOf) =>
+  windowOf(ACTIVITY_WINDOW_RULES.decemberWaste, relevantYear, asOf)
+
+/**
+ * @param {Year} relevantYear
+ * @param {Date} asOf
+ */
+export const isPrnWindowOpen = (relevantYear, asOf) =>
+  prnWindow(relevantYear, asOf).open
+
+/**
+ * @param {Year} relevantYear
+ * @param {Date} asOf
+ */
+export const isDecemberWasteWindowOpen = (relevantYear, asOf) =>
+  decemberWasteWindow(relevantYear, asOf).open

@@ -1,7 +1,6 @@
-import { ukCalendarDate } from '#common/helpers/dates/uk-calendar-date.js'
 import { conflict } from '#common/helpers/logging/cdp-boom.js'
 import { LOGGING_EVENT_ACTIONS } from '#common/enums/index.js'
-import { isDecemberWasteOpen } from '#domain/year-activities/rules.js'
+import { isDecemberWasteWindowOpen } from '#domain/year-activities/rules.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
@@ -16,7 +15,7 @@ import { isDecemberWasteOpen } from '#domain/year-activities/rules.js'
  * @returns {boolean}
  */
 export const isWithinDecemberWasteWindow = (relevantYear, now) =>
-  isDecemberWasteOpen(relevantYear, ukCalendarDate(now))
+  isDecemberWasteWindowOpen(relevantYear, now)
 
 export const DECEMBER_WASTE_NOT_DECLARABLE_CODE =
   'DECEMBER_WASTE_NOT_DECLARABLE'

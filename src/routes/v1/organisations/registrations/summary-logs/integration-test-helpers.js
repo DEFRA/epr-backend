@@ -658,13 +658,13 @@ export const openNextYear = () => {
 }
 
 /**
- * Fakes only `Date`, so the summary log's upload date is `isoInstant` while
+ * Fakes only `Date`, so the summary log's upload date is `uploadedAt` while
  * timers still run.
- * @param {string} isoInstant
+ * @param {string} uploadedAt
  */
-export const uploadOn = (isoInstant) => {
+export const uploadOn = (uploadedAt) => {
   vi.useFakeTimers({ toFake: ['Date'] })
-  vi.setSystemTime(new Date(isoInstant))
+  vi.setSystemTime(new Date(uploadedAt))
   onTestFinished(() => {
     vi.useRealTimers()
   })

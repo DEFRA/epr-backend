@@ -142,14 +142,13 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear?: Year, uploadDate?: CalendarDate }} RowValidationOptions
+ * @typedef {{ summaryLogYear?: Year, uploadedAt?: Date }} RowValidationOptions
  * Omitted, as when exporting stored rows, means dates are not checked against
- * the summary log year. `uploadDate` is the UK calendar date the summary log
- * was uploaded.
+ * the summary log year. `uploadedAt` is when the summary log was uploaded.
  */
 
 /**
- * @typedef {{ summaryLogYear: Year, uploadDate?: CalendarDate }} SummaryLogValidationOptions
+ * @typedef {{ summaryLogYear: Year, uploadedAt?: Date }} SummaryLogValidationOptions
  */
 
 /**

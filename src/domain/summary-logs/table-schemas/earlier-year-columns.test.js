@@ -6,7 +6,10 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { tableSchemasOf } from './index.js'
 import { BEFORE_SUMMARY_LOG_YEAR_ERROR } from './shared/field-schemas.js'
 
-const context = { summaryLogYear: toYear(2027), uploadDate: '2027-01-10' }
+const context = {
+  summaryLogYear: toYear(2027),
+  uploadedAt: new Date('2027-01-10T09:00:00.000Z')
+}
 
 /**
  * @param {import('joi').ObjectSchema} validationSchema

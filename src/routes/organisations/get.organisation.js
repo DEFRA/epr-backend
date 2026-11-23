@@ -3,9 +3,12 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { openYearSchema } from '#common/validation/year-schema.js'
-import { ukCalendarDate } from '#common/helpers/dates/uk-calendar-date.js'
 import { toYear } from '#common/helpers/dates/year.js'
-import { yearActivityState } from '#domain/year-activities/rules.js'
+import {
+  decemberWasteWindow,
+  prnWindow,
+  summaryLogWindow
+} from '#domain/year-activities/rules.js'
 import { decemberWasteControlModeFor } from '#packaging-recycling-notes/index.js'
 import { organisationParams, organisationPath } from './natural-keys.js'
 import { organisationViewSchema } from './response.schema.js'
@@ -13,9 +16,7 @@ import { organisationViewSchema } from './response.schema.js'
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
-/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { YearActivity } from '#domain/year-activities/rules.js' */
 /** @typedef {{ year?: Year }} OrganisationQuery */
 /** @import { Registration } from '#organisation-read-model/vocabulary.js' */
 /** @import { StandingByYear } from '#organisation-read-model/domain/model.js' */
@@ -29,27 +30,25 @@ const organisationQuery = { year: openYearSchema() }
 const displayNameOf = ({ name, tradingName }) => tradingName?.trim() || name
 
 /**
- * @param {StandingByYear} byYear
+ * @param {StandingByYear} standingByDate
  */
-const yearsOf = (byYear) =>
-  Object.keys(byYear).map((year) => toYear(Number(year)))
+const yearsOf = (standingByDate) =>
+  Object.keys(standingByDate).map((year) => toYear(Number(year)))
 
 /**
  * The registration with, for each of its years, whether each activity is open
- * on `today`.
+ * as of `asOf`.
  * @param {Registration} registration
- * @param {CalendarDate} today
+ * @param {Date} asOf
  */
-const registrationAt = (registration, today) => {
-  /** @param {YearActivity} activity @param {Year} year */
-  const stateOf = (activity, year) => yearActivityState(activity, year, today)
+const registrationAsOf = (registration, asOf) => {
   const mode = decemberWasteControlModeFor(registration)
   return {
     ...registration,
     summaryLogs: Object.fromEntries(
       yearsOf(registration.standingByDate).map((year) => [
         year,
-        stateOf('summaryLogs', year)
+        summaryLogWindow(year, asOf)
       ])
     ),
     accreditations: Object.fromEntries(
@@ -58,9 +57,9 @@ const registrationAt = (registration, today) => {
           key,
           {
             ...accreditation,
-            prns: stateOf('prns', accreditation.year),
+            prns: prnWindow(accreditation.year, asOf),
             decemberWaste: {
-              ...stateOf('decemberWaste', accreditation.year),
+              ...decemberWasteWindow(accreditation.year, asOf),
               mode
             }
           }
@@ -72,10 +71,9 @@ const registrationAt = (registration, today) => {
 
 /**
  * @param {Organisation} organisation
- * @param {Date} [now]
  */
-export const organisationFor = (organisation, now = new Date()) => {
-  const today = ukCalendarDate(now)
+export const organisationFor = (organisation) => {
+  const asOf = new Date()
   return {
     ...organisation,
     displayName: displayNameOf(organisation),
@@ -83,7 +81,7 @@ export const organisationFor = (organisation, now = new Date()) => {
       Object.entries(organisation.registrations).map(
         ([number, registration]) => [
           number,
-          registrationAt(registration, today)
+          registrationAsOf(registration, asOf)
         ]
       )
     )

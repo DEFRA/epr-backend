@@ -1,6 +1,5 @@
 import { nextYear } from '#common/helpers/dates/year.js'
-import { ukCalendarDate } from '#common/helpers/dates/uk-calendar-date.js'
-import { isPrnYearOpen } from '#domain/year-activities/rules.js'
+import { isPrnWindowOpen } from '#domain/year-activities/rules.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 
@@ -46,7 +45,7 @@ export function isBeforeEndOfRelevantYear(relevantYear, now) {
       `Cannot compute the end of a relevant year: relevantYear must be a finite number, got ${relevantYear}`
     )
   }
-  return isPrnYearOpen(relevantYear, ukCalendarDate(now))
+  return isPrnWindowOpen(relevantYear, now)
 }
 
 /**

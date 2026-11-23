@@ -2,7 +2,7 @@ import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
 import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
 import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
-import { yearActivityState } from '#domain/year-activities/rules.js'
+import { summaryLogWindow } from '#domain/year-activities/rules.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 
 /**
@@ -53,24 +53,20 @@ const rejectAfterSummaryLogYear = (dateStr, helpers) => {
 /**
  * Rejects a YYYY-MM-DD date in an earlier year than the `summaryLogYear` in
  * the Joi validation context while that year was still open on its
- * `uploadDate`. Without both, the date is not checked.
+ * `uploadedAt`. Without both, the date is not checked.
  *
  * @param {string} dateStr
  * @param {import('joi').CustomHelpers} helpers
  * @returns {string | import('joi').ErrorReport}
  */
 const rejectOpenEarlierYear = (dateStr, helpers) => {
-  const { summaryLogYear, uploadDate } = helpers.prefs.context ?? {}
-  if (summaryLogYear === undefined || uploadDate === undefined) {
+  const { summaryLogYear, uploadedAt } = helpers.prefs.context ?? {}
+  if (summaryLogYear === undefined || uploadedAt === undefined) {
     return dateStr
   }
-  const year = utcYearOf(dateStr)
-  const { open, lastOpenDay } = yearActivityState(
-    'summaryLogs',
-    year,
-    uploadDate
-  )
-  return year < summaryLogYear && open
+  const dateYear = utcYearOf(dateStr)
+  const { open, lastOpenDay } = summaryLogWindow(dateYear, uploadedAt)
+  return dateYear < summaryLogYear && open
     ? helpers.error(BEFORE_SUMMARY_LOG_YEAR_ERROR, {
         expected: summaryLogYear,
         deadline: lastOpenDay
@@ -83,10 +79,10 @@ const rejectOpenEarlierYear = (dateStr, helpers) => {
  * @returns {(dateStr: string, helpers: import('joi').CustomHelpers) => string | import('joi').ErrorReport}
  */
 const checkAgainstSummaryLogYear =
-  ({ rejectOpenEarlierYear: checkEarlier = false }) =>
+  ({ rejectOpenEarlierYear: rejectEarlier = false }) =>
   (dateStr, helpers) => {
     const after = rejectAfterSummaryLogYear(dateStr, helpers)
-    return after === dateStr && checkEarlier
+    return after === dateStr && rejectEarlier
       ? rejectOpenEarlierYear(dateStr, helpers)
       : after
   }

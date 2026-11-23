@@ -210,16 +210,16 @@ describe('field-schemas', () => {
     '%s rejecting an open earlier year',
     (_name, create, earlierYearDate) => {
       const schema = create({ rejectOpenEarlierYear: true })
-      const contextOn = (uploadDate) => ({
+      const contextOn = (uploadedAt) => ({
         summaryLogYear: toYear(2027),
-        uploadDate
+        uploadedAt: new Date(uploadedAt)
       })
 
-      it.each(['2027-01-10', '2027-02-28'])(
+      it.each(['2027-01-10T09:00:00.000Z', '2027-02-28T23:59:00.000Z'])(
         'rejects a 2026 date uploaded on %s, while 2026 is open',
-        (uploadDate) => {
+        (uploadedAt) => {
           const { error } = schema.validate(earlierYearDate, {
-            context: contextOn(uploadDate)
+            context: contextOn(uploadedAt)
           })
           expect(error?.details[0]).toMatchObject({
             type: 'date.beforeSummaryLogYear',
@@ -232,8 +232,9 @@ describe('field-schemas', () => {
 
       it('accepts a 2026 date uploaded on 1 March 2027, once 2026 has closed', () => {
         expect(
-          schema.validate(earlierYearDate, { context: contextOn('2027-03-01') })
-            .error
+          schema.validate(earlierYearDate, {
+            context: contextOn('2027-03-01T00:00:00.000Z')
+          }).error
         ).toBeUndefined()
       })
 
@@ -247,7 +248,7 @@ describe('field-schemas', () => {
 
       it('still rejects a later year as later', () => {
         const { error } = schema.validate('2028-01-01', {
-          context: contextOn('2027-01-10')
+          context: contextOn('2027-01-10T09:00:00.000Z')
         })
         expect(error?.details[0].type).toBe('date.afterSummaryLogYear')
       })
@@ -260,7 +261,10 @@ describe('field-schemas', () => {
       it('accepts a date in an open earlier year', () => {
         expect(
           create().validate(earlierYearDate, {
-            context: { summaryLogYear: toYear(2027), uploadDate: '2027-01-10' }
+            context: {
+              summaryLogYear: toYear(2027),
+              uploadedAt: new Date('2027-01-10T09:00:00.000Z')
+            }
           }).error
         ).toBeUndefined()
       })

@@ -191,11 +191,11 @@ describe('GET /organisations/{organisationNumber}', () => {
       })
 
     /**
-     * @param {string} now
+     * @param {string} asOf
      * @param {'input' | 'output'} [reprocessingType]
      */
-    const registrationOn = async (now, reprocessingType = 'input') => {
-      vi.useFakeTimers({ toFake: ['Date'], now: new Date(now) })
+    const registrationAsOf = async (asOf, reprocessingType = 'input') => {
+      vi.useFakeTimers({ toFake: ['Date'], now: new Date(asOf) })
       const organisation = accreditedFor2026(reprocessingType)
       await serve(organisation)
       return body(await get(urlOf(organisation))).registrations[
@@ -204,25 +204,28 @@ describe('GET /organisations/{organisationNumber}', () => {
     }
 
     it.for([
-      { now: '2026-10-01T00:00:00.000Z', open: true },
-      { now: '2027-01-31T23:59:59.999Z', open: true },
-      { now: '2027-02-01T00:00:00.000Z', open: false }
-    ])('serves PRNs for 2026 as open $open at $now', async ({ now, open }) => {
-      const registration = await registrationOn(now)
+      { asOf: '2026-10-01T00:00:00.000Z', open: true },
+      { asOf: '2027-01-31T23:59:59.999Z', open: true },
+      { asOf: '2027-02-01T00:00:00.000Z', open: false }
+    ])(
+      'serves PRNs for 2026 as open $open as of $asOf',
+      async ({ asOf, open }) => {
+        const registration = await registrationAsOf(asOf)
 
-      expect(registration.accreditations[2026].prns).toStrictEqual({
-        open,
-        lastOpenDay: '2027-01-31'
-      })
-    })
+        expect(registration.accreditations[2026].prns).toStrictEqual({
+          open,
+          lastOpenDay: '2027-01-31'
+        })
+      }
+    )
 
     it.for([
-      { now: '2027-02-28T23:59:59.999Z', open: true },
-      { now: '2027-03-01T00:00:00.000Z', open: false }
+      { asOf: '2027-02-28T23:59:59.999Z', open: true },
+      { asOf: '2027-03-01T00:00:00.000Z', open: false }
     ])(
-      'serves summary logs for 2026 as open $open at $now',
-      async ({ now, open }) => {
-        const registration = await registrationOn(now)
+      'serves summary logs for 2026 as open $open as of $asOf',
+      async ({ asOf, open }) => {
+        const registration = await registrationAsOf(asOf)
 
         expect(registration.summaryLogs).toStrictEqual({
           2026: { open, lastOpenDay: '2027-02-28' }
@@ -231,14 +234,14 @@ describe('GET /organisations/{organisationNumber}', () => {
     )
 
     it.for([
-      { now: '2026-11-30T23:59:59.999Z', open: false },
-      { now: '2026-12-01T00:00:00.000Z', open: true },
-      { now: '2027-01-31T23:59:59.999Z', open: true },
-      { now: '2027-02-01T00:00:00.000Z', open: false }
+      { asOf: '2026-11-30T23:59:59.999Z', open: false },
+      { asOf: '2026-12-01T00:00:00.000Z', open: true },
+      { asOf: '2027-01-31T23:59:59.999Z', open: true },
+      { asOf: '2027-02-01T00:00:00.000Z', open: false }
     ])(
-      'serves December Waste for 2026 as open $open at $now',
-      async ({ now, open }) => {
-        const registration = await registrationOn(now)
+      'serves December Waste for 2026 as open $open as of $asOf',
+      async ({ asOf, open }) => {
+        const registration = await registrationAsOf(asOf)
 
         expect(registration.accreditations[2026].decemberWaste).toStrictEqual({
           open,
@@ -250,7 +253,7 @@ describe('GET /organisations/{organisationNumber}', () => {
     )
 
     it('serves the manual December Waste control to a reprocessor on output', async () => {
-      const registration = await registrationOn(
+      const registration = await registrationAsOf(
         '2026-12-01T00:00:00.000Z',
         'output'
       )

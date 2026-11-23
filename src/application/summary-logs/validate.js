@@ -1,5 +1,4 @@
 /** @import {SummaryLogId} from '#domain/summary-logs/ids.js' */
-import { ukCalendarDate } from '#common/helpers/dates/uk-calendar-date.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -318,7 +317,7 @@ const runValidationChecks = async (
     {
       summaryLogYear: summaryLog.year,
       ...(summaryLog.createdAt && {
-        uploadDate: ukCalendarDate(new Date(summaryLog.createdAt))
+        uploadedAt: new Date(summaryLog.createdAt)
       })
     }
   )(parsed)
