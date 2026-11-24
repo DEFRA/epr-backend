@@ -302,20 +302,6 @@ describe('PRN routes by natural key', () => {
       })
     })
 
-    it('serves the allowed obligation years in ascending order', async () => {
-      const response = await server.inject({ url: prns, ...asOperator() })
-      const resource = {
-        ...body(response).items[0],
-        obligation: { year: 2026, allowedYears: [2027, 2026] }
-      }
-
-      expect(
-        prnSchema.validate(resource, { convert: false }).error?.message
-      ).toBe(
-        '"obligation.allowedYears" must be sorted in ascending order by value'
-      )
-    })
-
     it('refuses to serve an obligation year the service holds no data for', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
       const resource = {

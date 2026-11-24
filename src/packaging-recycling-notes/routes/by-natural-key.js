@@ -218,12 +218,7 @@ export const prnSchema = Joi.object({
     .description('Deprecated: use obligation.year'),
   obligation: Joi.object({
     year: yearSchema().required(),
-    allowedYears: Joi.array()
-      .items(yearSchema())
-      .unique()
-      .sort()
-      .min(1)
-      .required()
+    allowedYears: Joi.array().items(yearSchema()).unique().min(1).required()
   }).required(),
   notes: Joi.string(),
   createdAt: isoDateTime,
