@@ -35,6 +35,7 @@ import {
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { prnSchema } from './by-natural-key.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
@@ -272,6 +273,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: issued.obligationYear,
+        allowedObligationYears: [2026],
         createdAt: '2026-04-01T10:00:00.000Z',
         issued: {
           at: issued.status.issued?.at.toISOString(),
@@ -279,6 +281,34 @@ describe('PRN routes by natural key', () => {
         },
         regulatorCancellable: true
       })
+    })
+
+    it('serves the obligation years a December PRN can be accepted towards', async () => {
+      const { id } = await packagingRecyclingNotesRepository.create(
+        buildAwaitingAcceptancePrn({
+          ...underAccreditation(ownNumbers),
+          isDecemberWaste: true
+        })
+      )
+
+      const response = await server.inject({
+        url: `${prns}/${id}`,
+        ...asOperator()
+      })
+
+      expect(body(response).allowedObligationYears).toStrictEqual([2026, 2027])
+    })
+
+    it('refuses to serve the same obligation year twice', async () => {
+      const response = await server.inject({ url: prns, ...asOperator() })
+      const resource = {
+        ...body(response).items[0],
+        allowedObligationYears: [2026, 2026]
+      }
+
+      expect(prnSchema.validate(resource).error?.message).toBe(
+        '"allowedObligationYears[1]" contains a duplicate value'
+      )
     })
 
     it('serves a draft PRN with no number', async () => {
@@ -319,6 +349,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: draft.obligationYear,
+        allowedObligationYears: [2026],
         notes: 'For the spring run',
         createdAt: '2026-03-01T10:00:00.000Z',
         regulatorCancellable: false
@@ -598,6 +629,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: expect.any(String),
         isDecemberWaste: false,
         obligationYear: 2026,
+        allowedObligationYears: [2026],
         createdAt: '2026-06-01T00:00:00.000Z',
         regulatorCancellable: false
       })

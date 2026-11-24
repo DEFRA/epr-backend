@@ -12,6 +12,7 @@ import {
 import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/closed-year.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { allowedObligationYears } from '#packaging-recycling-notes/domain/obligation-year.js'
 import {
   REGULATOR,
   WASTE_PROCESSING_TYPE
@@ -95,6 +96,7 @@ import { createStatusesValidator } from './validation.js'
  *   processToBeUsed: string | null,
  *   isDecemberWaste: boolean,
  *   obligationYear: Year,
+ *   allowedObligationYears: Year[],
  *   notes?: string,
  *   createdAt: string,
  *   issued?: PrnOperation,
@@ -156,7 +158,7 @@ const prnStatusSchema = Joi.string()
   .valid(...Object.values(PRN_STATUS))
   .required()
 
-const prnSchema = Joi.object({
+export const prnSchema = Joi.object({
   id: Joi.string().required(),
   prnNumber: Joi.string().when('status.current', {
     not: onceIssued,
@@ -210,6 +212,11 @@ const prnSchema = Joi.object({
   processToBeUsed: Joi.string().required(),
   isDecemberWaste: Joi.boolean().required(),
   obligationYear: Joi.number().integer().required(),
+  allowedObligationYears: Joi.array()
+    .items(Joi.number().integer())
+    .unique()
+    .min(1)
+    .required(),
   notes: Joi.string(),
   createdAt: isoDateTime,
   issued: Joi.object(prnOperationKeys).when('status.current', {
@@ -310,6 +317,7 @@ const toPrnResource = (
     processToBeUsed: getProcessCode(prn.accreditation.material),
     isDecemberWaste: prn.isDecemberWaste,
     obligationYear: prn.obligationYear,
+    allowedObligationYears: allowedObligationYears(prn),
     ...(prn.notes && { notes: prn.notes }),
     createdAt: new Date(prn.createdAt).toISOString(),
     ...(prn.status.issued && { issued: toPrnOperation(prn.status.issued) }),
