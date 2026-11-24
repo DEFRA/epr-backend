@@ -5,21 +5,31 @@
  * Reads the organisations an in-memory organisations repository holds, with
  * the same lag behind its writes as the rest of its reads.
  *
- * @param {Pick<OrganisationAdministrationRepository, 'findAll'>} organisationsRepository
+ * @param {Pick<OrganisationAdministrationRepository, 'findAllIds' | 'findById'>} organisationsRepository
  * @returns {() => RegistrationAccreditationAdminRepository}
  */
-export const createInMemoryRegistrationAccreditationAdminRepository =
-  (organisationsRepository) => () => ({
+export const createInMemoryRegistrationAccreditationAdminRepository = (
+  organisationsRepository
+) => {
+  const readAll = async () => {
+    const { organisations } = await organisationsRepository.findAllIds()
+    return Promise.all(
+      [...organisations].map((id) => organisationsRepository.findById(id))
+    )
+  }
+
+  return () => ({
     isAccreditationNumberInUse: async (accreditationNumber) =>
-      (await organisationsRepository.findAll()).some((org) =>
+      (await readAll()).some((org) =>
         org.accreditations.some(
           (acc) => acc.accreditationNumber === accreditationNumber
         )
       ),
     isRegistrationNumberInUse: async (registrationNumber) =>
-      (await organisationsRepository.findAll()).some((org) =>
+      (await readAll()).some((org) =>
         org.registrations.some(
           (reg) => reg.registrationNumber === registrationNumber
         )
       )
   })
+}
