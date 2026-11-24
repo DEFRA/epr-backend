@@ -323,6 +323,7 @@ function toRegistrationEntry(
   }
 
   const openYear = latestOpenYear(new Date(context.today))
+  /** @type {Status<RegistrationStatus>} */
   const registrationStatus = { current: status, ...statusTimeline }
   const accreditations = accreditationsOf({
     registration,
