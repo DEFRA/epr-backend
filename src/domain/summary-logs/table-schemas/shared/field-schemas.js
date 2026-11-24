@@ -7,6 +7,7 @@ import {
   lastCorrectionDay
 } from '#domain/summary-logs/correction-deadline.js'
 import { customJoi } from '#common/validation/custom-joi.js'
+import { rowValidationOptionsOf } from '../validation-pipeline.js'
 
 /**
  * Common field schema factories for table validation
@@ -48,45 +49,10 @@ export const BEFORE_SUMMARY_LOG_YEAR_ERROR = 'date.beforeSummaryLogYear'
  * @returns {string | import('joi').ErrorReport}
  */
 const rejectAfterSummaryLogYear = (dateStr, helpers) => {
-  const summaryLogYear = helpers.prefs.context?.summaryLogYear
+  const { summaryLogYear } = rowValidationOptionsOf(helpers)
   return summaryLogYear !== undefined && dateStr > lastDayOfYear(summaryLogYear)
     ? helpers.error(AFTER_SUMMARY_LOG_YEAR_ERROR, { expected: summaryLogYear })
     : dateStr
-}
-
-/**
- * @param {unknown} value
- * @returns {string | undefined}
- */
-const calendarDateOf = (value) => {
-  if (value instanceof Date) {
-    return utcCalendarDate(value)
-  }
-  return typeof value === 'string'
-    ? CALENDAR_DATE_PATTERN.exec(value)?.[1]
-    : undefined
-}
-
-/**
- * A linked row's date was entered on this row only if the row supplied it and
- * it differs from the previous-year row's.
- *
- * @param {string} dateStr
- * @param {import('joi').CustomHelpers} helpers
- */
-const isEnteredOnThisRow = (dateStr, helpers) => {
-  /** @type {import('../validation-pipeline.js').LinkedRowContext | undefined} */
-  const linkedRow = helpers.prefs.context?.linkedRow
-  if (linkedRow === undefined) {
-    return true
-  }
-  // Joi always sets the path at run time; its types mark it optional.
-  const path = /** @type {(string | number)[]} */ (helpers.state.path)
-  const field = String(path.at(-1))
-  return (
-    linkedRow.suppliedFields.includes(field) &&
-    calendarDateOf(linkedRow.previousYear[field]) !== dateStr
-  )
 }
 
 /**
@@ -99,17 +65,18 @@ const isEnteredOnThisRow = (dateStr, helpers) => {
  * @returns {string | import('joi').ErrorReport}
  */
 const rejectOpenEarlierYear = (dateStr, helpers) => {
-  const { summaryLogYear, createdAt, registeredOnly } =
-    helpers.prefs.context ?? {}
-  if (summaryLogYear === undefined || !isEnteredOnThisRow(dateStr, helpers)) {
+  const options = rowValidationOptionsOf(helpers)
+  // A filled-in row's dates came from the previous year; the cross-year rules
+  // check the ones it supplied.
+  if (options.summaryLogYear === undefined || options.filledIn) {
     return dateStr
   }
   const dateYear = utcYearOf(dateStr)
-  const registration = { registeredOnly }
-  return dateYear < summaryLogYear &&
-    isBeforeCorrectionDeadline(dateYear, registration, createdAt)
+  const registration = { registeredOnly: options.registeredOnly }
+  return dateYear < options.summaryLogYear &&
+    isBeforeCorrectionDeadline(dateYear, registration, options.createdAt)
     ? helpers.error(BEFORE_SUMMARY_LOG_YEAR_ERROR, {
-        expected: summaryLogYear,
+        expected: options.summaryLogYear,
         deadline: lastCorrectionDay(dateYear, registration)
       })
     : dateStr
