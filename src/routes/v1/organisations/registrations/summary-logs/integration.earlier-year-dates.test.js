@@ -7,6 +7,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
   createRegisteredOnlyMeta,
+  createRegisteredOnlyReceivedRow,
   createWasteBalanceMeta,
   exporter2027Loads,
   ledgerIdOf,
@@ -190,6 +191,62 @@ describe('summary logs with a date in an earlier year', () => {
       )
 
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+    })
+  })
+
+  describe('a 2027 registered-only reprocessor log', () => {
+    /** @param {string} id */
+    const uploadWithDecember2026Received = async (id) => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'reprocessor',
+        accredited: false,
+        year: YEAR_2027
+      })
+      const validated = await uploadAndValidate(
+        env,
+        { summaryLogId: `summary-${id}`, fileId: `file-${id}` },
+        {
+          meta: withTemplateYear(
+            createRegisteredOnlyMeta('REPROCESSOR_REGISTERED_ONLY'),
+            YEAR_2027
+          ),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: tableOf('Received', [
+              {
+                ...createRegisteredOnlyReceivedRow({
+                  rowId: 1001,
+                  month: '2026-12-01'
+                }),
+                DWT_SUPPLY_ID: null
+              }
+            ])
+          }
+        }
+      )
+      return {
+        validated,
+        storedRows: await storedRowsOf(
+          { ...env, accreditationNumber: null },
+          id
+        )
+      }
+    }
+
+    it('is rejected for a December 2026 month received at 23:59:59 on 20 March 2027, the correction deadline, with nothing stored', async () => {
+      uploadOn('2027-03-20T23:59:59.000Z')
+
+      const { validated, storedRows } = await uploadWithDecember2026Received(
+        'reprocessor-registered-only-open-2026'
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        earlierYearFailure('MONTH_RECEIVED_FOR_REPROCESSING', '2027-03-20', {
+          rowId: '1001',
+          actual: '2026-12-01'
+        })
+      ])
+      expect(storedRows).toStrictEqual([])
     })
   })
 })
