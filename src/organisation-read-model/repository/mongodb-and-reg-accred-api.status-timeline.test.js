@@ -1,7 +1,5 @@
-import { onTestFinished } from 'vitest'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
-import { config } from '#root/config.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import {
   ACCREDITATION_NUMBER,
@@ -327,43 +325,6 @@ describe('status timeline', () => {
         { status: 'suspended', at: '2026-07-01T00:00:00.000Z' },
         { status: 'cancelled', at: '2026-07-01T00:00:00.000Z' }
       ]
-    })
-  })
-
-  it('serves an accreditation for next year approved today as approved from 1 January', async ({
-    organisationReadRepositoryWith
-  }) => {
-    config.set('openNextYear', true)
-    onTestFinished(() => config.reset('openNextYear'))
-    const now = new Date()
-    const nextYear = toYear(now.getUTCFullYear() + 1)
-    const stored = organisationAccredited({
-      validFrom: `${nextYear}-01-01`,
-      validTo: `${nextYear}-12-31`,
-      statusHistory: [
-        { status: 'created', updatedAt: now.toISOString() },
-        { status: 'approved', updatedAt: now.toISOString() }
-      ]
-    })
-    const repository = await organisationReadRepositoryWith({
-      organisations: [stored]
-    })
-
-    const organisation = await findOrganisation(
-      repository,
-      stored.organisationNumber
-    )
-
-    expect(
-      organisation.registrations[REPROCESSOR_NUMBER].accreditations[nextYear]
-    ).toMatchObject({
-      status: {
-        current: 'approved',
-        lastUpdatedAt: now.toISOString(),
-        timeline: [
-          { status: 'approved', at: `${nextYear}-01-01T00:00:00.000Z` }
-        ]
-      }
     })
   })
 

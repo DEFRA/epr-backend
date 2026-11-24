@@ -82,7 +82,11 @@ const regAccredAccreditationSummarySchema = Joi.object({
   organisationNumber: Joi.number().integer().required(),
   registrationNumber: Joi.string().trim().uppercase().required(),
   accreditationNumber: Joi.string().trim().uppercase().required(),
-  accreditationYear: Joi.number().integer().required(),
+  accreditationYear: Joi.number()
+    .integer()
+    .valid(Joi.ref('$year'))
+    .required()
+    .messages({ 'any.only': '{{#label}} must be {{$year}}' }),
   status: Joi.string()
     .valid(...ACCREDITATION_STATUSES)
     .required(),
@@ -91,14 +95,18 @@ const regAccredAccreditationSummarySchema = Joi.object({
 
 /**
  * The item with its numbers trimmed and upper-cased, or `null`, reported
- * through `onDrop`, when the read model cannot represent it.
+ * through `onDrop`, when the read model cannot represent it or it is not for
+ * the year asked for.
  *
  * @param {unknown} item
+ * @param {Year} year
  * @param {OnDrop} onDrop
  * @returns {RegAccredAccreditationSummary | null}
  */
-const toValidSummary = (item, onDrop) => {
-  const { value, error } = regAccredAccreditationSummarySchema.validate(item)
+const toValidSummary = (item, year, onDrop) => {
+  const { value, error } = regAccredAccreditationSummarySchema.validate(item, {
+    context: { year }
+  })
   if (error) {
     const { accreditationNumber = 'with no number' } =
       /** @type {{ accreditationNumber?: unknown }} */ (item ?? {})
@@ -217,7 +225,7 @@ export const createRegAccredAccreditationsLoader =
     )
     const loadedAt = now()
     return accreditations
-      .map((item) => toValidSummary(item, onDrop))
+      .map((item) => toValidSummary(item, year, onDrop))
       .filter((summary) => summary !== null)
       .map((summary) => toExternalAccreditation(summary, loadedAt))
   }
