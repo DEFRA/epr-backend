@@ -1,6 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 
 import {
+  buildRowStateLink,
   buildSummaryLogRowStateEntry,
   DEFAULT_LEDGER_ID,
   anotherOrganisationNumber
@@ -56,6 +57,22 @@ export const testFindWasteRecordStatesForSummaryLogBehaviour = (it) => {
         'rowId',
         'wasteRecordType'
       ])
+    })
+
+    it('returns where a linked row was filled in from', async () => {
+      const link = buildRowStateLink({ suppliedFields: ['DATE_OF_EXPORT'] })
+      await repository.upsertSummaryLogRowStates(
+        DEFAULT_LEDGER_ID,
+        [buildSummaryLogRowStateEntry({ rowId: 'row-1', link })],
+        'log-1'
+      )
+
+      const [state] = await repository.findWasteRecordStatesForSummaryLog(
+        DEFAULT_LEDGER_ID,
+        'log-1'
+      )
+
+      expect(state.link).toEqual(link)
     })
 
     it('returns every row of the summary log', async () => {

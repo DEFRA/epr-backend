@@ -26,6 +26,17 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 
 /**
+ * Where a linked row's values came from (ADR-0060): the previous year's row
+ * state it was filled in from, and the columns the row supplied itself.
+ *
+ * @typedef {Object} RowStateLink
+ * @property {import('#common/helpers/dates/year.js').Year} year
+ * @property {string} rowId
+ * @property {string} rowStateId
+ * @property {string[]} suppliedFields
+ */
+
+/**
  * A single row from the 1.1 per-row classification list — the unit
  * `upsertSummaryLogRowStates` compares and stores. Carries no ledger-identity fields (supplied
  * separately) and no membership (assigned at write).
@@ -40,6 +51,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
  * @property {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @property {Record<string, any>} data
+ * @property {RowStateLink} [link]
  * @property {RowClassification} classification
  */
 
@@ -49,6 +61,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  *   rowId: string,
  *   processingType: import('#domain/summary-logs/meta-fields.js').ProcessingType,
  *   data: Record<string, any>,
+ *   link?: RowStateLink,
  *   classification: RowClassification,
  *   summaryLogIds: import('#domain/summary-logs/ids.js').SummaryLogFileId[]
  * }} RowStateFields
@@ -83,6 +96,13 @@ const classificationSchema = Joi.object({
   transactionAmount: Joi.number().required()
 })
 
+const linkSchema = Joi.object({
+  year: Joi.number().integer().required(),
+  rowId: Joi.string().required(),
+  rowStateId: Joi.string().required(),
+  suppliedFields: Joi.array().items(Joi.string()).required()
+})
+
 const rowStateBaseSchema = Joi.object({
   wasteRecordType: Joi.string()
     .valid(...Object.values(WASTE_RECORD_TYPE))
@@ -90,6 +110,7 @@ const rowStateBaseSchema = Joi.object({
   rowId: Joi.string().required(),
   processingType: Joi.string().required(),
   data: Joi.object().required(),
+  link: linkSchema,
   classification: classificationSchema.required(),
   summaryLogIds: Joi.array().items(Joi.string().required()).min(1).required()
 })
