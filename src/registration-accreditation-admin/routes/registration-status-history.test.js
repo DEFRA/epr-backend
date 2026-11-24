@@ -58,7 +58,7 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
     reprocessingType: 'input',
     ...(accStatus !== 'created' && {
       accreditationNumber: toAccreditationNumber('ACC123456'),
-      validFrom: '2024-01-01',
+      validFrom: '2026-01-01',
       validTo: '2026-12-31'
     }),
     statusHistory:
@@ -329,9 +329,22 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      expect(JSON.parse(response.payload).message).toMatch(
-        /validFrom: must be in 2024 or later/
+      expect(JSON.parse(response.payload).message).toBe(
+        'The date the registration is valid from must be in 2024 or later'
       )
+    })
+
+    it('grants a validFrom on the first day of 2024', async () => {
+      const ctx = await seedOrg('created')
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { ...grantPayload, validFrom: '2024-01-01' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
     it('returns 422 when the registration has no reprocessingType, which granting does not set', async () => {

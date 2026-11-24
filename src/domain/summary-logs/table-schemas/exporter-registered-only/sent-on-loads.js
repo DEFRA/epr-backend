@@ -51,9 +51,7 @@ export const SENT_ON_LOADS = {
    */
   validationSchema: Joi.object({
     [FIELDS.ROW_ID]: createRowIdSchema(ROW_ID_MINIMUMS.SENT_ON_LOADS),
-    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema({
-      rejectOpenEarlierYear: true
-    }),
+    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(),
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
       createUnboundedWeightFieldSchema()
   })

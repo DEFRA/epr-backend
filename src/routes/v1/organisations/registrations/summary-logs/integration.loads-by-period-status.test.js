@@ -26,13 +26,15 @@ import {
   createUploadPayload,
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
+  exporter2027Loads,
   pollForValidation,
   pollWhileStatus,
   setupWasteBalanceIntegrationEnvironment,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
   tableOf,
-  uploadOn
+  uploadOn,
+  withTemplateYear
 } from './integration-test-helpers.js'
 
 // Data tables start with their header at row 7, so data rows begin at row 8.
@@ -650,33 +652,17 @@ describe('loadsByReportingPeriod population at validate time', () => {
       env,
       'sl-2027-received-december-2026',
       'file-2027-received-december-2026',
-      {
-        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
-          {
-            ...Object.fromEntries(
-              EXPORTER_HEADERS.map((header, index) => [
-                header,
-                createExporterRowValues({
-                  rowId: 1001,
-                  osrId: 100,
-                  exportTonnage: 25,
-                  dateReceived: '2026-12-20T00:00:00.000Z',
-                  exportDate: '2027-01-12T00:00:00.000Z',
-                  dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
-                })[index]
-              ])
-            ),
-            PREVIOUS_YEAR_ROW_ID: null,
-            EXIT_PORT: null,
-            DWT_EXPORT_ID: null,
-            DWT_SUPPLY_ID: null
-          }
-        ])
-      },
-      {
-        ...sharedMeta,
-        TEMPLATE_VERSION: { ...sharedMeta.TEMPLATE_VERSION, value: 2027.01 }
-      }
+      exporter2027Loads([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 25,
+          dateReceived: '2026-12-20T00:00:00.000Z',
+          exportDate: '2027-01-12T00:00:00.000Z',
+          dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
+        }
+      ]),
+      withTemplateYear(sharedMeta, toYear(2027))
     )
 
     expect(
@@ -759,33 +745,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
       env,
       'sl-2027-linked-december-2026',
       'file-2027-linked-december-2026',
-      {
-        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
-          {
-            ...Object.fromEntries(
-              EXPORTER_HEADERS.map((header, index) => [
-                header,
-                createExporterRowValues({
-                  rowId: 1001,
-                  osrId: 100,
-                  exportTonnage: 25,
-                  dateReceived: null,
-                  exportDate: '2027-01-12T00:00:00.000Z',
-                  dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
-                })[index]
-              ])
-            ),
-            PREVIOUS_YEAR_ROW_ID: 1500,
-            EXIT_PORT: null,
-            DWT_EXPORT_ID: null,
-            DWT_SUPPLY_ID: null
-          }
-        ])
-      },
-      {
-        ...sharedMeta,
-        TEMPLATE_VERSION: { ...sharedMeta.TEMPLATE_VERSION, value: 2027.01 }
-      }
+      exporter2027Loads([
+        {
+          rowId: 1001,
+          previousYearRowId: 1500,
+          osrId: 100,
+          exportTonnage: 25,
+          dateReceived: null,
+          exportDate: '2027-01-12T00:00:00.000Z',
+          dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
+        }
+      ]),
+      withTemplateYear(sharedMeta, toYear(2027))
     )
 
     expect(loadsByReportingPeriod.closedPeriodLoads).toEqual({
@@ -802,6 +773,111 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(
       await env.reportsRepository.findReportById(december2026ReportId)
     ).toEqual(december2026ReportBefore)
+  })
+
+  it('places a 2027 row linked to a load exported in December 2026 and received overseas in January 2027 in no period of 2026, so submitting the log leaves every submitted 2026 report as it was', async () => {
+    uploadOn('2027-01-10T09:00:00.000Z')
+    const env = await setupWasteBalanceIntegrationEnvironment({
+      processingType: 'exporter',
+      year: toYear(2027),
+      previousYearAccreditationNumber: toAccreditationNumber('ACC-122')
+    })
+    const env2026 = { ...env, year: toYear(2026) }
+    await upload(
+      env2026,
+      'sl-2026-exported-december',
+      'file-2026-exported-december',
+      createUploadData([
+        {
+          rowId: 1500,
+          osrId: 100,
+          exportTonnage: 25,
+          dateReceived: '2026-10-20T00:00:00.000Z',
+          exportDate: '2026-12-28T00:00:00.000Z',
+          dateReceivedByOsr: null
+        }
+      ]),
+      {
+        ...sharedMeta,
+        ACCREDITATION_NUMBER: {
+          ...sharedMeta.ACCREDITATION_NUMBER,
+          value: 'ACC-122'
+        }
+      }
+    )
+    await submitAndPoll(env2026, 'sl-2026-exported-december')
+    const submitted2026ReportIds = [
+      await createAndSubmitReport(env.reportsRepository, {
+        ...env.reportKey,
+        year: toYear(2026),
+        cadence: 'monthly',
+        period: MONTHLY_PERIODS.November,
+        startDate: calendarDate('2026-11-01'),
+        endDate: calendarDate('2026-11-30'),
+        dueDate: calendarDate('2026-12-20')
+      }),
+      await createAndSubmitReport(env.reportsRepository, {
+        ...env.reportKey,
+        year: toYear(2026),
+        cadence: 'monthly',
+        period: MONTHLY_PERIODS.December,
+        startDate: calendarDate('2026-12-01'),
+        endDate: calendarDate('2026-12-31'),
+        dueDate: calendarDate('2027-01-20')
+      })
+    ]
+    const submitted2026Reports = () =>
+      Promise.all(
+        submitted2026ReportIds.map((id) =>
+          env.reportsRepository.findReportById(id)
+        )
+      )
+    const submitted2026ReportsBefore = await submitted2026Reports()
+
+    const loadsByReportingPeriod = await uploadAndValidate(
+      env,
+      'sl-2027-linked-exported-december-2026',
+      'file-2027-linked-exported-december-2026',
+      exporter2027Loads([
+        {
+          rowId: 1001,
+          previousYearRowId: 1500,
+          osrId: 100,
+          exportTonnage: null,
+          dateReceived: null,
+          exportDate: null,
+          dateReceivedByOsr: '2027-01-06T00:00:00.000Z'
+        }
+      ]),
+      withTemplateYear(sharedMeta, toYear(2027))
+    )
+
+    expect(
+      loadsByReportingPeriod.openPeriodLoads.added.balanceAffecting
+    ).toEqual({
+      count: 1,
+      tonnageDelta: 25,
+      rows: [
+        {
+          rowId: '1001',
+          wasteRecordType: WASTE_RECORD_TYPE.EXPORTED,
+          exclusionReasons: [],
+          tonnageDelta: 25
+        }
+      ]
+    })
+    expect(loadsByReportingPeriod.closedPeriodLoads).toEqual({
+      added: emptyChange(),
+      adjusted: emptyChange()
+    })
+    expect(loadsByReportingPeriod.periodsRequiringResubmission).toEqual([])
+
+    await submitAndPoll(env, 'sl-2027-linked-exported-december-2026')
+    expect(
+      (await getCheckPage(env, 'sl-2027-linked-exported-december-2026')).status
+    ).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+
+    expect(await submitted2026Reports()).toEqual(submitted2026ReportsBefore)
   })
 
   it('aggregates count and tonnageDelta across multiple loads in the same period', async () => {

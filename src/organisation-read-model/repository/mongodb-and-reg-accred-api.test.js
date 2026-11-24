@@ -11,10 +11,7 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { testOrganisationReadRepositoryContract } from './port.contract.js'
-import {
-  SEED_ACCREDITATION_YEAR,
-  SEED_REGISTRATION_APPROVED_ON
-} from './contract/organisation-seed-test-helpers.js'
+import { SEED_REGISTRATION_APPROVED_ON } from './contract/organisation-seed-test-helpers.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -39,8 +36,8 @@ const toStoredSite = ({ name, approvedOn }) => ({
 })
 
 /**
- * The accreditation a seed's accreditation number gives, as stored: valid for
- * `SEED_ACCREDITATION_YEAR` from 1 July, and approved.
+ * The accreditation a seed's accreditation number gives, as stored: valid from
+ * 1 July of the seed's accreditation year, and approved.
  *
  * @param {NonNullable<SeededRegistration['accreditationNumber']>} accreditationNumber
  * @param {boolean} exporting
@@ -48,8 +45,8 @@ const toStoredSite = ({ name, approvedOn }) => ({
 const toStoredAccreditation = (accreditationNumber, exporting) =>
   (exporting ? exporterAccreditation : accreditation)({
     accreditationNumber,
-    validFrom: `${SEED_ACCREDITATION_YEAR}-07-01`,
-    validTo: `${SEED_ACCREDITATION_YEAR}-12-31`
+    validFrom: '2026-07-01',
+    validTo: '2026-12-31'
   })
 
 /**

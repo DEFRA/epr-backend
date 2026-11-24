@@ -234,7 +234,9 @@ describe('createRegAccredAccreditationsLoader', () => {
     { field: 'status', item: { status: 'withdrawn' } },
     { field: 'tonnageBand', item: { tonnageBand: 'up_to_a_lot' } },
     { field: 'registrationNumber', item: { registrationNumber: null } },
-    { field: 'accreditationNumber', item: { accreditationNumber: null } }
+    { field: 'accreditationNumber', item: { accreditationNumber: null } },
+    { field: 'accreditationYear', item: { accreditationYear: 2026 } },
+    { field: 'accreditationYear', item: { accreditationYear: 2028 } }
   ])(
     'drops and reports an accreditation with an invalid $field',
     async ({ field, item }) => {
@@ -267,6 +269,18 @@ describe('createRegAccredAccreditationsLoader', () => {
 
     expect(dropped).toStrictEqual([
       'Reg Accred accreditation with no number is invalid: "accreditationNumber" is required'
+    ])
+  })
+
+  it('reports an accreditation for another year as not for the year asked for', async () => {
+    serveAccreditations([{ ...validItem, accreditationYear: 2028 }])
+    /** @type {string[]} */
+    const dropped = []
+
+    await loadFor('990001', { onDrop: (message) => dropped.push(message) })
+
+    expect(dropped).toStrictEqual([
+      `Reg Accred accreditation ${validItem.accreditationNumber} is invalid: "accreditationYear" must be 2027`
     ])
   })
 

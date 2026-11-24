@@ -47,7 +47,7 @@ const grantPayload = {
   fromStatus: 'created',
   toStatus: 'approved',
   validFrom: '2026-08-01',
-  validTo: '2027-03-31',
+  validTo: '2026-11-30',
   accreditationNumber: 'ACC999999'
 }
 const rejectPayload = { fromStatus: 'created', toStatus: 'rejected' }
@@ -546,7 +546,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       expect(accreditation.validFrom).toBe('2026-08-01')
       // Overwrites the seeded 2026-12-31, proving the window came from the
       // request rather than the pre-existing application data.
-      expect(accreditation.validTo).toBe('2027-03-31')
+      expect(accreditation.validTo).toBe('2026-11-30')
       expect(accreditation.statusHistory.map((e) => e.status)).toEqual([
         'created',
         'approved'
@@ -583,18 +583,18 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, validFrom: '2027-06-01' },
+        payload: { ...grantPayload, validFrom: '2026-12-15' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(
-        /validFrom 2027-06-01 is after validTo 2027-03-31/
+        /validFrom 2026-12-15 is after validTo 2026-11-30/
       )
     })
 
-    it('returns 422 when the validFrom is before 2024', async () => {
+    it('returns 422 when the validTo is outside 2026', async () => {
       const ctx = await seedOrg('created', {
         registrationStatus: 'approved',
         accreditationOverrides: ungrantedAccreditation
@@ -603,14 +603,52 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, validFrom: '2015-03-01' },
+        payload: { ...grantPayload, validTo: '2027-03-31' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      expect(JSON.parse(response.payload).message).toMatch(
-        /validFrom: must be in 2024 or later/
+      expect(JSON.parse(response.payload).message).toBe(
+        'The date the accreditation is valid to must be in 2026'
       )
+    })
+
+    it.each(['2015-03-01', '2025-12-31'])(
+      'returns 422 with a plain message when the validFrom is %s',
+      async (validFrom) => {
+        const ctx = await seedOrg('created', {
+          registrationStatus: 'approved',
+          accreditationOverrides: ungrantedAccreditation
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: statusHistoryUrl(ctx),
+          payload: { ...grantPayload, validFrom },
+          headers: { Authorization: `Bearer ${validToken}` }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+        expect(JSON.parse(response.payload).message).toBe(
+          'The date the accreditation is valid from must be in 2026'
+        )
+      }
+    )
+
+    it('grants a validFrom on the first day of 2026', async () => {
+      const ctx = await seedOrg('created', {
+        registrationStatus: 'approved',
+        accreditationOverrides: ungrantedAccreditation
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: statusHistoryUrl(ctx),
+        payload: { ...grantPayload, validFrom: '2026-01-01' },
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
     })
 
     it('compares the supplied dates even when the accreditation has no stored validTo', async () => {
@@ -622,14 +660,14 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const response = await server.inject({
         method: 'POST',
         url: statusHistoryUrl(ctx),
-        payload: { ...grantPayload, validFrom: '2027-06-01' },
+        payload: { ...grantPayload, validFrom: '2026-12-15' },
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
       expect(body.message).toMatch(
-        /validFrom 2027-06-01 is after validTo 2027-03-31/
+        /validFrom 2026-12-15 is after validTo 2026-11-30/
       )
     })
 
@@ -659,7 +697,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
 
       expect(accreditation.status).toBe('approved')
       expect(accreditation.validFrom).toBe('2026-08-01')
-      expect(accreditation.validTo).toBe('2027-03-31')
+      expect(accreditation.validTo).toBe('2026-11-30')
     })
 
     it('returns 422 when the linked registration is not approved', async () => {
@@ -916,11 +954,11 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       ],
       [
         'a grant has an invalid validTo date',
-        { ...grantPayload, validTo: '2027-13-45' }
+        { ...grantPayload, validTo: '2026-13-45' }
       ],
       [
         'a grant has a validTo day that does not exist in that month',
-        { ...grantPayload, validTo: '2027-02-30' }
+        { ...grantPayload, validTo: '2026-02-30' }
       ],
       [
         'a grant uses the legacy appliesFrom field name',
@@ -928,7 +966,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
           fromStatus: 'created',
           toStatus: 'approved',
           appliesFrom: '2026-08-01',
-          validTo: '2027-03-31',
+          validTo: '2026-11-30',
           accreditationNumber: 'ACC999999'
         }
       ],

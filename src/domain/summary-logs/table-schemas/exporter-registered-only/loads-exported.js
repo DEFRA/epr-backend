@@ -60,9 +60,7 @@ export const LOADS_EXPORTED = {
     [FIELDS.ROW_ID]: createRowIdSchema(ROW_ID_MINIMUMS.LOADS_EXPORTED),
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]:
       createUnboundedWeightFieldSchema(),
-    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema({
-      rejectOpenEarlierYear: true
-    }),
+    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema(),
     [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
     [FIELDS.BASEL_EXPORT_CODE]: createEnumFieldSchema(
       BASEL_CODES,
@@ -70,9 +68,8 @@ export const LOADS_EXPORTED = {
     ),
     [FIELDS.WAS_THE_WASTE_REFUSED]: createYesNoFieldSchema(),
     [FIELDS.WAS_THE_WASTE_STOPPED]: createYesNoFieldSchema(),
-    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]: createDateFieldSchema({
-      rejectOpenEarlierYear: true
-    }),
+    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]:
+      createDateFieldSchema(),
     [FIELDS.CUSTOMS_CODES]: createFreeTextFieldSchema(),
     [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema()
   })
