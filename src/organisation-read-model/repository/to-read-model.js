@@ -329,10 +329,9 @@ function toRegistrationEntry(
     registration,
     organisation,
     context,
-    externalAccreditations: mapValues(
+    externalAccreditations: withRegistrationCancellation(
       externalByRegistration.get(registrationNumber) ?? {},
-      (accreditation) =>
-        cancelledWithRegistration(accreditation, registrationStatus)
+      registrationStatus
     )
   })
 
@@ -361,30 +360,73 @@ function toRegistrationEntry(
 /**
  * Re-ex cancels a stored accreditation when its registration is cancelled.
  * An external accreditation is held read-only in the registration service, so
- * the same cancellation is applied here as it is served: one still held reads
- * as cancelled from the registration's cancellation, and what the registration
- * service records after that is left out.
+ * the same cancellation is applied here as it is served. Once the registration
+ * is reinstated, the registration service's own statuses stand again.
+ *
+ * @param {Record<Year, AccreditationCommon>} externalAccreditations
+ * @param {Status<RegistrationStatus>} registrationStatus
+ * @returns {Record<Year, AccreditationCommon>}
+ */
+function withRegistrationCancellation(
+  externalAccreditations,
+  registrationStatus
+) {
+  const lastChange = registrationStatus.timeline.at(-1)
+  if (lastChange?.status !== REGISTRATION_STATUS.CANCELLED) {
+    return externalAccreditations
+  }
+  return /** @type {Record<Year, AccreditationCommon>} */ (
+    Object.fromEntries(
+      Object.entries(externalAccreditations).flatMap(
+        ([year, accreditation]) => {
+          const cancelled = cancelledFrom(
+            accreditation,
+            lastChange.at,
+            registrationStatus.lastUpdatedAt
+          )
+          return cancelled ? [[year, cancelled]] : []
+        }
+      )
+    )
+  )
+}
+
+/**
+ * The accreditation as it stood when its registration was cancelled, and
+ * cancelled from then if it was still held. What the registration service
+ * records after the cancellation is left out. An accreditation that had not
+ * started by then was never held, so there is none.
  *
  * @param {AccreditationCommon} accreditation
- * @param {Status<RegistrationStatus>} registrationStatus
- * @returns {AccreditationCommon}
+ * @param {string} cancelledAt
+ * @param {string} cancellationRecordedAt
+ * @returns {AccreditationCommon | null}
  */
-function cancelledWithRegistration(accreditation, registrationStatus) {
-  const lastChange = registrationStatus.timeline.at(-1)
-  if (
-    lastChange?.status !== REGISTRATION_STATUS.CANCELLED ||
-    !HELD_ACCREDITATION_STATUSES.has(accreditation.status.current)
-  ) {
-    return accreditation
+function cancelledFrom(accreditation, cancelledAt, cancellationRecordedAt) {
+  const timeline = accreditation.status.timeline.filter(
+    ({ at }) => at.localeCompare(cancelledAt) <= 0
+  )
+  const statusWhenCancelled = timeline.at(-1)?.status
+  if (statusWhenCancelled === undefined) {
+    return null
   }
-  const cancelledAt = lastChange.at
+  if (!HELD_ACCREDITATION_STATUSES.has(statusWhenCancelled)) {
+    return {
+      ...accreditation,
+      status: {
+        ...accreditation.status,
+        current: statusWhenCancelled,
+        timeline
+      }
+    }
+  }
   return {
     ...accreditation,
     status: {
       current: ACCREDITATION_STATUS.CANCELLED,
-      lastUpdatedAt: registrationStatus.lastUpdatedAt,
+      lastUpdatedAt: cancellationRecordedAt,
       timeline: [
-        ...accreditation.status.timeline.filter(({ at }) => at <= cancelledAt),
+        ...timeline,
         { status: ACCREDITATION_STATUS.CANCELLED, at: cancelledAt }
       ]
     }
