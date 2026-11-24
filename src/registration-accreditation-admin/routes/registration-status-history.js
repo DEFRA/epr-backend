@@ -85,7 +85,7 @@ export const registrationStatusHistory = {
 
     if (grant) {
       // The schema refuses this date too, but its message names a field path
-      // and index that the admin shows to the user as it comes back.
+      // and index, which means nothing to whoever reads it.
       if (utcYearOf(grant.validFrom) < MIN_YEAR) {
         throw Boom.badData(
           `The date the registration is valid from must be in ${MIN_YEAR} or later`
