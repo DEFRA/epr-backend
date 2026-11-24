@@ -43,6 +43,7 @@ export const projectSummaryLogRowState = (record, classificationContext) => {
   return {
     ...classified,
     processingType,
+    ...(record.link && { link: record.link }),
     classification: {
       ...classified.classification,
       transactionAmount: normaliseNegativeZero(

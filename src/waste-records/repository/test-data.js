@@ -50,6 +50,21 @@ export const buildSummaryLogRowStateEntry = (overrides = {}) => ({
   ...overrides
 })
 
+/**
+ * Build where a linked row was filled in from: a 2026 row state, with nothing
+ * supplied on the linked row unless overridden.
+ *
+ * @param {Partial<import('./schema.js').RowStateLink>} [overrides]
+ * @returns {import('./schema.js').RowStateLink}
+ */
+export const buildRowStateLink = (overrides = {}) => ({
+  year: utcYearOf('2026-01-01'),
+  rowId: '1500',
+  rowStateId: 'state-1500',
+  suppliedFields: [],
+  ...overrides
+})
+
 export const DEFAULT_YEAR = utcYearOf('2026-01-01')
 
 /**
