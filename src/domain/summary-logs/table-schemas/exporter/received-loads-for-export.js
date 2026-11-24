@@ -215,9 +215,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
     ).optional(),
-    [FIELDS.DATE_RECEIVED_FOR_EXPORT]: createDateFieldSchema({
-      rejectOpenEarlierYear: true
-    }),
+    [FIELDS.DATE_RECEIVED_FOR_EXPORT]: createDateFieldSchema(),
     [FIELDS.EWC_CODE]: createEnumFieldSchema(
       EWC_CODES,
       MESSAGES.MUST_BE_VALID_EWC_CODE
@@ -240,21 +238,16 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
     [FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]: createWeightFieldSchema(),
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: createWeightFieldSchema(),
-    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema({
-      rejectOpenEarlierYear: true
-    }),
+    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema(),
     [FIELDS.BASEL_EXPORT_CODE]: createEnumFieldSchema(
       BASEL_CODES,
       MESSAGES.MUST_BE_VALID_BASEL_CODE
     ),
     [FIELDS.CUSTOMS_CODES]: createFreeTextFieldSchema(),
     [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema(),
-    [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema({
-      rejectOpenEarlierYear: true
-    }),
-    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]: createDateFieldSchema({
-      rejectOpenEarlierYear: true
-    }),
+    [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema(),
+    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]:
+      createDateFieldSchema(),
     [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: createYesNoFieldSchema(),
     [FIELDS.INTERIM_SITE_ID]: createThreeDigitIdSchema(),

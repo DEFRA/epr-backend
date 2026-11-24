@@ -743,7 +743,7 @@ describe('SummaryLogsValidator integration', () => {
                 rowNumber: 8,
                 values: [
                   1000,
-                  '2025-01-01',
+                  '2026-01-01',
                   10.5,
                   'Actual weight (100%)',
                   0.95,
@@ -774,7 +774,7 @@ describe('SummaryLogsValidator integration', () => {
                 rowNumber: 8,
                 values: [
                   5000,
-                  new Date('2025-03-01'),
+                  new Date('2026-03-01'),
                   5.0,
                   'Reprocessor',
                   'Dest Co',
