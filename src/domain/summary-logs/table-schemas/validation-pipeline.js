@@ -142,13 +142,19 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear?: Year, createdAt?: Date, registeredOnly?: boolean }} RowValidationOptions
+ * @typedef {{ suppliedFields: readonly string[], previousYear: Record<string, unknown> }} LinkedRowContext
+ * A row filled in from a previous-year row: the columns it supplied itself,
+ * and the previous-year row as stored.
+ */
+
+/**
+ * @typedef {{ summaryLogYear?: Year, createdAt?: Date, registeredOnly?: boolean, linkedRow?: LinkedRowContext }} RowValidationOptions
  * Omitted, as when exporting stored rows, means dates are not checked against
  * the summary log year.
  */
 
 /**
- * @typedef {Required<RowValidationOptions>} SummaryLogValidationOptions
+ * @typedef {RowValidationOptions & Required<Pick<RowValidationOptions, 'summaryLogYear' | 'createdAt' | 'registeredOnly'>>} SummaryLogValidationOptions
  */
 
 /**

@@ -16,6 +16,7 @@
  * @property {string} [rowId] - Extracted row ID (set by data-syntax validator; not required for transformation)
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
  * @property {RowOutcome} outcome - Classification outcome from validation pipeline
+ * @property {import('#waste-records/repository/schema.js').RowStateLink} [link] - Where a linked row was filled in from
  */
 
 /**
@@ -66,7 +67,7 @@ const transformTable = (
   const { rows } = tableData
 
   return rows.map((row) => {
-    const { data: rowData, issues, outcome } = row
+    const { data: rowData, issues, outcome, link } = row
 
     const { wasteRecordType, rowId, data } = rowTransformer(rowData)
 
@@ -74,7 +75,8 @@ const transformTable = (
     const wasteRecord = {
       rowId,
       type: wasteRecordType,
-      data
+      data,
+      ...(link && { link })
     }
 
     /** @type {ValidatedWasteRecord} */

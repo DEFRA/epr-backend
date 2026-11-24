@@ -30,7 +30,13 @@ import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * }} SummaryLogContext
  */
 
-/** @typedef {{ number: number, summaryLogId: SummaryLogFileId }} PreviousYearSubmission */
+/**
+ * @typedef {{
+ *   number: number,
+ *   summaryLogId: SummaryLogFileId,
+ *   ledgerId: import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId
+ * }} PreviousYearSubmission
+ */
 
 /**
  * @typedef {{
@@ -48,7 +54,13 @@ import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
  */
 const latestSubmissionIn = async (ledgerRepository, ledgerId) => {
   const latest = await latestSubmittedSummaryLog(ledgerRepository, ledgerId)
-  return latest && { number: latest.number, summaryLogId: latest.summaryLogId }
+  return (
+    latest && {
+      number: latest.number,
+      summaryLogId: latest.summaryLogId,
+      ledgerId
+    }
+  )
 }
 
 /**
