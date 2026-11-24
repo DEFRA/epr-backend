@@ -35,6 +35,7 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
 
 /**
  * @param {{
+ *   rowId?: number | null,
  *   dateOfExport: unknown,
  *   previousYearDateOfExport?: unknown,
  *   suppliedFields?: string[]
@@ -42,12 +43,13 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
  * @returns {FilledInRow}
  */
 const filledInRow = ({
+  rowId = 1001,
   dateOfExport,
   previousYearDateOfExport = '2026-11-01',
   suppliedFields = ['DATE_OF_EXPORT']
 }) => ({
   rowNumber: 8,
-  values: [1001, 1500, dateOfExport, 'Overseas Ltd'],
+  values: [rowId, 1500, dateOfExport, 'Overseas Ltd'],
   linked: {
     link: {
       year: toYear(2026),
@@ -55,7 +57,7 @@ const filledInRow = ({
       rowStateId: 'row-state-1500',
       suppliedFields
     },
-    entered: [1001, 1500, dateOfExport, 'Overseas Ltd'],
+    entered: [rowId, 1500, dateOfExport, 'Overseas Ltd'],
     previousYear: {
       ROW_ID: 1500,
       DATE_OF_EXPORT: previousYearDateOfExport,
@@ -103,6 +105,29 @@ describe('checkCrossYearRules', () => {
           expected: 2027,
           deadline: '2027-02-27',
           errorCode: VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR
+        }
+      }
+    ])
+  })
+
+  it('rejects a linked row with no row ID, without checking its dates', () => {
+    expect(
+      check([filledInRow({ rowId: null, dateOfExport: '2026-12-28' })])
+    ).toStrictEqual([
+      {
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        severity: VALIDATION_SEVERITY.FATAL,
+        message: 'Missing required field: ROW_ID',
+        code: VALIDATION_CODE.FIELD_REQUIRED,
+        context: {
+          location: {
+            sheet: 'Exported',
+            table: 'LOADS',
+            row: 8,
+            column: 'B',
+            header: 'ROW_ID'
+          },
+          actual: null
         }
       }
     ])

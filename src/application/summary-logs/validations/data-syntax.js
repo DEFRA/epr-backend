@@ -209,7 +209,7 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
  * @param {{
  *   tableName: string,
  *   rowNumber: number,
- *   rowId: string,
+ *   rowId: string | undefined,
  *   fieldName: string,
  *   colIndex: number | undefined,
  *   location: CellLocation
@@ -223,17 +223,19 @@ const buildCellLocation = ({
   fieldName,
   colIndex,
   location
-}) =>
-  location?.column && colIndex !== undefined
+}) => {
+  const identifiedBy = rowId === undefined ? {} : { rowId }
+  return location?.column && colIndex !== undefined
     ? {
         sheet: location.sheet,
         table: tableName,
         row: rowNumber,
-        rowId,
+        ...identifiedBy,
         column: offsetColumn(location.column, colIndex),
         header: fieldName
       }
-    : { table: tableName, rowId, header: fieldName }
+    : { table: tableName, ...identifiedBy, header: fieldName }
+}
 
 /**
  * Maps a row-classification issue from the validation pipeline into a
@@ -244,7 +246,7 @@ const buildCellLocation = ({
  *   classification: { outcome: RowOutcome },
  *   headerToIndexMap: Map<string, number>,
  *   rowObject: Record<string, unknown>,
- *   rowId: string,
+ *   rowId: string | undefined,
  *   tableName: string,
  *   rowNumber: number,
  *   location: CellLocation

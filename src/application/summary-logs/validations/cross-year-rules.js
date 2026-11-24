@@ -1,7 +1,10 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { BEFORE_SUMMARY_LOG_YEAR_ERROR } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import {
+  isFilled,
+  ROW_OUTCOME
+} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 import { buildHeaderToIndexMap, toApplicationIssue } from './data-syntax.js'
 
@@ -90,6 +93,24 @@ const checkTable = ({
     for (const [header, index] of headerToIndexMap) {
       rowObject[header] = values[index]
     }
+    const issueAt = {
+      headerToIndexMap,
+      rowObject,
+      tableName,
+      rowNumber,
+      location
+    }
+
+    if (!isFilled(rowObject[schema.rowIdField])) {
+      return [
+        toApplicationIssue({
+          issue: { code: 'MISSING_REQUIRED_FIELD', field: schema.rowIdField },
+          classification: { outcome: ROW_OUTCOME.REJECTED },
+          rowId: undefined,
+          ...issueAt
+        })
+      ]
+    }
     const rowId = toRowId(rowObject[schema.rowIdField])
 
     return earlierYearDatesOf({
@@ -108,12 +129,8 @@ const checkTable = ({
           deadline: detail.context?.deadline
         },
         classification: { outcome: ROW_OUTCOME.REJECTED },
-        headerToIndexMap,
-        rowObject,
         rowId,
-        tableName,
-        rowNumber,
-        location
+        ...issueAt
       })
     )
   })
