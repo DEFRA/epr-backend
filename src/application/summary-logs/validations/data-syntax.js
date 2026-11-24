@@ -161,7 +161,7 @@ const hasFatal = (issues) =>
  * @param {Array<string|null>} headers - Array of header names from the table
  * @returns {Map<string, number>} Map of header name to column index
  */
-const buildHeaderToIndexMap = (headers) => {
+export const buildHeaderToIndexMap = (headers) => {
   const headerToIndexMap = new Map()
 
   for (const [index, header] of headers.entries()) {
@@ -209,7 +209,7 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
  * @param {{
  *   tableName: string,
  *   rowNumber: number,
- *   rowId: string,
+ *   rowId?: string,
  *   fieldName: string,
  *   colIndex: number | undefined,
  *   location: CellLocation
@@ -223,17 +223,19 @@ const buildCellLocation = ({
   fieldName,
   colIndex,
   location
-}) =>
-  location?.column && colIndex !== undefined
+}) => {
+  const identifiedBy = rowId === undefined ? {} : { rowId }
+  return location?.column && colIndex !== undefined
     ? {
         sheet: location.sheet,
         table: tableName,
         row: rowNumber,
-        rowId,
+        ...identifiedBy,
         column: offsetColumn(location.column, colIndex),
         header: fieldName
       }
-    : { table: tableName, rowId, header: fieldName }
+    : { table: tableName, ...identifiedBy, header: fieldName }
+}
 
 /**
  * Maps a row-classification issue from the validation pipeline into a
@@ -244,14 +246,14 @@ const buildCellLocation = ({
  *   classification: { outcome: RowOutcome },
  *   headerToIndexMap: Map<string, number>,
  *   rowObject: Record<string, unknown>,
- *   rowId: string,
+ *   rowId?: string,
  *   tableName: string,
  *   rowNumber: number,
  *   location: CellLocation
  * }} params
  * @returns {ValidationIssue}
  */
-const toApplicationIssue = ({
+export const toApplicationIssue = ({
   issue,
   classification,
   headerToIndexMap,
@@ -373,15 +375,7 @@ const validateRows = ({
     const classification = classifyRow(
       rowObject,
       domainSchema,
-      linked
-        ? {
-            ...options,
-            linkedRow: {
-              suppliedFields: linked.link.suppliedFields,
-              previousYear: linked.previousYear
-            }
-          }
-        : options
+      linked ? { ...options, filledIn: true } : options
     )
     const rowId = toRowId(rowObject[domainSchema.rowIdField])
 
