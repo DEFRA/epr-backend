@@ -473,6 +473,36 @@ describe('2027 rows linked to a 2026 row', () => {
       expect((await getWasteBalance(env)).amount).toBe(0)
     })
 
+    it('does not credit a linked row exported before the 2026 accreditation started', async () => {
+      const env = await setup({
+        previousYearAccreditationValidFrom: '2026-12-29'
+      })
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log(EXPORTED_IN_DECEMBER_2026)
+      )
+
+      await submitted(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([linkedRow(RECEIVED_OVERSEAS_IN_2027)])
+      )
+
+      expect(
+        (await storedRow(env, ledgerIdOf(env), 'log-2027', '1001'))
+          ?.classification
+      ).toEqual(
+        expect.objectContaining({
+          outcome: 'IGNORED',
+          reasons: [{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }]
+        })
+      )
+      expect((await getWasteBalance(env)).amount).toBe(0)
+    })
+
     it('credits an unlinked 2027 row, uploaded once 2026 has closed, exported on a live day of the 2026 accreditation', async () => {
       afterThe2026CorrectionDeadline()
       const env = await setup()
