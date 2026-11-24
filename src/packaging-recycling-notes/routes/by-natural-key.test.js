@@ -316,6 +316,18 @@ describe('PRN routes by natural key', () => {
       )
     })
 
+    it('refuses to serve an obligation year the service holds no data for', async () => {
+      const response = await server.inject({ url: prns, ...asOperator() })
+      const resource = {
+        ...body(response).items[0],
+        obligation: { year: 2026, allowedYears: [1999, 2026] }
+      }
+
+      expect(prnSchema.validate(resource).error?.message).toBe(
+        '"obligation.allowedYears[0]" must be greater than or equal to 2024'
+      )
+    })
+
     it('refuses to serve the same obligation year twice', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
       const resource = {

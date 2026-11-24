@@ -212,14 +212,13 @@ export const prnSchema = Joi.object({
   tonnage: Joi.number().required(),
   processToBeUsed: Joi.string().required(),
   isDecemberWaste: Joi.boolean().required(),
-  obligationYear: Joi.number()
-    .integer()
+  obligationYear: yearSchema()
     .required()
     .description('Deprecated: use obligation.year'),
   obligation: Joi.object({
-    year: Joi.number().integer().required(),
+    year: yearSchema().required(),
     allowedYears: Joi.array()
-      .items(Joi.number().integer())
+      .items(yearSchema())
       .unique()
       .sort()
       .min(1)
