@@ -2,6 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 
 import {
+  acceptableObligationYears,
   InvalidObligationYearError,
   selectObligationYearForAcceptance
 } from './obligation-year.js'
@@ -11,40 +12,56 @@ const buildPrn = ({ isDecemberWaste }) => ({
   accreditation: { accreditationYear: toYear(2026) }
 })
 
-describe('selectObligationYearForAcceptance', () => {
-  it('leaves the obligation year unchanged when none is supplied', () => {
-    expect(
-      selectObligationYearForAcceptance(buildPrn({ isDecemberWaste: true }))
-    ).toBeUndefined()
+describe('obligation year', () => {
+  describe('acceptableObligationYears', () => {
+    it.for([
+      { isDecemberWaste: false, expected: [2026] },
+      { isDecemberWaste: true, expected: [2026, 2027] }
+    ])(
+      'offers $expected when december waste is $isDecemberWaste',
+      ({ isDecemberWaste, expected }) => {
+        expect(
+          acceptableObligationYears(buildPrn({ isDecemberWaste }))
+        ).toStrictEqual(expected)
+      }
+    )
   })
 
-  it('leaves the obligation year unchanged for a non-December PRN', () => {
-    expect(
-      selectObligationYearForAcceptance(
-        buildPrn({ isDecemberWaste: false }),
-        2027
-      )
-    ).toBeUndefined()
-  })
+  describe('selectObligationYearForAcceptance', () => {
+    it('leaves the obligation year unchanged when none is supplied', () => {
+      expect(
+        selectObligationYearForAcceptance(buildPrn({ isDecemberWaste: true }))
+      ).toBeUndefined()
+    })
 
-  it.each([2026, 2027])(
-    'allows a December PRN to use obligation year %i',
-    (obligationYear) => {
+    it('leaves the obligation year unchanged for a non-December PRN', () => {
       expect(
         selectObligationYearForAcceptance(
-          buildPrn({ isDecemberWaste: true }),
-          obligationYear
+          buildPrn({ isDecemberWaste: false }),
+          2027
         )
-      ).toBe(obligationYear)
-    }
-  )
+      ).toBeUndefined()
+    })
 
-  it('rejects any other obligation year for a December PRN', () => {
-    expect(() =>
-      selectObligationYearForAcceptance(
-        buildPrn({ isDecemberWaste: true }),
-        2028
-      )
-    ).toThrow(InvalidObligationYearError)
+    it.each([2026, 2027])(
+      'allows a December PRN to use obligation year %i',
+      (obligationYear) => {
+        expect(
+          selectObligationYearForAcceptance(
+            buildPrn({ isDecemberWaste: true }),
+            obligationYear
+          )
+        ).toBe(obligationYear)
+      }
+    )
+
+    it('rejects any other obligation year for a December PRN', () => {
+      expect(() =>
+        selectObligationYearForAcceptance(
+          buildPrn({ isDecemberWaste: true }),
+          2028
+        )
+      ).toThrow(InvalidObligationYearError)
+    })
   })
 })

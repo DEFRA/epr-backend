@@ -16,10 +16,25 @@ export class InvalidObligationYearError extends Error {
 }
 
 /**
+ * The obligation years a PRN can be accepted towards: its accreditation year,
+ * and for December waste the year after too.
+ *
+ * @param {{ isDecemberWaste: boolean, accreditation: { accreditationYear: Year } }} prn
+ * @returns {Year[]}
+ */
+export const acceptableObligationYears = ({
+  isDecemberWaste,
+  accreditation: { accreditationYear }
+}) =>
+  isDecemberWaste
+    ? [accreditationYear, nextYear(accreditationYear)]
+    : [accreditationYear]
+
+/**
  * Returns the obligation year to apply during acceptance. An omitted value and
  * any value supplied for a non-December PRN leave the stored value unchanged.
- * December PRNs may be accepted against their accreditation year or its
- * successor only.
+ * December PRNs may be accepted against one of their acceptable obligation
+ * years only.
  *
  * @param {{ isDecemberWaste: boolean, accreditation: { accreditationYear: Year } }} prn
  * @param {number} [providedObligationYear]
@@ -33,15 +48,13 @@ export const selectObligationYearForAcceptance = (
     return undefined
   }
 
-  const { accreditationYear } = prn.accreditation
-  const allowedObligationYear = [
-    accreditationYear,
-    nextYear(accreditationYear)
-  ].find((year) => year === providedObligationYear)
+  const allowedObligationYear = acceptableObligationYears(prn).find(
+    (year) => year === providedObligationYear
+  )
 
   if (!allowedObligationYear) {
     throw new InvalidObligationYearError(
-      accreditationYear,
+      prn.accreditation.accreditationYear,
       providedObligationYear
     )
   }
