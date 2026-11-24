@@ -1,6 +1,16 @@
 import { nextYear } from '#common/helpers/dates/year.js'
 
-/** @import { Year } from '#common/helpers/dates/year.js' */
+/**
+ * @import { Year } from '#common/helpers/dates/year.js'
+ * @import { AccreditationSnapshot, PackagingRecyclingNote } from './model.js'
+ */
+
+/**
+ * The parts of a PRN its obligation year rules read.
+ * @typedef {Pick<PackagingRecyclingNote, 'isDecemberWaste'> & {
+ *   accreditation: Pick<AccreditationSnapshot, 'accreditationYear'>
+ * }} ObligationYearPrn
+ */
 
 export class InvalidObligationYearError extends Error {
   /**
@@ -19,7 +29,7 @@ export class InvalidObligationYearError extends Error {
  * The obligation years a PRN can be accepted towards: its accreditation year,
  * and for December waste the year after too.
  *
- * @param {{ isDecemberWaste: boolean, accreditation: { accreditationYear: Year } }} prn
+ * @param {ObligationYearPrn} prn
  * @returns {Year[]}
  */
 export const allowedObligationYears = ({
@@ -36,7 +46,7 @@ export const allowedObligationYears = ({
  * December PRNs may be accepted against one of their allowed obligation
  * years only.
  *
- * @param {{ isDecemberWaste: boolean, accreditation: { accreditationYear: Year } }} prn
+ * @param {ObligationYearPrn} prn
  * @param {number} [providedObligationYear]
  * @returns {Year | undefined}
  */
