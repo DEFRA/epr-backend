@@ -1,4 +1,7 @@
-import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/index.js'
+import {
+  findSchemaByWasteRecordType,
+  linksYears
+} from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
@@ -59,8 +62,11 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  */
 export const classifyRecordForWasteBalance = (
   record,
-  { tableSchemas, ...context }
+  { tableSchemas, previousYearAccreditation, ...currentYear }
 ) => {
+  const context = linksYears(tableSchemas)
+    ? { ...currentYear, previousYearAccreditation }
+    : currentYear
   const schema = findSchemaByWasteRecordType(record.type, tableSchemas)?.schema
 
   if (!context.accreditation || !schema?.classifyForWasteBalance) {

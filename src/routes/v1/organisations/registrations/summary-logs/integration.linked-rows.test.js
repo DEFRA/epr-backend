@@ -183,6 +183,33 @@ const submitted = async (env, year, summaryLogId, parsed) => {
   )
 }
 
+/**
+ * Each exported row's ID and waste balance cells, read through the
+ * registration's waste-records export.
+ *
+ * @param {Awaited<ReturnType<typeof setupWasteBalanceIntegrationEnvironment>>} env
+ * @param {import('#common/helpers/dates/year.js').Year} year
+ */
+const exportedBalanceCells = async (env, year) => {
+  const response = await env.server.inject({
+    method: 'GET',
+    url: `/organisations/${env.organisationNumber}/registrations/${env.registrationNumber}/waste-records/export.csv?year=${year}`,
+    ...asServiceMaintainer()
+  })
+  expect(response.statusCode).toBe(StatusCodes.OK)
+  const [header, ...rows] = response.payload
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => line.split(','))
+  const columns = [
+    'Row ID',
+    'Included in Waste Balance',
+    'Waste Balance Tonnage',
+    'Waste Balance Exclusion Reason'
+  ].map((name) => header.indexOf(name))
+  return rows.map((cells) => columns.map((column) => cells[column]))
+}
+
 const storedRow = async (env, ledgerId, summaryLogId, rowId) => {
   const rows =
     await env.summaryLogRowStatesRepository.findWasteRecordStatesForSummaryLog(
@@ -471,31 +498,11 @@ describe('2027 rows linked to a 2026 row', () => {
       it('the waste records export, as counting towards 2027 and not 2026', async () => {
         const env = await submittedAcrossTheYearEnd()
 
-        /** @param {import('#common/helpers/dates/year.js').Year} year */
-        const exportedBalanceCells = async (year) => {
-          const response = await env.server.inject({
-            method: 'GET',
-            url: `/organisations/${env.organisationNumber}/registrations/${env.registrationNumber}/waste-records/export.csv?year=${year}`,
-            ...asServiceMaintainer()
-          })
-          expect(response.statusCode).toBe(StatusCodes.OK)
-          const [header, ...rows] = response.payload
-            .split('\n')
-            .filter((line) => line !== '')
-            .map((line) => line.split(','))
-          const columns = [
-            'Row ID',
-            'Included in Waste Balance',
-            'Waste Balance Tonnage'
-          ].map((name) => header.indexOf(name))
-          return rows.map((cells) => columns.map((column) => cells[column]))
-        }
-
-        expect(await exportedBalanceCells(YEAR)).toEqual([
-          ['1001', 'true', '25']
+        expect(await exportedBalanceCells(env, YEAR)).toEqual([
+          ['1001', 'true', '25', '']
         ])
-        expect(await exportedBalanceCells(PREVIOUS_YEAR)).toEqual([
-          ['1500', 'false', '']
+        expect(await exportedBalanceCells(env, PREVIOUS_YEAR)).toEqual([
+          ['1500', 'false', '', 'MISSING_REQUIRED_FIELD: DATE_RECEIVED_BY_OSR']
         ])
       })
 
@@ -808,6 +815,34 @@ describe('2027 rows linked to a 2026 row', () => {
         })
       )
       expect((await getWasteBalance(env)).amount).toBe(0)
+    })
+  })
+
+  describe('an accredited exporter also accredited in 2025, on the 2026 template', () => {
+    it('does not credit a 2026 row exported in 2025, at submission or in the waste records export', async () => {
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter',
+        year: PREVIOUS_YEAR,
+        previousYearAccreditationNumber: toAccreditationNumber('ACC-121')
+      })
+
+      await submitted(env, PREVIOUS_YEAR, 'log-2026', {
+        meta: createWasteBalanceMeta('EXPORTER'),
+        data: accredited2026Log({
+          ...EXPORTED_IN_JANUARY_2027,
+          dateReceived: '2025-12-10T00:00:00.000Z',
+          exportDate: '2025-12-28',
+          dateReceivedByOsr: '2026-01-06'
+        }).data
+      })
+
+      expect(
+        (await storedRow(env, ledgerIdOf(env), 'log-2026', '1500'))
+          ?.classification.reasons
+      ).toEqual([{ code: 'OUTSIDE_ACCREDITATION_PERIOD' }])
+      expect(await exportedBalanceCells(env, PREVIOUS_YEAR)).toEqual([
+        ['1500', 'false', '', 'OUTSIDE_ACCREDITATION_PERIOD']
+      ])
     })
   })
 
