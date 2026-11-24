@@ -235,6 +235,36 @@ describe('summary-log row states repository - mongodb implementation', () => {
     testSummaryLogRowStatesRepositoryContract(it)
   })
 
+  it('stores an unlinked row under the content hash it had before rows could link years', async (/** @type {*} */ {
+    summaryLogRowStatesRepository,
+    summaryLogRowStatesCollection
+  }) => {
+    await summaryLogRowStatesRepository().upsertSummaryLogRowStates(
+      DEFAULT_LEDGER_ID,
+      [
+        {
+          rowId: 'row-1',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+          data: { supplierName: 'Acme', tonnage: 10 },
+          classification: {
+            outcome: ROW_OUTCOME.INCLUDED,
+            reasons: [],
+            transactionAmount: 10
+          }
+        }
+      ],
+      'log-1'
+    )
+
+    const [{ contentHash }] = await summaryLogRowStatesCollection
+      .find({ organisationNumber: DEFAULT_LEDGER_ID.organisationNumber })
+      .toArray()
+    expect(contentHash).toBe(
+      'eb6964da314dd5c7f7b60e5b5af8c2ef4b197a0bfc92a13811deda1c7d8ea622'
+    )
+  })
+
   describe('concurrent same-ledger writes', () => {
     const CONCURRENT_WRITERS = 20
 

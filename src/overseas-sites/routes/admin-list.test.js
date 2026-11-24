@@ -4,6 +4,7 @@ import Boom from '@hapi/boom'
 import {
   createInMemoryOrganisationReadRepository,
   accreditationsByYear,
+  approvedStatusFrom,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
@@ -15,7 +16,10 @@ import { asServiceMaintainer, asOperator } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminOverseasSitesListPath } from './admin-list.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
 
+const YEAR = toYear(2026)
+const NEXT_YEAR = toYear(2027)
 const ALPHA_REGISTRATION = toRegistrationNumber('R26EX5001180042PL')
 const BETA_REGISTRATION = toRegistrationNumber('R26EX5001180043PL')
 const REPROCESSOR_REGISTRATION = toRegistrationNumber('R26ER5001180044PL')
@@ -129,10 +133,10 @@ const serverOver = (organisationReadRepository) =>
 const serverWith = (organisations) =>
   serverOver(createInMemoryOrganisationReadRepository(organisations))
 
-const list = (server, query = '') =>
+const list = (server, query = '', year = YEAR) =>
   server.inject({
     method: 'GET',
-    url: `${adminOverseasSitesListPath}${query}`,
+    url: `${adminOverseasSitesListPath}?year=${year}${query}`,
     ...asServiceMaintainer()
   })
 
@@ -162,7 +166,7 @@ describe(`${adminOverseasSitesListPath} route`, () => {
       await server.stop()
     })
 
-    it("returns a row per exporter overseas site, sorted by ORS id, with this year's accreditation number", async () => {
+    it("returns a row per exporter overseas site, sorted by ORS id, with the year's accreditation number", async () => {
       const response = await list(server)
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -180,7 +184,7 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     })
 
     it('returns paginated rows and metadata when page and pageSize are provided', async () => {
-      const response = await list(server, '?page=2&pageSize=1')
+      const response = await list(server, '&page=2&pageSize=1')
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
@@ -198,7 +202,7 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     it('filters by registrationNumber, ignoring case, before pagination is applied', async () => {
       const response = await list(
         server,
-        `?registrationNumber=${ALPHA_REGISTRATION.toLowerCase()}&page=2&pageSize=1`
+        `&registrationNumber=${ALPHA_REGISTRATION.toLowerCase()}&page=2&pageSize=1`
       )
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -216,14 +220,14 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     })
 
     it('treats a blank registrationNumber filter as no filter', async () => {
-      const response = await list(server, '?registrationNumber=%20%20')
+      const response = await list(server, '&registrationNumber=%20%20')
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload).pagination.totalItems).toBe(3)
     })
 
     it('returns an empty page when the requested page is beyond totalPages', async () => {
-      const response = await list(server, '?page=999&pageSize=1')
+      const response = await list(server, '&page=999&pageSize=1')
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
@@ -239,7 +243,7 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     })
 
     it('returns all rows when all=true is provided', async () => {
-      const response = await list(server, '?all=true&page=2&pageSize=1')
+      const response = await list(server, '&all=true&page=2&pageSize=1')
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       const body = JSON.parse(response.payload)
@@ -278,11 +282,55 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     })
   })
 
-  it('gives no accreditation number when the exporter holds none for the current year', async () => {
+  describe('for an exporter accredited in 2026 and 2027', () => {
+    const NEXT_YEAR_ACCREDITATION_NUMBER = nextReadAccreditationNumber()
+    const twoYearOrganisation = buildReadOrganisation({
+      registrations: {
+        [ALPHA_REGISTRATION]: buildReadExporterRegistration({
+          accreditations: accreditationsByYear(
+            buildReadExporterAccreditation({
+              accreditationNumber: ACCREDITATION_NUMBER
+            }),
+            buildReadExporterAccreditation({
+              accreditationNumber: NEXT_YEAR_ACCREDITATION_NUMBER,
+              year: NEXT_YEAR
+            })
+          ),
+          overseasSites: { '001': fullSite }
+        })
+      }
+    })
+
+    beforeEach(() => {
+      vi.setSystemTime(new Date('2027-03-01T12:00:00.000Z'))
+    })
+
+    it.for([
+      { year: YEAR, accreditationNumber: ACCREDITATION_NUMBER },
+      { year: NEXT_YEAR, accreditationNumber: NEXT_YEAR_ACCREDITATION_NUMBER }
+    ])(
+      'gives the $year accreditation number when asked for that year',
+      async ({ year, accreditationNumber }) => {
+        const server = await serverWith([twoYearOrganisation])
+
+        const response = await list(server, '', year)
+
+        await server.stop()
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(
+          JSON.parse(response.payload).rows.map(
+            (row) => row.accreditationNumber
+          )
+        ).toStrictEqual([accreditationNumber])
+      }
+    )
+  })
+
+  it('gives no accreditation number when the exporter holds none for the year', async () => {
     vi.setSystemTime(new Date('2027-03-01T12:00:00.000Z'))
     const server = await serverWith([accreditedOrganisation])
 
-    const response = await list(server)
+    const response = await list(server, '', NEXT_YEAR)
 
     await server.stop()
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -291,10 +339,57 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     ).toStrictEqual([null, null])
   })
 
+  it('leaves out a registration not approved in the year asked for', async () => {
+    const nextYearOrganisation = buildReadOrganisation({
+      registrations: {
+        [BETA_REGISTRATION]: buildReadExporterRegistration({
+          status: approvedStatusFrom('2027-02-01'),
+          overseasSites: { '003': thirdSite }
+        })
+      }
+    })
+    const server = await serverWith([
+      accreditedOrganisation,
+      nextYearOrganisation
+    ])
+
+    const response = await list(server)
+
+    await server.stop()
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).rows).toStrictEqual([
+      fullRow,
+      minimalRow
+    ])
+  })
+
+  it.for([
+    ['no year', adminOverseasSitesListPath],
+    ['a year that is not a number', `${adminOverseasSitesListPath}?year=last`],
+    [
+      'a year before the service holds data',
+      `${adminOverseasSitesListPath}?year=2023`
+    ],
+    ['a year not yet open', `${adminOverseasSitesListPath}?year=2099`]
+  ])('refuses %s', async ([, url]) => {
+    const findAll = vi.fn().mockResolvedValue([])
+    const server = await serverOver(() => ({ findAll }))
+
+    const response = await server.inject({
+      method: 'GET',
+      url,
+      ...asServiceMaintainer()
+    })
+
+    await server.stop()
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    expect(findAll).not.toHaveBeenCalled()
+  })
+
   it('returns the default empty page size when all=true and there are no rows', async () => {
     const server = await serverWith([])
 
-    const response = await list(server, '?all=true')
+    const response = await list(server, '&all=true')
 
     await server.stop()
     expect(response.statusCode).toBe(StatusCodes.OK)
@@ -334,12 +429,12 @@ describe(`${adminOverseasSitesListPath} route`, () => {
   })
 
   it.each([
-    '?page=0',
-    '?page=1.5',
-    '?pageSize=0',
-    '?pageSize=201',
-    '?pageSize=1.5',
-    '?all=maybe'
+    '&page=0',
+    '&page=1.5',
+    '&pageSize=0',
+    '&pageSize=201',
+    '&pageSize=1.5',
+    '&all=maybe'
   ])('returns 422 for invalid query %s', async (query) => {
     const server = await createTestServer({})
 

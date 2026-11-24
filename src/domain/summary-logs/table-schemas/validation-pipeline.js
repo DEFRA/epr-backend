@@ -1,4 +1,5 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 import {
   CLASSIFICATION_REASON,
   ORS_VALIDATION_DISABLED
@@ -13,7 +14,11 @@ import {
 
 /**
  * What classifying a row reads of its accreditation: null when there is none.
- * @typedef {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} ClassificationContext
+ * @typedef {{
+ *   accreditation: AccreditationValidity | null,
+ *   overseasSites: OverseasSitesContext,
+ *   previousYearAccreditation?: AccreditationValidity | null
+ * }} ClassificationContext
  */
 
 /**
@@ -141,18 +146,29 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear?: Year }} RowValidationOptions
- * Omitted, as when exporting stored rows, means dates are not checked against
- * the summary log year.
+ * @typedef {{ summaryLogYear: Year, createdAt: Date, registeredOnly: boolean }} SummaryLogValidationOptions
  */
 
 /**
- * @typedef {Required<RowValidationOptions>} SummaryLogValidationOptions
+ * @typedef {{ summaryLogYear?: undefined, filledIn?: undefined } | (SummaryLogValidationOptions & { filledIn?: true })} RowValidationOptions
+ * The Joi context a row is validated in. Without a summary log, as when
+ * exporting stored rows, dates are not checked against its year. `filledIn`
+ * marks a row filled in from a previous-year row (ADR-0060).
  */
+
+/**
+ * The Joi context a field or row rule runs in.
+ *
+ * @param {import('joi').CustomHelpers} helpers
+ * @returns {RowValidationOptions}
+ */
+export const rowValidationOptionsOf = (helpers) =>
+  // Joi types its context as an open record; the validators below set it.
+  /** @type {RowValidationOptions} */ (helpers.prefs.context ?? {})
 
 /**
  * Issue from validation pipeline when a field fails schema validation (VAL010)
- * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string, expected?: unknown }} ValidationErrorIssue
+ * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string, expected?: unknown, deadline?: CalendarDate }} ValidationErrorIssue
  */
 
 /**
@@ -164,6 +180,29 @@ export const coerceRowData = (
  * Union of all issue types from the validation pipeline
  * @typedef {ValidationErrorIssue | MissingFieldIssue} RowClassificationIssue
  */
+
+/**
+ * @param {import('joi').ValidationErrorItem} detail
+ * @param {string | number | undefined} [field] - Defaults to the detail's own
+ *   field: path[0] for a field-level validator, context.field for an
+ *   object-level one such as a calculation check
+ * @returns {ValidationErrorIssue}
+ */
+export const toValidationErrorIssue = (
+  detail,
+  field = detail.path[0] ?? detail.context?.field
+) => ({
+  code: 'VALIDATION_ERROR',
+  field,
+  message: detail.message,
+  type: detail.type,
+  ...(detail.context?.expected !== undefined && {
+    expected: detail.context.expected
+  }),
+  ...(detail.context?.deadline !== undefined && {
+    deadline: detail.context.deadline
+  })
+})
 
 /**
  * Maps a classifyForWasteBalance result to a classifyRow result.
@@ -229,7 +268,7 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Record<string, readonly string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance | null} [tableSchema.classifyForWasteBalance] - Waste balance classifier
- * @param {SummaryLogValidationOptions} options
+ * @param {SummaryLogValidationOptions & { filledIn?: true }} options
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[], data: Record<string, any> }}
  */
 export const classifyRow = (row, tableSchema, options) => {
@@ -241,18 +280,7 @@ export const classifyRow = (row, tableSchema, options) => {
   if (error) {
     return {
       outcome: ROW_OUTCOME.REJECTED,
-      issues: error.details.map((detail) => ({
-        code: 'VALIDATION_ERROR',
-        // For field-level validators, path[0] contains the field name
-        // For object-level custom validators (e.g., calculation checks),
-        // path is empty but field is passed via context.field
-        field: detail.path[0] ?? detail.context?.field,
-        message: detail.message,
-        type: detail.type, // Include Joi error type for application-layer mapping
-        ...(detail.context?.expected !== undefined && {
-          expected: detail.context.expected
-        })
-      })),
+      issues: error.details.map((detail) => toValidationErrorIssue(detail)),
       data
     }
   }

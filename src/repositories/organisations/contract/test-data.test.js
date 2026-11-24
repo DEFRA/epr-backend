@@ -53,13 +53,11 @@ describe('test-data', () => {
       const builders = createOrganisationBuilders()
       const draws = [
         () => builders.buildOrganisation().organisationNumber,
-        (/** @type {number} */ index) =>
-          builders.buildOrgWithName(`Org ${index}`).organisationNumber,
         () => builders.nextOrganisationNumber()
       ]
 
       const numbers = Array.from({ length: 999 }, (_, index) =>
-        draws[index % draws.length](index)
+        draws[index % draws.length]()
       )
 
       expect(new Set(numbers).size).toBe(numbers.length)

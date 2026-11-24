@@ -33,7 +33,7 @@ import { getCurrentStatus } from './status.js'
 /** @import { StoredLinkedDefraOrganisation, Organisation, StoredOrganisationStatus } from '#domain/organisations/model.js' */
 /** @import { StatusTransitionAsserter } from '#domain/organisations/status.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
-/** @import { OrganisationReplacement, SearchCriteria } from './administration-port.js' */
+/** @import { OrganisationReplacement } from './administration-port.js' */
 
 /**
  * A status history entry as it reaches the repository: stored entries carry a
@@ -408,31 +408,6 @@ export const escapeRegex = (string) =>
  * @typedef {Omit<Organisation, 'id'|'status'|'organisationNumber'> & { _id: string, orgId: number }} StoredOrganisation
  */
 
-const INTEGER_PATTERN = /^\d+$/
-
-/**
- * @param {SearchCriteria} criteria
- * @returns {Required<SearchCriteria>} - every criterion trimmed, absent ones as ''
- */
-export const normaliseCriteria = ({
-  search,
-  organisationNumber,
-  registrationNumber,
-  accreditationNumber
-}) => ({
-  search: (search ?? '').trim(),
-  organisationNumber: (organisationNumber ?? '').trim(),
-  registrationNumber: (registrationNumber ?? '').trim(),
-  accreditationNumber: (accreditationNumber ?? '').trim()
-})
-
-/**
- * @param {string} value
- * @returns {number | null} - the stored orgId, or null when the value is not a number
- */
-export const parseOrgIdCriterion = (value) =>
-  INTEGER_PATTERN.test(value) ? Number(value) : null
-
 /**
  * The orgId an organisation is stored under.
  *
@@ -475,13 +450,3 @@ export const toStoredFields = ({ organisationNumber, ...rest }) =>
   organisationNumber === undefined
     ? rest
     : { ...rest, orgId: storedOrgId(organisationNumber) }
-
-/**
- * The pattern both adapters match numbers with: the whole value, escaped.
- * Each adapter turns this into its own form — a Mongo `$regex` fragment or a
- * JavaScript RegExp — so the matching semantics stay defined in one place.
- *
- * @param {string} value
- * @returns {string}
- */
-export const anchoredPattern = (value) => `^${escapeRegex(value)}$`

@@ -46,7 +46,33 @@ import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/index.js'
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {OverseasSitesContext} from '../validation-pipeline.js' */
+/** @import {ClassificationContext} from '../validation-pipeline.js' */
+
+/**
+ * @param {Date | string} date
+ * @param {AccreditationValidity | null} accreditation
+ */
+const isLiveOn = (date, accreditation) =>
+  accreditation !== null && isAccreditedAtDates([date], accreditation)
+
+/**
+ * Each accreditation is live only within its own year, so an export date live
+ * under either one is live under the accreditation of its year. A null
+ * accreditation skips the check, as the validation pipeline's does.
+ *
+ * @param {Record<string, any>} data
+ * @param {ClassificationContext} context
+ */
+const isOutsideItsAccreditations = (
+  data,
+  { accreditation, previousYearAccreditation = null }
+) =>
+  accreditation !== null &&
+  !(
+    isLiveOn(data[FIELDS.DATE_RECEIVED_BY_OSR], accreditation) &&
+    (isLiveOn(data[FIELDS.DATE_OF_EXPORT], accreditation) ||
+      isLiveOn(data[FIELDS.DATE_OF_EXPORT], previousYearAccreditation))
+  )
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).
@@ -189,7 +215,9 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
     ).optional(),
-    [FIELDS.DATE_RECEIVED_FOR_EXPORT]: createDateFieldSchema(),
+    [FIELDS.DATE_RECEIVED_FOR_EXPORT]: createDateFieldSchema({
+      rejectOpenEarlierYear: true
+    }),
     [FIELDS.EWC_CODE]: createEnumFieldSchema(
       EWC_CODES,
       MESSAGES.MUST_BE_VALID_EWC_CODE
@@ -212,16 +240,21 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
     [FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]: createWeightFieldSchema(),
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: createWeightFieldSchema(),
-    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema(),
+    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema({
+      rejectOpenEarlierYear: true
+    }),
     [FIELDS.BASEL_EXPORT_CODE]: createEnumFieldSchema(
       BASEL_CODES,
       MESSAGES.MUST_BE_VALID_BASEL_CODE
     ),
     [FIELDS.CUSTOMS_CODES]: createFreeTextFieldSchema(),
     [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema(),
-    [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema(),
-    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]:
-      createDateFieldSchema(),
+    [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema({
+      rejectOpenEarlierYear: true
+    }),
+    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]: createDateFieldSchema({
+      rejectOpenEarlierYear: true
+    }),
     [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
     [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: createYesNoFieldSchema(),
     [FIELDS.INTERIM_SITE_ID]: createThreeDigitIdSchema(),
@@ -243,11 +276,9 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} */ {
-      accreditation,
-      overseasSites
-    }
+    /** @type {ClassificationContext} */ context
   ) => {
+    const { overseasSites } = context
     const missingResult = checkRequiredFields(
       data,
       WASTE_BALANCE_CONTENT_FIELDS,
@@ -257,12 +288,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       return missingResult
     }
 
-    if (
-      !isAccreditedAtDates(
-        [data[FIELDS.DATE_OF_EXPORT], data[FIELDS.DATE_RECEIVED_BY_OSR]],
-        accreditation
-      )
-    ) {
+    if (isOutsideItsAccreditations(data, context)) {
       return {
         outcome: ROW_OUTCOME.IGNORED,
         reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
@@ -336,7 +362,34 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
 export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
   ...RECEIVED_LOADS_FOR_EXPORT,
-  previousYearRowIdField: RECEIVED_LOADS_FIELDS_2027.PREVIOUS_YEAR_ROW_ID,
+  linking: {
+    previousYearRowIdField: RECEIVED_LOADS_FIELDS_2027.PREVIOUS_YEAR_ROW_ID,
+    // The whole export group, not only the date of export: a load received
+    // for export in one year can be exported in the next.
+    suppliableOnLinkedRow: [
+      FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED,
+      FIELDS.DATE_OF_EXPORT,
+      FIELDS.BASEL_EXPORT_CODE,
+      FIELDS.CUSTOMS_CODES,
+      FIELDS.CONTAINER_NUMBER,
+      FIELDS.DATE_RECEIVED_BY_OSR,
+      FIELDS.OSR_ID,
+      FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE,
+      FIELDS.INTERIM_SITE_ID,
+      FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR,
+      FIELDS.EXPORT_CONTROLS,
+      RECEIVED_LOADS_FIELDS_2027.EXIT_PORT,
+      RECEIVED_LOADS_FIELDS_2027.DWT_EXPORT_ID,
+      FIELDS.WAS_THE_WASTE_REFUSED,
+      FIELDS.WAS_THE_WASTE_STOPPED,
+      FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED,
+      FIELDS.OSR_NAME,
+      FIELDS.OSR_COUNTRY,
+      FIELDS.TONNAGE_RECEIVED_BY_OSR,
+      FIELDS.BILL_OF_LANDING_REFERENCE_NUMBER,
+      FIELDS.CUSTOMS_DECLARATION_NUMBER
+    ]
+  },
   requiredHeaders: [
     ...RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
     ...Object.values(RECEIVED_LOADS_FIELDS_2027)

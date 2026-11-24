@@ -14,10 +14,14 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  REGISTERED_ONLY_PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { summaryLogContextOf } from './classification-context.js'
+import { fillInLinkedRows } from './fill-in-linked-rows.js'
 import {
   classifyLoads,
   fetchPeriodicReports,
@@ -25,6 +29,7 @@ import {
 } from './classify-and-persist.js'
 import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
+import { checkCrossYearRules } from './validations/cross-year-rules.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
@@ -55,7 +60,8 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {LoadsByReportingPeriod} from '#domain/summary-logs/loads-by-period-status-schema.js' */
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
-/** @import {PreviousYearSubmission, SummaryLogContext} from './classification-context.js' */
+/** @import {SummaryLogContext} from './classification-context.js' */
+/** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {SummaryLogCommit} from '#domain/summary-logs/commit.js' */
 
 /**
@@ -129,7 +135,6 @@ const fetchRegistration = async ({
  * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  * @property {SummaryLogRegistration} [registration] - Registration fetched during validation
  * @property {SummaryLogContext} [classificationContext] - What the rows are read against, once meta syntax has chosen the template and the registration is read
- * @property {PreviousYearSubmission | null} [previousYearSubmission] - The previous-year submission the context was read from, for a template that links years
  */
 
 /**
@@ -181,14 +186,14 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
 
 const markIgnoredByDateRange = (
   /** @type ValidatedWasteRecord[] */ wasteRecords,
-  /** @type {RowClassificationContext} */ { tableSchemas, accreditation }
+  /** @type {RowClassificationContext} */ { tableSchemas, ...context }
 ) => {
   for (const wasteRecord of wasteRecords) {
     const schema = tableSchemas[wasteRecord.tableName]
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation,
+      ...context,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
@@ -257,6 +262,17 @@ const performValidationChecks = async (params) => {
  */
 
 /**
+ * @param {SubmittedSummaryLog} summaryLog
+ * @param {ExtractedMeta} meta
+ * @returns {SummaryLogValidationOptions}
+ */
+const validationOptionsOf = (summaryLog, meta) => ({
+  summaryLogYear: summaryLog.year,
+  createdAt: new Date(summaryLog.createdAt),
+  registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE)
+})
+
+/**
  * Runs the checks in order, recording each step's outcome on `result` as it
  * goes, and stops at the first fatal issue.
  *
@@ -308,19 +324,27 @@ const runValidationChecks = async (
     })
   const { tableSchemas } = classificationContext
   result.classificationContext = classificationContext
-  result.previousYearSubmission = previousYearSubmission
   issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
   if (issues.isFatal()) {
     return
   }
 
+  const filledIn = await fillInLinkedRows({
+    parsed,
+    tableSchemas,
+    previousYearSubmission,
+    summaryLogRowStatesRepository
+  })
+
+  const options = validationOptionsOf(summaryLog, meta)
   // Data syntax validation returns validated data with issues attached to rows
   const { issues: dataSyntaxIssues, validatedData } = createDataSyntaxValidator(
     tableSchemas,
-    { summaryLogYear: summaryLog.year }
-  )(parsed)
+    options
+  )(filledIn)
   issues.merge(dataSyntaxIssues)
+  issues.merge(checkCrossYearRules({ parsed: filledIn, tableSchemas, options }))
 
   if (issues.isFatal()) {
     return
@@ -356,6 +380,12 @@ const assertValidatingStatus = (result, summaryLogId) => {
   if (result.summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATING) {
     throw new PermanentError(
       `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
+    )
+  }
+
+  if (!result.summaryLog.createdAt) {
+    throw new PermanentError(
+      `Summary log has no createdAt: summaryLogId=${summaryLogId}`
     )
   }
 

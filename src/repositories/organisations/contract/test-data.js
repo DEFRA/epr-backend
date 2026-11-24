@@ -166,39 +166,6 @@ const buildNumberedOrganisation = (organisationNumber, overrides = {}) => {
 }
 
 /**
- * Gives the organisation the given company name, its first registration the
- * given registration number and its first accreditation the given
- * accreditation number, so the registration/accreditation links stay intact.
- *
- * @param {Omit<Organisation, 'status'>} base
- * @param {{ name: string, registrationNumber?: string, accreditationNumber?: string }} criteria
- * @returns {Omit<Organisation, 'status'>}
- */
-const withCriteria = (
-  base,
-  { name, registrationNumber, accreditationNumber }
-) => ({
-  ...base,
-  companyDetails: { ...base.companyDetails, name },
-  registrations: base.registrations.map((registration, index) =>
-    index === 0 && registrationNumber !== undefined
-      ? {
-          ...registration,
-          registrationNumber: toRegistrationNumber(registrationNumber)
-        }
-      : registration
-  ),
-  accreditations: base.accreditations.map((accreditation, index) =>
-    index === 0 && accreditationNumber !== undefined
-      ? {
-          ...accreditation,
-          accreditationNumber: toAccreditationNumber(accreditationNumber)
-        }
-      : accreditation
-  )
-})
-
-/**
  * Adds the computed top-level and nested 'status' fields the read path
  * derives from statusHistory.
  *
@@ -262,39 +229,6 @@ export const createOrganisationBuilders = () => {
   /** @returns {Omit<Organisation, 'status'>} */
   const buildOrganisation = (overrides = {}) =>
     buildNumberedOrganisation(nextOrganisationNumber(), overrides)
-
-  /**
-   * Builds an organisation with a known company name.
-   *
-   * @param {string} name
-   */
-  const buildOrgWithName = (name) => withCriteria(buildOrganisation(), { name })
-
-  /**
-   * Builds an organisation carrying known search criteria. Everything else is
-   * left as buildOrganisation makes it.
-   *
-   * @param {{
-   *   name?: string,
-   *   organisationNumber?: OrganisationNumber,
-   *   registrationNumber?: string,
-   *   accreditationNumber?: string
-   * }} [criteria]
-   */
-  const buildOrgWithCriteria = ({
-    name = 'Criteria Ltd',
-    organisationNumber,
-    ...numbers
-  } = {}) =>
-    withCriteria(
-      buildOrganisation(
-        organisationNumber === undefined ? {} : { organisationNumber }
-      ),
-      {
-        name,
-        ...numbers
-      }
-    )
 
   /**
    * Builds an organisation as returned from a repository read. Use this for
@@ -367,8 +301,6 @@ export const createOrganisationBuilders = () => {
     nextOrganisationNumber,
     buildOrganisation,
     buildOrganisationHolding,
-    buildOrgWithName,
-    buildOrgWithCriteria,
     buildReadOrganisation,
     buildOrganisationWithRegistration
   }

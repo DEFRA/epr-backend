@@ -14,4 +14,5 @@ export const WASTE_RECORD_TYPE = Object.freeze({
  * @property {string} rowId - The waste record row identifier
  * @property {WasteRecordType} type
  * @property {Object} data - Reporting fields only
+ * @property {import('#waste-records/repository/schema.js').RowStateLink} [link] - Where a linked row was filled in from (ADR-0060)
  */

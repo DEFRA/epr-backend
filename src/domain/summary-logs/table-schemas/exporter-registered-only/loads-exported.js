@@ -60,7 +60,9 @@ export const LOADS_EXPORTED = {
     [FIELDS.ROW_ID]: createRowIdSchema(ROW_ID_MINIMUMS.LOADS_EXPORTED),
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]:
       createUnboundedWeightFieldSchema(),
-    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema(),
+    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema({
+      rejectOpenEarlierYear: true
+    }),
     [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
     [FIELDS.BASEL_EXPORT_CODE]: createEnumFieldSchema(
       BASEL_CODES,
@@ -68,8 +70,9 @@ export const LOADS_EXPORTED = {
     ),
     [FIELDS.WAS_THE_WASTE_REFUSED]: createYesNoFieldSchema(),
     [FIELDS.WAS_THE_WASTE_STOPPED]: createYesNoFieldSchema(),
-    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]:
-      createDateFieldSchema(),
+    [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]: createDateFieldSchema({
+      rejectOpenEarlierYear: true
+    }),
     [FIELDS.CUSTOMS_CODES]: createFreeTextFieldSchema(),
     [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema()
   })
@@ -79,7 +82,14 @@ export const LOADS_EXPORTED = {
 
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
-  previousYearRowIdField: LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID,
+  linking: {
+    previousYearRowIdField: LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID,
+    suppliableOnLinkedRow: [
+      FIELDS.WAS_THE_WASTE_REFUSED,
+      FIELDS.WAS_THE_WASTE_STOPPED,
+      FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
+    ]
+  },
   requiredHeaders: [
     ...LOADS_EXPORTED.requiredHeaders,
     ...Object.values(LOADS_EXPORTED_FIELDS_2027)

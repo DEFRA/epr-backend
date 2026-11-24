@@ -70,7 +70,9 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
     ),
-    [FIELDS.MONTH_RECEIVED_FOR_EXPORT]: createFirstOfMonthFieldSchema(),
+    [FIELDS.MONTH_RECEIVED_FOR_EXPORT]: createFirstOfMonthFieldSchema({
+      rejectOpenEarlierYear: true
+    }),
     [FIELDS.NET_WEIGHT]: createUnboundedWeightFieldSchema(),
     [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: createEnumFieldSchema(
       RECYCLABLE_PROPORTION_METHODS,

@@ -1,8 +1,13 @@
 import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
 import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
-import { lastDayOfYear } from '#common/helpers/dates/year.js'
+import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
+import {
+  isBeforeCorrectionDeadline,
+  lastCorrectionDay
+} from '#domain/summary-logs/correction-deadline.js'
 import { customJoi } from '#common/validation/custom-joi.js'
+import { rowValidationOptionsOf } from '../validation-pipeline.js'
 
 /**
  * Common field schema factories for table validation
@@ -26,6 +31,14 @@ const CALENDAR_DATE_ERROR = 'any.calendarDate'
 const CALENDAR_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/
 const FIRST_OF_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-01$/
 export const AFTER_SUMMARY_LOG_YEAR_ERROR = 'date.afterSummaryLogYear'
+export const BEFORE_SUMMARY_LOG_YEAR_ERROR = 'date.beforeSummaryLogYear'
+
+/**
+ * @typedef {{ rejectOpenEarlierYear?: boolean }} DateFieldOptions
+ * `rejectOpenEarlierYear` rejects a date in an earlier year whose correction
+ * deadline had not passed when the summary log was created: it belongs in
+ * that year's log.
+ */
 
 /**
  * Rejects a YYYY-MM-DD date in a later year than the `summaryLogYear` in the
@@ -36,10 +49,56 @@ export const AFTER_SUMMARY_LOG_YEAR_ERROR = 'date.afterSummaryLogYear'
  * @returns {string | import('joi').ErrorReport}
  */
 const rejectAfterSummaryLogYear = (dateStr, helpers) => {
-  const summaryLogYear = helpers.prefs.context?.summaryLogYear
+  const { summaryLogYear } = rowValidationOptionsOf(helpers)
   return summaryLogYear !== undefined && dateStr > lastDayOfYear(summaryLogYear)
     ? helpers.error(AFTER_SUMMARY_LOG_YEAR_ERROR, { expected: summaryLogYear })
     : dateStr
+}
+
+/**
+ * Rejects a YYYY-MM-DD date in an earlier year than the `summaryLogYear` in
+ * the Joi validation context while that year's correction deadline had not
+ * passed at `createdAt`. Without a `summaryLogYear`, the date is not checked.
+ *
+ * @param {string} dateStr
+ * @param {import('joi').CustomHelpers} helpers
+ * @returns {string | import('joi').ErrorReport}
+ */
+const rejectOpenEarlierYear = (dateStr, helpers) => {
+  const options = rowValidationOptionsOf(helpers)
+  // A filled-in row's dates came from the previous year; the cross-year rules
+  // check the ones it supplied.
+  if (options.summaryLogYear === undefined || options.filledIn) {
+    return dateStr
+  }
+  const dateYear = utcYearOf(dateStr)
+  const registration = { registeredOnly: options.registeredOnly }
+  return dateYear < options.summaryLogYear &&
+    isBeforeCorrectionDeadline(dateYear, registration, options.createdAt)
+    ? helpers.error(BEFORE_SUMMARY_LOG_YEAR_ERROR, {
+        expected: options.summaryLogYear,
+        deadline: lastCorrectionDay(dateYear, registration)
+      })
+    : dateStr
+}
+
+/**
+ * @param {DateFieldOptions} options
+ * @returns {(dateStr: string, helpers: import('joi').CustomHelpers) => string | import('joi').ErrorReport}
+ */
+const checkAgainstSummaryLogYear =
+  ({ rejectOpenEarlierYear: rejectEarlier = false }) =>
+  (dateStr, helpers) => {
+    const after = rejectAfterSummaryLogYear(dateStr, helpers)
+    return after === dateStr && rejectEarlier
+      ? rejectOpenEarlierYear(dateStr, helpers)
+      : after
+  }
+
+const SUMMARY_LOG_YEAR_MESSAGES = {
+  [AFTER_SUMMARY_LOG_YEAR_ERROR]: MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR,
+  [BEFORE_SUMMARY_LOG_YEAR_ERROR]:
+    MESSAGES.MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR
 }
 
 /**
@@ -115,23 +174,23 @@ export const createYesNoFieldSchema = () =>
  * Used for registered-only templates where monthly granularity replaces daily dates.
  * Excel stores the dropdown value as a first-of-month date string.
  *
+ * @param {DateFieldOptions} [options]
  * @returns {Joi.StringSchema} Joi string schema
  */
-export const createFirstOfMonthFieldSchema = () =>
-  Joi.string()
+export const createFirstOfMonthFieldSchema = (options = {}) => {
+  const check = checkAgainstSummaryLogYear(options)
+  return Joi.string()
     .pattern(FIRST_OF_MONTH_PATTERN)
     .custom((value, helpers) =>
-      FIRST_OF_MONTH_PATTERN.test(value)
-        ? rejectAfterSummaryLogYear(value, helpers)
-        : value
+      FIRST_OF_MONTH_PATTERN.test(value) ? check(value, helpers) : value
     )
     .optional()
     .messages({
       'string.base': MESSAGES.MUST_BE_A_STRING,
       'string.pattern.base': 'must be a first-of-month date (YYYY-MM-01)',
-      [AFTER_SUMMARY_LOG_YEAR_ERROR]:
-        MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR
+      ...SUMMARY_LOG_YEAR_MESSAGES
     })
+}
 
 /**
  * Creates a calendar date field schema (2000-01-01 to 2100-01-01).
@@ -142,10 +201,12 @@ export const createFirstOfMonthFieldSchema = () =>
  *
  * Accepts YYYY-MM-DD strings and Date objects (coerced to YYYY-MM-DD).
  *
+ * @param {DateFieldOptions} [options]
  * @returns {Joi.AnySchema} Joi schema that outputs YYYY-MM-DD strings
  */
-export const createDateFieldSchema = () =>
-  Joi.any()
+export const createDateFieldSchema = (options = {}) => {
+  const check = checkAgainstSummaryLogYear(options)
+  return Joi.any()
     .custom((value, helpers) => {
       let dateStr
       if (value instanceof Date) {
@@ -180,14 +241,14 @@ export const createDateFieldSchema = () =>
         return helpers.error(CALENDAR_DATE_ERROR)
       }
 
-      return rejectAfterSummaryLogYear(dateStr, helpers)
+      return check(dateStr, helpers)
     })
     .optional()
     .messages({
       [CALENDAR_DATE_ERROR]: MESSAGES.MUST_BE_A_VALID_DATE,
-      [AFTER_SUMMARY_LOG_YEAR_ERROR]:
-        MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR
+      ...SUMMARY_LOG_YEAR_MESSAGES
     })
+}
 
 /**
  * Creates a 3-digit ID field schema that coerces numbers to zero-padded

@@ -11,8 +11,12 @@ import {
 } from '#domain/summary-logs/markers.js'
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
-import { AFTER_SUMMARY_LOG_YEAR_ERROR } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
+import {
+  AFTER_SUMMARY_LOG_YEAR_ERROR,
+  BEFORE_SUMMARY_LOG_YEAR_ERROR
+} from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
+import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
 import {
   classifyRow,
@@ -26,6 +30,8 @@ import {
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {Pick<TableSchema, 'rowIdField' | 'requiredHeaders' | 'unfilledValues' | 'validationSchema' | 'classifyForWasteBalance'>} DataSyntaxTableSchema */
 /** @import {RowClassificationIssue, RowOutcome, SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {FilledInRow} from '../fill-in-linked-rows.js' */
+/** @import {RowStateLink} from '#waste-records/repository/schema.js' */
 
 /**
  * A validated row from the data syntax validation pipeline
@@ -38,6 +44,7 @@ import {
  * @property {string} rowId - Extracted row ID
  * @property {RowOutcome} outcome - Classification outcome from validation pipeline
  * @property {ValidationIssue[]} issues - Validation issues for this row (empty array if none)
+ * @property {RowStateLink} [link] - Where a linked row was filled in from
  */
 
 /**
@@ -65,6 +72,7 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'date.max': VALIDATION_CODE.INVALID_DATE,
   'any.calendarDate': VALIDATION_CODE.INVALID_DATE,
   [AFTER_SUMMARY_LOG_YEAR_ERROR]: VALIDATION_CODE.INVALID_DATE,
+  [BEFORE_SUMMARY_LOG_YEAR_ERROR]: VALIDATION_CODE.INVALID_DATE, // NOSONAR: javascript:S1874 - code stays the generic category; the specific one is errorCode
   'string.threeDigitId': VALIDATION_CODE.INVALID_TYPE,
   'custom.netWeightCalculationMismatch':
     VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
@@ -98,6 +106,8 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   [MESSAGES.MUST_BE_A_VALID_DATE]: VALIDATION_CODE.MUST_BE_A_VALID_DATE,
   [MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR]:
     VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
+  [MESSAGES.MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR]:
+    VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR,
   [MESSAGES.MUST_BE_GREATER_THAN_ZERO]:
     VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO,
   [MESSAGES.MUST_BE_AT_LEAST_ZERO]: VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO,
@@ -151,7 +161,7 @@ const hasFatal = (issues) =>
  * @param {Array<string|null>} headers - Array of header names from the table
  * @returns {Map<string, number>} Map of header name to column index
  */
-const buildHeaderToIndexMap = (headers) => {
+export const buildHeaderToIndexMap = (headers) => {
   const headerToIndexMap = new Map()
 
   for (const [index, header] of headers.entries()) {
@@ -199,7 +209,7 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
  * @param {{
  *   tableName: string,
  *   rowNumber: number,
- *   rowId: string,
+ *   rowId?: string,
  *   fieldName: string,
  *   colIndex: number | undefined,
  *   location: CellLocation
@@ -213,17 +223,19 @@ const buildCellLocation = ({
   fieldName,
   colIndex,
   location
-}) =>
-  location?.column && colIndex !== undefined
+}) => {
+  const identifiedBy = rowId === undefined ? {} : { rowId }
+  return location?.column && colIndex !== undefined
     ? {
         sheet: location.sheet,
         table: tableName,
         row: rowNumber,
-        rowId,
+        ...identifiedBy,
         column: offsetColumn(location.column, colIndex),
         header: fieldName
       }
-    : { table: tableName, rowId, header: fieldName }
+    : { table: tableName, ...identifiedBy, header: fieldName }
+}
 
 /**
  * Maps a row-classification issue from the validation pipeline into a
@@ -234,14 +246,14 @@ const buildCellLocation = ({
  *   classification: { outcome: RowOutcome },
  *   headerToIndexMap: Map<string, number>,
  *   rowObject: Record<string, unknown>,
- *   rowId: string,
+ *   rowId?: string,
  *   tableName: string,
  *   rowNumber: number,
  *   location: CellLocation
  * }} params
  * @returns {ValidationIssue}
  */
-const toApplicationIssue = ({
+export const toApplicationIssue = ({
   issue,
   classification,
   headerToIndexMap,
@@ -281,6 +293,8 @@ const toApplicationIssue = ({
     actual: rowObject[fieldName],
     ...(isValidationError &&
       issue.expected !== undefined && { expected: issue.expected }),
+    ...(isValidationError &&
+      issue.deadline !== undefined && { deadline: issue.deadline }),
     ...(errorCode && { errorCode })
   }
 
@@ -332,7 +346,7 @@ const isTemplateRow = (rowObject, rowIdField) => {
  * @param {{
  *   tableName: string,
  *   headerToIndexMap: Map<string, number>,
- *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
+ *   rows: FilledInRow[],
  *   domainSchema: DataSyntaxTableSchema,
  *   location: CellLocation,
  *   options: SummaryLogValidationOptions
@@ -347,7 +361,7 @@ const validateRows = ({
   location,
   options
 }) => {
-  const validatedRows = rows.flatMap(({ rowNumber, values }) => {
+  const validatedRows = rows.flatMap(({ rowNumber, values, linked }) => {
     /** @type {Record<string, unknown>} */
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
@@ -358,8 +372,12 @@ const validateRows = ({
       return []
     }
 
-    const classification = classifyRow(rowObject, domainSchema, options)
-    const rowId = String(rowObject[domainSchema.rowIdField]) // NOSONAR: javascript:S6551 - ROW_ID is never an object
+    const classification = classifyRow(
+      rowObject,
+      domainSchema,
+      linked ? { ...options, filledIn: true } : options
+    )
+    const rowId = toRowId(rowObject[domainSchema.rowIdField])
 
     const rowIssues = classification.issues.map((issue) =>
       toApplicationIssue({
@@ -379,7 +397,8 @@ const validateRows = ({
         data: rowObject,
         rowId,
         outcome: classification.outcome,
-        issues: rowIssues
+        issues: rowIssues,
+        ...(linked && { link: linked.link })
       }
     ]
   })

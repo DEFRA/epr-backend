@@ -124,35 +124,6 @@ export const testFindBehaviour = (it) => {
       })
     })
 
-    describe('findAll', () => {
-      it('returns empty array when no organisations exist', async () => {
-        const result = await repository.findAll()
-
-        expect(result).toEqual([])
-      })
-
-      it('returns all organisations', async () => {
-        const org1 = buildOrganisation()
-        const org2 = buildOrganisation()
-        const org3 = buildOrganisation()
-
-        await Promise.all(
-          [org1, org2, org3].map((org) => repository.insert(org))
-        )
-
-        const result = await repository.findAll()
-
-        expect(result).toHaveLength(3)
-        expect(result.map((o) => o.organisationNumber)).toEqual(
-          expect.arrayContaining([
-            org1.organisationNumber,
-            org2.organisationNumber,
-            org3.organisationNumber
-          ])
-        )
-      })
-    })
-
     describe('findByLinkedDefraOrgId', () => {
       const DEFRA_ORG_ID_1 = '550e8400-e29b-41d4-a716-446655440001'
       const DEFRA_ORG_ID_2 = '550e8400-e29b-41d4-a716-446655440002'

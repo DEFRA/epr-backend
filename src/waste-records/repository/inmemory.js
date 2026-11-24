@@ -46,6 +46,7 @@ const matchesCommittedState = (doc, candidate) =>
   matchesRowIdentity(doc, candidate) &&
   doc.processingType === candidate.processingType &&
   isDeepStrictEqual(doc.data, candidate.data) &&
+  isDeepStrictEqual(doc.link, candidate.link) &&
   isDeepStrictEqual(doc.classification, candidate.classification)
 
 /**
@@ -115,8 +116,16 @@ const toWasteRecordState = ({
   wasteRecordType,
   processingType,
   data,
+  link,
   classification
-}) => ({ rowId, wasteRecordType, processingType, data, classification })
+}) => ({
+  rowId,
+  wasteRecordType,
+  processingType,
+  data,
+  ...(link && { link }),
+  classification
+})
 
 /**
  * @param {WasteBalanceLedgerId} ledgerId
@@ -131,6 +140,7 @@ const toCandidate = (ledgerId, entry, summaryLogId) =>
     rowId: entry.rowId,
     processingType: entry.processingType,
     data: entry.data,
+    ...(entry.link && { link: entry.link }),
     classification: entry.classification,
     summaryLogIds: [summaryLogId]
   })
@@ -227,6 +237,21 @@ const repositoryOver = (storage) => ({
       organisationNumber,
       registrationNumber,
       fileId
+    ),
+
+  /**
+   * @param {WasteBalanceLedgerId} ledgerId
+   * @param {SummaryLogFileId} summaryLogId
+   * @param {{ wasteRecordType: string, rowIds: string[] }} rows
+   */
+  findRowStatesInSummaryLog: async (
+    ledgerId,
+    summaryLogId,
+    { wasteRecordType, rowIds }
+  ) =>
+    rowStatesForSummaryLog(storage, ledgerId, summaryLogId).filter(
+      (doc) =>
+        doc.wasteRecordType === wasteRecordType && rowIds.includes(doc.rowId)
     ),
 
   /**
