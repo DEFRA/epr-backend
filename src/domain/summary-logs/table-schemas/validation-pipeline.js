@@ -14,7 +14,11 @@ import {
 
 /**
  * What classifying a row reads of its accreditation: null when there is none.
- * @typedef {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} ClassificationContext
+ * @typedef {{
+ *   accreditation: AccreditationValidity | null,
+ *   overseasSites: OverseasSitesContext,
+ *   previousYearAccreditation?: AccreditationValidity | null
+ * }} ClassificationContext
  */
 
 /**

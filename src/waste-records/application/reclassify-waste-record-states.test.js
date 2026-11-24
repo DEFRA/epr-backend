@@ -59,7 +59,8 @@ const receivedRowState = (overrides = {}) => ({
  * @param {AccreditationValidity | null} accreditation
  * @returns {import('./reclassify-waste-record-states.js').ReclassificationContext}
  */
-const contextWith = (accreditation) => ({
+const contextWith = (accreditation) => (tableSchemas) => ({
+  tableSchemas,
   accreditation,
   overseasSites: ORS_VALIDATION_DISABLED
 })
@@ -253,10 +254,11 @@ describe('reclassifying a projected row state preserves the stamped classificati
       }
     )
 
-    const reclassified = reclassifyWasteRecordState(stamped, toYear(2026), {
-      accreditation: covering,
-      overseasSites: ORS_VALIDATION_DISABLED
-    })
+    const reclassified = reclassifyWasteRecordState(
+      stamped,
+      toYear(2026),
+      contextWith(covering)
+    )
 
     expect(reclassified.classification).toEqual(stamped.classification)
   })
