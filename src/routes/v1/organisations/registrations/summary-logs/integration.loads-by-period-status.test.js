@@ -26,13 +26,15 @@ import {
   createUploadPayload,
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
+  exporter2027Loads,
   pollForValidation,
   pollWhileStatus,
   setupWasteBalanceIntegrationEnvironment,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
   tableOf,
-  uploadOn
+  uploadOn,
+  withTemplateYear
 } from './integration-test-helpers.js'
 
 // Data tables start with their header at row 7, so data rows begin at row 8.
@@ -650,33 +652,17 @@ describe('loadsByReportingPeriod population at validate time', () => {
       env,
       'sl-2027-received-december-2026',
       'file-2027-received-december-2026',
-      {
-        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
-          {
-            ...Object.fromEntries(
-              EXPORTER_HEADERS.map((header, index) => [
-                header,
-                createExporterRowValues({
-                  rowId: 1001,
-                  osrId: 100,
-                  exportTonnage: 25,
-                  dateReceived: '2026-12-20T00:00:00.000Z',
-                  exportDate: '2027-01-12T00:00:00.000Z',
-                  dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
-                })[index]
-              ])
-            ),
-            PREVIOUS_YEAR_ROW_ID: null,
-            EXIT_PORT: null,
-            DWT_EXPORT_ID: null,
-            DWT_SUPPLY_ID: null
-          }
-        ])
-      },
-      {
-        ...sharedMeta,
-        TEMPLATE_VERSION: { ...sharedMeta.TEMPLATE_VERSION, value: 2027.01 }
-      }
+      exporter2027Loads([
+        {
+          rowId: 1001,
+          osrId: 100,
+          exportTonnage: 25,
+          dateReceived: '2026-12-20T00:00:00.000Z',
+          exportDate: '2027-01-12T00:00:00.000Z',
+          dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
+        }
+      ]),
+      withTemplateYear(sharedMeta, toYear(2027))
     )
 
     expect(
@@ -759,33 +745,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
       env,
       'sl-2027-linked-december-2026',
       'file-2027-linked-december-2026',
-      {
-        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
-          {
-            ...Object.fromEntries(
-              EXPORTER_HEADERS.map((header, index) => [
-                header,
-                createExporterRowValues({
-                  rowId: 1001,
-                  osrId: 100,
-                  exportTonnage: 25,
-                  dateReceived: null,
-                  exportDate: '2027-01-12T00:00:00.000Z',
-                  dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
-                })[index]
-              ])
-            ),
-            PREVIOUS_YEAR_ROW_ID: 1500,
-            EXIT_PORT: null,
-            DWT_EXPORT_ID: null,
-            DWT_SUPPLY_ID: null
-          }
-        ])
-      },
-      {
-        ...sharedMeta,
-        TEMPLATE_VERSION: { ...sharedMeta.TEMPLATE_VERSION, value: 2027.01 }
-      }
+      exporter2027Loads([
+        {
+          rowId: 1001,
+          previousYearRowId: 1500,
+          osrId: 100,
+          exportTonnage: 25,
+          dateReceived: null,
+          exportDate: '2027-01-12T00:00:00.000Z',
+          dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
+        }
+      ]),
+      withTemplateYear(sharedMeta, toYear(2027))
     )
 
     expect(loadsByReportingPeriod.closedPeriodLoads).toEqual({
@@ -821,7 +792,7 @@ describe('loadsByReportingPeriod population at validate time', () => {
           rowId: 1500,
           osrId: 100,
           exportTonnage: 25,
-          dateReceived: '2026-12-10T00:00:00.000Z',
+          dateReceived: '2026-10-20T00:00:00.000Z',
           exportDate: '2026-12-28T00:00:00.000Z',
           dateReceivedByOsr: null
         }
@@ -867,33 +838,18 @@ describe('loadsByReportingPeriod population at validate time', () => {
       env,
       'sl-2027-linked-exported-december-2026',
       'file-2027-linked-exported-december-2026',
-      {
-        RECEIVED_LOADS_FOR_EXPORT: tableOf('Received', [
-          {
-            ...Object.fromEntries(
-              EXPORTER_HEADERS.map((header, index) => [
-                header,
-                createExporterRowValues({
-                  rowId: 1001,
-                  osrId: 100,
-                  exportTonnage: null,
-                  dateReceived: null,
-                  exportDate: null,
-                  dateReceivedByOsr: '2027-01-06T00:00:00.000Z'
-                })[index]
-              ])
-            ),
-            PREVIOUS_YEAR_ROW_ID: 1500,
-            EXIT_PORT: null,
-            DWT_EXPORT_ID: null,
-            DWT_SUPPLY_ID: null
-          }
-        ])
-      },
-      {
-        ...sharedMeta,
-        TEMPLATE_VERSION: { ...sharedMeta.TEMPLATE_VERSION, value: 2027.01 }
-      }
+      exporter2027Loads([
+        {
+          rowId: 1001,
+          previousYearRowId: 1500,
+          osrId: 100,
+          exportTonnage: null,
+          dateReceived: null,
+          exportDate: null,
+          dateReceivedByOsr: '2027-01-06T00:00:00.000Z'
+        }
+      ]),
+      withTemplateYear(sharedMeta, toYear(2027))
     )
 
     expect(

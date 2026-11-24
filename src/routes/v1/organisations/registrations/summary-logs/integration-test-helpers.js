@@ -1194,7 +1194,8 @@ const buildComplexTestOrg = ({
  * its registration under the test keys, approved from `VALID_FROM`, and its
  * accreditation for the year of `accreditationValidFrom` when accredited,
  * approved from `accreditationValidFrom`, and, given its number, the
- * accreditation for the year before, approved from the start of that year.
+ * accreditation for the year before, approved from
+ * `previousYearAccreditationValidFrom`, or the start of that year.
  *
  * @param {{
  *   processingType: string,
