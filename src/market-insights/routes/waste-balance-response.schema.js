@@ -1,10 +1,10 @@
 import Joi from 'joi'
 
+import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
 import {
-  TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
-import { EXPORTER_AND_REPROCESSOR } from '#market-insights/domain/waste-balance-figures.js'
+  MERGED_ROWS,
+  SEPARATE_ROWS
+} from '#market-insights/domain/waste-balance-figures.js'
 import {
   byReportingMonth,
   metaSchema,
@@ -27,8 +27,8 @@ const byMaterialAndType = (figuresSchema) =>
   recordOf(
     TONNAGE_MONITORING_MATERIALS,
     Joi.alternatives().try(
-      recordOf(Object.values(WASTE_PROCESSING_TYPE), figuresSchema),
-      recordOf([EXPORTER_AND_REPROCESSOR], figuresSchema)
+      recordOf(SEPARATE_ROWS, figuresSchema),
+      recordOf(MERGED_ROWS, figuresSchema)
     )
   )
 

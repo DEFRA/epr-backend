@@ -30,7 +30,11 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
-import { EXPORTER_AND_REPROCESSOR } from '#market-insights/domain/waste-balance-figures.js'
+import {
+  EXPORTER_AND_REPROCESSOR,
+  MERGED_ROWS,
+  SEPARATE_ROWS
+} from '#market-insights/domain/waste-balance-figures.js'
 import { partialMock } from '#test/type-helpers.js'
 import { recordOf } from '#common/helpers/record-of.js'
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
@@ -53,7 +57,8 @@ import {
 /** @import { Organisation as ServedOrganisation, Registration, Status } from '#organisation-read-model/vocabulary.js' */
 /** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
-/** @import { WasteBalanceTable } from './waste-balance-table.js' */
+/** @import { AggregateWasteBalanceTable, EveryRow, WasteBalanceTable } from './waste-balance-table.js' */
+/** @import { WasteBalanceRowType } from '#market-insights/domain/waste-balance-figures.js' */
 
 // .vite/setup-files.js configures 999999 as a test organisation.
 const TEST_ORG_ID = 999999
@@ -750,15 +755,14 @@ const NO_ACTIVITY = {
  * A material's exporter and reprocessor rows, leaving out the row merging them.
  *
  * @template T
- * @param {Partial<Record<string, T>>} byAccreditationType
- * @returns {[string, T][]}
+ * @param {EveryRow<T>} byAccreditationType
+ * @returns {[WasteBalanceRowType, T][]}
  */
 const separateRows = (byAccreditationType) =>
-  /** @type {[string, T][]} */ (
-    Object.entries(byAccreditationType).filter(
-      ([accreditationType]) => accreditationType !== EXPORTER_AND_REPROCESSOR
-    )
-  )
+  SEPARATE_ROWS.map((accreditationType) => [
+    accreditationType,
+    byAccreditationType[accreditationType]
+  ])
 
 /**
  * The cells something was reported into, flattened to one row each, without
@@ -766,7 +770,7 @@ const separateRows = (byAccreditationType) =>
  * combination, and a merged row beside each pair, which these tests are not
  * about.
  *
- * @param {WasteBalanceTable} table
+ * @param {AggregateWasteBalanceTable} table
  */
 const reported = (table) =>
   Object.entries(table.data.months).flatMap(([month, { figures }]) =>
@@ -792,7 +796,7 @@ const reported = (table) =>
  * One of the operator counts of every cell where it is not zero, keyed
  * `month material type`.
  *
- * @param {WasteBalanceTable} table
+ * @param {AggregateWasteBalanceTable} table
  * @param {'operatorCount' | 'submittingOperatorCount'} [count]
  */
 const operatorCounts = (table, count = 'operatorCount') =>
@@ -810,7 +814,7 @@ const operatorCounts = (table, count = 'operatorCount') =>
   )
 
 /**
- * @param {WasteBalanceTable} table
+ * @param {AggregateWasteBalanceTable} table
  */
 const submittingOperatorCounts = (table) =>
   operatorCounts(table, 'submittingOperatorCount')
@@ -819,7 +823,7 @@ const submittingOperatorCounts = (table) =>
  * The operator counts of every row's whole-period total that any operator
  * was accredited for, keyed `material type`.
  *
- * @param {WasteBalanceTable} table
+ * @param {AggregateWasteBalanceTable} table
  */
 const periodOperatorCounts = (table) =>
   Object.fromEntries(
@@ -838,7 +842,7 @@ const periodOperatorCounts = (table) =>
  * The monthly report counts the table carries, one pair per month served and
  * one for the period.
  *
- * @param {WasteBalanceTable} table
+ * @param {AggregateWasteBalanceTable} table
  */
 const monthlyReports = ({ data: { months, period } }) => ({
   byMonth: Object.fromEntries(
@@ -1339,7 +1343,7 @@ describe('aggregateWasteBalanceTable', () => {
         ...everyMonth(1, 'plastic exporter')
       })
       for (const { figures } of Object.values(table.data.months)) {
-        expect(figures.plastic[EXPORTER_AND_REPROCESSOR]?.operatorCount).toBe(2)
+        expect(figures.plastic[EXPORTER_AND_REPROCESSOR].operatorCount).toBe(2)
       }
       expect(
         table.data.period.operatorCounts.plastic[EXPORTER_AND_REPROCESSOR]
@@ -1645,7 +1649,7 @@ describe('aggregateWasteBalanceTable', () => {
 
       return table.data.months[toYearMonth('2026-02')].figures[
         MATERIAL.PLASTIC
-      ][WASTE_PROCESSING_TYPE.EXPORTER]?.eligibleForWasteBalance
+      ][WASTE_PROCESSING_TYPE.EXPORTER].eligibleForWasteBalance
     }
 
     it('is eligible when its overseas site was approved by the date of export', async () => {
@@ -1685,7 +1689,7 @@ describe('aggregateWasteBalanceTable', () => {
       expect(
         table.data.months[toYearMonth('2025-12')].figures[MATERIAL.PLASTIC][
           WASTE_PROCESSING_TYPE.REPROCESSOR
-        ]?.eligibleForWasteBalance
+        ].eligibleForWasteBalance
       ).toBe(0)
     })
   })
@@ -1779,7 +1783,7 @@ describe('aggregateWasteBalanceTable', () => {
       expect(
         table.data.period.figures[MATERIAL.PLASTIC][
           WASTE_PROCESSING_TYPE.REPROCESSOR
-        ]?.netCredit
+        ].netCredit
       ).toBe(40)
     })
 
@@ -2020,9 +2024,9 @@ describe('aggregateWasteBalanceTable', () => {
     })
 
     const { figures } = table.data.months[toYearMonth('2026-02')]
-    expect(figures.paper.reprocessor?.totalCredited).toBe(10)
-    expect(figures.plastic.exporter?.totalCredited).toBe(30)
-    expect(figures.plastic.reprocessor?.totalCredited).toBe(20)
+    expect(figures.paper.reprocessor.totalCredited).toBe(10)
+    expect(figures.plastic.exporter.totalCredited).toBe(30)
+    expect(figures.plastic.reprocessor.totalCredited).toBe(20)
     expect(reported(table)).toHaveLength(3)
   })
 
@@ -2043,6 +2047,7 @@ describe('aggregateWasteBalanceTable', () => {
       ]
     })
 
+    /** @param {string} month */
     const merged = (month) =>
       table.data.months[toYearMonth(month)].figures.plastic[
         EXPORTER_AND_REPROCESSOR
@@ -2202,10 +2207,15 @@ describe('mergeRowsFromFewOperators', () => {
   const MERGED_FIGURE = figure(99, 4)
 
   /**
+   * @typedef {Partial<EveryRow<PublishedWasteBalanceFigures & OperatorCounts>>} RowOverrides
+   */
+
+  /**
    * Every material's rows from three operators, its merged row distinct from
    * them, and plastic's rows overridden as given.
    *
-   * @param {Partial<Record<string, PublishedWasteBalanceFigures & OperatorCounts>>} plastic
+   * @param {RowOverrides} plastic
+   * @returns {Record<import('#domain/organisations/model.js').Material, EveryRow<PublishedWasteBalanceFigures & OperatorCounts>>}
    */
   const everyMaterial = (plastic) =>
     recordOf(TONNAGE_MONITORING_MATERIALS, (material) => ({
@@ -2219,11 +2229,8 @@ describe('mergeRowsFromFewOperators', () => {
    * An aggregate over February and March, with plastic's February and period
    * figures overridden as given.
    *
-   * @param {{
-   *   february?: Partial<Record<string, PublishedWasteBalanceFigures & OperatorCounts>>,
-   *   period?: Partial<Record<string, PublishedWasteBalanceFigures & OperatorCounts>>
-   * }} [plastic]
-   * @returns {WasteBalanceTable}
+   * @param {{ february?: RowOverrides, period?: RowOverrides }} [overrides] - plastic's rows
+   * @returns {AggregateWasteBalanceTable}
    */
   const aggregate = ({ february = {}, period = {} } = {}) => {
     const periodFigures = everyMaterial(period)
@@ -2238,14 +2245,11 @@ describe('mergeRowsFromFewOperators', () => {
           reports: NO_REPORTS,
           figures: periodFigures,
           operatorCounts: recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-            Object.fromEntries(
-              Object.entries(periodFigures[material]).map(
-                ([row, { operatorCount, submittingOperatorCount }]) => [
-                  row,
-                  { operatorCount, submittingOperatorCount }
-                ]
-              )
-            )
+            recordOf([...SEPARATE_ROWS, ...MERGED_ROWS], (row) => {
+              const { operatorCount, submittingOperatorCount } =
+                periodFigures[material][row]
+              return { operatorCount, submittingOperatorCount }
+            })
           )
         }
       }

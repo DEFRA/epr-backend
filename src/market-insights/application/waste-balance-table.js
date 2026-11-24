@@ -16,8 +16,10 @@ import {
 import {
   addFigures,
   EXPORTER_AND_REPROCESSOR,
+  MERGED_ROWS,
   monthlyContribution,
   NO_FIGURES,
+  SEPARATE_ROWS,
   withNetCredit
 } from '#market-insights/domain/waste-balance-figures.js'
 import { fromFewOperators } from '#market-insights/domain/confidential-figures.js'
@@ -81,14 +83,26 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * Each material is served either as its exporter and reprocessor rows or,
- * where those would identify an operator, as the one row merging them.
+ * A value for each of a material's exporter, reprocessor and merged rows.
  *
- * @typedef {Partial<Record<WasteBalanceRowType, PublishedWasteBalanceFigures & OperatorCounts>>} FiguresByAccreditationType
- * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
- * @typedef {Record<Material, Partial<Record<WasteBalanceRowType, OperatorCounts>>>} OperatorCountsByMaterial
- * @typedef {Record<Material, Partial<Record<WasteBalanceRowType, PublishedWasteBalanceFigures>>>} PeriodFiguresByMaterial
- * @typedef {Record<Material, WasteBalanceRowType[]>} RowsByMaterial
+ * @template T
+ * @typedef {Record<WasteBalanceRowType, T>} EveryRow
+ */
+
+/**
+ * A value for each row a material is served as: either its exporter and
+ * reprocessor rows or, where those would identify an operator, the one row
+ * merging them.
+ *
+ * @template T
+ * @typedef {Partial<Record<WasteBalanceRowType, T>>} ServedRows
+ */
+
+/**
+ * @typedef {Record<Material, ServedRows<PublishedWasteBalanceFigures & OperatorCounts>>} FiguresByMaterial
+ * @typedef {Record<Material, ServedRows<OperatorCounts>>} OperatorCountsByMaterial
+ * @typedef {Record<Material, ServedRows<PublishedWasteBalanceFigures>>} PeriodFiguresByMaterial
+ * @typedef {Record<Material, readonly WasteBalanceRowType[]>} RowsByMaterial
  */
 
 /**
@@ -114,6 +128,28 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {Object} WasteBalanceTable
  * @property {{ generatedAt: string }} meta
  * @property {{ months: Record<YearMonth, PublishedMonth>, period: PublishedPeriod }} data
+ */
+
+/**
+ * @typedef {Object} AggregateMonth
+ * @property {ReportCount} reports
+ * @property {Record<Material, EveryRow<PublishedWasteBalanceFigures & OperatorCounts>>} figures
+ */
+
+/**
+ * @typedef {Object} AggregatePeriod
+ * @property {ReportCount} reports
+ * @property {Record<Material, EveryRow<PublishedWasteBalanceFigures>>} figures
+ * @property {Record<Material, EveryRow<OperatorCounts>>} operatorCounts
+ */
+
+/**
+ * The waste balance table before the rows that would identify an operator
+ * are merged: every material carries all three of its rows.
+ *
+ * @typedef {Object} AggregateWasteBalanceTable
+ * @property {{ generatedAt: string }} meta
+ * @property {{ months: Record<YearMonth, AggregateMonth>, period: AggregatePeriod }} data
  */
 
 /**
@@ -156,11 +192,7 @@ const figuresOf = ({ month, registration }) =>
     periodKey(row)
   ])
 
-/** @type {WasteBalanceRowType[]} */
-const SEPARATE_ROWS = Object.values(WASTE_PROCESSING_TYPE)
-/** @type {WasteBalanceRowType[]} */
-const MERGED_ROWS = [EXPORTER_AND_REPROCESSOR]
-/** @type {WasteBalanceRowType[]} */
+/** @type {readonly WasteBalanceRowType[]} */
 const EVERY_ROW = [...SEPARATE_ROWS, ...MERGED_ROWS]
 
 /**
@@ -200,7 +232,7 @@ const periodFigure = (cells, months, row) =>
  * row the aggregate carries.
  *
  * @param {OperatorsByFigure} operators
- * @returns {OperatorCountsByMaterial}
+ * @returns {AggregatePeriod['operatorCounts']}
  */
 const periodOperatorCounts = (operators) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
@@ -216,7 +248,7 @@ const periodOperatorCounts = (operators) =>
  * @param {Map<string, WasteBalanceCell>} cells
  * @param {OperatorsByFigure} operators
  * @param {YearMonth} month
- * @returns {FiguresByMaterial}
+ * @returns {AggregateMonth['figures']}
  */
 const publishedFigures = (cells, operators, month) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
@@ -228,7 +260,7 @@ const publishedFigures = (cells, operators, month) =>
 /**
  * @param {Map<string, WasteBalanceCell>} cells
  * @param {YearMonth[]} months
- * @returns {PeriodFiguresByMaterial}
+ * @returns {AggregatePeriod['figures']}
  */
 const periodFigures = (cells, months) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
@@ -459,7 +491,7 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {Year} params.year - the reporting year
  * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {Date} params.now - clock reading supplied by the caller
- * @returns {Promise<WasteBalanceTable>}
+ * @returns {Promise<AggregateWasteBalanceTable>}
  */
 export const aggregateWasteBalanceTable = async ({
   ledgerRepository,
@@ -540,7 +572,7 @@ export const aggregateWasteBalanceTable = async ({
  * Whether any figure in a material's exporter or reprocessor row, in any month
  * or across the period, comes from fewer than three operators.
  *
- * @param {WasteBalanceTable} table
+ * @param {AggregateWasteBalanceTable} table
  * @param {Material} material
  */
 const identifiesAnOperator = ({ data: { months, period } }, material) =>
@@ -553,18 +585,14 @@ const identifiesAnOperator = ({ data: { months, period } }, material) =>
         ...period.figures[material][accreditationType],
         ...period.operatorCounts[material][accreditationType]
       }
-    ].some((figure) => {
-      const { netCredit, operatorCount } =
-        /** @type {PublishedWasteBalanceFigures & OperatorCounts} */ (figure)
-      return fromFewOperators({ operatorCount }, netCredit !== 0)
-    })
+    ].some((figure) => fromFewOperators(figure, figure.netCredit !== 0))
   )
 
 /**
  * @template T
- * @param {Record<Material, Partial<Record<WasteBalanceRowType, T>>>} byMaterial
+ * @param {Record<Material, EveryRow<T>>} byMaterial
  * @param {RowsByMaterial} rows
- * @returns {Record<Material, Partial<Record<WasteBalanceRowType, T>>>}
+ * @returns {Record<Material, ServedRows<T>>}
  */
 const onlyRows = (byMaterial, rows) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
@@ -577,7 +605,7 @@ const onlyRows = (byMaterial, rows) =>
  * the whole period, and every other material as its two separate rows. No
  * material is a special case.
  *
- * @param {WasteBalanceTable} table
+ * @param {AggregateWasteBalanceTable} table
  * @returns {WasteBalanceTable}
  */
 export const mergeRowsFromFewOperators = (table) => {
