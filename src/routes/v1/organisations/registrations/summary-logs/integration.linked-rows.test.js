@@ -183,6 +183,17 @@ const submitted = async (env, year, summaryLogId, parsed) => {
   )
 }
 
+/** Until then, a 2027 row may not carry a 2026 date it was not linked to. */
+const afterThe2026CorrectionDeadline = () => {
+  vi.useFakeTimers({
+    toFake: ['Date'],
+    now: new Date('2027-03-15T10:00:00.000Z')
+  })
+  onTestFinished(() => {
+    vi.useRealTimers()
+  })
+}
+
 /**
  * Each exported row's ID and waste balance cells, read through the
  * registration's waste-records export.
@@ -462,7 +473,8 @@ describe('2027 rows linked to a 2026 row', () => {
       expect((await getWasteBalance(env)).amount).toBe(0)
     })
 
-    it('credits an unlinked 2027 row exported on a live day of the 2026 accreditation', async () => {
+    it('credits an unlinked 2027 row, uploaded once 2026 has closed, exported on a live day of the 2026 accreditation', async () => {
+      afterThe2026CorrectionDeadline()
       const env = await setup()
 
       await submitted(
@@ -847,7 +859,8 @@ describe('2027 rows linked to a 2026 row', () => {
   })
 
   describe('an accredited exporter accredited only in 2027', () => {
-    it('does not credit a 2027 row exported in 2026', async () => {
+    it('does not credit a 2027 row, uploaded once 2026 has closed, exported in 2026', async () => {
+      afterThe2026CorrectionDeadline()
       openNextYear()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
