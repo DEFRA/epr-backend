@@ -66,7 +66,8 @@ import { createStatusesValidator } from './validation.js'
  * @typedef {{ at: string, by?: { name: string, position?: string } }} PrnOperation
  * @typedef {PrnOperation & { status: PrnStatus }} PrnStatusChange
  *
- * `obligationYear` is deprecated in favour of `obligation.year`.
+ * Deprecated: `obligationYear`. Read `obligation.year`; it goes once the
+ * frontend reads `obligation`.
  * @typedef {{
  *   id: string,
  *   prnNumber?: string,
