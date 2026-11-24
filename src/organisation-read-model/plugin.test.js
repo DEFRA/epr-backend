@@ -12,7 +12,7 @@ import { registerDependency } from '#plugins/register-dependency.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 import { setupMsw } from '#vite/setup-msw.js'
-import { organisationReadModel } from './plugin.js'
+import { organisationReadRepositoryPlugin } from './plugin.js'
 import {
   REPROCESSOR_NUMBER,
   findOrganisation,
@@ -75,18 +75,15 @@ const serveRegAccredAccreditation = () => {
 }
 
 /**
- * A server with the read model registered over the test's database, as the
- * server setup registers it, and initialised. Given an adapter, it has no
- * MongoDB plugin, because the read model then needs none.
+ * A server with the MongoDB adapter registered over the test's database, as
+ * the server setup registers it, and initialised.
  *
  * @param {MongoClient} mongoClient
  * @param {boolean} regAccredExternalAccreditations
- * @param {{ organisationReadRepository?: OrganisationReadRepository }} [adapters]
  */
 const registeredServer = async (
   mongoClient,
-  regAccredExternalAccreditations,
-  adapters = {}
+  regAccredExternalAccreditations
 ) => {
   /** @type {Record<string, unknown>} */
   const settings = {
@@ -102,14 +99,13 @@ const registeredServer = async (
   )()
   const server = Hapi.server()
   server.decorate('server', 'logger', logger)
-  const mongodb = {
-    name: 'mongodb',
-    register: (/** @type {import('@hapi/hapi').Server} */ registered) => {
-      registered.decorate('server', 'db', database)
-    }
-  }
   await server.register([
-    ...(adapters.organisationReadRepository ? [] : [mongodb]),
+    {
+      name: 'mongodb',
+      register: (/** @type {import('@hapi/hapi').Server} */ registered) => {
+        registered.decorate('server', 'db', database)
+      }
+    },
     {
       name: 'overseasSitesRepository',
       register: (registered) => {
@@ -122,8 +118,8 @@ const registeredServer = async (
     }
   ])
   await server.register({
-    plugin: organisationReadModel,
-    options: { config: { get: (key) => settings[key] }, ...adapters }
+    plugin: organisationReadRepositoryPlugin,
+    options: { config: { get: (key) => settings[key] } }
   })
   await server.initialize()
   return server
@@ -136,7 +132,7 @@ const registeredServer = async (
 const readRepositoryOf = (server) =>
   /** @type {ServerApp} */ (server.app).organisationReadRepository
 
-describe('organisationReadModel', () => {
+describe('organisationReadRepositoryPlugin', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
   })
@@ -195,14 +191,5 @@ describe('organisationReadModel', () => {
     await server.initialize()
 
     expect(readRepositoryOf(server)).toBe(provided)
-  })
-
-  it('provides the repository it is given', async ({ mongoClient }) => {
-    const given = /** @type {OrganisationReadRepository} */ ({})
-    const server = await registeredServer(mongoClient, false, {
-      organisationReadRepository: given
-    })
-
-    expect(readRepositoryOf(server)).toBe(given)
   })
 })

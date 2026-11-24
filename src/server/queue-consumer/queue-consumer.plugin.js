@@ -27,7 +27,7 @@ export const commandQueueConsumerPlugin = {
     dependsOn(server, [
       'summaryLogsRepository',
       'organisationsRepository',
-      'organisation-read-model',
+      'organisationReadRepository',
       'wasteBalanceService',
       'uploadsRepository',
       'reportsRepository',

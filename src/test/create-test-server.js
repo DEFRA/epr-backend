@@ -4,7 +4,6 @@ import { vi } from 'vitest'
 import { mockSqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/mock.plugin.js'
 import { mockDlqAdminPlugin } from '#plugins/dlq-admin.mock.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
-import { modulePlugins } from '#plugins/modules.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import { serverPlugins } from '#plugins/server-plugins.js'
 import { getConfig } from '#root/config.js'
@@ -15,7 +14,7 @@ import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/up
 import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
 import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
 import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import { createInMemoryOrganisationReadRepositoryPlugin } from '#organisation-read-model/test-support.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
 import { createInMemoryRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
@@ -33,7 +32,6 @@ import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-record
 /** @import { HapiServer, ServerApp } from '#common/hapi-types.js' */
 /** @import { LogMethod } from '#common/helpers/logging/logger.js' */
 /** @import { Mock } from 'vitest' */
-/** @import { ModuleOptions } from '#plugins/modules.js' */
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
@@ -210,6 +208,10 @@ const repositoryConfigs = [
   {
     name: 'orsImportsRepository',
     createDefault: createInMemoryOrsImportsRepositoryPlugin
+  },
+  {
+    name: 'organisationReadRepository',
+    createDefault: createInMemoryOrganisationReadRepositoryPlugin
   }
 ]
 
@@ -245,21 +247,6 @@ function buildRepositoryPlugins(configs, repoOverrides) {
       : createRepositoryPlugin(name, repoOverrides[name])
   })
 }
-
-/**
- * Gives each module the in-memory adapter for its port, or the test's own
- * repository where the test passes one.
- *
- * @param {Partial<Record<keyof ServerApp, Function|Object>>} repoOverrides - Repository overrides keyed by name
- * @returns {Required<ModuleOptions>}
- */
-const testModuleOptions = (repoOverrides) => ({
-  'organisation-read-model': {
-    organisationReadRepository: repoOverrides.organisationReadRepository
-      ? resolveOverride(repoOverrides.organisationReadRepository)
-      : createInMemoryOrganisationReadRepository()
-  }
-})
 
 /**
  * Creates a Hapi server with test configuration.
@@ -354,8 +341,7 @@ export async function createTestServer(options = {}) {
       plugin: mockDlqAdminPlugin,
       options: { dlqService: options.dlqService }
     },
-    ...(options.db ? [createDbPlugin(options.db)] : []),
-    ...modulePlugins(config, testModuleOptions(options.repositories ?? {}))
+    ...(options.db ? [createDbPlugin(options.db)] : [])
   ]
 
   await server.register(serverPlugins(config, infrastructure))

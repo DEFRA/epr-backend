@@ -87,7 +87,7 @@ describe('commandQueueConsumerPlugin', () => {
     const providers = [
       'summaryLogsRepository',
       'organisationsRepository',
-      'organisation-read-model',
+      'organisationReadRepository',
       'wasteBalanceService',
       'uploadsRepository',
       'reportsRepository',
@@ -122,11 +122,11 @@ describe('commandQueueConsumerPlugin', () => {
 
     it('refuses to initialise without the read model', async () => {
       const hapiServer = await serverWith(
-        providers.filter((name) => name !== 'organisation-read-model')
+        providers.filter((name) => name !== 'organisationReadRepository')
       )
 
       await expect(hapiServer.initialize()).rejects.toThrow(
-        /organisation-read-model/
+        /organisationReadRepository/
       )
     })
   })
