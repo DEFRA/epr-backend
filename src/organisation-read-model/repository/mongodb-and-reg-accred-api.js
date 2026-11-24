@@ -1,10 +1,6 @@
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
-import {
-  findAll,
-  findOne,
-  findPage
-} from '#repositories/organisations/mongodb-find.js'
+import { findAll, findOne, findPage } from './mongodb-find.js'
 import {
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
   REG_ACCRED_ACCREDITATION_YEAR
@@ -87,11 +83,10 @@ const createMongoExternalAccreditationsLoader =
  * shape. External accreditations exist only for 2027, so they are loaded only
  * once 2027 is open, and only when the year asked for is 2027 or omitted.
  *
- * It shares the organisations repository's reads through the
- * `#repositories/organisations/mongodb-find.js` import while both read
- * `epr-organisations`, so a change to that repository's find changes this one
- * too. Once the read model has its own collection, that import is the place
- * to separate them.
+ * It reads `epr-organisations`, which the organisations repository owns,
+ * naming it through that repository's `COLLECTION_NAME` in mongodb.js.
+ * Once the read model has its own collection, that import is the place to
+ * separate them.
  *
  * `find` filters and counts the stored organisations, then puts the page into
  * the read model's shape. An organisation the model leaves out still counts

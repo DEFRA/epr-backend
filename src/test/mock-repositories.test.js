@@ -17,8 +17,6 @@ describe('mock-repositories', () => {
       methods: [
         'insert',
         'replace',
-        'findAll',
-        'find',
         'findByOrganisationNumbers',
         'findById',
         'findByLinkedDefraOrgId',
