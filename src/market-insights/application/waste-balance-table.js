@@ -169,6 +169,7 @@ const periodKey = ({ material, accreditationType }) =>
  * identify an operator.
  *
  * @param {ReadModelRegistration} registration
+ * @returns {Pick<WasteBalanceCell, 'material' | 'accreditationType'>[]}
  */
 const rowsOfRegistration = ({ material, wasteProcessingType }) => [
   { material, accreditationType: wasteProcessingType },
@@ -182,6 +183,7 @@ const rowsOfRegistration = ({ material, wasteProcessingType }) => [
  * exporter and reprocessor counts once in the merged row.
  *
  * @param {Contribution} contribution
+ * @returns {string[]}
  */
 const figuresOf = ({ month, registration }) =>
   rowsOfRegistration(registration).flatMap((row) => [
@@ -564,23 +566,34 @@ export const aggregateWasteBalanceTable = async ({
 }
 
 /**
- * Whether any figure in a material's exporter or reprocessor row, in any month
- * or across the period, comes from fewer than three operators.
+ * @param {PublishedWasteBalanceFigures} figure
+ * @returns {boolean}
+ */
+const holdsTonnage = ({
+  totalCredited,
+  eligibleForWasteBalance,
+  sentOnDeductions,
+  netCredit
+}) =>
+  [totalCredited, eligibleForWasteBalance, sentOnDeductions, netCredit].some(
+    (tonnage) => tonnage !== 0
+  )
+
+/**
+ * Whether any month's figure in a material's exporter or reprocessor row comes
+ * from fewer than three operators. The period's operators take in every
+ * month's, so its figures can identify an operator only where a month's does.
  *
  * @param {AggregateWasteBalanceTable} table
  * @param {Material} material
+ * @returns {boolean}
  */
-const identifiesAnOperator = ({ data: { months, period } }, material) =>
+const identifiesAnOperator = ({ data: { months } }, material) =>
   SEPARATE_ROWS.some((accreditationType) =>
-    [
-      ...Object.values(months).map(
-        ({ figures }) => figures[material][accreditationType]
-      ),
-      {
-        ...period.figures[material][accreditationType],
-        ...period.operatorCounts[material][accreditationType]
-      }
-    ].some((figure) => fromFewOperators(figure, figure.netCredit !== 0))
+    Object.values(months).some(({ figures }) => {
+      const figure = figures[material][accreditationType]
+      return fromFewOperators(figure, holdsTonnage(figure))
+    })
   )
 
 /**

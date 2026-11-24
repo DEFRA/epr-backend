@@ -2283,7 +2283,20 @@ describe('mergeRowsFromFewOperators', () => {
     ['two operators', figure(20, 2)],
     ['one operator', figure(20, 1)],
     ['no accredited operator, though it holds tonnage', figure(20, 0)],
-    ['two operators, though it holds no tonnage', figure(0, 2)]
+    ['two operators, though it holds no tonnage', figure(0, 2)],
+    [
+      'no accredited operator, though it holds gross tonnage that credits nothing',
+      { ...figure(0, 0), totalCredited: 25 }
+    ],
+    [
+      'no accredited operator, though its tonnage nets to zero',
+      {
+        ...figure(0, 0),
+        totalCredited: 30,
+        eligibleForWasteBalance: 30,
+        sentOnDeductions: 30
+      }
+    ]
   ])(
     "merges a material's rows for the whole period where one month's figure comes from %s",
     (_, fewOperators) => {
@@ -2303,14 +2316,6 @@ describe('mergeRowsFromFewOperators', () => {
       ).toEqual({ operatorCount: 4, submittingOperatorCount: 4 })
     }
   )
-
-  it("merges a material's rows where only the period's figure comes from two operators", () => {
-    const table = mergeRowsFromFewOperators(
-      aggregate({ period: { reprocessor: figure(10, 2) } })
-    )
-
-    expect(plasticRows(table)).toEqual(SERVED_MERGED)
-  })
 
   it('keeps separate rows where a figure comes from no accredited operator and holds nothing', () => {
     const table = mergeRowsFromFewOperators(

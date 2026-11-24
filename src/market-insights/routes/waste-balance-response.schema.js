@@ -51,7 +51,7 @@ const operatorCountsByMaterialSchema = byMaterialAndType(
  *
  * A material is keyed by `exporter` and `reprocessor`, or by
  * `exporterAndReprocessor` alone where any figure in either of those rows, in
- * any month or across the period, comes from fewer than three operators
+ * any month, comes from fewer than three operators
  * accredited for it. The merged row covers the whole period and sums both
  * accreditation types.
  *
