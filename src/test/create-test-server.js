@@ -250,14 +250,14 @@ function buildRepositoryPlugins(configs, repoOverrides) {
  * Gives each module the in-memory adapter for its port, or the test's own
  * repository where the test passes one.
  *
- * @param {Record<string, any>} repoOverrides - Repository overrides keyed by name
+ * @param {Partial<Record<keyof ServerApp, Function|Object>>} repoOverrides - Repository overrides keyed by name
  * @returns {ModuleOptions}
  */
 const testModuleOptions = (repoOverrides) => ({
   'organisation-read-model': {
-    organisationReadRepository:
-      repoOverrides.organisationReadRepository ??
-      createInMemoryOrganisationReadRepository()
+    organisationReadRepository: repoOverrides.organisationReadRepository
+      ? resolveOverride(repoOverrides.organisationReadRepository)
+      : createInMemoryOrganisationReadRepository()
   }
 })
 

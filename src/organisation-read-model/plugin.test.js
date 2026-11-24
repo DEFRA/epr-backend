@@ -80,10 +80,12 @@ const serveRegAccredAccreditation = () => {
  *
  * @param {MongoClient} mongoClient
  * @param {boolean} regAccredExternalAccreditations
+ * @param {{ organisationReadRepository?: OrganisationReadRepository }} [adapters]
  */
 const registeredServer = async (
   mongoClient,
-  regAccredExternalAccreditations
+  regAccredExternalAccreditations,
+  adapters = {}
 ) => {
   /** @type {Record<string, unknown>} */
   const settings = {
@@ -119,7 +121,7 @@ const registeredServer = async (
   ])
   await server.register({
     plugin: organisationReadModel,
-    options: { config: { get: (key) => settings[key] } }
+    options: { config: { get: (key) => settings[key] }, ...adapters }
   })
   await server.initialize()
   return server
@@ -191,5 +193,14 @@ describe('organisationReadModel', () => {
     await server.initialize()
 
     expect(readRepositoryOf(server)).toBe(provided)
+  })
+
+  it('provides the repository it is given', async ({ mongoClient }) => {
+    const given = /** @type {OrganisationReadRepository} */ ({})
+    const server = await registeredServer(mongoClient, false, {
+      organisationReadRepository: given
+    })
+
+    expect(readRepositoryOf(server)).toBe(given)
   })
 })

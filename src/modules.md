@@ -15,7 +15,7 @@ The plugin registers what the module offers. That is routes for its users, a cap
 - **It declares a literal `name` and the keys it `provides`.** The `provides` keys are keys of `ServerApp` in `src/common/hapi-types.js`, which stays the one closed type for what plugins provide.
 - **Its config arrives as the `config` option.** It never reads the config singleton, and it reads its own feature flags from that option.
 - **Its adapters are options keyed by port.** An adapter is an instance, or a factory that takes the other capabilities it needs. Given none, the plugin builds its MongoDB adapter and declares the `mongodb` plugin.
-- **It provides each capability with `registerDependency`** inside the `after` callback of `dependsOn`. Hapi runs that callback at every initialise, so the plugin guards it to provide only once. Handlers keep reading capabilities from the request, so each request logs with its own logger.
+- **It provides each capability with `registerDependency`** inside the `after` callback of `dependsOn`. Hapi runs that callback at every initialise, so the plugin guards it to provide only once. Handlers keep reading capabilities from the request, so a factory adapter logs with each request's own logger.
 
 ## Dependencies between plugins
 
@@ -29,6 +29,6 @@ Every server, test servers included, is initialised before use, because capabili
 
 ## Registering modules
 
-`modules` in `src/plugins/modules.js` lists every module, and `modulePlugins` turns it into registrations with their config. Both servers register it after their own plugins. The test server gives each module its in-memory adapter through a `ModuleOptions` map, whose type comes from the list, and a test overrides a capability through `createTestServer`'s `repositories`. The legacy apply-routes server registers no modules.
+`modules` in `src/plugins/modules.js` lists every module in this shape, and `modulePlugins` turns it into registrations with their config. Both servers register it after their own plugins. The test server gives each module its in-memory adapter through a `ModuleOptions` map, whose type comes from the list, and a test overrides a capability through `createTestServer`'s `repositories`. The legacy apply-routes server skips the module list.
 
 A plugin that is not yet a module stays in each server's own list. Its name and what it provides are listed in `UnmigratedProvides` in `src/plugins/modules.js` while another plugin declares it with `dependsOn`.
