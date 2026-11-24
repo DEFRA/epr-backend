@@ -21,5 +21,5 @@ A module offers routes, ports, or both. A port is a capability other code uses, 
 
 A plugin lists the plugins it needs in Hapi's `dependencies` field, by the name of the port each one provides. Hapi checks that list when the server initialises, so every server, test servers included, is initialised before use.
 
-- **A plugin that reads another plugin's port when it registers needs that plugin registered first.** Hapi does not check the list until initialise, so the plugin throws a clear error when the port is missing, and the server setup registers the provider first.
+- **A plugin that reads another plugin's port when it registers needs that plugin registered first.** Hapi does not check the list until initialise, so the server setup registers the provider first.
 - **A plugin that reads a port only at runtime reads it in its handlers or its `start` listener,** as the queue consumer does.

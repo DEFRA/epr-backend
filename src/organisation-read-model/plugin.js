@@ -23,14 +23,7 @@ export const organisationReadRepositoryPlugin = {
    * @param {{ config: { get: (key: string) => unknown } }} options
    */
   register: (server, { config }) => {
-    const { overseasSitesRepository } = /** @type {Partial<ServerApp>} */ (
-      server.app
-    )
-    if (!overseasSitesRepository) {
-      throw new Error(
-        'organisationReadRepository needs the overseasSitesRepository plugin registered before it'
-      )
-    }
+    const { overseasSitesRepository } = /** @type {ServerApp} */ (server.app)
     const createRepository = createOrganisationReadRepository(
       /** @type {Server & { db: Db }} */ (server).db,
       {
