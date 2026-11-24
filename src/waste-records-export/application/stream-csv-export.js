@@ -134,7 +134,7 @@ const recomputedClassification = (rowState, year, context) =>
   reclassifyWasteRecordState(rowState, year, context).classification
 
 /** @type {ReclassificationContext} */
-const NOT_ACCREDITED = (tableSchemas) => ({
+const notAccredited = (tableSchemas) => ({
   tableSchemas,
   accreditation: null,
   overseasSites: {}
@@ -158,7 +158,7 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
       ledgerAccreditation.accreditation.status.current
     )
   ) {
-    return { accreditationNumber: null, context: NOT_ACCREDITED }
+    return { accreditationNumber: null, context: notAccredited }
   }
   return {
     accreditationNumber: ledgerAccreditation.accreditation.accreditationNumber,
