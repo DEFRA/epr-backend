@@ -1,8 +1,7 @@
 /** @import { ObjectId } from 'mongodb' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import { FindParams } from './administration-port.js' */
 /** @import { OrganisationsRepositoryFactory } from './port.js' */
-/** @import { NumberHolder, StoredOrganisation, WriteOperation } from './helpers.js' */
+/** @import { NumberHolder, WriteOperation } from './helpers.js' */
 
 import Boom from '@hapi/boom'
 import {
@@ -28,7 +27,6 @@ import {
   performReplaceUsers,
   performUnlinkDefraOrganisation
 } from './inmemory.targeted-updates.js'
-import { findPage } from './inmemory-find.js'
 import { CURRENT_SCHEMA_VERSION } from '#repositories/organisations/schema/helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -229,22 +227,6 @@ const performFindById = (staleCache) => async (id, minimumVersion) => {
   }
   return found
 }
-
-const performFindAll = (staleCache) => async () => {
-  return structuredClone(staleCache).map((org) =>
-    mapDocumentWithCurrentStatuses({ ...org })
-  )
-}
-
-const performFind =
-  (/** @type {StoredOrganisation[]} */ staleCache) =>
-  async (/** @type {FindParams} */ params) =>
-    findPage(
-      structuredClone(staleCache).map((org) =>
-        mapDocumentWithCurrentStatuses(org)
-      ),
-      params
-    )
 
 /** @returns {import('./linking-port.js').OrganisationSummary} */
 const toOrganisationSummary = (org) => ({
@@ -494,8 +476,6 @@ export const createInMemoryOrganisationsRepository = (
         syncStaleCache
       ),
       replaceUsers: performReplaceUsers(storage, syncStaleCache),
-      findAll: performFindAll(staleCache),
-      find: performFind(staleCache),
       findAllLinked: performFindAllLinked(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,

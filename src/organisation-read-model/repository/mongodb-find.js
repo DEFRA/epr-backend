@@ -1,28 +1,23 @@
-import Boom from '@hapi/boom'
-
+import {
+  escapeRegex,
+  mapDocumentWithCurrentStatuses
+} from '#repositories/organisations/helpers.js'
+import { COLLECTION_NAME } from '#repositories/organisations/mongodb.js'
 import {
   anchoredPattern,
-  escapeRegex,
-  mapDocumentWithCurrentStatuses,
   normaliseCriteria,
   parseOrgIdCriterion
-} from './helpers.js'
+} from './search-criteria.js'
 
 /** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { Db, Document, Filter } from 'mongodb' */
-/** @import { FindParams, SearchCriteria } from './administration-port.js' */
+/** @import { FindParams } from './port.js' */
+/** @import { SearchCriteria } from './search-criteria.js' */
 
 /**
- * How organisations are read from MongoDB. The organisations repository and
- * the organisation read repository both read this collection, and share these
- * reads so they look organisations up and search them the same way.
+ * How the MongoDB organisation read repository reads the stored
+ * organisations: one at a time, a page of a search, or all of them.
  */
-
-export const COLLECTION_NAME = 'epr-organisations'
-
-// Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)
-export const DEFAULT_MAX_CONSISTENCY_RETRIES = 20
-export const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
 
 /**
  * Reads the organisation document matching `filter` once.
@@ -34,54 +29,6 @@ export const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
 export const findOne = async (db, filter) => {
   const doc = await db.collection(COLLECTION_NAME).findOne(filter)
   return doc ? mapDocumentWithCurrentStatuses(doc) : null
-}
-
-/**
- * Reads the one organisation `filter` matches, retrying until its version is
- * at least `minimumVersion`. Without `minimumVersion` it reads once. Resolves
- * null when no organisation matches, and throws 500 when the version never
- * arrives.
- *
- * @param {Db} db
- * @param {number} maxRetries
- * @param {number} retryDelayMs
- * @param {Filter<Document>} filter
- * @param {number} [minimumVersion]
- * @returns {Promise<Organisation | null>}
- */
-export const findOneAtMinimumVersion = async (
-  db,
-  maxRetries,
-  retryDelayMs,
-  filter,
-  minimumVersion
-) => {
-  if (minimumVersion === undefined) {
-    return findOne(db, filter)
-  }
-
-  for (let i = 0; i < maxRetries; i++) {
-    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
-
-    const isLastRetry = i === maxRetries - 1
-
-    if (doc) {
-      if (doc.version >= minimumVersion) {
-        return mapDocumentWithCurrentStatuses(doc)
-      }
-      // Document exists but version too low - will retry
-    } else if (isLastRetry) {
-      return null
-    } else {
-      // Document not found but have retries left - will retry
-    }
-
-    if (!isLastRetry) {
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs)) // NOSONAR: javascript:S9382 - each retry must wait for the one before it
-    }
-  }
-
-  throw Boom.internal('Consistency timeout waiting for minimum version')
 }
 
 /** Matches no organisation, used when a criterion cannot be parsed. */
@@ -107,7 +54,7 @@ const buildOrgIdFilter = (value) => {
 
 /**
  * Builds the MongoDB filter for a find query. The in-memory equivalent is in
- * inmemory-find.js; the shared criteria semantics live in helpers.js and the
+ * inmemory-find.js; the shared criteria semantics live in search-criteria.js and the
  * find contract tests hold the two implementations to the same behaviour.
  *
  * @param {SearchCriteria} criteria

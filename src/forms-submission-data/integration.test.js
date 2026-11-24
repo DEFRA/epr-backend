@@ -17,6 +17,13 @@ describe('Migration Integration Tests with Fixtures', () => {
     copyFormFileToS3: vi.fn().mockResolvedValue(undefined)
   }
 
+  async function readAllOrganisations() {
+    const { organisations } = await sharedOrganisationsRepo.findAllIds()
+    return Promise.all(
+      [...organisations].map((id) => sharedOrganisationsRepo.findById(id))
+    )
+  }
+
   function loadFixtures(fixtureType) {
     const fixturesDir = join(
       process.cwd(),
@@ -110,7 +117,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       await formsDataMigration.migrate()
 
       // Verify organisations were created
-      const allOrgs = await sharedOrganisationsRepo.findAll()
+      const allOrgs = await readAllOrganisations()
       expect(allOrgs).toHaveLength(8)
 
       // Create a map of organisations by number for easy lookup
@@ -164,7 +171,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       await new Promise((resolve) => setImmediate(resolve))
 
       // Verify all accreditations are now present
-      const allOrgs = await sharedOrganisationsRepo.findAll()
+      const allOrgs = await readAllOrganisations()
       expect(allOrgs).toHaveLength(8)
 
       const totalAccreditations = allOrgs.reduce(

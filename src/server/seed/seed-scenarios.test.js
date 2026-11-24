@@ -16,8 +16,8 @@ import {
  * The repository uses setImmediate for cache updates.
  *
  * Note: We can't use waitForVersion here because createEprOrganisationScenarios
- * doesn't return the created organisations, and we query using findAll() with
- * organisation number filtering rather than findById().
+ * doesn't return the created organisations, and we query by organisation number
+ * rather than findById().
  */
 const waitForCacheSync = () => new Promise((resolve) => setImmediate(resolve))
 
@@ -33,7 +33,9 @@ describe('seed-scenarios', () => {
     it('creates approved, active, and active-with-rejected-accreditation scenarios', async () => {
       await createEprOrganisationScenarios(repository)
 
-      const orgs = await repository.findAll()
+      const orgs = await repository.findByOrganisationNumbers(
+        Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      )
       const numbers = Object.values(SCENARIO_ORGANISATION_NUMBERS)
       const scenarioOrgs = orgs.filter((org) =>
         numbers.includes(org.organisationNumber)
@@ -56,7 +58,9 @@ describe('seed-scenarios', () => {
 
       // Verify all scenarios were created successfully
       await waitForCacheSync()
-      const orgs = await repository.findAll()
+      const orgs = await repository.findByOrganisationNumbers(
+        Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      )
       const numbers = Object.values(SCENARIO_ORGANISATION_NUMBERS)
       const scenarioOrgs = orgs.filter((org) =>
         numbers.includes(org.organisationNumber)
@@ -80,7 +84,9 @@ describe('seed-scenarios', () => {
       await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
-      const orgs = await repository.findAll()
+      const orgs = await repository.findByOrganisationNumbers(
+        Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      )
       const approvedOrg = orgs.find(
         (org) =>
           org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.APPROVED
@@ -110,7 +116,9 @@ describe('seed-scenarios', () => {
       await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
-      const orgs = await repository.findAll()
+      const orgs = await repository.findByOrganisationNumbers(
+        Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      )
       const approvedOrg = orgs.find(
         (org) =>
           org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.APPROVED
@@ -129,7 +137,9 @@ describe('seed-scenarios', () => {
       await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
-      const orgs = await repository.findAll()
+      const orgs = await repository.findByOrganisationNumbers(
+        Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      )
       const activeOrg = orgs.find(
         (org) => org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.ACTIVE
       )
@@ -154,7 +164,9 @@ describe('seed-scenarios', () => {
       await createEprOrganisationScenarios(repository)
       await waitForCacheSync()
 
-      const orgs = await repository.findAll()
+      const orgs = await repository.findByOrganisationNumbers(
+        Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      )
       const mixedOrg = orgs.find(
         (org) =>
           org.organisationNumber ===
@@ -183,7 +195,9 @@ describe('seed-scenarios', () => {
         await createEprOrganisationScenarios(repository)
         await waitForCacheSync()
 
-        const orgs = await repository.findAll()
+        const orgs = await repository.findByOrganisationNumbers(
+          Object.values(SCENARIO_ORGANISATION_NUMBERS)
+        )
         const activeOrg = orgs.find(
           (org) =>
             org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.ACTIVE
@@ -211,7 +225,9 @@ describe('seed-scenarios', () => {
         await createEprOrganisationScenarios(repository)
         await waitForCacheSync()
 
-        const orgs = await repository.findAll()
+        const orgs = await repository.findByOrganisationNumbers(
+          Object.values(SCENARIO_ORGANISATION_NUMBERS)
+        )
         const approvedOrg = orgs.find(
           (org) =>
             org.organisationNumber === SCENARIO_ORGANISATION_NUMBERS.APPROVED
@@ -268,7 +284,9 @@ describe('seed-scenarios', () => {
 
       // Should have attempted all 3 scenarios despite first failing
       // The first scenario fails, so only 2 should succeed
-      const orgs = await failingRepository.findAll()
+      const orgs = await failingRepository.findByOrganisationNumbers(
+        Object.values(SCENARIO_ORGANISATION_NUMBERS)
+      )
       expect(orgs.length).toBe(2)
     })
   })
