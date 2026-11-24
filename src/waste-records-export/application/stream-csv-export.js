@@ -134,7 +134,11 @@ const recomputedClassification = (rowState, year, context) =>
   reclassifyWasteRecordState(rowState, year, context).classification
 
 /** @type {ReclassificationContext} */
-const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }
+const NOT_ACCREDITED = (tableSchemas) => ({
+  tableSchemas,
+  accreditation: null,
+  overseasSites: {}
+})
 
 /**
  * The partition's own accreditation, held (approved or suspended) as of export

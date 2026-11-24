@@ -1,7 +1,4 @@
-import {
-  findSchemaByWasteRecordType,
-  linksYears
-} from '#domain/summary-logs/table-schemas/index.js'
+import { findSchemaByWasteRecordType } from '#domain/summary-logs/table-schemas/index.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
@@ -49,6 +46,13 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  */
 
 /**
+ * The context a row is classified against, given the template it reports
+ * under, for readers that classify rows of many templates against one ledger.
+ *
+ * @typedef {(tableSchemas: TableSchemas) => RowClassificationContext} ClassificationContextFor
+ */
+
+/**
  * Classify a waste record for the waste balance. NOT_APPLICABLE takes
  * precedence: a record with no accreditation, or whose table schema has no
  * waste-balance classifier, cannot yield a per-row decision at all. Otherwise
@@ -62,11 +66,8 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  */
 export const classifyRecordForWasteBalance = (
   record,
-  { tableSchemas, previousYearAccreditation, ...currentYear }
+  { tableSchemas, ...context }
 ) => {
-  const context = linksYears(tableSchemas)
-    ? { ...currentYear, previousYearAccreditation }
-    : currentYear
   const schema = findSchemaByWasteRecordType(record.type, tableSchemas)?.schema
 
   if (!context.accreditation || !schema?.classifyForWasteBalance) {

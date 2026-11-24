@@ -7,7 +7,7 @@ import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
  */
 
 /**
- * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').ClassificationContext} ReclassificationContext
+ * @typedef {import('#waste-balances/domain/waste-balance-classification.js').ClassificationContextFor} ReclassificationContext
  */
 
 /**
@@ -28,17 +28,14 @@ import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
  *
  * @param {WasteRecordState} rowState
  * @param {Year} year - The year of the row's partition
- * @param {ReclassificationContext} context
+ * @param {ReclassificationContext} contextFor
  * @returns {WasteRecordState}
  */
-export const reclassifyWasteRecordState = (rowState, year, context) => ({
+export const reclassifyWasteRecordState = (rowState, year, contextFor) => ({
   ...rowState,
   classification: classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    {
-      tableSchemas: tableSchemasOf(year, rowState.processingType),
-      ...context
-    }
+    contextFor(tableSchemasOf(year, rowState.processingType))
   )
 })
 
@@ -51,10 +48,10 @@ export const reclassifyWasteRecordState = (rowState, year, context) => ({
  *
  * @param {WasteRecordState[]} rowStates
  * @param {Year} year - The year of the partition
- * @param {ReclassificationContext} context
+ * @param {ReclassificationContext} contextFor
  * @returns {WasteRecordState[]}
  */
-export const reclassifyWasteRecordStates = (rowStates, year, context) =>
+export const reclassifyWasteRecordStates = (rowStates, year, contextFor) =>
   rowStates.map((rowState) =>
-    reclassifyWasteRecordState(rowState, year, context)
+    reclassifyWasteRecordState(rowState, year, contextFor)
   )

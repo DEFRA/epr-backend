@@ -34,7 +34,7 @@ import { recordOf } from '#common/helpers/record-of.js'
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import { ClassificationContextFor } from '#waste-balances/domain/waste-balance-classification.js' */
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
@@ -60,7 +60,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {ReadModelRegistration} registration
- * @property {ClassificationContext} classificationContext
+ * @property {ClassificationContextFor} classificationContextFor
  */
 
 /**
@@ -234,7 +234,8 @@ const resolvePublishedPartitions = (entries, index, logger) => {
       organisationNumber: ledgerAccreditation.organisation.organisationNumber,
       registrationNumber: ledgerAccreditation.registrationNumber,
       registration: ledgerAccreditation.registration,
-      classificationContext: ledgerClassificationContextOf(ledgerAccreditation)
+      classificationContextFor:
+        ledgerClassificationContextOf(ledgerAccreditation)
     })
   }
   return partitions
@@ -253,13 +254,12 @@ const publishedContribution = (rowState, partitions) => {
   if (partition === undefined) {
     return null
   }
-  const { registration, classificationContext } = partition
+  const { registration, classificationContextFor } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    {
-      tableSchemas: tableSchemasOf(rowState.year, rowState.processingType),
-      ...classificationContext
-    }
+    classificationContextFor(
+      tableSchemasOf(rowState.year, rowState.processingType)
+    )
   )
 
   const contribution = monthlyContribution(
