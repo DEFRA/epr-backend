@@ -158,4 +158,4 @@ async function createServer(options = {}) {
   return server
 }
 
-export { createServer, regAccredApiOf }
+export { createServer }
