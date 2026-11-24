@@ -66,6 +66,7 @@ import { createStatusesValidator } from './validation.js'
  * @typedef {{ at: string, by?: { name: string, position?: string } }} PrnOperation
  * @typedef {PrnOperation & { status: PrnStatus }} PrnStatusChange
  *
+ * `obligationYear` is deprecated in favour of `obligation.year`.
  * @typedef {{
  *   id: string,
  *   prnNumber?: string,
@@ -96,7 +97,7 @@ import { createStatusesValidator } from './validation.js'
  *   processToBeUsed: string | null,
  *   isDecemberWaste: boolean,
  *   obligationYear: Year,
- *   allowedObligationYears: Year[],
+ *   obligation: { year: Year, allowedYears: Year[] },
  *   notes?: string,
  *   createdAt: string,
  *   issued?: PrnOperation,
@@ -211,12 +212,18 @@ export const prnSchema = Joi.object({
   tonnage: Joi.number().required(),
   processToBeUsed: Joi.string().required(),
   isDecemberWaste: Joi.boolean().required(),
-  obligationYear: Joi.number().integer().required(),
-  allowedObligationYears: Joi.array()
-    .items(Joi.number().integer())
-    .unique()
-    .min(1)
-    .required(),
+  obligationYear: Joi.number()
+    .integer()
+    .required()
+    .description('Deprecated: use obligation.year'),
+  obligation: Joi.object({
+    year: Joi.number().integer().required(),
+    allowedYears: Joi.array()
+      .items(Joi.number().integer())
+      .unique()
+      .min(1)
+      .required()
+  }).required(),
   notes: Joi.string(),
   createdAt: isoDateTime,
   issued: Joi.object(prnOperationKeys).when('status.current', {
@@ -317,7 +324,10 @@ const toPrnResource = (
     processToBeUsed: getProcessCode(prn.accreditation.material),
     isDecemberWaste: prn.isDecemberWaste,
     obligationYear: prn.obligationYear,
-    allowedObligationYears: allowedObligationYears(prn),
+    obligation: {
+      year: prn.obligationYear,
+      allowedYears: allowedObligationYears(prn)
+    },
     ...(prn.notes && { notes: prn.notes }),
     createdAt: new Date(prn.createdAt).toISOString(),
     ...(prn.status.issued && { issued: toPrnOperation(prn.status.issued) }),

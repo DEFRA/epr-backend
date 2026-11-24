@@ -273,7 +273,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: issued.obligationYear,
-        allowedObligationYears: [2026],
+        obligation: { year: issued.obligationYear, allowedYears: [2026] },
         createdAt: '2026-04-01T10:00:00.000Z',
         issued: {
           at: issued.status.issued?.at.toISOString(),
@@ -296,18 +296,21 @@ describe('PRN routes by natural key', () => {
         ...asOperator()
       })
 
-      expect(body(response).allowedObligationYears).toStrictEqual([2026, 2027])
+      expect(body(response).obligation).toStrictEqual({
+        year: 2026,
+        allowedYears: [2026, 2027]
+      })
     })
 
     it('refuses to serve the same obligation year twice', async () => {
       const response = await server.inject({ url: prns, ...asOperator() })
       const resource = {
         ...body(response).items[0],
-        allowedObligationYears: [2026, 2026]
+        obligation: { year: 2026, allowedYears: [2026, 2026] }
       }
 
       expect(prnSchema.validate(resource).error?.message).toBe(
-        '"allowedObligationYears[1]" contains a duplicate value'
+        '"obligation.allowedYears[1]" contains a duplicate value'
       )
     })
 
@@ -349,7 +352,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: draft.obligationYear,
-        allowedObligationYears: [2026],
+        obligation: { year: draft.obligationYear, allowedYears: [2026] },
         notes: 'For the spring run',
         createdAt: '2026-03-01T10:00:00.000Z',
         regulatorCancellable: false
@@ -629,7 +632,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: expect.any(String),
         isDecemberWaste: false,
         obligationYear: 2026,
-        allowedObligationYears: [2026],
+        obligation: { year: 2026, allowedYears: [2026] },
         createdAt: '2026-06-01T00:00:00.000Z',
         regulatorCancellable: false
       })
