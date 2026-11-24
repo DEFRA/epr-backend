@@ -4,6 +4,7 @@ import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 import { assertRegistrationStatusTransitionValid } from '#domain/organisations/status.js'
 import { MIN_YEAR } from '#common/validation/year-schema.js'
+import { utcYearOf } from '#common/helpers/dates/year.js'
 import { registrationStatusHistoryPayloadSchema } from './registration-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
@@ -85,7 +86,7 @@ export const registrationStatusHistory = {
     if (grant) {
       // The schema refuses this date too, but its message names a field path
       // and index that the admin shows to the user as it comes back.
-      if (Number(grant.validFrom.slice(0, 4)) < MIN_YEAR) {
+      if (utcYearOf(grant.validFrom) < MIN_YEAR) {
         throw Boom.badData(
           `The date the registration is valid from must be in ${MIN_YEAR} or later`
         )
