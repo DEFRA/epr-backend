@@ -7,6 +7,7 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
+import { MIN_YEAR } from '#common/validation/year-schema.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
@@ -21,7 +22,8 @@ export const accreditationStatusHistoryPath =
 
 /**
  * Grant-only validations. Granting sets the whole validity window from the
- * supplied dates, so reject a window that would be inverted. Granting also
+ * supplied dates, so reject a start before the service's first year, with a
+ * message the admin can show as it is, and a window that would be inverted. Granting also
  * issues the accreditation number, which must not already be in use by any
  * accreditation in any organisation, whatever its status. The unique index on
  * accreditations.accreditationNumber also blocks concurrent grants of the
@@ -34,6 +36,12 @@ const assertGrantAllowed = async (
   registrationAccreditationAdminRepository,
   grant
 ) => {
+  if (Number(grant.validFrom.slice(0, 4)) < MIN_YEAR) {
+    throw Boom.badData(
+      `The date the accreditation is valid from must be in ${MIN_YEAR} or later`
+    )
+  }
+
   if (new Date(grant.validFrom) > new Date(grant.validTo)) {
     throw Boom.badData(
       `Cannot grant accreditation: validFrom ${grant.validFrom} is after validTo ${grant.validTo}`
