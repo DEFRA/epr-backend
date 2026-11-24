@@ -21,7 +21,7 @@ const tableSchemas = {
     validationSchema: Joi.object({
       ROW_ID: Joi.number(),
       PREVIOUS_YEAR_ROW_ID: Joi.number(),
-      DATE_OF_EXPORT: createDateFieldSchema({ rejectOpenEarlierYear: true })
+      DATE_OF_EXPORT: createDateFieldSchema()
     }).unknown(true)
   }
 }

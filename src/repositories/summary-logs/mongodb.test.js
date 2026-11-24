@@ -108,7 +108,9 @@ describe('MongoDB summary logs repository', () => {
     it('names it for the registration and the moment it was submitted', async ({
       summaryLogsRepository
     }) => {
-      const id = await insertLog(summaryLogsRepository)
+      const id = await insertLog(summaryLogsRepository, {
+        submittedAt: '2026-06-01T13:00:00.000Z'
+      })
 
       await summaryLogsRepository.getDownloadUrl(
         toSummaryLogId(id),
@@ -116,7 +118,7 @@ describe('MongoDB summary logs repository', () => {
       )
 
       expect(await lastSignedDisposition()).toBe(
-        'attachment; filename="R26ER5000000002PA-2024-01-01-000000.xlsx"'
+        'attachment; filename="R26ER5000000002PA-2026-06-01-130000.xlsx"'
       )
     })
 
