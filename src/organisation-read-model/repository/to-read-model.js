@@ -4,11 +4,16 @@ import {
 } from '#common/helpers/date-formatter.js'
 import { isOneOf } from '#common/helpers/is-one-of.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  ACCREDITATION_STATUS,
+  REGISTRATION_STATUS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { STORED_ACCREDITATION_YEAR } from '#repositories/organisations/schema/accreditation.js'
 import {
   ACCREDITATION_STATUSES,
+  HELD_ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
   REGISTRATION_STATUSES,
   statusOn
@@ -29,6 +34,7 @@ import { organisationInYear } from './organisation-in-year.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
+/** @import { RegistrationStatus, Status } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
@@ -317,13 +323,17 @@ function toRegistrationEntry(
   }
 
   const openYear = latestOpenYear(new Date(context.today))
+  const registrationStatus = { current: status, ...statusTimeline }
   const accreditations = accreditationsOf({
     registration,
     organisation,
     context,
-    externalAccreditations: externalByRegistration.get(registrationNumber) ?? {}
+    externalAccreditations: mapValues(
+      externalByRegistration.get(registrationNumber) ?? {},
+      (accreditation) =>
+        cancelledWithRegistration(accreditation, registrationStatus)
+    )
   })
-  const registrationStatus = { current: status, ...statusTimeline }
 
   /** @type {RegistrationCommon} */
   const common = {
@@ -345,6 +355,39 @@ function toRegistrationEntry(
       : toReprocessorRegistration(registration, common, accreditations, onDrop)
 
   return converted && [registrationNumber, converted]
+}
+
+/**
+ * Re-ex cancels a stored accreditation when its registration is cancelled.
+ * An external accreditation is held read-only in the registration service, so
+ * the same cancellation is applied here as it is served: one still held reads
+ * as cancelled from the registration's cancellation, and what the registration
+ * service records after that is left out.
+ *
+ * @param {AccreditationCommon} accreditation
+ * @param {Status<RegistrationStatus>} registrationStatus
+ * @returns {AccreditationCommon}
+ */
+function cancelledWithRegistration(accreditation, registrationStatus) {
+  const lastChange = registrationStatus.timeline.at(-1)
+  if (
+    lastChange?.status !== REGISTRATION_STATUS.CANCELLED ||
+    !HELD_ACCREDITATION_STATUSES.has(accreditation.status.current)
+  ) {
+    return accreditation
+  }
+  const cancelledAt = lastChange.at
+  return {
+    ...accreditation,
+    status: {
+      current: ACCREDITATION_STATUS.CANCELLED,
+      lastUpdatedAt: registrationStatus.lastUpdatedAt,
+      timeline: [
+        ...accreditation.status.timeline.filter(({ at }) => at <= cancelledAt),
+        { status: ACCREDITATION_STATUS.CANCELLED, at: cancelledAt }
+      ]
+    }
+  }
 }
 
 /**
