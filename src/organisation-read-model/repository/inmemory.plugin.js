@@ -1,4 +1,3 @@
-import { dependsOn } from '#plugins/depends-on.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
 
@@ -24,11 +23,9 @@ export function createInMemoryOrganisationReadRepositoryPlugin(
      * @returns {void}
      */
     register: (server) => {
-      dependsOn(server, [], () => {
-        registerDependency(server, 'organisationReadRepository', () =>
-          createRepository()
-        )
-      })
+      registerDependency(server, 'organisationReadRepository', () =>
+        createRepository()
+      )
     }
   }
 }

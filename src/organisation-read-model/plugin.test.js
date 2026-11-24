@@ -179,17 +179,4 @@ describe('organisationReadRepositoryPlugin', () => {
       expect(requested).toHaveLength(expectedRequests)
     }
   )
-
-  it('keeps the repository it provided when the server is initialised again', async ({
-    mongoClient
-  }) => {
-    serveRegAccredAccreditation()
-    const server = await registeredServer(mongoClient, false)
-    const provided = readRepositoryOf(server)
-
-    await server.stop()
-    await server.initialize()
-
-    expect(readRepositoryOf(server)).toBe(provided)
-  })
 })

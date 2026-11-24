@@ -15,7 +15,7 @@ A module offers routes, ports, or both. A port is a capability other code uses, 
 - **Routes go in a route plugin.**
 - **Each adapter of a port is its own plugin, named after the port.** The plugin's name is the literal port name, and it provides that key of `ServerApp` in `src/common/hapi-types.js` and nothing else. A port's adapters share the name, so Hapi refuses a server that registers two of them. The server setup registers the production adapter, and the test server registers the in-memory one.
 - **Its config arrives as the `config` option.** It never reads the config singleton, and it reads its own feature flags from that option.
-- **It provides its port with `registerDependency`** inside the `after` callback of `dependsOn`, and names there only the plugins that adapter uses. Handlers keep reading the port from the request, so an adapter built per request logs with that request's logger.
+- **It provides its port with `registerDependency`.** An adapter that uses other plugins calls it inside the `after` callback of `dependsOn`, and names there only the plugins it uses. An adapter that uses none calls it when it registers. Handlers keep reading the port from the request, so an adapter built per request logs with that request's logger.
 
 ## Dependencies between plugins
 
