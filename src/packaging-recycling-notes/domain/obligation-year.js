@@ -14,12 +14,12 @@ import { nextYear } from '#common/helpers/dates/year.js'
 
 export class InvalidObligationYearError extends Error {
   /**
-   * @param {Year} accreditationYear
+   * @param {Year[]} allowedYears
    * @param {number} obligationYear
    */
-  constructor(accreditationYear, obligationYear) {
+  constructor(allowedYears, obligationYear) {
     super(
-      `obligationYear must be either accreditation year ${accreditationYear} or ${accreditationYear + 1} for a December waste PRN; received ${obligationYear}`
+      `obligationYear must be either accreditation year ${allowedYears.join(' or ')} for a December waste PRN; received ${obligationYear}`
     )
     this.name = 'InvalidObligationYearError'
   }
@@ -58,15 +58,13 @@ export const selectObligationYearForAcceptance = (
     return undefined
   }
 
-  const allowedObligationYear = allowedObligationYears(prn).find(
+  const allowedYears = allowedObligationYears(prn)
+  const allowedObligationYear = allowedYears.find(
     (year) => year === providedObligationYear
   )
 
   if (!allowedObligationYear) {
-    throw new InvalidObligationYearError(
-      prn.accreditation.accreditationYear,
-      providedObligationYear
-    )
+    throw new InvalidObligationYearError(allowedYears, providedObligationYear)
   }
 
   return allowedObligationYear

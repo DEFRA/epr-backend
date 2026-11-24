@@ -55,13 +55,17 @@ describe('obligation year', () => {
       }
     )
 
-    it('rejects any other obligation year for a December PRN', () => {
-      expect(() =>
+    it('rejects any other obligation year for a December PRN, naming the allowed years', () => {
+      const select = () =>
         selectObligationYearForAcceptance(
           buildPrn({ isDecemberWaste: true }),
           2028
         )
-      ).toThrow(InvalidObligationYearError)
+
+      expect(select).toThrow(InvalidObligationYearError)
+      expect(select).toThrow(
+        'obligationYear must be either accreditation year 2026 or 2027 for a December waste PRN; received 2028'
+      )
     })
   })
 })
