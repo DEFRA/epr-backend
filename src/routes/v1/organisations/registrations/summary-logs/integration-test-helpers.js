@@ -893,6 +893,7 @@ export const createTestInfrastructure = async (
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
+ *   previousYearAccreditationValidFrom?: string,
  *   previousYearAccreditationSuspendedOn?: string,
  *   year?: Year,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config'],
@@ -913,6 +914,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   year = UPLOAD_YEAR,
   accreditationValidFrom = `${year}-01-01`,
   previousYearAccreditationNumber,
+  previousYearAccreditationValidFrom,
   previousYearAccreditationSuspendedOn,
   config,
   ledgerRepository = createInMemoryLedgerRepository()(),
@@ -943,6 +945,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       accredited,
       accreditationValidFrom,
       previousYearAccreditationNumber,
+      previousYearAccreditationValidFrom,
       previousYearAccreditationSuspendedOn
     })
   ])()
@@ -1202,6 +1205,7 @@ const buildComplexTestOrg = ({
  *   withOverseasSites?: boolean,
  *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
  *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
+ *   previousYearAccreditationValidFrom?: string,
  *   previousYearAccreditationSuspendedOn?: string
  * }} options
  * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
@@ -1215,6 +1219,7 @@ const buildComplexTestReadOrg = ({
   withOverseasSites = true,
   accreditationNumber = TEST_ACCREDITATION_NUMBER,
   previousYearAccreditationNumber,
+  previousYearAccreditationValidFrom,
   previousYearAccreditationSuspendedOn
 }) => {
   const isExporter = processingType === 'exporter'
@@ -1257,7 +1262,8 @@ const buildComplexTestReadOrg = ({
           buildReadAccreditation({
             accreditationNumber: previousYearAccreditationNumber,
             status: accreditationStatusFrom(
-              `${previousYear(accreditationYear)}-01-01`,
+              previousYearAccreditationValidFrom ??
+                `${previousYear(accreditationYear)}-01-01`,
               previousYearAccreditationSuspendedOn
             ),
             year: previousYear(accreditationYear)
