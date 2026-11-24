@@ -209,7 +209,7 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
  * @param {{
  *   tableName: string,
  *   rowNumber: number,
- *   rowId: string | undefined,
+ *   rowId?: string,
  *   fieldName: string,
  *   colIndex: number | undefined,
  *   location: CellLocation
@@ -246,7 +246,7 @@ const buildCellLocation = ({
  *   classification: { outcome: RowOutcome },
  *   headerToIndexMap: Map<string, number>,
  *   rowObject: Record<string, unknown>,
- *   rowId: string | undefined,
+ *   rowId?: string,
  *   tableName: string,
  *   rowNumber: number,
  *   location: CellLocation

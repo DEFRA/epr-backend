@@ -105,7 +105,6 @@ const checkTable = ({
         toApplicationIssue({
           issue: { code: 'MISSING_REQUIRED_FIELD', field: schema.rowIdField },
           classification: { outcome: ROW_OUTCOME.REJECTED },
-          rowId: undefined,
           ...issueAt
         })
       ]
