@@ -3,15 +3,14 @@ import {
   linksYears,
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import {
   classificationContextOf,
+  previousYearAccreditationOf,
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 
-/** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
 /** @import { SummaryLogFileId } from '#domain/summary-logs/ids.js' */
 /** @import { RowClassificationContext } from '#waste-balances/domain/waste-balance-classification.js' */
@@ -25,8 +24,7 @@ import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
  * template that does not link years, so its hash is unchanged.
  *
  * @typedef {RowClassificationContext & {
- *   previousYearPosition?: number | null,
- *   previousYearAccreditation?: AccreditationValidity | null
+ *   previousYearPosition?: number | null
  * }} SummaryLogContext
  */
 
@@ -92,8 +90,10 @@ const previousYearOf = async ({
     }
   }
 
-  const accreditation =
-    accreditationForYear(registration.registration, year) ?? null
+  const accreditation = previousYearAccreditationOf(
+    registration.registration,
+    summaryLog.year
+  )
   const previousYearSubmission =
     accreditation &&
     (await latestSubmissionIn(ledgerRepository, {
