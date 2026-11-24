@@ -146,7 +146,13 @@ describe('summaryLogContextOf', () => {
     })
     expect(previousYearSubmission).toEqual({
       number: 2,
-      summaryLogId: 'log-2026-b'
+      summaryLogId: 'log-2026-b',
+      ledgerId: {
+        organisationNumber,
+        registrationNumber,
+        accreditationNumber: PREVIOUS_YEAR_ACCREDITATION_NUMBER,
+        year: PREVIOUS_YEAR
+      }
     })
   })
 
