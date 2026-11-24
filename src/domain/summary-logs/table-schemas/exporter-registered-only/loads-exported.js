@@ -82,7 +82,14 @@ export const LOADS_EXPORTED = {
 
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
-  previousYearRowIdField: LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID,
+  linking: {
+    previousYearRowIdField: LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID,
+    suppliableOnLinkedRow: [
+      FIELDS.WAS_THE_WASTE_REFUSED,
+      FIELDS.WAS_THE_WASTE_STOPPED,
+      FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
+    ]
+  },
   requiredHeaders: [
     ...LOADS_EXPORTED.requiredHeaders,
     ...Object.values(LOADS_EXPORTED_FIELDS_2027)
