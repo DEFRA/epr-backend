@@ -10,6 +10,12 @@ import {
   createEnumFieldSchema
 } from './field-schemas.js'
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'
+import { toYear } from '#common/helpers/dates/year.js'
+
+const DATE_SCHEMAS_WITH_EARLIER_YEAR_DATE = /** @type {const} */ ([
+  ['createDateFieldSchema', createDateFieldSchema, '2026-12-30'],
+  ['createFirstOfMonthFieldSchema', createFirstOfMonthFieldSchema, '2026-12-01']
+])
 
 describe('field-schemas', () => {
   describe('createWeightFieldSchema', () => {
@@ -199,6 +205,82 @@ describe('field-schemas', () => {
       expect(schema.validate('2099-01-01').error).toBeUndefined()
     })
   })
+
+  describe.each(DATE_SCHEMAS_WITH_EARLIER_YEAR_DATE)(
+    '%s rejecting an open earlier year',
+    (_name, create, earlierYearDate) => {
+      const schema = create({ rejectOpenEarlierYear: true })
+      /**
+       * @param {string} createdAt
+       * @param {boolean} [registeredOnly]
+       */
+      const contextOn = (createdAt, registeredOnly = false) => ({
+        summaryLogYear: toYear(2027),
+        createdAt: new Date(createdAt),
+        registeredOnly
+      })
+
+      it.each([
+        [false, '2027-02-27T23:59:59.999Z', '2027-02-27'],
+        [true, '2027-03-20T23:59:59.999Z', '2027-03-20']
+      ])(
+        'rejects a 2026 date when registered-only is %s and created at %s, before the correction deadline',
+        (registeredOnly, createdAt, deadline) => {
+          const { error } = schema.validate(earlierYearDate, {
+            context: contextOn(createdAt, registeredOnly)
+          })
+          expect(error?.details[0]).toMatchObject({
+            type: 'date.beforeSummaryLogYear',
+            message:
+              'must not be in an earlier year whose summary log is still open',
+            context: { expected: 2027, deadline }
+          })
+        }
+      )
+
+      it.each([
+        [false, '2027-02-28T00:00:00.000Z'],
+        [true, '2027-03-21T00:00:00.000Z']
+      ])(
+        'accepts a 2026 date when registered-only is %s and created at %s, after the correction deadline',
+        (registeredOnly, createdAt) => {
+          expect(
+            schema.validate(earlierYearDate, {
+              context: contextOn(createdAt, registeredOnly)
+            }).error
+          ).toBeUndefined()
+        }
+      )
+
+      it('accepts a 2026 date when the context has no summary log year', () => {
+        expect(schema.validate(earlierYearDate).error).toBeUndefined()
+      })
+
+      it('still rejects a later year as later', () => {
+        const { error } = schema.validate('2028-01-01', {
+          context: contextOn('2027-01-10T09:00:00.000Z')
+        })
+        expect(error?.details[0].type).toBe('date.afterSummaryLogYear')
+      })
+    }
+  )
+
+  describe.each(DATE_SCHEMAS_WITH_EARLIER_YEAR_DATE)(
+    '%s without rejectOpenEarlierYear',
+    (_name, create, earlierYearDate) => {
+      it('accepts a date in an open earlier year', () => {
+        expect(
+          create().validate(earlierYearDate, {
+            context: {
+              summaryLogYear: toYear(2027),
+              createdAt: new Date('2027-01-10T09:00:00.000Z'),
+              registeredOnly: false
+            }
+          }).error
+        ).toBeUndefined()
+      })
+    }
+  )
 
   describe('createFirstOfMonthFieldSchema', () => {
     const context = { summaryLogYear: 2026 }

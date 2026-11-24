@@ -16,6 +16,7 @@ import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-su
  * @property {import('#domain/waste-records/model.js').WasteRecordType} wasteRecordType
  * @property {import('#domain/summary-logs/meta-fields.js').ProcessingType} processingType
  * @property {Record<string, any>} data
+ * @property {import('#waste-records/repository/schema.js').RowStateLink} [link]
  * @property {import('#waste-records/repository/schema.js').RowClassification} classification
  */
 

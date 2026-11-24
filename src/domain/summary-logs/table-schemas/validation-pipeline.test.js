@@ -12,8 +12,9 @@ import {
 } from './shared/classify-helpers.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { validationOptionsIn } from './validation-options-test-helpers.js'
 
-const IN_2026 = { summaryLogYear: toYear(2026) }
+const IN_2026 = validationOptionsIn(toYear(2026))
 
 describe('validation-pipeline', () => {
   describe('ROW_OUTCOME', () => {
