@@ -160,7 +160,7 @@ const prnStatusSchema = Joi.string()
   .valid(...Object.values(PRN_STATUS))
   .required()
 
-export const prnSchema = Joi.object({
+const prnSchema = Joi.object({
   id: Joi.string().required(),
   prnNumber: Joi.string().when('status.current', {
     not: onceIssued,

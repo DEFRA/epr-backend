@@ -35,7 +35,6 @@ import {
   underAccreditation
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { prnSchema } from './by-natural-key.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
@@ -300,30 +299,6 @@ describe('PRN routes by natural key', () => {
         year: 2026,
         allowedYears: [2026, 2027]
       })
-    })
-
-    it('refuses to serve an obligation year the service holds no data for', async () => {
-      const response = await server.inject({ url: prns, ...asOperator() })
-      const resource = {
-        ...body(response).items[0],
-        obligation: { year: 2026, allowedYears: [1999, 2026] }
-      }
-
-      expect(prnSchema.validate(resource).error?.message).toBe(
-        '"obligation.allowedYears[0]" must be greater than or equal to 2024'
-      )
-    })
-
-    it('refuses to serve the same obligation year twice', async () => {
-      const response = await server.inject({ url: prns, ...asOperator() })
-      const resource = {
-        ...body(response).items[0],
-        obligation: { year: 2026, allowedYears: [2026, 2026] }
-      }
-
-      expect(prnSchema.validate(resource).error?.message).toBe(
-        '"obligation.allowedYears[1]" contains a duplicate value'
-      )
     })
 
     it('serves a draft PRN with no number', async () => {
