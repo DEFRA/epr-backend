@@ -356,6 +356,42 @@ describe('transformValidationResponse', () => {
       })
     })
 
+    it('includes deadline field when present in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'technical',
+            message: 'Earlier year still open',
+            code: 'INVALID_DATE',
+            context: {
+              location: {
+                sheet: 'Exported',
+                table: 'RECEIVED_LOADS_FOR_EXPORT',
+                row: 8,
+                column: 'U',
+                header: 'DATE_OF_EXPORT'
+              },
+              actual: '2026-12-30',
+              expected: 2027,
+              deadline: '2027-02-28',
+              errorCode: 'DATE_BEFORE_SUMMARY_LOG_YEAR'
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(
+        result.validation.concerns.RECEIVED_LOADS_FOR_EXPORT.rows[0].issues[0]
+      ).toMatchObject({
+        errorCode: 'DATE_BEFORE_SUMMARY_LOG_YEAR',
+        expected: 2027,
+        deadline: '2027-02-28'
+      })
+    })
+
     it('sorts rows in ascending order', () => {
       const validation = {
         issues: [
