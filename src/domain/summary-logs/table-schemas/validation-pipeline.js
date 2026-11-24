@@ -168,6 +168,29 @@ export const coerceRowData = (
  */
 
 /**
+ * @param {import('joi').ValidationErrorItem} detail
+ * @param {string | number | undefined} [field] - Defaults to the detail's own
+ *   field: path[0] for a field-level validator, context.field for an
+ *   object-level one such as a calculation check
+ * @returns {ValidationErrorIssue}
+ */
+export const toValidationErrorIssue = (
+  detail,
+  field = detail.path[0] ?? detail.context?.field
+) => ({
+  code: 'VALIDATION_ERROR',
+  field,
+  message: detail.message,
+  type: detail.type,
+  ...(detail.context?.expected !== undefined && {
+    expected: detail.context.expected
+  }),
+  ...(detail.context?.deadline !== undefined && {
+    deadline: detail.context.deadline
+  })
+})
+
+/**
  * Maps a classifyForWasteBalance result to a classifyRow result.
  *
  * Only MISSING_REQUIRED_FIELD reasons are relevant to the validation pipeline.
@@ -243,21 +266,7 @@ export const classifyRow = (row, tableSchema, options) => {
   if (error) {
     return {
       outcome: ROW_OUTCOME.REJECTED,
-      issues: error.details.map((detail) => ({
-        code: 'VALIDATION_ERROR',
-        // For field-level validators, path[0] contains the field name
-        // For object-level custom validators (e.g., calculation checks),
-        // path is empty but field is passed via context.field
-        field: detail.path[0] ?? detail.context?.field,
-        message: detail.message,
-        type: detail.type, // Include Joi error type for application-layer mapping
-        ...(detail.context?.expected !== undefined && {
-          expected: detail.context.expected
-        }),
-        ...(detail.context?.deadline !== undefined && {
-          deadline: detail.context.deadline
-        })
-      })),
+      issues: error.details.map((detail) => toValidationErrorIssue(detail)),
       data
     }
   }

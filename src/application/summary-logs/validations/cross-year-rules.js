@@ -3,7 +3,8 @@ import { BEFORE_SUMMARY_LOG_YEAR_ERROR } from '#domain/summary-logs/table-schema
 import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
 import {
   isFilled,
-  ROW_OUTCOME
+  ROW_OUTCOME,
+  toValidationErrorIssue
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 import { buildHeaderToIndexMap, toApplicationIssue } from './data-syntax.js'
@@ -118,14 +119,7 @@ const checkTable = ({
       options
     }).map(({ field, detail }) =>
       toApplicationIssue({
-        issue: {
-          code: 'VALIDATION_ERROR',
-          field,
-          message: detail.message,
-          type: detail.type,
-          expected: detail.context?.expected,
-          deadline: detail.context?.deadline
-        },
+        issue: toValidationErrorIssue(detail, field),
         classification: { outcome: ROW_OUTCOME.REJECTED },
         rowId,
         ...issueAt
