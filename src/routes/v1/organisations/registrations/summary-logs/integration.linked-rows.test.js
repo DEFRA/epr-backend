@@ -9,7 +9,7 @@ import { MATERIAL } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { buildWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
+import { aggregateWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { DATABASE_NAME, it as mongoIt } from '#vite/fixtures/mongo-client.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -523,7 +523,7 @@ describe('2027 rows linked to a 2026 row', () => {
 
         /** @param {import('#common/helpers/dates/year-month.js').YearMonth} month */
         const publishedExporterCredit = async (month) => {
-          const table = await buildWasteBalanceTable({
+          const table = await aggregateWasteBalanceTable({
             ledgerRepository: env.ledgerRepository,
             summaryLogRowStatesRepository: env.summaryLogRowStatesRepository,
             organisationReadRepository: env.organisationReadRepository,
