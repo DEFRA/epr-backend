@@ -4,6 +4,7 @@ import Boom from '@hapi/boom'
 import {
   createInMemoryOrganisationReadRepository,
   accreditationsByYear,
+  approvedStatusFrom,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
   buildReadOrganisation,
@@ -338,14 +339,28 @@ describe(`${adminOverseasSitesListPath} route`, () => {
     ).toStrictEqual([null, null])
   })
 
-  it('reads the read model for the year asked for', async () => {
-    const findAll = vi.fn().mockResolvedValue([])
-    const server = await serverOver(() => ({ findAll }))
+  it('leaves out a registration not approved in the year asked for', async () => {
+    const nextYearOrganisation = buildReadOrganisation({
+      registrations: {
+        [BETA_REGISTRATION]: buildReadExporterRegistration({
+          status: approvedStatusFrom('2027-02-01'),
+          overseasSites: { '003': thirdSite }
+        })
+      }
+    })
+    const server = await serverWith([
+      accreditedOrganisation,
+      nextYearOrganisation
+    ])
 
-    await list(server)
+    const response = await list(server)
 
     await server.stop()
-    expect(findAll).toHaveBeenCalledWith({ year: YEAR })
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload).rows).toStrictEqual([
+      fullRow,
+      minimalRow
+    ])
   })
 
   it.for([
