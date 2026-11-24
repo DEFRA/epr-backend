@@ -13,7 +13,6 @@ const ADMINISTRATION_PORT_MODULES = [
   // Wiring
   'src/common/hapi-types.js',
   'src/non-prod-data-reset/mongodb.plugin.js',
-  'src/plugins/depends-on.js',
   'src/repositories/form-submissions/mongodb.plugin.js',
   'src/server/queue-consumer/queue-consumer.plugin.js',
 

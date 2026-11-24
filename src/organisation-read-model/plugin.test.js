@@ -179,4 +179,17 @@ describe('organisationReadRepositoryPlugin', () => {
       expect(requested).toHaveLength(expectedRequests)
     }
   )
+
+  it('refuses to register before the overseas sites repository', async () => {
+    const server = Hapi.server()
+
+    await expect(
+      server.register({
+        plugin: organisationReadRepositoryPlugin,
+        options: { config: { get: () => false } }
+      })
+    ).rejects.toThrow(
+      'organisationReadRepository needs the overseasSitesRepository plugin registered before it'
+    )
+  })
 })

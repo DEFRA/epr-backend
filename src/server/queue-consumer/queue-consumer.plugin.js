@@ -3,7 +3,6 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
-import { dependsOn } from '#plugins/depends-on.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { buildSummaryLogHandlerDeps } from './summary-log-handler-deps.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
@@ -19,20 +18,20 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
+  dependencies: [
+    'summaryLogsRepository',
+    'organisationsRepository',
+    'organisationReadRepository',
+    'wasteBalanceService',
+    'uploadsRepository',
+    'reportsRepository',
+    'systemLogsRepository'
+  ],
 
   register: async (
     /** @type {import('#common/hapi-types.js').HapiServer} */ server,
     /** @type {CommandQueueConsumerPluginOptions} */ options
   ) => {
-    dependsOn(server, [
-      'summaryLogsRepository',
-      'organisationsRepository',
-      'organisationReadRepository',
-      'wasteBalanceService',
-      'uploadsRepository',
-      'reportsRepository',
-      'systemLogsRepository'
-    ])
     const { config } = options
     const sqsClient = createSqsClient({
       region: config.get('awsRegion'),
