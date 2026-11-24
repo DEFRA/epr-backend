@@ -55,6 +55,41 @@ const rejectAfterSummaryLogYear = (dateStr, helpers) => {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
+const calendarDateOf = (value) => {
+  if (value instanceof Date) {
+    return utcCalendarDate(value)
+  }
+  return typeof value === 'string'
+    ? CALENDAR_DATE_PATTERN.exec(value)?.[1]
+    : undefined
+}
+
+/**
+ * A linked row's date was entered on this row only if the row supplied it and
+ * it differs from the previous-year row's.
+ *
+ * @param {string} dateStr
+ * @param {import('joi').CustomHelpers} helpers
+ */
+const isEnteredOnThisRow = (dateStr, helpers) => {
+  /** @type {import('../validation-pipeline.js').LinkedRowContext | undefined} */
+  const linkedRow = helpers.prefs.context?.linkedRow
+  if (linkedRow === undefined) {
+    return true
+  }
+  // Joi always sets the path at run time; its types mark it optional.
+  const path = /** @type {(string | number)[]} */ (helpers.state.path)
+  const field = String(path.at(-1))
+  return (
+    linkedRow.suppliedFields.includes(field) &&
+    calendarDateOf(linkedRow.previousYear[field]) !== dateStr
+  )
+}
+
+/**
  * Rejects a YYYY-MM-DD date in an earlier year than the `summaryLogYear` in
  * the Joi validation context while that year's correction deadline had not
  * passed at `createdAt`. Without a `summaryLogYear`, the date is not checked.
@@ -66,7 +101,7 @@ const rejectAfterSummaryLogYear = (dateStr, helpers) => {
 const rejectOpenEarlierYear = (dateStr, helpers) => {
   const { summaryLogYear, createdAt, registeredOnly } =
     helpers.prefs.context ?? {}
-  if (summaryLogYear === undefined) {
+  if (summaryLogYear === undefined || !isEnteredOnThisRow(dateStr, helpers)) {
     return dateStr
   }
   const dateYear = utcYearOf(dateStr)

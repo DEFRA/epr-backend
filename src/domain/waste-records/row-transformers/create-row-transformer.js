@@ -1,3 +1,5 @@
+import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
+
 /**
  * Factory for creating row transformer functions.
  *
@@ -23,7 +25,7 @@ export const createRowTransformer = ({
 
     return {
       wasteRecordType,
-      rowId: String(rowData[rowIdField]),
+      rowId: toRowId(rowData[rowIdField]),
       data: {
         ...rowData,
         processingType

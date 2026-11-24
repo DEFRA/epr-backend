@@ -24,3 +24,12 @@ export const createRowIdSchema = (minRowId) => {
       'number.min': `must be at least ${minRowId}`
     })
 }
+
+/**
+ * A row ID cell as the row's stored identity, which a previous-year row ID
+ * cell must match to find the row it names.
+ *
+ * @param {unknown} cellValue
+ * @returns {string}
+ */
+export const toRowId = (cellValue) => String(cellValue) // NOSONAR: javascript:S6551 - a row ID cell is never an object
