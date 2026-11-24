@@ -1,5 +1,6 @@
 /** @import { ExporterRegistration, Organisation, OverseasSite } from '#organisation-read-model/index.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 import { toWireOrgId } from '#common/helpers/organisation-wire.js'
 import Boom from '@hapi/boom'
 import Joi from 'joi'
@@ -12,7 +13,7 @@ import {
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
-import { currentUtcYear } from '#common/helpers/dates/year.js'
+import { openYearSchema } from '#common/validation/year-schema.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { accreditationForYear } from '#organisation-read-model/index.js'
 
@@ -44,18 +45,20 @@ const nullable = (value) => value ?? null
  * @param {ExporterRegistration} registration
  * @param {string} orsId
  * @param {OverseasSite} site
+ * @param {Year} year
  */
 const toRow = (
   organisation,
   registrationNumber,
   registration,
   orsId,
-  site
+  site,
+  year
 ) => ({
   orgId: toWireOrgId(organisation.organisationNumber),
   registrationNumber,
   accreditationNumber: nullable(
-    accreditationForYear(registration, currentUtcYear())?.accreditationNumber
+    accreditationForYear(registration, year)?.accreditationNumber
   ),
   orsId,
   packagingWasteCategory: registration.material,
@@ -72,8 +75,9 @@ const toRow = (
 
 /**
  * @param {Organisation[]} organisations
+ * @param {Year} year
  */
-const buildRows = (organisations) =>
+const buildRows = (organisations, year) =>
   organisations
     .flatMap((organisation) =>
       Object.entries(organisation.registrations).flatMap(
@@ -85,7 +89,8 @@ const buildRows = (organisations) =>
                   toRegistrationNumber(registrationNumber),
                   registration,
                   orsId,
-                  site
+                  site,
+                  year
                 )
               )
             : []
@@ -125,6 +130,7 @@ export const adminOverseasSitesList = {
     tags: ['api'],
     validate: {
       query: Joi.object({
+        year: openYearSchema().required(),
         all: Joi.boolean().optional(),
         page: Joi.number().integer().min(1).optional(),
         pageSize: Joi.number().integer().min(1).max(MAX_PAGE_SIZE).optional(),
@@ -139,6 +145,7 @@ export const adminOverseasSitesList = {
    */
   handler: async (request, h) => {
     const { logger, organisationReadRepository } = request
+    const year = /** @type {Year} */ (request.query.year)
     const all = Boolean(request.query.all)
     const page = Number(request.query.page ?? DEFAULT_PAGE)
     const pageSize = Number(request.query.pageSize ?? DEFAULT_PAGE_SIZE)
@@ -147,10 +154,10 @@ export const adminOverseasSitesList = {
     )
 
     try {
-      const organisations = await organisationReadRepository.findAll()
+      const organisations = await organisationReadRepository.findAll({ year })
 
       const rows = filterRowsByRegistrationNumber(
-        buildRows(organisations),
+        buildRows(organisations, year),
         registrationNumber
       )
       const startIndex = (page - 1) * pageSize
