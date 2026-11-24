@@ -33,12 +33,8 @@ describe('seed-scenarios', () => {
     it('creates approved, active, and active-with-rejected-accreditation scenarios', async () => {
       await createEprOrganisationScenarios(repository)
 
-      const orgs = await repository.findByOrganisationNumbers(
+      const scenarioOrgs = await repository.findByOrganisationNumbers(
         Object.values(SCENARIO_ORGANISATION_NUMBERS)
-      )
-      const numbers = Object.values(SCENARIO_ORGANISATION_NUMBERS)
-      const scenarioOrgs = orgs.filter((org) =>
-        numbers.includes(org.organisationNumber)
       )
 
       expect(scenarioOrgs).toHaveLength(3)
@@ -58,12 +54,8 @@ describe('seed-scenarios', () => {
 
       // Verify all scenarios were created successfully
       await waitForCacheSync()
-      const orgs = await repository.findByOrganisationNumbers(
+      const scenarioOrgs = await repository.findByOrganisationNumbers(
         Object.values(SCENARIO_ORGANISATION_NUMBERS)
-      )
-      const numbers = Object.values(SCENARIO_ORGANISATION_NUMBERS)
-      const scenarioOrgs = orgs.filter((org) =>
-        numbers.includes(org.organisationNumber)
       )
 
       expect(scenarioOrgs).toHaveLength(3)
