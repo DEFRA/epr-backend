@@ -1,10 +1,17 @@
 import { http, HttpResponse } from 'msw'
+import { onTestFinished } from 'vitest'
 
+import { aggregateTonnageByMaterial } from '#application/tonnage-monitoring/aggregate-tonnage.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { MATERIAL } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { DATABASE_NAME, it as mongoIt } from '#vite/fixtures/mongo-client.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
+import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mongodb.js'
 
 import {
   createExporterRowValues,
@@ -190,14 +197,85 @@ describe('2027 rows linked to a 2026 row', () => {
   })
 
   describe('an accredited exporter accredited in both years', () => {
-    const setup = async () => {
+    /** @param {Parameters<typeof setupWasteBalanceIntegrationEnvironment>[0]} [repositories] */
+    const setup = async (repositories = {}) => {
       openNextYear()
       return setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         year: YEAR,
-        previousYearAccreditationNumber: PREVIOUS_YEAR_ACCREDITATION_NUMBER
+        previousYearAccreditationNumber: PREVIOUS_YEAR_ACCREDITATION_NUMBER,
+        ...repositories
       })
     }
+
+    mongoIt(
+      'counts a load exported in December 2026 once in tonnage monitoring, in 2026, when a 2027 row is filled in from it',
+      async ({ mongoClient }) => {
+        vi.useFakeTimers({
+          toFake: ['Date'],
+          now: new Date('2027-01-20T10:00:00.000Z')
+        })
+        onTestFinished(() => {
+          vi.useRealTimers()
+        })
+        const db = mongoClient.db(DATABASE_NAME)
+        const env = await setup({
+          ledgerRepository: (await createMongoLedgerRepository(db))(),
+          summaryLogRowStatesRepository: (
+            await createMongoSummaryLogRowStatesRepository(db)
+          )()
+        })
+        await submitted(
+          env,
+          PREVIOUS_YEAR,
+          'log-2026',
+          accredited2026Log({
+            ...EXPORTED_IN_JANUARY_2027,
+            exportTonnage: 25,
+            exportDate: '2026-12-28',
+            dateReceivedByOsr: null
+          })
+        )
+
+        await submitted(
+          env,
+          YEAR,
+          'log-2027',
+          accredited2027Log([
+            linkedRow({ exportTonnage: null, exportDate: null })
+          ])
+        )
+
+        expect(
+          (await storedRow(env, ledgerIdOf(env), 'log-2027', '1001'))?.data
+        ).toEqual(
+          expect.objectContaining({
+            DATE_OF_EXPORT: '2026-12-28',
+            TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 25
+          })
+        )
+
+        /** @param {import('#common/helpers/dates/year.js').Year} year */
+        const tonnageMonitoring = (year) =>
+          aggregateTonnageByMaterial(
+            createTonnageQuery(db),
+            env.ledgerRepository,
+            env.organisationReadRepository,
+            year
+          )
+        const report2026 = await tonnageMonitoring(PREVIOUS_YEAR)
+        expect(
+          report2026.materials
+            .find(
+              ({ material, type }) =>
+                material === MATERIAL.PAPER && type === 'Exporter'
+            )
+            ?.months.find(({ month }) => month === 'Dec')
+        ).toEqual({ month: 'Dec', tonnage: 25 })
+        expect(report2026.total).toBe(25)
+        expect((await tonnageMonitoring(YEAR)).total).toBe(0)
+      }
+    )
 
     it('fills in the receipt from the 2026 row, keeps the supplied export and credits the 2027 balance', async () => {
       const env = await setup()
@@ -372,6 +450,38 @@ describe('2027 rows linked to a 2026 row', () => {
       )
     })
 
+    it('passes a linked row whose 2026 tonnage was entered to more than two decimal places and credits it', async () => {
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log({
+          grossWeight: 12.123,
+          tareWeight: 1,
+          palletWeight: 1,
+          netWeight: 10.123,
+          recyclablePropMethod: 'Actual weight (100%)',
+          nonTargetWeight: 0,
+          recyclablePropPct: 0.37,
+          tonnageReceived: 3.74551
+        })
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([linkedRow({ exportTonnage: 3.7 })])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect((await submitAndWait(env, 'log-2027')).status).toBe(
+        SUMMARY_LOG_STATUS.SUBMITTED
+      )
+      expect((await getWasteBalance(env)).amount).toBe(3.7)
+    })
+
     it('stores a row as written when its previous-year row ID names no 2026 row', async () => {
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
@@ -408,6 +518,25 @@ describe('2027 rows linked to a 2026 row', () => {
           location: expect.objectContaining({ header: 'ROW_ID' })
         })
       ])
+    })
+
+    it('checks the tonnage of a row whose link names no 2026 row exactly, as typed', async () => {
+      const env = await setup()
+      await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          { rowId: 1001, previousYearRowId: 1999, tonnageReceived: 850.01 }
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toContainEqual(
+        expect.objectContaining({ code: 'CALCULATED_VALUE_MISMATCH' })
+      )
     })
 
     it('keeps a 2026 PRN on a linked row whose PRN column is left on its No default', async () => {

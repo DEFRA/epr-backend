@@ -1,11 +1,13 @@
 import Joi from 'joi'
 import {
   areNumbersEqual,
+  LINKED_ROW_ROUNDING_ALLOWANCE,
   YES_NO_VALUES,
   createWeightFieldSchema,
   createYesNoFieldSchema,
   createPercentageFieldSchema
 } from '../../shared/index.js'
+import { rowValidationOptionsOf } from '../../validation-pipeline.js'
 import { RECEIVED_LOADS_FIELDS } from '../fields.js'
 
 /**
@@ -126,7 +128,11 @@ export const validateTonnageExport = (value, helpers) => {
   // Calculate expected tonnage
   const expectedTonnage = adjustedWeight * recyclableProportionPercentage
 
-  if (!areNumbersEqual(tonnageReceivedForExport, expectedTonnage)) {
+  const tolerance = rowValidationOptionsOf(helpers).filledIn
+    ? LINKED_ROW_ROUNDING_ALLOWANCE
+    : undefined
+
+  if (!areNumbersEqual(tonnageReceivedForExport, expectedTonnage, tolerance)) {
     return helpers.error('custom.tonnageCalculationMismatch', {
       field: RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_EXPORT
     })

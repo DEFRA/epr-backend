@@ -13,6 +13,14 @@
 const DEFAULT_TOLERANCE = 1e-9
 
 /**
+ * A row filled in from a previous-year row inherits its weights and tonnage as
+ * stored, at two decimal places: the tonnage can be off by 0.005 t, the net
+ * weight from three rounded weights by 0.015 t and the non-target weight by
+ * 0.005 t (ADR-0060).
+ */
+export const LINKED_ROW_ROUNDING_ALLOWANCE = 0.025
+
+/**
  * Checks if two numbers are equal within a tolerance.
  *
  * Handles edge cases like Infinity and NaN appropriately.
