@@ -13,13 +13,13 @@ A module is a directory under `src/` that owns one responsibility. Code outside 
 A module offers routes, ports, or both. A port is a capability other code uses, such as a repository or an application service.
 
 - **Routes go in a route plugin.**
-- **Each adapter of a port is its own plugin, named after the port, and looks like the existing repository plugins,** such as the overseas sites one. Its name is the port's key in `ServerApp`, in `src/common/hapi-types.js`, and it provides that key and nothing else. A port's adapters share the name, so Hapi refuses a server that registers two of them. The server setup registers the production adapter, and the test server registers the in-memory one.
-- **Its config arrives as the `config` option.** It never reads the config singleton, and it reads its own feature flags from that option.
-- **It provides its port with `registerDependency` when it registers.** Handlers keep reading the port from the request, so an adapter built per request logs with that request's logger.
+- **Each adapter of a port is its own plugin, made with `portAdapter`** from `src/plugins/port-adapter.js`. It is named after the port, which is the port's key in `ServerApp` in `src/common/hapi-types.js`, and it provides that key and nothing else. A port's adapters share the name, so Hapi refuses a server that registers two of them. The server setup registers the production adapter, and the test server registers the in-memory one.
+- **The server setup makes the decisions.** It picks the adapter, reads the config and feature flags, and passes the adapter plain values as its options. An adapter never sees config or a feature flag.
+- **An adapter declares the ports it needs,** and `mongodb` when it needs the database. When the server starts, the adapter is built from its options and those dependencies alone. It provides its port on `server.app` and on each request, so an adapter built per request logs with that request's logger.
 
 ## Dependencies between plugins
 
-A plugin lists the plugins it needs in Hapi's `dependencies` field, by the name of the port each one provides. Hapi checks that list when the server initialises, so every server, test servers included, is initialised before use.
+A plugin names the ports it needs. Hapi checks them when the server initialises and refuses to start while a provider is missing, so every server, test servers included, is initialised before use.
 
-- **A plugin that reads another plugin's port when it registers needs that plugin registered first.** Hapi does not check the list until initialise, so the server setup registers the provider first.
-- **A plugin that reads a port only at runtime reads it in its handlers or its `start` listener,** as the queue consumer does.
+- **An adapter reads its dependencies only when the server starts,** so the order of the server's plugin list does not matter.
+- **A plugin that reads a port only at runtime lists it in Hapi's `dependencies` field,** and reads it in its handlers or its `start` listener, as the queue consumer does.

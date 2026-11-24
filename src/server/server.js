@@ -34,6 +34,7 @@ import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
+/** @import { RegAccredApiConfig } from '#organisation-read-model/index.js' */
 
 function getServerConfig(config) {
   return {
@@ -67,6 +68,19 @@ function getServerConfig(config) {
   }
 }
 
+/**
+ * The Reg Accred API's settings when Reg Accred supplies external
+ * accreditations, otherwise nothing.
+ *
+ * @param {{ get: (key: string) => unknown }} config
+ * @returns {RegAccredApiConfig | undefined}
+ */
+function regAccredApiOf(config) {
+  return config.get('featureFlags.regAccredExternalAccreditations')
+    ? /** @type {RegAccredApiConfig} */ (config.get('regAccredApi'))
+    : undefined
+}
+
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
@@ -90,7 +104,10 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    { plugin: organisationReadRepositoryPlugin, options: { config } },
+    {
+      plugin: organisationReadRepositoryPlugin,
+      options: { regAccredApi: regAccredApiOf(config) }
+    },
     orsImportsRepositoryPlugin,
     mongoSummaryLogRowStatesRepositoryPlugin
   ]
@@ -141,4 +158,4 @@ async function createServer(options = {}) {
   return server
 }
 
-export { createServer }
+export { createServer, regAccredApiOf }

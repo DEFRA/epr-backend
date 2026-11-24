@@ -79,18 +79,9 @@ const serveRegAccredAccreditation = () => {
  * the server setup registers it, and initialised.
  *
  * @param {MongoClient} mongoClient
- * @param {boolean} regAccredExternalAccreditations
+ * @param {{ regAccredApi?: RegAccredApiConfig }} options
  */
-const registeredServer = async (
-  mongoClient,
-  regAccredExternalAccreditations
-) => {
-  /** @type {Record<string, unknown>} */
-  const settings = {
-    'featureFlags.regAccredExternalAccreditations':
-      regAccredExternalAccreditations,
-    regAccredApi
-  }
+const registeredServer = async (mongoClient, options) => {
   /** @type {Pick<TypedLogger, 'warn'>} */
   const logger = { warn: () => {} }
   const database = mongoClient.db('epr-backend')
@@ -99,6 +90,7 @@ const registeredServer = async (
   )()
   const server = Hapi.server()
   server.decorate('server', 'logger', logger)
+  await server.register({ plugin: organisationReadRepositoryPlugin, options })
   await server.register([
     {
       name: 'mongodb',
@@ -117,10 +109,6 @@ const registeredServer = async (
       }
     }
   ])
-  await server.register({
-    plugin: organisationReadRepositoryPlugin,
-    options: { config: { get: (key) => settings[key] } }
-  })
   await server.initialize()
   return server
 }
@@ -142,14 +130,14 @@ describe('organisationReadRepositoryPlugin', () => {
   })
 
   it.for(
-    /** @type {[string, boolean, string, number][]} */ ([
-      ['off', false, STORED_ACCREDITATION_NUMBER, 0],
-      ['on', true, REG_ACCRED_ACCREDITATION_NUMBER, 1]
+    /** @type {[string, { regAccredApi?: RegAccredApiConfig }, string, number][]} */ ([
+      ['without', {}, STORED_ACCREDITATION_NUMBER, 0],
+      ['with', { regAccredApi }, REG_ACCRED_ACCREDITATION_NUMBER, 1]
     ])
   )(
-    'registers a repository that asks Reg Accred for the 2027 accreditation only with the flag %s',
+    'registers a repository that asks Reg Accred for the 2027 accreditation only %s its settings',
     async (
-      [, flag, expectedNumber, expectedRequests],
+      [, options, expectedNumber, expectedRequests],
       { organisationReadRepositoryWith, mongoClient }
     ) => {
       const requested = serveRegAccredAccreditation()
@@ -167,7 +155,7 @@ describe('organisationReadRepositoryPlugin', () => {
       })
 
       const organisation = await findOrganisation(
-        readRepositoryOf(await registeredServer(mongoClient, flag)),
+        readRepositoryOf(await registeredServer(mongoClient, options)),
         stored.organisationNumber
       )
 

@@ -31,6 +31,7 @@ export {
 
 /** @typedef {import('./repository/port.js').OrganisationReadRepository} OrganisationReadRepository */
 /** @typedef {import('./repository/to-read-model.js').ExternalAccreditation} ExternalAccreditation */
+/** @typedef {import('./repository/reg-accred-accreditations.js').RegAccredApiConfig} RegAccredApiConfig */
 /** @typedef {import('./domain/model.js').AccreditationCommon} AccreditationCommon */
 /** @typedef {import('./domain/model.js').AccreditationStatus} AccreditationStatus */
 /** @typedef {import('./domain/model.js').ExporterAccreditation} ExporterAccreditation */
