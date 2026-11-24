@@ -10,7 +10,7 @@ A module is a directory under `src/` that owns one responsibility. Code outside 
 
 ## Plugins
 
-A module offers routes, ports, or both. A port is a capability other code uses, such as a repository or an application service. The storage behind a port stays private to the module.
+A module offers routes, ports, or both. A port is a capability other code uses, such as a repository or an application service.
 
 - **Routes go in a route plugin.**
 - **Each adapter of a port is its own plugin, named after the port.** The plugin's name is the literal port name, and it provides that key of `ServerApp` in `src/common/hapi-types.js` and nothing else. A port's adapters share the name, so Hapi refuses a server that registers two of them. The server setup registers the production adapter, and the test server registers the in-memory one.
