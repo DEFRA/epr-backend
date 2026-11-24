@@ -23,12 +23,10 @@ import { buildHeaderToIndexMap, toApplicationIssue } from './data-syntax.js'
  */
 const columnSchemasOf = (validationSchema) =>
   new Map(
-    validationSchema.$_terms.keys.map(
-      (/** @type {{ key: string, schema: Schema }} */ { key, schema }) => [
-        key,
-        schema
-      ]
-    )
+    Object.keys(validationSchema.describe().keys).map((column) => [
+      column,
+      validationSchema.extract(column)
+    ])
   )
 
 /**
