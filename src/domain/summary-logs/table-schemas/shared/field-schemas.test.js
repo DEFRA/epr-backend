@@ -262,6 +262,26 @@ describe('field-schemas', () => {
         })
         expect(error?.details[0].type).toBe('date.afterSummaryLogYear')
       })
+
+      describe('on a row filled in from a previous-year row', () => {
+        const filledInContext = {
+          ...contextOn('2027-01-10T09:00:00.000Z'),
+          filledIn: true
+        }
+
+        it('accepts a 2026 date, leaving it to the cross-year rules', () => {
+          expect(
+            schema.validate(earlierYearDate, { context: filledInContext }).error
+          ).toBeUndefined()
+        })
+
+        it('still rejects a later year', () => {
+          const { error } = schema.validate('2028-01-01', {
+            context: filledInContext
+          })
+          expect(error?.details[0].type).toBe('date.afterSummaryLogYear')
+        })
+      })
     }
   )
 

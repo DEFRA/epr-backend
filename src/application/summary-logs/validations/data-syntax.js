@@ -161,7 +161,7 @@ const hasFatal = (issues) =>
  * @param {Array<string|null>} headers - Array of header names from the table
  * @returns {Map<string, number>} Map of header name to column index
  */
-const buildHeaderToIndexMap = (headers) => {
+export const buildHeaderToIndexMap = (headers) => {
   const headerToIndexMap = new Map()
 
   for (const [index, header] of headers.entries()) {
@@ -251,7 +251,7 @@ const buildCellLocation = ({
  * }} params
  * @returns {ValidationIssue}
  */
-const toApplicationIssue = ({
+export const toApplicationIssue = ({
   issue,
   classification,
   headerToIndexMap,
@@ -373,15 +373,7 @@ const validateRows = ({
     const classification = classifyRow(
       rowObject,
       domainSchema,
-      linked
-        ? {
-            ...options,
-            linkedRow: {
-              suppliedFields: linked.link.suppliedFields,
-              previousYear: linked.previousYear
-            }
-          }
-        : options
+      linked ? { ...options, filledIn: true } : options
     )
     const rowId = toRowId(rowObject[domainSchema.rowIdField])
 

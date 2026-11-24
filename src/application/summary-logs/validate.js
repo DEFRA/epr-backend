@@ -29,6 +29,7 @@ import {
 } from './classify-and-persist.js'
 import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
+import { checkCrossYearRules } from './validations/cross-year-rules.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
@@ -324,16 +325,18 @@ const runValidationChecks = async (
     summaryLogRowStatesRepository
   })
 
+  const options = {
+    summaryLogYear: summaryLog.year,
+    createdAt: new Date(summaryLog.createdAt),
+    registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE)
+  }
   // Data syntax validation returns validated data with issues attached to rows
   const { issues: dataSyntaxIssues, validatedData } = createDataSyntaxValidator(
     tableSchemas,
-    {
-      summaryLogYear: summaryLog.year,
-      createdAt: new Date(summaryLog.createdAt),
-      registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE)
-    }
+    options
   )(filledIn)
   issues.merge(dataSyntaxIssues)
+  issues.merge(checkCrossYearRules({ parsed: filledIn, tableSchemas, options }))
 
   if (issues.isFatal()) {
     return

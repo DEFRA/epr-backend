@@ -142,15 +142,10 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ suppliedFields: readonly string[], previousYear: Record<string, unknown> }} LinkedRowContext
- * A row filled in from a previous-year row: the columns it supplied itself,
- * and the previous-year row as stored.
- */
-
-/**
- * @typedef {{ summaryLogYear?: Year, createdAt?: Date, registeredOnly?: boolean, linkedRow?: LinkedRowContext }} RowValidationOptions
+ * @typedef {{ summaryLogYear?: Year, createdAt?: Date, registeredOnly?: boolean, filledIn?: boolean }} RowValidationOptions
  * Omitted, as when exporting stored rows, means dates are not checked against
- * the summary log year.
+ * the summary log year. `filledIn` marks a row filled in from a previous-year
+ * row (ADR-0060).
  */
 
 /**
