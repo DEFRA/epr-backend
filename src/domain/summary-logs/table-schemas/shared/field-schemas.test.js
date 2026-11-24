@@ -11,6 +11,7 @@ import {
 } from './field-schemas.js'
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { validationOptionsIn } from '../validation-options-test-helpers.js'
 
 const DATE_SCHEMAS_WITH_EARLIER_YEAR_DATE = /** @type {const} */ ([
   ['createDateFieldSchema', createDateFieldSchema, '2026-12-30'],
@@ -162,7 +163,7 @@ describe('field-schemas', () => {
     })
 
     describe('when the validation context has a summary log year', () => {
-      const context = { summaryLogYear: 2026 }
+      const context = validationOptionsIn(toYear(2026))
 
       it.each([
         { description: 'the last day of that year', input: '2026-12-31' },
@@ -209,7 +210,7 @@ describe('field-schemas', () => {
   describe.each(DATE_SCHEMAS_WITH_EARLIER_YEAR_DATE)(
     '%s rejecting an open earlier year',
     (_name, create, earlierYearDate) => {
-      const schema = create({ rejectOpenEarlierYear: true })
+      const schema = create()
       /**
        * @param {string} createdAt
        * @param {boolean} [registeredOnly]
@@ -285,25 +286,8 @@ describe('field-schemas', () => {
     }
   )
 
-  describe.each(DATE_SCHEMAS_WITH_EARLIER_YEAR_DATE)(
-    '%s without rejectOpenEarlierYear',
-    (_name, create, earlierYearDate) => {
-      it('accepts a date in an open earlier year', () => {
-        expect(
-          create().validate(earlierYearDate, {
-            context: {
-              summaryLogYear: toYear(2027),
-              createdAt: new Date('2027-01-10T09:00:00.000Z'),
-              registeredOnly: false
-            }
-          }).error
-        ).toBeUndefined()
-      })
-    }
-  )
-
   describe('createFirstOfMonthFieldSchema', () => {
-    const context = { summaryLogYear: 2026 }
+    const context = validationOptionsIn(toYear(2026))
 
     it('accepts December of the latest year', () => {
       const schema = createFirstOfMonthFieldSchema()
