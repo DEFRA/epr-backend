@@ -8,10 +8,11 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
+import { registerDependency } from '#plugins/register-dependency.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 import { setupMsw } from '#vite/setup-msw.js'
-import { organisationReadRepositoryPlugin } from './plugin.js'
+import { organisationReadModel } from './plugin.js'
 import {
   REPROCESSOR_NUMBER,
   findOrganisation,
@@ -74,11 +75,13 @@ const serveRegAccredAccreditation = () => {
 }
 
 /**
+ * A server with the read model registered over the test's database, as the
+ * server setup registers it, and initialised.
+ *
  * @param {MongoClient} mongoClient
  * @param {boolean} regAccredExternalAccreditations
- * @returns {Promise<OrganisationReadRepository>}
  */
-const registeredRepository = async (
+const registeredServer = async (
   mongoClient,
   regAccredExternalAccreditations
 ) => {
@@ -91,19 +94,45 @@ const registeredRepository = async (
   /** @type {Pick<TypedLogger, 'warn'>} */
   const logger = { warn: () => {} }
   const database = mongoClient.db('epr-backend')
-  const server = Object.assign(Hapi.server(), { db: database })
-  server.decorate('server', 'logger', logger)
-  const app = /** @type {ServerApp} */ (server.app)
-  app.overseasSitesRepository = (
+  const overseasSitesRepository = (
     await createOverseasSitesRepository(database)
   )()
-  organisationReadRepositoryPlugin.register(server, {
-    config: { get: (key) => settings[key] }
+  const server = Hapi.server()
+  server.decorate('server', 'logger', logger)
+  await server.register([
+    {
+      name: 'mongodb',
+      register: (registered) => {
+        registered.decorate('server', 'db', database)
+      }
+    },
+    {
+      name: 'overseasSitesRepository',
+      register: (registered) => {
+        registerDependency(
+          registered,
+          'overseasSitesRepository',
+          () => overseasSitesRepository
+        )
+      }
+    }
+  ])
+  await server.register({
+    plugin: organisationReadModel,
+    options: { config: { get: (key) => settings[key] } }
   })
-  return app.organisationReadRepository
+  await server.initialize()
+  return server
 }
 
-describe('organisationReadRepositoryPlugin', () => {
+/**
+ * @param {import('@hapi/hapi').Server} server
+ * @returns {OrganisationReadRepository}
+ */
+const readRepositoryOf = (server) =>
+  /** @type {ServerApp} */ (server.app).organisationReadRepository
+
+describe('organisationReadModel', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
   })
@@ -138,7 +167,7 @@ describe('organisationReadRepositoryPlugin', () => {
       })
 
       const organisation = await findOrganisation(
-        await registeredRepository(mongoClient, flag),
+        readRepositoryOf(await registeredServer(mongoClient, flag)),
         stored.organisationNumber
       )
 
@@ -150,4 +179,17 @@ describe('organisationReadRepositoryPlugin', () => {
       expect(requested).toHaveLength(expectedRequests)
     }
   )
+
+  it('keeps the repository it provided when the server is initialised again', async ({
+    mongoClient
+  }) => {
+    serveRegAccredAccreditation()
+    const server = await registeredServer(mongoClient, false)
+    const provided = readRepositoryOf(server)
+
+    await server.stop()
+    await server.initialize()
+
+    expect(readRepositoryOf(server)).toBe(provided)
+  })
 })

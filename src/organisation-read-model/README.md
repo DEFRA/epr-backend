@@ -5,8 +5,10 @@ This module serves organisations, their registrations and their accreditations i
 Code outside the module imports from three entry points, and each lists its exports by name:
 
 - **`index.js`** is the public interface: the read model's types, its pure rules and what a caller needs to know about the stores it reads. It loads no route, adapter or Hapi code.
-- **`plugin.js`** is the module's Hapi plugin, which registers the repository. Only code in `src/server`, `src/plugins` and `src/test` may import it. The server setup registers it, and the test servers register the in-memory repository from `test-support.js` instead.
+- **`plugin.js`** is the module's Hapi plugin, which provides the read repository. Only code in `src/server`, `src/plugins` and `src/test` may import it. Both servers register it from the module list, and the test server gives it the in-memory repository.
 - **`test-support.js`** holds the in-memory repository and test builders, and only a test may import it.
+
+[`src/modules.md`](../modules.md) describes the shape every module takes.
 
 Lint refuses any other import into the module, but it cannot see a JSDoc `@import`.
 

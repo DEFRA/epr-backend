@@ -40,6 +40,7 @@ describe('commandQueueConsumerPlugin', () => {
       events: {
         on: vi.fn()
       },
+      dependency: vi.fn(),
       app: {
         summaryLogsRepository: {},
         organisationAdministrationRepository: {},
@@ -80,14 +81,18 @@ describe('commandQueueConsumerPlugin', () => {
   it('has correct plugin metadata', () => {
     expect(commandQueueConsumerPlugin.name).toBe('command-queue-consumer')
     expect(commandQueueConsumerPlugin.version).toBe('1.0.0')
-    expect(commandQueueConsumerPlugin.dependencies).toContain(
-      'summaryLogsRepository'
-    )
-    expect(commandQueueConsumerPlugin.dependencies).toContain(
-      'uploadsRepository'
-    )
-    expect(commandQueueConsumerPlugin.dependencies).toContain(
-      'organisationReadRepository'
+  })
+
+  it('declares the plugins whose capabilities it reads', async () => {
+    await commandQueueConsumerPlugin.register(server, { config })
+
+    expect(server.dependency).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        'summaryLogsRepository',
+        'uploadsRepository',
+        'organisation-read-model'
+      ]),
+      undefined
     )
   })
 
@@ -106,7 +111,7 @@ describe('commandQueueConsumerPlugin', () => {
         [
           'summaryLogsRepository',
           'organisationsRepository',
-          'organisationReadRepository',
+          'organisation-read-model',
           'wasteBalanceService',
           'uploadsRepository',
           'reportsRepository',
@@ -135,8 +140,13 @@ describe('commandQueueConsumerPlugin', () => {
       })
     })
 
-    it('creates summary log extractor', async () => {
+    it('creates summary log extractor when the server starts', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
+
+      const startHandler = server.events.on.mock.calls.find(
+        (call) => call[0] === 'start'
+      )[1]
+      await startHandler()
 
       expect(createSummaryLogExtractor).toHaveBeenCalledWith({
         uploadsRepository: expect.any(Object)

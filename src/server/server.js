@@ -15,10 +15,10 @@ import {
 } from '#overseas-sites/index.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
+import { modulePlugins } from '#plugins/modules.js'
 import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
-import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
@@ -90,7 +90,6 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    { plugin: organisationReadRepositoryPlugin, options: { config } },
     orsImportsRepositoryPlugin,
     mongoSummaryLogRowStatesRepositoryPlugin
   ]
@@ -126,7 +125,7 @@ async function createServer(options = {}) {
   // See: src/routes/v1/apply/*.js
   const infrastructure = options._testOnlyLegacyApplyRoutes
     ? []
-    : getProductionPlugins(config)
+    : [...getProductionPlugins(config), ...modulePlugins(config)]
 
   await server.register(serverPlugins(config, infrastructure))
 
