@@ -29,6 +29,7 @@
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { WasteRecordType } from '#domain/waste-records/model.js' */
 
 /**
  * A row as it was submitted, carrying no waste-balance classification.
@@ -66,6 +67,11 @@
  *   summary log document's id. Spans every ledger partition of the
  *   registration, so a caller that does not know the accreditation reads it
  *   back off the rows.
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId, rows: { wasteRecordType: WasteRecordType, rowIds: string[] }) => Promise<SummaryLogRowState[]>} findRowStatesInSummaryLog
+ *   Return the states `ledgerId` holds at the summary log `summaryLogId` for
+ *   the named rows of one waste record type, with their storage ids: what a
+ *   later year's linked rows are filled in from (ADR-0060). A named row the
+ *   summary log does not hold is absent from the result.
  * @property {(summaryLogIds: SummaryLogFileId[]) => AsyncIterable<SubmittedRowState>} streamRowStatesForSummaryLogs
  *   Yield each state document whose membership contains at least one of
  *   `summaryLogIds`, at most once however many of them it holds.
