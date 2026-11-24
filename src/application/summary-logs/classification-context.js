@@ -3,10 +3,10 @@ import {
   linksYears,
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import {
   classificationContextOf,
+  previousYearAccreditationOf,
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
@@ -90,8 +90,10 @@ const previousYearOf = async ({
     }
   }
 
-  const accreditation =
-    accreditationForYear(registration.registration, year) ?? null
+  const accreditation = previousYearAccreditationOf(
+    registration.registration,
+    summaryLog.year
+  )
   const previousYearSubmission =
     accreditation &&
     (await latestSubmissionIn(ledgerRepository, {

@@ -13,6 +13,7 @@ import {
 /** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/vocabulary.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
@@ -118,6 +119,16 @@ export const overseasSitesOf = (accreditation) =>
   )
 
 /**
+ * The registration's accreditation for the year before `year`, or null.
+ *
+ * @param {Pick<ReadModelRegistration, 'accreditations'>} registration
+ * @param {Year} year
+ * @returns {ReadModelAccreditation | null}
+ */
+export const previousYearAccreditationOf = (registration, year) =>
+  accreditationForYear(registration, previousYear(year)) ?? null
+
+/**
  * What classifying a ledger's rows again reads of its accreditation as it
  * stands, with the registration's accreditation for the year before.
  *
@@ -128,17 +139,14 @@ export const ledgerClassificationContextOf = ({
   registration,
   accreditation
 }) => {
-  const previousYearAccreditation = accreditationForYear(
+  const previousYearAccreditation = previousYearAccreditationOf(
     registration,
-    previousYear(accreditation.year)
+    accreditation.year
   )
   return {
-    accreditation: validityOf(accreditation),
-    overseasSites: overseasSitesOf(accreditation),
+    ...classificationContextOf({ accreditation }),
     previousYearAccreditation:
-      previousYearAccreditation === undefined
-        ? null
-        : validityOf(previousYearAccreditation)
+      previousYearAccreditation && validityOf(previousYearAccreditation)
   }
 }
 
