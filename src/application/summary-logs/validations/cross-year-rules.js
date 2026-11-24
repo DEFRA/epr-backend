@@ -137,8 +137,8 @@ const checkTable = ({
 }
 
 /**
- * The rules that compare a linked row with the previous year's (ADR-0060), so
- * the field schemas need know nothing about linking.
+ * The rules that compare a linked row with the previous year's (ADR-0060). The
+ * field schemas know only that a row was filled in.
  *
  * @param {{
  *   parsed: ParsedSummaryLog,
