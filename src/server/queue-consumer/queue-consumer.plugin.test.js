@@ -83,20 +83,17 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.version).toBe('1.0.0')
   })
 
-  it('declares the plugins whose capabilities it reads', async () => {
-    await commandQueueConsumerPlugin.register(server, { config })
+  describe('startup', () => {
+    const providers = [
+      'summaryLogsRepository',
+      'organisationsRepository',
+      'organisation-read-model',
+      'wasteBalanceService',
+      'uploadsRepository',
+      'reportsRepository',
+      'systemLogsRepository'
+    ]
 
-    expect(server.dependency).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        'summaryLogsRepository',
-        'uploadsRepository',
-        'organisation-read-model'
-      ]),
-      undefined
-    )
-  })
-
-  describe('startup without a row-state repository', () => {
     const stubRepositoryPlugin = (name) => ({
       name,
       register: (/** @type {import('@hapi/hapi').Server} */ srv) => {
@@ -104,29 +101,33 @@ describe('commandQueueConsumerPlugin', () => {
       }
     })
 
-    it('initialises when summaryLogRowStatesRepository is not registered', async () => {
+    /** @param {string[]} registered */
+    const serverWith = async (registered) => {
       const hapiServer = Hapi.server()
-
-      await hapiServer.register(
-        [
-          'summaryLogsRepository',
-          'organisationsRepository',
-          'organisation-read-model',
-          'wasteBalanceService',
-          'uploadsRepository',
-          'reportsRepository',
-          'systemLogsRepository'
-        ].map(stubRepositoryPlugin)
-      )
-
+      await hapiServer.register(registered.map(stubRepositoryPlugin))
       await hapiServer.register(
         /** @type {any} */ ({
           plugin: commandQueueConsumerPlugin,
           options: { config }
         })
       )
+      return hapiServer
+    }
+
+    it('initialises when summaryLogRowStatesRepository is not registered', async () => {
+      const hapiServer = await serverWith(providers)
 
       await expect(hapiServer.initialize()).resolves.toBeUndefined()
+    })
+
+    it('refuses to initialise without the read model', async () => {
+      const hapiServer = await serverWith(
+        providers.filter((name) => name !== 'organisation-read-model')
+      )
+
+      await expect(hapiServer.initialize()).rejects.toThrow(
+        /organisation-read-model/
+      )
     })
   })
 

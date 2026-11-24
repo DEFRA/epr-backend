@@ -251,7 +251,7 @@ function buildRepositoryPlugins(configs, repoOverrides) {
  * repository where the test passes one.
  *
  * @param {Partial<Record<keyof ServerApp, Function|Object>>} repoOverrides - Repository overrides keyed by name
- * @returns {ModuleOptions}
+ * @returns {Required<ModuleOptions>}
  */
 const testModuleOptions = (repoOverrides) => ({
   'organisation-read-model': {

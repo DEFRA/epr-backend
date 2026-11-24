@@ -76,7 +76,8 @@ const serveRegAccredAccreditation = () => {
 
 /**
  * A server with the read model registered over the test's database, as the
- * server setup registers it, and initialised.
+ * server setup registers it, and initialised. Given an adapter, it has no
+ * MongoDB plugin, because the read model then needs none.
  *
  * @param {MongoClient} mongoClient
  * @param {boolean} regAccredExternalAccreditations
@@ -101,13 +102,14 @@ const registeredServer = async (
   )()
   const server = Hapi.server()
   server.decorate('server', 'logger', logger)
+  const mongodb = {
+    name: 'mongodb',
+    register: (/** @type {import('@hapi/hapi').Server} */ registered) => {
+      registered.decorate('server', 'db', database)
+    }
+  }
   await server.register([
-    {
-      name: 'mongodb',
-      register: (registered) => {
-        registered.decorate('server', 'db', database)
-      }
-    },
+    ...(adapters.organisationReadRepository ? [] : [mongodb]),
     {
       name: 'overseasSitesRepository',
       register: (registered) => {

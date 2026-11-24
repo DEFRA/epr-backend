@@ -23,7 +23,7 @@ The plugin registers what the module offers. That is routes for its users, a cap
 
 - **Pass `after` only to wire something at startup.** A plugin that reads a capability only in its handlers declares the names without `after`. Two plugins that each pass `after` and name each other cannot start.
 - **Never read another plugin's output at registration, or in a plain `onPreStart`.** Neither waits for the plugin that provides it. A plugin that needs it at runtime reads it in its `start` listener, as the queue consumer does.
-- **Never list dependencies statically on the plugin.** A static list cannot change with the adapters the plugin is given, so the test server could not start.
+- **A module's plugin never lists its dependencies statically.** A static list cannot change with the adapters the plugin is given, so the test server could not start.
 
 Every server, test servers included, is initialised before use, because capabilities are provided at initialise.
 
