@@ -21,13 +21,13 @@ const { buildOrganisation } = createOrganisationBuilders()
  * after storing the organisation so its current statuses are derived as they
  * are in production.
  *
- * @param {object} organisation
+ * @param {{ id: string }} organisation
  */
 const reprocessorOf = async (organisation) => {
   const stored = await createInMemoryOrganisationsRepository([
     partialMock(organisation)
-  ])().findAll()
-  const [served] = await toReadModelOrganisations(stored, [], {
+  ])().findById(organisation.id)
+  const [served] = await toReadModelOrganisations([stored], [], {
     overseasSitesRepository: { findByIds: async () => [] },
     logger: { warn: () => {} }
   })

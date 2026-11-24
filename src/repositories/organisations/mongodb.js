@@ -25,21 +25,80 @@ import {
   performReplaceUsers,
   performUnlinkDefraOrganisation
 } from './mongodb.targeted-updates.js'
-import {
-  COLLECTION_NAME,
-  DEFAULT_CONSISTENCY_RETRY_DELAY_MS,
-  DEFAULT_MAX_CONSISTENCY_RETRIES,
-  findAll,
-  findOneAtMinimumVersion,
-  findPage
-} from './mongodb-find.js'
 
-/** @import { Collection, Db } from 'mongodb' */
-/** @import { FindParams } from './administration-port.js' */
+/** @import { Collection, Db, Document, Filter } from 'mongodb' */
+/** @import { Organisation } from '#domain/organisations/model.js' */
 /** @import { OrganisationsRepositoryFactory } from './port.js' */
 /** @import { HeldNumber, WriteOperation } from './helpers.js' */
 
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+
+export const COLLECTION_NAME = 'epr-organisations'
+
+// Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)
+export const DEFAULT_MAX_CONSISTENCY_RETRIES = 20
+export const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
+
+/**
+ * Reads the organisation document matching `filter` once.
+ *
+ * @param {Db} db
+ * @param {Filter<Document>} filter
+ * @returns {Promise<Organisation | null>}
+ */
+const findOne = async (db, filter) => {
+  const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+  return doc ? mapDocumentWithCurrentStatuses(doc) : null
+}
+
+/**
+ * Reads the one organisation `filter` matches, retrying until its version is
+ * at least `minimumVersion`. Without `minimumVersion` it reads once. Resolves
+ * null when no organisation matches, and throws 500 when the version never
+ * arrives.
+ *
+ * @param {Db} db
+ * @param {number} maxRetries
+ * @param {number} retryDelayMs
+ * @param {Filter<Document>} filter
+ * @param {number} [minimumVersion]
+ * @returns {Promise<Organisation | null>}
+ */
+const findOneAtMinimumVersion = async (
+  db,
+  maxRetries,
+  retryDelayMs,
+  filter,
+  minimumVersion
+) => {
+  if (minimumVersion === undefined) {
+    return findOne(db, filter)
+  }
+
+  for (let i = 0; i < maxRetries; i++) {
+    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+
+    const isLastRetry = i === maxRetries - 1
+
+    if (doc) {
+      if (doc.version >= minimumVersion) {
+        return mapDocumentWithCurrentStatuses(doc)
+      }
+      // Document exists but version too low - will retry
+    } else if (isLastRetry) {
+      return null
+    } else {
+      // Document not found but have retries left - will retry
+    }
+
+    if (!isLastRetry) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs)) // NOSONAR: javascript:S9382 - each retry must wait for the one before it
+    }
+  }
+
+  throw Boom.internal('Consistency timeout waiting for minimum version')
+}
+
 /**
  * Ensures the collection exists with required indexes.
  * Safe to call multiple times - MongoDB createIndex is idempotent.
@@ -195,10 +254,6 @@ const performFindById =
     }
     return found
   }
-
-const performFindAll = (db) => () => findAll(db)
-const performFind = (db) => (/** @type {FindParams} */ params) =>
-  findPage(db, params)
 
 const ORG_SUMMARY_PROJECTION = {
   orgId: 1,
@@ -447,8 +502,6 @@ export const createOrganisationsRepository = async (
         db.collection(COLLECTION_NAME)
       ),
       findById,
-      findAll: performFindAll(db),
-      find: performFind(db),
       findAllLinked: performFindAllLinked(db),
       findByOrganisationNumbers: performFindByOrganisationNumbers(db),
       findAllIds: findAllIds(db),

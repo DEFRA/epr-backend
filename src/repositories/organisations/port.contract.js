@@ -7,7 +7,6 @@ import { testDeleteByOrganisationNumberBehaviour } from './contract/delete-by-or
 import { testFindAllIdsBehaviour } from './contract/find-all-ids.contract.js'
 import { testFindAllLinkedBehaviour } from './contract/find-all-linked.contract.js'
 import { testFindByLinkedDefraOrgIdBehaviour } from './contract/find-by-linked-defra-org-id.contract.js'
-import { testFindWithCriteriaBehaviour } from './contract/find-criteria.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testReplaceBehaviour } from './contract/replace.contract.js'
 import { testLinkDefraOrganisationBehaviour } from './contract/link-defra-organisation.contract.js'
@@ -51,7 +50,6 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testFindAllIdsBehaviour(it)
   testFindAllLinkedBehaviour(it)
   testFindByLinkedDefraOrgIdBehaviour(it)
-  testFindWithCriteriaBehaviour(it)
   testFindRegistrationByIdBehaviour(it)
   testDataIsolationBehaviour(it)
   testRegAccApprovalValidation(it)

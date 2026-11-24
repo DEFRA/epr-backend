@@ -1,4 +1,4 @@
-import { COLLECTION_NAME } from '#repositories/organisations/mongodb-find.js'
+import { COLLECTION_NAME } from '#repositories/organisations/mongodb.js'
 
 /** @import { Db } from 'mongodb' */
 /** @import { RegistrationAccreditationAdminRepository } from './port.js' */

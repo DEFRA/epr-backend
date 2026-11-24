@@ -21,26 +21,6 @@
  */
 
 /**
- * What to search organisations for. Every criterion that carries a value is
- * ANDed with the others; an empty string or undefined is treated as absent, so
- * an empty object matches everything.
- *
- * Criteria match anywhere on the organisation's registrations and
- * accreditations — a registration criterion and an accreditation criterion are
- * not required to describe a linked pair.
- * @typedef {Object} SearchCriteria
- * @property {string} [search] - case-insensitive substring on companyDetails.name
- * @property {string} [organisationNumber] - a value that is not an organisation number matches nothing
- * @property {string} [registrationNumber] - case-insensitive exact match on registrations[].registrationNumber
- * @property {string} [accreditationNumber] - case-insensitive exact match on accreditations[].accreditationNumber
- */
-
-/**
- * A {@link SearchCriteria} query plus the page of results to return it in.
- * @typedef {SearchCriteria & { page: number, pageSize: number }} FindParams
- */
-
-/**
  * The registration and accreditation context's port onto whole organisations,
  * including registrations and accreditations that have no number. That context
  * is leaving epr-backend, so only its admin routes and data tooling use this
@@ -51,8 +31,6 @@
  * @typedef {Object} OrganisationAdministrationRepository
  * @property {(organisation: Omit<Organisation, 'status'>) => Promise<void>} insert
  * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
- * @property {() => Promise<Organisation[]>} findAll
- * @property {(params: FindParams) => Promise<{ items: Organisation[], page: number, pageSize: number, totalItems: number, totalPages: number }>} find - Find organisations matching every criterion in SearchCriteria, ANDed together; results sorted alphabetically by name and returned a page at a time
  * @property {(organisationNumbers: OrganisationNumber[]) => Promise<Organisation[]>} findByOrganisationNumbers - Find the organisations holding these numbers
  * @property {(id: string, minimumVersion?: number) => Promise<Organisation>} findById
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration>} findRegistrationById

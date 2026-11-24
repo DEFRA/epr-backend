@@ -1,21 +1,20 @@
 import {
-  anchoredPattern,
   escapeRegex,
-  normaliseCriteria,
-  parseOrgIdCriterion,
   storedOrgId
-} from './helpers.js'
+} from '#repositories/organisations/helpers.js'
+import {
+  anchoredPattern,
+  normaliseCriteria,
+  parseOrgIdCriterion
+} from './search-criteria.js'
 
-/** @import { FindParams, SearchCriteria } from './administration-port.js' */
+/** @import { FindParams } from './port.js' */
+/** @import { SearchCriteria } from './search-criteria.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 
 /**
- * How organisations are searched in memory. The in-memory organisations
- * repository and the in-memory organisation read repository share this
- * search, so both match criteria the same way. Each searches the shape it
- * returns: the organisations repository its stored organisations, the read
- * repository the read model's. So the two can find different organisations
- * for the same criteria.
+ * How the in-memory organisation read repository searches organisations, in
+ * the same way the MongoDB adapter's filter in mongodb-find.js does.
  */
 
 /**
@@ -24,23 +23,23 @@ import {
  * @typedef {{
  *   organisationNumber: OrganisationNumber
  *   companyDetails: { name: string }
- *   registrations: Array<{ registrationNumber?: RegistrationNumber | null }>
- *   accreditations: Array<{ accreditationNumber?: AccreditationNumber | null }>
+ *   registrations: Array<{ registrationNumber: RegistrationNumber }>
+ *   accreditations: Array<{ accreditationNumber: AccreditationNumber }>
  * }} Searchable
  */
 
 /**
  * @param {string} value
- * @returns {(candidate: string | null | undefined) => boolean}
+ * @returns {(candidate: string) => boolean}
  */
 const anchoredMatcher = (value) => {
   const pattern = new RegExp(anchoredPattern(value), 'i')
-  return (candidate) => pattern.test(candidate ?? '')
+  return (candidate) => pattern.test(candidate)
 }
 
 /**
  * The in-memory equivalent of the MongoDB find filter in mongodb-find.js. The
- * shared criteria semantics live in helpers.js and the find contract tests
+ * shared criteria semantics live in search-criteria.js and the find contract tests
  * hold the two implementations to the same behaviour.
  *
  * @param {SearchCriteria} criteria

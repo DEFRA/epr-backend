@@ -21,26 +21,6 @@ export const testDataIsolationBehaviour = (it) => {
       }
     )
 
-    describe('findAll isolation', () => {
-      it('returns independent copies that cannot modify stored data', async () => {
-        const org1 = buildOrganisation()
-        const org2 = buildOrganisation()
-        await repository.insert(org1)
-        await repository.insert(org2)
-
-        const firstRead = await repository.findAll()
-        const originalNumber = firstRead[0].organisationNumber
-
-        // mutate returned array and objects
-        firstRead[0].organisationNumber = toOrganisationNumber('999999')
-        firstRead.push(buildOrganisation())
-
-        const secondRead = await repository.findAll()
-        expect(secondRead).toHaveLength(2)
-        expect(secondRead[0].organisationNumber).toBe(originalNumber)
-      })
-    })
-
     describe('findById isolation', () => {
       it('returns a clone, not internal reference', async () => {
         const org = buildOrganisation()

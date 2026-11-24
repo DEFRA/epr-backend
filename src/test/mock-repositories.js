@@ -20,8 +20,6 @@ import { vi } from 'vitest'
 export const createMockOrganisationsRepository = (overrides = {}) => ({
   insert: vi.fn(),
   replace: vi.fn(),
-  findAll: vi.fn(),
-  find: vi.fn(),
   findByOrganisationNumbers: vi.fn(),
   findById: vi.fn(),
   findByLinkedDefraOrgId: vi.fn(),

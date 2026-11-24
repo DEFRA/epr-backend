@@ -1,5 +1,5 @@
 import { organisationInYear } from './organisation-in-year.js'
-import { findPage } from '#repositories/organisations/inmemory-find.js'
+import { findPage } from './inmemory-find.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 
 /** @import { Organisation } from '#organisation-read-model/domain/model.js' */
@@ -31,12 +31,11 @@ const searchable = (organisation) => ({
  * given. Given a `year`, `findByOrganisationNumber` serves the organisation in
  * that year, as the MongoDB adapter does.
  *
- * It shares the in-memory organisations repository's search through the
- * `#repositories/organisations/inmemory-find.js` import, so both match
- * criteria the same way. Unlike the MongoDB adapter, which searches and
- * counts organisations as they are stored, it searches what the read model
- * serves: what the model leaves out is neither found nor counted, and an
- * external accreditation is both found by `find` and served from it.
+ * It searches through `inmemory-find.js`, which matches criteria as the MongoDB adapter's filter does. Unlike
+ * the MongoDB adapter, which searches and counts organisations as they are
+ * stored, it searches what the read model serves: what the model leaves out is
+ * neither found nor counted, and an external accreditation is both found by
+ * `find` and served from it.
  *
  * @param {Organisation[]} [organisations]
  * @returns {() => OrganisationReadRepository}

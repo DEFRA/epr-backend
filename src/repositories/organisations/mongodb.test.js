@@ -239,7 +239,6 @@ describe('MongoDB organisations repository', () => {
         )
       const failure = `Stored organisation ${organisation.id} is invalid: "orgId"`
 
-      await expect(repository.findAll()).rejects.toThrow(failure)
       await expect(repository.findById(organisation.id)).rejects.toThrow(
         failure
       )
