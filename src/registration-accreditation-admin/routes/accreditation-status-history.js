@@ -7,7 +7,7 @@ import {
   REGISTRATION_STATUS
 } from '#domain/organisations/model.js'
 import { assertAccreditationStatusTransitionValid } from '#domain/organisations/status.js'
-import { MIN_YEAR } from '#common/validation/year-schema.js'
+import { STORED_ACCREDITATION_YEAR } from '#repositories/organisations/schema/accreditation.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
 import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-history.schema.js'
 
@@ -21,10 +21,17 @@ import { accreditationStatusHistoryPayloadSchema } from './accreditation-status-
 export const accreditationStatusHistoryPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/accreditations/{accreditationId}/status-history'
 
+/** @type {ReadonlyArray<['validFrom' | 'validTo', string]>} */
+const GRANT_DATE_LABELS = [
+  ['validFrom', 'valid from'],
+  ['validTo', 'valid to']
+]
+
 /**
  * Grant-only validations. Granting sets the whole validity window from the
- * supplied dates, so reject a start before the service's first year, with a
- * message a caller can show as it is, and a window that would be inverted.
+ * supplied dates, so reject a date outside the one year REEX stores
+ * accreditations for, with a message a caller can show as it is, and a window
+ * that would be inverted.
  * Granting also issues the accreditation number, which must not already be in
  * use by any accreditation in any organisation, whatever its status. The
  * unique index on accreditations.accreditationNumber also blocks concurrent
@@ -37,10 +44,12 @@ const assertGrantAllowed = async (
   registrationAccreditationAdminRepository,
   grant
 ) => {
-  if (utcYearOf(grant.validFrom) < MIN_YEAR) {
-    throw Boom.badData(
-      `The date the accreditation is valid from must be in ${MIN_YEAR} or later`
-    )
+  for (const [field, label] of GRANT_DATE_LABELS) {
+    if (utcYearOf(grant[field]) !== STORED_ACCREDITATION_YEAR) {
+      throw Boom.badData(
+        `The date the accreditation is ${label} must be in ${STORED_ACCREDITATION_YEAR}`
+      )
+    }
   }
 
   if (new Date(grant.validFrom) > new Date(grant.validTo)) {
