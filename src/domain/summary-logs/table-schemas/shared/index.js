@@ -16,7 +16,7 @@ export {
 } from './joi-messages.js'
 export { isYes } from './yes-no.js'
 export { areNumbersEqual, isProductCorrect } from './number-validation.js'
-export { createRowIdSchema } from './row-id.schema.js'
+export { createRowIdSchema, toRowId } from './row-id.schema.js'
 
 // Field schema factories
 export {

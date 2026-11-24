@@ -16,6 +16,7 @@ import {
   BEFORE_SUMMARY_LOG_YEAR_ERROR
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
+import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
 import {
   classifyRow,
@@ -29,6 +30,8 @@ import {
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {Pick<TableSchema, 'rowIdField' | 'requiredHeaders' | 'unfilledValues' | 'validationSchema' | 'classifyForWasteBalance'>} DataSyntaxTableSchema */
 /** @import {RowClassificationIssue, RowOutcome, SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import {FilledInRow} from '../fill-in-linked-rows.js' */
+/** @import {RowStateLink} from '#waste-records/repository/schema.js' */
 
 /**
  * A validated row from the data syntax validation pipeline
@@ -41,6 +44,7 @@ import {
  * @property {string} rowId - Extracted row ID
  * @property {RowOutcome} outcome - Classification outcome from validation pipeline
  * @property {ValidationIssue[]} issues - Validation issues for this row (empty array if none)
+ * @property {RowStateLink} [link] - Where a linked row was filled in from
  */
 
 /**
@@ -340,7 +344,7 @@ const isTemplateRow = (rowObject, rowIdField) => {
  * @param {{
  *   tableName: string,
  *   headerToIndexMap: Map<string, number>,
- *   rows: Array<{ rowNumber: number, values: Array<unknown> }>,
+ *   rows: FilledInRow[],
  *   domainSchema: DataSyntaxTableSchema,
  *   location: CellLocation,
  *   options: SummaryLogValidationOptions
@@ -355,7 +359,7 @@ const validateRows = ({
   location,
   options
 }) => {
-  const validatedRows = rows.flatMap(({ rowNumber, values }) => {
+  const validatedRows = rows.flatMap(({ rowNumber, values, linked }) => {
     /** @type {Record<string, unknown>} */
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
@@ -366,8 +370,20 @@ const validateRows = ({
       return []
     }
 
-    const classification = classifyRow(rowObject, domainSchema, options)
-    const rowId = String(rowObject[domainSchema.rowIdField]) // NOSONAR: javascript:S6551 - ROW_ID is never an object
+    const classification = classifyRow(
+      rowObject,
+      domainSchema,
+      linked
+        ? {
+            ...options,
+            linkedRow: {
+              suppliedFields: linked.link.suppliedFields,
+              previousYear: linked.previousYear
+            }
+          }
+        : options
+    )
+    const rowId = toRowId(rowObject[domainSchema.rowIdField])
 
     const rowIssues = classification.issues.map((issue) =>
       toApplicationIssue({
@@ -387,7 +403,8 @@ const validateRows = ({
         data: rowObject,
         rowId,
         outcome: classification.outcome,
-        issues: rowIssues
+        issues: rowIssues,
+        ...(linked && { link: linked.link })
       }
     ]
   })
