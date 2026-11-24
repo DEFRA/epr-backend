@@ -415,4 +415,53 @@ describe('validateTonnageExport', () => {
       expect(error).toBeUndefined()
     })
   })
+
+  describe('on a row filled in from a previous-year row, whose values were stored rounded', () => {
+    const schema = createTestSchema()
+
+    /** @param {{ netWeight: number, tonnage: number, linked?: boolean }} row */
+    const validate = ({ netWeight, tonnage, linked = true }) =>
+      schema.validate(
+        {
+          NET_WEIGHT: netWeight,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+          BAILING_WIRE_PROTOCOL: 'No',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.37,
+          TONNAGE_RECEIVED_FOR_EXPORT: tonnage
+        },
+        { context: { filledIn: linked } }
+      )
+
+    it('passes a stored tonnage within the rounding allowance of the recalculation', () => {
+      // 10.12 × 0.37 = 3.7444, stored as 3.74
+      expect(
+        validate({ netWeight: 10.12, tonnage: 3.74 }).error
+      ).toBeUndefined()
+    })
+
+    it('passes a stored tonnage at the edge of the rounding allowance', () => {
+      // 100 × 0.37 = 37
+      expect(
+        validate({ netWeight: 100, tonnage: 37.025 }).error
+      ).toBeUndefined()
+    })
+
+    it('rejects a stored tonnage beyond the rounding allowance', () => {
+      expect(validate({ netWeight: 100, tonnage: 37.026 }).error).toBeDefined()
+    })
+
+    it('rejects a tonnage no rounding accounts for', () => {
+      expect(validate({ netWeight: 10.12, tonnage: 3.8 }).error).toBeDefined()
+    })
+
+    it('keeps the exact comparison on a row not filled in', () => {
+      expect(
+        validate({
+          netWeight: 10.12,
+          tonnage: 3.74,
+          linked: false
+        }).error
+      ).toBeDefined()
+    })
+  })
 })
