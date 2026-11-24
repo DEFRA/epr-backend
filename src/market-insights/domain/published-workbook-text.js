@@ -171,7 +171,7 @@ export const WASTE_BALANCE_MATERIALS = NATION_FIGURES_MATERIALS
  *
  * @type {readonly (readonly [WasteBalanceRowType, string])[]}
  */
-export const WASTE_BALANCE_ACCREDITATION_TYPES = Object.freeze([
+export const WASTE_BALANCE_ROWS = Object.freeze([
   [WASTE_PROCESSING_TYPE.EXPORTER, 'Exporter'],
   [WASTE_PROCESSING_TYPE.REPROCESSOR, 'Reprocessor'],
   [EXPORTER_AND_REPROCESSOR, 'Exp & Rep']

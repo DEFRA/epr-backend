@@ -1,7 +1,7 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { assert } from 'vitest'
 import {
-  WASTE_BALANCE_ACCREDITATION_TYPES,
+  WASTE_BALANCE_ROWS,
   WASTE_BALANCE_MATERIALS,
   WORKSHEET_NAME
 } from '#market-insights/domain/published-workbook-text.js'
@@ -299,7 +299,7 @@ const figuresOnTab = (worksheet) => {
     WASTE_BALANCE_MATERIALS.map(([material, label]) => [label, material])
   )
   const typeLabelled = new Map(
-    WASTE_BALANCE_ACCREDITATION_TYPES.map(([type, label]) => [label, type])
+    WASTE_BALANCE_ROWS.map(([type, label]) => [label, type])
   )
   /** @type {Record<string, unknown>} */
   const figures = {}

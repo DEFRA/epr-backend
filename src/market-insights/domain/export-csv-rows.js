@@ -100,8 +100,8 @@ export const MANIFEST_COLUMNS = Object.freeze([
 export const buildWasteBalanceRows = ({ data }) =>
   Object.entries(data.months).flatMap(([month, { figures }]) =>
     TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
-      Object.entries(figures[material]).map(([row_, { netCredit }]) =>
-        row([month, material, row_, netCredit])
+      Object.entries(figures[material]).map(([rowType, { netCredit }]) =>
+        row([month, material, rowType, netCredit])
       )
     )
   )

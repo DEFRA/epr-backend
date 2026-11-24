@@ -15,7 +15,7 @@ import {
   WASTE_BALANCE_MONTH_HEADING
 } from '#market-insights/domain/published-workbook-style.js'
 import {
-  WASTE_BALANCE_ACCREDITATION_TYPES,
+  WASTE_BALANCE_ROWS,
   WASTE_BALANCE_COLUMNS,
   WASTE_BALANCE_GUIDANCE,
   WASTE_BALANCE_MATERIALS,
@@ -128,7 +128,7 @@ export const addWasteBalance = (
   const rows = WASTE_BALANCE_MATERIALS.filter(([material]) =>
     hasAccreditedOperator(ukTable, material)
   ).flatMap(([material, materialLabel]) =>
-    WASTE_BALANCE_ACCREDITATION_TYPES.filter(
+    WASTE_BALANCE_ROWS.filter(
       ([type]) => type in served.period.figures[material]
     ).map(([type, typeLabel]) => ({
       labels: [materialLabel, typeLabel],

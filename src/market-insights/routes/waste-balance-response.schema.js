@@ -42,7 +42,7 @@ const operatorCountsByMaterialSchema = byMaterialAndType(
 
 /**
  * Response contract for the published UK Waste Balance table. Keyed by
- * reporting month, then material, then accreditation type, with the net credit
+ * reporting month, then material, then row, with the net credit
  * the publication prints alongside the figures it is derived from. Each month
  * says how many monthly reports it was owed and how many have been submitted,
  * and the period carries the sum. That count covers every accredited
@@ -71,7 +71,7 @@ const operatorCountsByMaterialSchema = byMaterialAndType(
  *   accreditation was suspended, adds to the gross credited tonnage only, so
  *   its operator does not count.
  *
- * The period carries each material and accreditation type's figures summed
+ * The period carries each material and row's figures summed
  * across the months served, net credit included. It carries the same two
  * counts for each of those totals. An operator counts once there, however
  * many of those months it contributes to, so a period count is not the sum of
