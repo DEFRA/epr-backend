@@ -2,7 +2,7 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { describe, expect, it } from 'vitest'
 
 import {
-  acceptableObligationYears,
+  allowedObligationYears,
   InvalidObligationYearError,
   selectObligationYearForAcceptance
 } from './obligation-year.js'
@@ -13,7 +13,7 @@ const buildPrn = ({ isDecemberWaste }) => ({
 })
 
 describe('obligation year', () => {
-  describe('acceptableObligationYears', () => {
+  describe('allowedObligationYears', () => {
     it.for([
       { isDecemberWaste: false, expected: [2026] },
       { isDecemberWaste: true, expected: [2026, 2027] }
@@ -21,7 +21,7 @@ describe('obligation year', () => {
       'offers $expected when december waste is $isDecemberWaste',
       ({ isDecemberWaste, expected }) => {
         expect(
-          acceptableObligationYears(buildPrn({ isDecemberWaste }))
+          allowedObligationYears(buildPrn({ isDecemberWaste }))
         ).toStrictEqual(expected)
       }
     )
