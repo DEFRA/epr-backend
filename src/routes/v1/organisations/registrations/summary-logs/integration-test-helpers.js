@@ -894,7 +894,9 @@ export const createTestInfrastructure = async (
  *   accreditationValidFrom?: string,
  *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
  *   year?: Year,
- *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config']
+ *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config'],
+ *   ledgerRepository?: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
+ *   summaryLogRowStatesRepository?: import('#waste-records/repository/port.js').SummaryLogRowStatesRepository
  * }} WasteBalanceEnvironmentOptions
  */
 
@@ -910,7 +912,9 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   year = UPLOAD_YEAR,
   accreditationValidFrom = `${year}-01-01`,
   previousYearAccreditationNumber,
-  config
+  config,
+  ledgerRepository = createInMemoryLedgerRepository()(),
+  summaryLogRowStatesRepository = createInMemorySummaryLogRowStatesRepository()()
 } = {}) => {
   const accreditationId = 'ACC-123'
   const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -942,10 +946,6 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
 
   const organisationAdministrationRepository =
     createInMemoryOrganisationsRepository([{ ...testOrg, status: 'active' }])()
-
-  const ledgerRepository = createInMemoryLedgerRepository()()
-  const summaryLogRowStatesRepository =
-    createInMemorySummaryLogRowStatesRepository()()
 
   const systemLogsForBalanceAudit = {
     insert: vi.fn().mockResolvedValue(undefined),

@@ -15,7 +15,11 @@ export {
   DROPDOWN_PLACEHOLDER
 } from './joi-messages.js'
 export { isYes } from './yes-no.js'
-export { areNumbersEqual, isProductCorrect } from './number-validation.js'
+export {
+  areNumbersEqual,
+  isProductCorrect,
+  LINKED_ROW_ROUNDING_ALLOWANCE
+} from './number-validation.js'
 export { createRowIdSchema, toRowId } from './row-id.schema.js'
 
 // Field schema factories
