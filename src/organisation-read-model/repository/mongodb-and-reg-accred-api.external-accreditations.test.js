@@ -20,6 +20,9 @@ import {
   storedWithout
 } from './contract/organisation-read-test-helpers.js'
 
+/** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
+/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+
 const { buildOrganisation } = createOrganisationBuilders()
 
 const externalAccreditation2027 = {
@@ -144,6 +147,13 @@ describe('stored and external accreditations together', () => {
   describe('when the registration is cancelled', () => {
     const CANCELLED_AT = '2027-02-15T09:00:00.000Z'
 
+    /**
+     * The 2027 accreditation's status, served under a registration cancelled
+     * at CANCELLED_AT, when the registration service holds `timeline`.
+     *
+     * @param {OrganisationReadRepositoryWith} organisationReadRepositoryWith
+     * @param {StatusTimeline<AccreditationStatus>} timeline
+     */
     const findCancelledWithExternal = async (
       organisationReadRepositoryWith,
       timeline
@@ -164,7 +174,7 @@ describe('stored and external accreditations together', () => {
           buildExternalAccreditationFor(stored, {
             registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
             status: {
-              current: timeline.at(-1).status,
+              current: timeline[timeline.length - 1].status,
               lastUpdatedAt: '2026-12-14T10:31:00.000Z',
               timeline
             }
@@ -175,8 +185,9 @@ describe('stored and external accreditations together', () => {
         repository,
         stored.organisationNumber
       )
-      return organisation.registrations[REPROCESSOR_NUMBER].accreditations[2027]
-        .status
+      return organisation.registrations[REPROCESSOR_NUMBER]?.accreditations[
+        toYear(2027)
+      ]?.status
     }
 
     it('serves its external accreditation as cancelled from the day the registration was cancelled', async ({
@@ -217,6 +228,7 @@ describe('stored and external accreditations together', () => {
     it('serves an external accreditation the registration service has already cancelled as it holds it', async ({
       organisationReadRepositoryWith
     }) => {
+      /** @type {StatusTimeline<AccreditationStatus>} */
       const timeline = [
         { status: 'approved', at: '2027-01-01T00:00:00.000Z' },
         { status: 'cancelled', at: '2027-01-20T00:00:00.000Z' }
