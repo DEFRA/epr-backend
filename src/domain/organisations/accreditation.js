@@ -82,11 +82,17 @@
  */
 
 /**
+ * A date in the only year REEX stores accreditations for, as YYYY-MM-DD.
+ *
+ * @typedef {`2026-${string}`} StoredAccreditationDate
+ */
+
+/**
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber;
  *  status: Extract<StoredAccreditationStatus, 'approved'|'suspended'>;
- *  validFrom: string;
- *  validTo: string
+ *  validFrom: StoredAccreditationDate;
+ *  validTo: StoredAccreditationDate
  * }} AccreditationApproved
  */
 
@@ -94,8 +100,8 @@
  * @typedef {AccreditationBase & {
  *  accreditationNumber: AccreditationNumber | null;
  *  status: Extract<StoredAccreditationStatus, 'created'|'rejected'|'cancelled'>;
- *  validFrom?: string;
- *  validTo?: string
+ *  validFrom?: StoredAccreditationDate;
+ *  validTo?: StoredAccreditationDate
  * }} AccreditationOther
  */
 
@@ -104,9 +110,14 @@
  */
 
 /**
- * What deciding whether a date is accredited reads of an accreditation.
+ * What deciding whether a date is accredited reads of an accreditation, stored
+ * or held by the registration and accreditation service.
  *
- * @typedef {{ timeline: StatusTimeline<AccreditationStatus> } & Pick<AccreditationOther, 'validFrom' | 'validTo'>} AccreditationValidity
+ * @typedef {{
+ *  timeline: StatusTimeline<AccreditationStatus>;
+ *  validFrom?: string;
+ *  validTo?: string
+ * }} AccreditationValidity
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

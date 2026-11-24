@@ -3,6 +3,8 @@ import { ObjectId } from 'mongodb'
 import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import { createInitialStatusHistory } from '../helpers.js'
 import { getCurrentStatus } from '../status.js'
+import { STORED_ACCREDITATION_YEAR } from '../schema/accreditation.js'
+import { yearBounds } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -17,20 +19,13 @@ import {
 const FIRST_ORGANISATION_NUMBER = 500000
 
 /**
- * Generates date constants for validFrom/validTo in YYYY-MM-DD format
- * @returns {{ VALID_FROM: string, VALID_TO: string }} Object with VALID_FROM (today) and VALID_TO (one year from now)
+ * The validity dates of an approved stored accreditation or registration,
+ * spanning the only year REEX stores accreditations for.
+ * @returns {{ VALID_FROM: string, VALID_TO: string }}
  */
 export const getValidDateRange = () => {
-  const now = new Date()
-  const oneYearFromNow = new Date(
-    now.getFullYear() + 1,
-    now.getMonth(),
-    now.getDate()
-  )
-  return {
-    VALID_FROM: now.toISOString().slice(0, 10),
-    VALID_TO: oneYearFromNow.toISOString().slice(0, 10)
-  }
+  const { start, end } = yearBounds(STORED_ACCREDITATION_YEAR)
+  return { VALID_FROM: start, VALID_TO: end }
 }
 
 function initializeStatusForItems(items) {

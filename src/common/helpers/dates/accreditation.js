@@ -1,11 +1,9 @@
 import { calendarDate, toCalendarDate } from '#common/helpers/date-formatter.js'
-import { utcYearOf } from '#common/helpers/dates/year.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { statusOn } from '#organisation-read-model/vocabulary.js'
 
 /** @import {Brand} from '#common/helpers/brand.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
-/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 
 /**
@@ -88,23 +86,4 @@ export function isWithinAccreditationDateRange(date, window) {
   const day = toCalendarDate(date)
 
   return day >= window.validFrom && day <= window.validTo
-}
-
-/**
- * The relevant year an accreditation's `validFrom` names. Approved
- * accreditations always carry `validFrom`; a missing value here means the
- * caller reached this on a path that should never have — every relevant-year
- * consumer only ever serves approved accreditations.
- *
- * @param {{ id: string; validFrom?: string }} accreditation
- * @returns {Year}
- * @throws {Error} if validFrom is missing
- */
-export function deriveAccreditationYear(accreditation) {
-  if (!accreditation.validFrom) {
-    throw new Error(
-      `Accreditation ${accreditation.id} is missing validFrom — cannot derive accreditation year`
-    )
-  }
-  return utcYearOf(accreditation.validFrom)
 }

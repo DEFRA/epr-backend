@@ -26,7 +26,7 @@ export const createApprovedOrgBuilder =
   /**
    * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {object} [overrides]
-   * @param {{ VALID_FROM: string, VALID_TO: string }} [dateRange] - Accreditation/registration validity range (defaults to today .. one year on)
+   * @param {{ VALID_FROM: string, VALID_TO: string }} [dateRange] - Accreditation/registration validity range (defaults to the whole of 2026)
    * @returns {Promise<Organisation>}
    */
   async (

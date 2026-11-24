@@ -93,8 +93,8 @@ export const createStatusHistoryBuilders = ({ buildOrganisation }) => {
       wasteProcessingType: registration.wasteProcessingType,
       // validFrom/validTo/accreditationNumber/reprocessingType are only
       // required once an accreditation has been approved or suspended.
-      validFrom: '2024-01-01',
-      validTo: '2025-01-01',
+      validFrom: '2026-01-01',
+      validTo: '2026-12-31',
       accreditationNumber: toAccreditationNumber('ACC123456'),
       reprocessingType: 'input',
       statusHistory:

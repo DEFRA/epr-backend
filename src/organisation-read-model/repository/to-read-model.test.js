@@ -43,24 +43,6 @@ const approvedSince = (updatedAt) => [
   { status: 'approved', updatedAt }
 ]
 
-const accreditedEarlyForNextYear = () => {
-  const accredited = accreditation({
-    validFrom: '2028-01-01',
-    validTo: '2028-12-31',
-    statusHistory: approvedSince('2027-02-01T09:00:00.000Z')
-  })
-  return buildOrganisation({
-    registrations: [
-      reprocessor({
-        accreditationId: accredited.id,
-        validFrom: '2027-01-10',
-        statusHistory: approvedSince('2027-01-10T09:00:00.000Z')
-      })
-    ],
-    accreditations: [accredited]
-  })
-}
-
 describe('toReadModelOrganisations', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-15') })
@@ -137,25 +119,6 @@ describe('toReadModelOrganisations', () => {
           '2026-03-01': { standing: 'cancelled' }
         }
       })
-    })
-
-    it("gives next year's accreditation alongside its status dates while that year is open", async () => {
-      config.set('openNextYear', true)
-
-      const registration = await reprocessorOf(accreditedEarlyForNextYear())
-
-      expect(Object.keys(registration.accreditations)).toEqual(['2028'])
-      expect(registration.standingByDate).toEqual({
-        2027: { '2027-01-10': { standing: 'registeredOnly' } },
-        2028: { '2028-01-01': { standing: 'accredited' } }
-      })
-    })
-
-    it("leaves out next year's accreditation along with its status dates while that year is closed", async () => {
-      const registration = await reprocessorOf(accreditedEarlyForNextYear())
-
-      expect(Object.keys(registration.accreditations)).toEqual([])
-      expect(Object.keys(registration.standingByDate)).toEqual(['2027'])
     })
   })
 
