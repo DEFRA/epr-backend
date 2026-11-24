@@ -4,20 +4,16 @@ import {
 } from '#common/helpers/date-formatter.js'
 import { isOneOf } from '#common/helpers/is-one-of.js'
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
-import {
-  ACCREDITATION_STATUS,
-  REGISTRATION_STATUS,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { resolveMaterial } from '#domain/organisations/registration-utils.js'
 import { STORED_ACCREDITATION_YEAR } from '#repositories/organisations/schema/accreditation.js'
 import {
   ACCREDITATION_STATUSES,
-  HELD_ACCREDITATION_STATUSES,
   ORGANISATION_STATUSES,
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
+import { withRegistrationCancellation } from '#organisation-read-model/domain/registration-cancellation.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { accreditationsForRegistration } from './accreditations-for-registration.js'
 import {
@@ -355,82 +351,6 @@ function toRegistrationEntry(
       : toReprocessorRegistration(registration, common, accreditations, onDrop)
 
   return converted && [registrationNumber, converted]
-}
-
-/**
- * Re-ex cancels a stored accreditation when its registration is cancelled.
- * An external accreditation is held read-only in the registration service, so
- * the same cancellation is applied here as it is served. Once the registration
- * is reinstated, the registration service's own statuses stand again.
- *
- * @param {Record<Year, AccreditationCommon>} externalAccreditations
- * @param {Status<RegistrationStatus>} registrationStatus
- * @returns {Record<Year, AccreditationCommon>}
- */
-function withRegistrationCancellation(
-  externalAccreditations,
-  registrationStatus
-) {
-  const lastChange = registrationStatus.timeline.at(-1)
-  if (lastChange?.status !== REGISTRATION_STATUS.CANCELLED) {
-    return externalAccreditations
-  }
-  return /** @type {Record<Year, AccreditationCommon>} */ (
-    Object.fromEntries(
-      Object.entries(externalAccreditations).flatMap(
-        ([year, accreditation]) => {
-          const cancelled = cancelledFrom(
-            accreditation,
-            lastChange.at,
-            registrationStatus.lastUpdatedAt
-          )
-          return cancelled ? [[year, cancelled]] : []
-        }
-      )
-    )
-  )
-}
-
-/**
- * The accreditation as it stood when its registration was cancelled, and
- * cancelled from then if it was still held. What the registration service
- * records after the cancellation is left out. An accreditation that had not
- * started by then was never held, so there is none.
- *
- * @param {AccreditationCommon} accreditation
- * @param {string} cancelledAt
- * @param {string} cancellationRecordedAt
- * @returns {AccreditationCommon | null}
- */
-function cancelledFrom(accreditation, cancelledAt, cancellationRecordedAt) {
-  const timeline = accreditation.status.timeline.filter(
-    ({ at }) => at.localeCompare(cancelledAt) <= 0
-  )
-  const statusWhenCancelled = timeline.at(-1)?.status
-  if (statusWhenCancelled === undefined) {
-    return null
-  }
-  if (!HELD_ACCREDITATION_STATUSES.has(statusWhenCancelled)) {
-    return {
-      ...accreditation,
-      status: {
-        ...accreditation.status,
-        current: statusWhenCancelled,
-        timeline
-      }
-    }
-  }
-  return {
-    ...accreditation,
-    status: {
-      current: ACCREDITATION_STATUS.CANCELLED,
-      lastUpdatedAt: cancellationRecordedAt,
-      timeline: [
-        ...timeline,
-        { status: ACCREDITATION_STATUS.CANCELLED, at: cancelledAt }
-      ]
-    }
-  }
 }
 
 /**
