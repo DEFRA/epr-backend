@@ -2,6 +2,7 @@ import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json
 import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json' with { type: 'json' }
 import { logger } from '#common/helpers/logging/logger.js'
 import { MATERIAL } from '#domain/organisations/model.js'
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -17,10 +18,12 @@ describe('Migration Integration Tests with Fixtures', () => {
     copyFormFileToS3: vi.fn().mockResolvedValue(undefined)
   }
 
-  async function readAllOrganisations() {
-    const { organisations } = await sharedOrganisationsRepo.findAllIds()
-    return Promise.all(
-      [...organisations].map((id) => sharedOrganisationsRepo.findById(id))
+  async function readFixtureOrganisations() {
+    const organisationNumbers = loadFixtures('organisation').map((fixture) =>
+      toOrganisationNumber(String(fixture.orgId))
+    )
+    return sharedOrganisationsRepo.findByOrganisationNumbers(
+      organisationNumbers
     )
   }
 
@@ -117,7 +120,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       await formsDataMigration.migrate()
 
       // Verify organisations were created
-      const allOrgs = await readAllOrganisations()
+      const allOrgs = await readFixtureOrganisations()
       expect(allOrgs).toHaveLength(8)
 
       // Create a map of organisations by number for easy lookup
@@ -171,7 +174,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       await new Promise((resolve) => setImmediate(resolve))
 
       // Verify all accreditations are now present
-      const allOrgs = await readAllOrganisations()
+      const allOrgs = await readFixtureOrganisations()
       expect(allOrgs).toHaveLength(8)
 
       const totalAccreditations = allOrgs.reduce(
