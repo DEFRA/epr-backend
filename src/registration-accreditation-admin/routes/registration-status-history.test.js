@@ -58,7 +58,7 @@ const buildOrgWithLinkedAccreditation = (accStatus) => {
     reprocessingType: 'input',
     ...(accStatus !== 'created' && {
       accreditationNumber: toAccreditationNumber('ACC123456'),
-      validFrom: '2024-01-01',
+      validFrom: '2026-01-01',
       validTo: '2026-12-31'
     }),
     statusHistory:

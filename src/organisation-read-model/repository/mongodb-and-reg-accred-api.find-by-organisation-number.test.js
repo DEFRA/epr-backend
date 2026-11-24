@@ -198,31 +198,6 @@ describe('findByOrganisationNumber', () => {
     })
   })
 
-  it('keys an accreditation by the year of its validFrom', async ({
-    organisationReadRepositoryWith
-  }) => {
-    const granted2025 = accreditation({
-      validFrom: '2025-01-01',
-      validTo: '2025-12-31'
-    })
-    const stored = buildOrganisation({
-      registrations: [reprocessor({ accreditationId: granted2025.id })],
-      accreditations: [granted2025]
-    })
-    const repository = await organisationReadRepositoryWith({
-      organisations: [stored]
-    })
-
-    const organisation = await findOrganisation(
-      repository,
-      stored.organisationNumber
-    )
-
-    expect(
-      Object.keys(organisation.registrations[REPROCESSOR_NUMBER].accreditations)
-    ).toEqual(['2025'])
-  })
-
   describe('while next year is open', () => {
     beforeEach(() => {
       vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-10') })
@@ -778,30 +753,30 @@ describe('findByOrganisationNumber for years', () => {
   it('serves a past year’s accreditation with its latest status', async ({
     organisationReadRepositoryWith
   }) => {
-    const granted2025 = accreditation({
-      validFrom: '2025-02-01',
-      validTo: '2025-12-31',
+    const granted2026 = accreditation({
+      validFrom: '2026-02-01',
+      validTo: '2026-12-31',
       statusHistory: history([
         ['created', '2024-01-01'],
-        ['approved', '2025-02-01'],
-        ['cancelled', '2026-01-02']
+        ['approved', '2026-02-01'],
+        ['cancelled', '2027-01-02']
       ])
     })
     const stored = buildOrganisation({
       registrations: [
-        reprocessorFrom('2025-02-01', [], { accreditationId: granted2025.id })
+        reprocessorFrom('2026-02-01', [], { accreditationId: granted2026.id })
       ],
-      accreditations: [granted2025]
+      accreditations: [granted2026]
     })
 
     const { registrations } = await findInYear(
       organisationReadRepositoryWith,
       stored,
-      2025
+      2026
     )
 
     expect(
-      registrations[REPROCESSOR_NUMBER].accreditations[2025].status.current
+      registrations[REPROCESSOR_NUMBER].accreditations[2026].status.current
     ).toBe('cancelled')
   })
 

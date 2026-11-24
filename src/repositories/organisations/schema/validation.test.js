@@ -667,6 +667,47 @@ describe('validateOrganisationUpdate', () => {
       }
     )
   })
+
+  describe('an accreditation outside 2026', () => {
+    /** @param {{ validFrom: string, validTo: string }} dates */
+    const updateWithAccreditationDates = (dates) => {
+      const organisation = buildOrganisation()
+
+      return toStoredFields(
+        prepareOrgUpdate(organisation, {
+          accreditations: [{ ...organisation.accreditations[0], ...dates }]
+        })
+      )
+    }
+
+    it('is accepted when both dates are in 2026', () => {
+      expect(() =>
+        validateOrganisationUpdate(
+          updateWithAccreditationDates({
+            validFrom: '2026-01-01',
+            validTo: '2026-12-31'
+          })
+        )
+      ).not.toThrow()
+    })
+
+    it.each([
+      ['validFrom', '2025-12-31'],
+      ['validFrom', '2027-01-01'],
+      ['validTo', '2025-12-31'],
+      ['validTo', '2027-01-01']
+    ])('is refused when %s is %s', (field, date) => {
+      const dates = {
+        validFrom: '2026-01-01',
+        validTo: '2026-12-31',
+        [field]: date
+      }
+
+      expect(() =>
+        validateOrganisationUpdate(updateWithAccreditationDates(dates))
+      ).toThrow(`accreditations.0.${field}: must be in 2026`)
+    })
+  })
 })
 
 describe('organisationJSONSchemaOverrides', () => {
