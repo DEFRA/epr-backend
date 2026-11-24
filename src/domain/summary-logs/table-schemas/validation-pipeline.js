@@ -142,15 +142,25 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear?: Year, createdAt?: Date, registeredOnly?: boolean, filledIn?: boolean }} RowValidationOptions
- * Omitted, as when exporting stored rows, means dates are not checked against
- * the summary log year. `filledIn` marks a row filled in from a previous-year
- * row (ADR-0060).
+ * @typedef {{ summaryLogYear: Year, createdAt: Date, registeredOnly: boolean }} SummaryLogValidationOptions
  */
 
 /**
- * @typedef {RowValidationOptions & Required<Pick<RowValidationOptions, 'summaryLogYear' | 'createdAt' | 'registeredOnly'>>} SummaryLogValidationOptions
+ * @typedef {{ summaryLogYear?: undefined, filledIn?: undefined } | (SummaryLogValidationOptions & { filledIn?: true })} RowValidationOptions
+ * The Joi context a row is validated in. Without a summary log, as when
+ * exporting stored rows, dates are not checked against its year. `filledIn`
+ * marks a row filled in from a previous-year row (ADR-0060).
  */
+
+/**
+ * The Joi context a field or row rule runs in.
+ *
+ * @param {import('joi').CustomHelpers} helpers
+ * @returns {RowValidationOptions}
+ */
+export const rowValidationOptionsOf = (helpers) =>
+  // Joi types its context as an open record; the validators below set it.
+  /** @type {RowValidationOptions} */ (helpers.prefs.context ?? {})
 
 /**
  * Issue from validation pipeline when a field fails schema validation (VAL010)
@@ -254,7 +264,7 @@ const mapWasteBalanceResult = (wasteBalanceResult) => {
  * @param {Record<string, readonly string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {ClassifyForWasteBalance | null} [tableSchema.classifyForWasteBalance] - Waste balance classifier
- * @param {SummaryLogValidationOptions} options
+ * @param {SummaryLogValidationOptions & { filledIn?: true }} options
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[], data: Record<string, any> }}
  */
 export const classifyRow = (row, tableSchema, options) => {

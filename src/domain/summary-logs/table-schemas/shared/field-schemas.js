@@ -7,6 +7,7 @@ import {
   lastCorrectionDay
 } from '#domain/summary-logs/correction-deadline.js'
 import { customJoi } from '#common/validation/custom-joi.js'
+import { rowValidationOptionsOf } from '../validation-pipeline.js'
 
 /**
  * Common field schema factories for table validation
@@ -48,7 +49,7 @@ export const BEFORE_SUMMARY_LOG_YEAR_ERROR = 'date.beforeSummaryLogYear'
  * @returns {string | import('joi').ErrorReport}
  */
 const rejectAfterSummaryLogYear = (dateStr, helpers) => {
-  const summaryLogYear = helpers.prefs.context?.summaryLogYear
+  const { summaryLogYear } = rowValidationOptionsOf(helpers)
   return summaryLogYear !== undefined && dateStr > lastDayOfYear(summaryLogYear)
     ? helpers.error(AFTER_SUMMARY_LOG_YEAR_ERROR, { expected: summaryLogYear })
     : dateStr
@@ -64,19 +65,18 @@ const rejectAfterSummaryLogYear = (dateStr, helpers) => {
  * @returns {string | import('joi').ErrorReport}
  */
 const rejectOpenEarlierYear = (dateStr, helpers) => {
-  const { summaryLogYear, createdAt, registeredOnly, filledIn } =
-    helpers.prefs.context ?? {}
+  const options = rowValidationOptionsOf(helpers)
   // A filled-in row's dates came from the previous year; the cross-year rules
   // check the ones it supplied.
-  if (summaryLogYear === undefined || filledIn) {
+  if (options.summaryLogYear === undefined || options.filledIn) {
     return dateStr
   }
   const dateYear = utcYearOf(dateStr)
-  const registration = { registeredOnly }
-  return dateYear < summaryLogYear &&
-    isBeforeCorrectionDeadline(dateYear, registration, createdAt)
+  const registration = { registeredOnly: options.registeredOnly }
+  return dateYear < options.summaryLogYear &&
+    isBeforeCorrectionDeadline(dateYear, registration, options.createdAt)
     ? helpers.error(BEFORE_SUMMARY_LOG_YEAR_ERROR, {
-        expected: summaryLogYear,
+        expected: options.summaryLogYear,
         deadline: lastCorrectionDay(dateYear, registration)
       })
     : dateStr
