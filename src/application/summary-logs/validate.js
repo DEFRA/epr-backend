@@ -14,7 +14,10 @@ import {
 import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 import { summaryLogRowStatesForLedger } from '#waste-records/application/read-summary-log-row-states.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  REGISTERED_ONLY_PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { summaryLogContextOf } from './classification-context.js'
@@ -318,7 +321,11 @@ const runValidationChecks = async (
   // Data syntax validation returns validated data with issues attached to rows
   const { issues: dataSyntaxIssues, validatedData } = createDataSyntaxValidator(
     tableSchemas,
-    { summaryLogYear: summaryLog.year }
+    {
+      summaryLogYear: summaryLog.year,
+      createdAt: new Date(summaryLog.createdAt),
+      registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE)
+    }
   )(parsed)
   issues.merge(dataSyntaxIssues)
 
@@ -356,6 +363,12 @@ const assertValidatingStatus = (result, summaryLogId) => {
   if (result.summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATING) {
     throw new PermanentError(
       `Summary log must be in validating status. Current status: ${result.summaryLog.status}`
+    )
+  }
+
+  if (!result.summaryLog.createdAt) {
+    throw new PermanentError(
+      `Summary log has no createdAt: summaryLogId=${summaryLogId}`
     )
   }
 

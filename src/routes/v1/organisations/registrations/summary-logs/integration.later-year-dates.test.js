@@ -17,6 +17,7 @@ import {
   setupWasteBalanceIntegrationEnvironment,
   tableOf,
   uploadAndValidate,
+  uploadOn,
   withTemplateYear
 } from './integration-test-helpers.js'
 
@@ -119,8 +120,8 @@ describe('summary logs with a date in a later year', () => {
       ])
     })
 
-    it('accepts dates up to 31 December 2027 and from earlier years', async () => {
-      openNextYear()
+    it('accepts dates up to 31 December 2027 and from closed earlier years', async () => {
+      uploadOn('2027-03-01T09:00:00.000Z')
       const env = await setup()
 
       const validated = await upload(env, '2027-in-year', {
