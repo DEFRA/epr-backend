@@ -7,9 +7,7 @@ import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
  */
 
 /**
- * @typedef {Object} ReclassificationContext
- * @property {import('#domain/organisations/accreditation.js').AccreditationValidity | null} accreditation
- * @property {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').ClassificationContext} ReclassificationContext
  */
 
 /**
@@ -33,18 +31,13 @@ import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
  * @param {ReclassificationContext} context
  * @returns {WasteRecordState}
  */
-export const reclassifyWasteRecordState = (
-  rowState,
-  year,
-  { accreditation, overseasSites }
-) => ({
+export const reclassifyWasteRecordState = (rowState, year, context) => ({
   ...rowState,
   classification: classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
     {
       tableSchemas: tableSchemasOf(year, rowState.processingType),
-      accreditation,
-      overseasSites
+      ...context
     }
   )
 })

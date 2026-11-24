@@ -59,11 +59,11 @@ export const WASTE_BALANCE_OUTCOME = Object.freeze({
  */
 export const classifyRecordForWasteBalance = (
   record,
-  { tableSchemas, accreditation, overseasSites }
+  { tableSchemas, ...context }
 ) => {
   const schema = findSchemaByWasteRecordType(record.type, tableSchemas)?.schema
 
-  if (!accreditation || !schema?.classifyForWasteBalance) {
+  if (!context.accreditation || !schema?.classifyForWasteBalance) {
     return {
       outcome: WASTE_BALANCE_OUTCOME.NOT_APPLICABLE,
       reasons: [],
@@ -71,10 +71,7 @@ export const classifyRecordForWasteBalance = (
     }
   }
 
-  const result = schema.classifyForWasteBalance(record.data, {
-    accreditation,
-    overseasSites
-  })
+  const result = schema.classifyForWasteBalance(record.data, context)
   return {
     outcome: result.outcome,
     reasons: result.reasons,

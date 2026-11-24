@@ -13,8 +13,7 @@ import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/vocabulary
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
-  overseasSitesOf,
-  validityOf
+  ledgerClassificationContextOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
@@ -159,10 +158,7 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
   }
   return {
     accreditationNumber: ledgerAccreditation.accreditation.accreditationNumber,
-    context: {
-      accreditation: validityOf(ledgerAccreditation.accreditation),
-      overseasSites: overseasSitesOf(ledgerAccreditation.accreditation)
-    }
+    context: ledgerClassificationContextOf(ledgerAccreditation)
   }
 }
 

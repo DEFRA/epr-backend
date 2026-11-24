@@ -5,8 +5,7 @@ import { reclassifyWasteRecordStates } from '#waste-records/application/reclassi
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
-  overseasSitesOf,
-  validityOf
+  ledgerClassificationContextOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { LOGGING_EVENT_CATEGORIES } from '#common/enums/index.js'
@@ -178,10 +177,7 @@ export const buildCreditedTonnageReport = async ({
         summaryLogId
       ),
       accreditation.year,
-      {
-        accreditation: validityOf(accreditation),
-        overseasSites: overseasSitesOf(accreditation)
-      }
+      ledgerClassificationContextOf(ledgerAccreditation)
     )
 
     const { months, skippedRows } = creditedTonnageByMonth(

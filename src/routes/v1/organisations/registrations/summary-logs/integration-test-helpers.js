@@ -893,6 +893,7 @@ export const createTestInfrastructure = async (
  *   accredited?: boolean,
  *   accreditationValidFrom?: string,
  *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
+ *   previousYearAccreditationSuspendedOn?: string,
  *   year?: Year,
  *   config?: NonNullable<Parameters<typeof createTestServer>[0]>['config'],
  *   ledgerRepository?: import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository,
@@ -912,6 +913,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
   year = UPLOAD_YEAR,
   accreditationValidFrom = `${year}-01-01`,
   previousYearAccreditationNumber,
+  previousYearAccreditationSuspendedOn,
   config,
   ledgerRepository = createInMemoryLedgerRepository()(),
   summaryLogRowStatesRepository = createInMemorySummaryLogRowStatesRepository()()
@@ -940,7 +942,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
       material,
       accredited,
       accreditationValidFrom,
-      previousYearAccreditationNumber
+      previousYearAccreditationNumber,
+      previousYearAccreditationSuspendedOn
     })
   ])()
 
@@ -991,6 +994,8 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
     config,
     repositories: {
       summaryLogsRepository: () => summaryLogsRepository,
+      summaryLogRowStatesRepository: () => summaryLogRowStatesRepository,
+      reportsRepository: () => reportsRepository,
       uploadsRepository,
       ledgerRepository: () => ledgerRepository,
       wasteBalanceService: () => wasteBalanceService,
@@ -1196,7 +1201,8 @@ const buildComplexTestOrg = ({
  *   accreditationValidFrom?: string,
  *   withOverseasSites?: boolean,
  *   accreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
- *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber
+ *   previousYearAccreditationNumber?: import('#domain/organisations/numbers.js').AccreditationNumber,
+ *   previousYearAccreditationSuspendedOn?: string
  * }} options
  * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
  */
@@ -1208,7 +1214,8 @@ const buildComplexTestReadOrg = ({
   accreditationValidFrom = VALID_FROM,
   withOverseasSites = true,
   accreditationNumber = TEST_ACCREDITATION_NUMBER,
-  previousYearAccreditationNumber
+  previousYearAccreditationNumber,
+  previousYearAccreditationSuspendedOn
 }) => {
   const isExporter = processingType === 'exporter'
   /** @param {string} approvedAt */
@@ -1222,6 +1229,26 @@ const buildComplexTestReadOrg = ({
       }
     ]
   })
+  /**
+   * @param {string} approvedAt
+   * @param {string | undefined} suspendedOn
+   */
+  const accreditationStatusFrom = (approvedAt, suspendedOn) => {
+    const approved = approvedFrom(approvedAt)
+    return suspendedOn
+      ? {
+          ...approved,
+          current: /** @type {const} */ ('suspended'),
+          timeline: [
+            ...approved.timeline,
+            {
+              status: /** @type {const} */ ('suspended'),
+              at: `${suspendedOn}T00:00:00.000Z`
+            }
+          ]
+        }
+      : approved
+  }
   const accreditationYear = utcYearOf(accreditationValidFrom)
   const followingYear = nextYear(accreditationYear)
   const accreditations = [
@@ -1229,7 +1256,10 @@ const buildComplexTestReadOrg = ({
       ? [
           buildReadAccreditation({
             accreditationNumber: previousYearAccreditationNumber,
-            status: approvedFrom(`${previousYear(accreditationYear)}-01-01`),
+            status: accreditationStatusFrom(
+              `${previousYear(accreditationYear)}-01-01`,
+              previousYearAccreditationSuspendedOn
+            ),
             year: previousYear(accreditationYear)
           })
         ]

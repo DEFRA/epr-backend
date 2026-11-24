@@ -1,10 +1,13 @@
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { yearBounds } from '#common/helpers/dates/year.js'
+import { previousYear, yearBounds } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { firstApprovedAt } from '#organisation-read-model/vocabulary.js'
+import {
+  accreditationForYear,
+  firstApprovedAt
+} from '#organisation-read-model/vocabulary.js'
 
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/vocabulary.js' */
@@ -113,6 +116,31 @@ export const overseasSitesOf = (accreditation) =>
       }
     ])
   )
+
+/**
+ * What classifying a ledger's rows again reads of its accreditation as it
+ * stands, with the registration's accreditation for the year before.
+ *
+ * @param {Pick<LedgerAccreditation, 'registration' | 'accreditation'>} ledgerAccreditation
+ * @returns {ClassificationContext}
+ */
+export const ledgerClassificationContextOf = ({
+  registration,
+  accreditation
+}) => {
+  const previousYearAccreditation = accreditationForYear(
+    registration,
+    previousYear(accreditation.year)
+  )
+  return {
+    accreditation: validityOf(accreditation),
+    overseasSites: overseasSitesOf(accreditation),
+    previousYearAccreditation:
+      previousYearAccreditation === undefined
+        ? null
+        : validityOf(previousYearAccreditation)
+  }
+}
 
 /**
  * What classifying a row reads of its accreditation, none for a

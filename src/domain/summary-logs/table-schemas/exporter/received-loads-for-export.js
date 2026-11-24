@@ -41,12 +41,48 @@ import {
   checkRequiredFields
 } from '../shared/classify-helpers.js'
 import { ORS_VALIDATION_DISABLED } from '../shared/classification-reason.js'
-import { isAccreditedAtDates } from '#common/helpers/dates/accreditation.js'
+import {
+  accreditationWindow,
+  isAccreditedAtDates
+} from '#common/helpers/dates/accreditation.js'
+import { utcYearOf } from '#common/helpers/dates/year.js'
 import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
 import { isOrsApprovedAtDate } from '#overseas-sites/index.js'
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {OverseasSitesContext} from '../validation-pipeline.js' */
+/** @import {ClassificationContext} from '../validation-pipeline.js' */
+
+/**
+ * @param {Date | string} date
+ * @param {AccreditationValidity | null} accreditation
+ */
+const isLiveOn = (date, accreditation) =>
+  accreditation !== null && isAccreditedAtDates([date], accreditation)
+
+/**
+ * @param {Record<string, any>} data
+ * @param {AccreditationValidity} accreditation
+ * @param {AccreditationValidity | null} previousYearAccreditation
+ */
+const isCreditedOnItsDates = (
+  data,
+  accreditation,
+  previousYearAccreditation
+) => {
+  const window = accreditationWindow(accreditation)
+  if (window === null) {
+    return false
+  }
+  const exportDate = data[FIELDS.DATE_OF_EXPORT]
+  const accreditationOfExportYear =
+    utcYearOf(exportDate) < utcYearOf(window.validFrom)
+      ? previousYearAccreditation
+      : accreditation
+  return (
+    isLiveOn(data[FIELDS.DATE_RECEIVED_BY_OSR], accreditation) &&
+    isLiveOn(exportDate, accreditationOfExportYear)
+  )
+}
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).
@@ -250,9 +286,10 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} */ {
+    /** @type {ClassificationContext} */ {
       accreditation,
-      overseasSites
+      overseasSites,
+      previousYearAccreditation = null
     }
   ) => {
     const missingResult = checkRequiredFields(
@@ -265,10 +302,8 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     }
 
     if (
-      !isAccreditedAtDates(
-        [data[FIELDS.DATE_OF_EXPORT], data[FIELDS.DATE_RECEIVED_BY_OSR]],
-        accreditation
-      )
+      accreditation &&
+      !isCreditedOnItsDates(data, accreditation, previousYearAccreditation)
     ) {
       return {
         outcome: ROW_OUTCOME.IGNORED,

@@ -14,7 +14,13 @@ import {
 
 /**
  * What classifying a row reads of its accreditation: null when there is none.
- * @typedef {{ accreditation: AccreditationValidity | null, overseasSites: OverseasSitesContext }} ClassificationContext
+ * The previous year's accreditation is absent where no reader resolved it, and
+ * credits a previous-year date only when present (ADR-0060).
+ * @typedef {{
+ *   accreditation: AccreditationValidity | null,
+ *   overseasSites: OverseasSitesContext,
+ *   previousYearAccreditation?: AccreditationValidity | null
+ * }} ClassificationContext
  */
 
 /**

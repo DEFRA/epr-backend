@@ -186,14 +186,14 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
 
 const markIgnoredByDateRange = (
   /** @type ValidatedWasteRecord[] */ wasteRecords,
-  /** @type {RowClassificationContext} */ { tableSchemas, accreditation }
+  /** @type {RowClassificationContext} */ { tableSchemas, ...context }
 ) => {
   for (const wasteRecord of wasteRecords) {
     const schema = tableSchemas[wasteRecord.tableName]
 
     /** @type {import('#domain/summary-logs/table-schemas/validation-pipeline.js').WasteBalanceClassificationResult | undefined} */
     const result = schema?.classifyForWasteBalance?.(wasteRecord.record.data, {
-      accreditation,
+      ...context,
       overseasSites: ORS_VALIDATION_DISABLED
     })
 
