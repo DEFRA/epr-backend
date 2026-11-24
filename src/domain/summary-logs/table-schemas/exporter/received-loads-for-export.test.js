@@ -837,6 +837,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
       })
 
+      it('returns IGNORED when the accreditation has never had a validity window', () => {
+        const result = schema.classifyForWasteBalance(completeRow, {
+          accreditation: { timeline: [] },
+          overseasSites: ORS_VALIDATION_DISABLED
+        })
+        expect(result.outcome).toBe(ROW_OUTCOME.IGNORED)
+      })
+
       it('returns INCLUDED when DATE_OF_EXPORT is on accreditation start boundary', () => {
         const row = { ...completeRow, DATE_OF_EXPORT: new Date('2024-01-01') }
         const result = schema.classifyForWasteBalance(row, {

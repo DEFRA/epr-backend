@@ -7,9 +7,7 @@ import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
  */
 
 /**
- * @typedef {Object} ReclassificationContext
- * @property {import('#domain/organisations/accreditation.js').AccreditationValidity | null} accreditation
- * @property {import('#domain/summary-logs/table-schemas/validation-pipeline.js').OverseasSitesContext} overseasSites
+ * @typedef {import('#waste-balances/domain/waste-balance-classification.js').ClassificationContextFor} ReclassificationContext
  */
 
 /**
@@ -30,22 +28,14 @@ import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
  *
  * @param {WasteRecordState} rowState
  * @param {Year} year - The year of the row's partition
- * @param {ReclassificationContext} context
+ * @param {ReclassificationContext} contextFor
  * @returns {WasteRecordState}
  */
-export const reclassifyWasteRecordState = (
-  rowState,
-  year,
-  { accreditation, overseasSites }
-) => ({
+export const reclassifyWasteRecordState = (rowState, year, contextFor) => ({
   ...rowState,
   classification: classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    {
-      tableSchemas: tableSchemasOf(year, rowState.processingType),
-      accreditation,
-      overseasSites
-    }
+    contextFor(tableSchemasOf(year, rowState.processingType))
   )
 })
 
@@ -58,10 +48,10 @@ export const reclassifyWasteRecordState = (
  *
  * @param {WasteRecordState[]} rowStates
  * @param {Year} year - The year of the partition
- * @param {ReclassificationContext} context
+ * @param {ReclassificationContext} contextFor
  * @returns {WasteRecordState[]}
  */
-export const reclassifyWasteRecordStates = (rowStates, year, context) =>
+export const reclassifyWasteRecordStates = (rowStates, year, contextFor) =>
   rowStates.map((rowState) =>
-    reclassifyWasteRecordState(rowState, year, context)
+    reclassifyWasteRecordState(rowState, year, contextFor)
   )

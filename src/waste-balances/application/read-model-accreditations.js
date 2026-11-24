@@ -1,15 +1,21 @@
 import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { yearBounds } from '#common/helpers/dates/year.js'
+import { previousYear, yearBounds } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { linksYears } from '#domain/summary-logs/table-schemas/index.js'
 import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shared/classification-reason.js'
-import { firstApprovedAt } from '#organisation-read-model/index.js'
+import {
+  accreditationForYear,
+  firstApprovedAt
+} from '#organisation-read-model/index.js'
 
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import { ClassificationContextFor } from '#waste-balances/domain/waste-balance-classification.js' */
 /** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/index.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 /**
@@ -113,6 +119,41 @@ export const overseasSitesOf = (accreditation) =>
       }
     ])
   )
+
+/**
+ * The registration's accreditation for the year before `year`, or null.
+ *
+ * @param {Pick<ReadModelRegistration, 'accreditations'>} registration
+ * @param {Year} year
+ * @returns {ReadModelAccreditation | null}
+ */
+export const previousYearAccreditationOf = (registration, year) =>
+  accreditationForYear(registration, previousYear(year)) ?? null
+
+/**
+ * What classifying a ledger's rows again reads of its accreditation as it
+ * stands, for the template a row reports under. The registration's
+ * accreditation for the year before is read only under a template that links
+ * years, as at submission.
+ *
+ * @param {Pick<LedgerAccreditation, 'registration' | 'accreditation'>} ledgerAccreditation
+ * @returns {ClassificationContextFor}
+ */
+export const ledgerClassificationContextOf = ({
+  registration,
+  accreditation
+}) => {
+  const currentYear = classificationContextOf({ accreditation })
+  const lastYears = previousYearAccreditationOf(
+    registration,
+    accreditation.year
+  )
+  const previousYearAccreditation = lastYears && validityOf(lastYears)
+  return (tableSchemas) =>
+    linksYears(tableSchemas)
+      ? { tableSchemas, ...currentYear, previousYearAccreditation }
+      : { tableSchemas, ...currentYear }
+}
 
 /**
  * What classifying a row reads of its accreditation, none for a

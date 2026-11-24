@@ -4,8 +4,7 @@ import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisati
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
-  overseasSitesOf,
-  validityOf
+  ledgerClassificationContextOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { classifyRecordForWasteBalance } from '#waste-balances/domain/waste-balance-classification.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
@@ -33,9 +32,8 @@ import { recordOf } from '#common/helpers/record-of.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationReadRepository, Registration as ReadModelRegistration } from '#organisation-read-model/index.js' */
 /** @import { LedgerAccreditation } from '#waste-balances/application/read-model-accreditations.js' */
-/** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { OverseasSitesContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
+/** @import { ClassificationContextFor } from '#waste-balances/domain/waste-balance-classification.js' */
 
 /**
  * @typedef {import('#waste-balances/repository/ledger-port.js').WasteBalanceLedgerRepository} WasteBalanceLedgerRepository
@@ -61,8 +59,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @property {OrganisationNumber} organisationNumber
  * @property {RegistrationNumber} registrationNumber
  * @property {ReadModelRegistration} registration
- * @property {AccreditationValidity} accreditation
- * @property {OverseasSitesContext} overseasSites
+ * @property {ClassificationContextFor} classificationContextFor
  */
 
 /**
@@ -236,8 +233,8 @@ const resolvePublishedPartitions = (entries, index, logger) => {
       organisationNumber: ledgerAccreditation.organisation.organisationNumber,
       registrationNumber: ledgerAccreditation.registrationNumber,
       registration: ledgerAccreditation.registration,
-      accreditation: validityOf(ledgerAccreditation.accreditation),
-      overseasSites: overseasSitesOf(ledgerAccreditation.accreditation)
+      classificationContextFor:
+        ledgerClassificationContextOf(ledgerAccreditation)
     })
   }
   return partitions
@@ -256,14 +253,12 @@ const publishedContribution = (rowState, partitions) => {
   if (partition === undefined) {
     return null
   }
-  const { registration, accreditation, overseasSites } = partition
+  const { registration, classificationContextFor } = partition
   const classification = classifyRecordForWasteBalance(
     { type: rowState.wasteRecordType, data: rowState.data },
-    {
-      tableSchemas: tableSchemasOf(rowState.year, rowState.processingType),
-      accreditation,
-      overseasSites
-    }
+    classificationContextFor(
+      tableSchemasOf(rowState.year, rowState.processingType)
+    )
   )
 
   const contribution = monthlyContribution(

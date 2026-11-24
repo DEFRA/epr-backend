@@ -13,8 +13,7 @@ import { HELD_ACCREDITATION_STATUSES } from '#organisation-read-model/index.js'
 import { ledgerKey } from '#waste-balances/repository/ledger-schema.js'
 import {
   indexByLedger,
-  overseasSitesOf,
-  validityOf
+  ledgerClassificationContextOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { reclassifyWasteRecordState } from '#waste-records/application/reclassify-waste-record-states.js'
 import {
@@ -134,7 +133,11 @@ const recomputedClassification = (rowState, year, context) =>
   reclassifyWasteRecordState(rowState, year, context).classification
 
 /** @type {ReclassificationContext} */
-const NOT_ACCREDITED = { accreditation: null, overseasSites: {} }
+const notAccredited = (tableSchemas) => ({
+  tableSchemas,
+  accreditation: null,
+  overseasSites: {}
+})
 
 /**
  * The partition's own accreditation, held (approved or suspended) as of export
@@ -154,14 +157,11 @@ const heldAccreditation = (ledgerIndex, ledgerId) => {
       ledgerAccreditation.accreditation.status.current
     )
   ) {
-    return { accreditationNumber: null, context: NOT_ACCREDITED }
+    return { accreditationNumber: null, context: notAccredited }
   }
   return {
     accreditationNumber: ledgerAccreditation.accreditation.accreditationNumber,
-    context: {
-      accreditation: validityOf(ledgerAccreditation.accreditation),
-      overseasSites: overseasSitesOf(ledgerAccreditation.accreditation)
-    }
+    context: ledgerClassificationContextOf(ledgerAccreditation)
   }
 }
 
