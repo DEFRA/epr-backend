@@ -390,6 +390,26 @@ describe('2027 rows linked to a 2026 row', () => {
       expect(row).not.toHaveProperty('link')
     })
 
+    it('rejects a row that names a 2026 row but has no row ID', async () => {
+      const env = await setup()
+      await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([linkedRow({ rowId: null })])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        expect.objectContaining({
+          code: 'FIELD_REQUIRED',
+          location: expect.objectContaining({ header: 'ROW_ID' })
+        })
+      ])
+    })
+
     it('keeps a 2026 PRN on a linked row whose PRN column is left on its No default', async () => {
       const env = await setup()
       await submitted(

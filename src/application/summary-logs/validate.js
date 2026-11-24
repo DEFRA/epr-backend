@@ -29,6 +29,7 @@ import {
 } from './classify-and-persist.js'
 import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
+import { checkCrossYearRules } from './validations/cross-year-rules.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'
@@ -60,6 +61,7 @@ export { MAX_ACTUAL_LENGTH } from './cap-issues-for-storage.js'
 /** @import {ReportsService} from '#reports/application/report-service.js' */
 /** @import {RowClassificationContext} from '#waste-balances/domain/waste-balance-classification.js' */
 /** @import {SummaryLogContext} from './classification-context.js' */
+/** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {SummaryLogCommit} from '#domain/summary-logs/commit.js' */
 
 /**
@@ -260,6 +262,17 @@ const performValidationChecks = async (params) => {
  */
 
 /**
+ * @param {SubmittedSummaryLog} summaryLog
+ * @param {ExtractedMeta} meta
+ * @returns {SummaryLogValidationOptions}
+ */
+const validationOptionsOf = (summaryLog, meta) => ({
+  summaryLogYear: summaryLog.year,
+  createdAt: new Date(summaryLog.createdAt),
+  registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE)
+})
+
+/**
  * Runs the checks in order, recording each step's outcome on `result` as it
  * goes, and stops at the first fatal issue.
  *
@@ -324,16 +337,14 @@ const runValidationChecks = async (
     summaryLogRowStatesRepository
   })
 
+  const options = validationOptionsOf(summaryLog, meta)
   // Data syntax validation returns validated data with issues attached to rows
   const { issues: dataSyntaxIssues, validatedData } = createDataSyntaxValidator(
     tableSchemas,
-    {
-      summaryLogYear: summaryLog.year,
-      createdAt: new Date(summaryLog.createdAt),
-      registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE)
-    }
+    options
   )(filledIn)
   issues.merge(dataSyntaxIssues)
+  issues.merge(checkCrossYearRules({ parsed: filledIn, tableSchemas, options }))
 
   if (issues.isFatal()) {
     return
