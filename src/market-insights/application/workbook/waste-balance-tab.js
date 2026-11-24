@@ -36,6 +36,7 @@ import {
 
 /** @import ExcelJS from 'exceljs' */
 /** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
+/** @import { WasteBalanceRowType } from '#market-insights/domain/waste-balance-figures.js' */
 /** @import { RedactableTabContents } from './cells.js' */
 
 const WASTE_BALANCE_NOTE_LAST_ROW = 3
@@ -65,9 +66,17 @@ const publishedNetCredit = (netCredit, counts, redacted) =>
     : netCredit
 
 /**
- * A row for each accreditation type of each material the period has an
- * accredited operator for: each month's net credit as served, then the
- * period's.
+ * @template T
+ * @param {Partial<Record<WasteBalanceRowType, T>>} byRow
+ * @param {WasteBalanceRowType} row - one the material is served as
+ * @returns {T}
+ */
+const servedRow = (byRow, row) => /** @type {T} */ (byRow[row])
+
+/**
+ * A row for each row served of each material the period has an accredited
+ * operator for: its exporters and reprocessors, or the one row merging them.
+ * Each holds every month's net credit as served, then the period's.
  *
  * @param {ExcelJS.Workbook} workbook
  * @param {RedactableTabContents} contents
@@ -119,16 +128,18 @@ export const addWasteBalance = (
   const rows = WASTE_BALANCE_MATERIALS.filter(([material]) =>
     hasAccreditedOperator(ukTable, material)
   ).flatMap(([material, materialLabel]) =>
-    WASTE_BALANCE_ACCREDITATION_TYPES.map(([type, typeLabel]) => ({
+    WASTE_BALANCE_ACCREDITATION_TYPES.filter(
+      ([type]) => type in served.period.figures[material]
+    ).map(([type, typeLabel]) => ({
       labels: [materialLabel, typeLabel],
       netCredits: [
         ...months.map((month) => {
-          const figure = served.months[month].figures[material][type]
+          const figure = servedRow(served.months[month].figures[material], type)
           return publishedNetCredit(figure.netCredit, figure, redacted)
         }),
         publishedNetCredit(
-          served.period.figures[material][type].netCredit,
-          served.period.operatorCounts[material][type],
+          servedRow(served.period.figures[material], type).netCredit,
+          servedRow(served.period.operatorCounts[material], type),
           redacted
         )
       ]

@@ -6,7 +6,11 @@ import {
   WORKSHEET_NAME
 } from '#market-insights/domain/published-workbook-text.js'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
-import { MATERIAL, REGULATOR } from '#domain/organisations/model.js'
+import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
+  REGULATOR
+} from '#domain/organisations/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
@@ -164,14 +168,30 @@ const seedOperator = async (
 }
 
 /**
- * A register with an accredited operator for each material the published file
- * shows, and none for fibre-based composite.
+ * The operators with nothing reported, enough of them that the material's
+ * figures identify none of them.
+ *
+ * @param {Register} register
+ * @param {{ material: Material, regulator?: RegulatorValue }} operator
+ */
+const seedSilentOperators = async (register, operator) => {
+  for (let count = 0; count < 3; count++) {
+    await seedOperator(register, operator)
+  }
+}
+
+/**
+ * A register shaped like the published file: three accredited reprocessors
+ * for each material it shows, except glass-other, which has one and so is
+ * merged, and none for fibre-based composite.
  */
 const publishedRegister = async () => {
   const register = emptyRegister()
   for (const [material] of WASTE_BALANCE_MATERIALS) {
-    if (material !== MATERIAL.FIBRE) {
+    if (material === GLASS_RECYCLING_PROCESS.GLASS_OTHER) {
       await seedOperator(register, { material })
+    } else if (material !== MATERIAL.FIBRE) {
+      await seedSilentOperators(register, { material })
     }
   }
   return register
@@ -197,13 +217,12 @@ const render = async (months, register, redacted = false) => {
 }
 
 /**
- * The published tab as this tab is built until glass-other is amalgamated:
- * glass-other split by accreditation type like every other material, and a
- * note that says nothing of it.
+ * The published tab with a note that says nothing of glass-other, since the
+ * merged row's label says what it is.
  *
  * @param {ExcelJS.Worksheet} published
  */
-const withGlassOtherSplit = (published) => {
+const withoutTheGlassOtherSentence = (published) => {
   const note = published.getCell('A1')
   const { value } = note
   assert(value !== null && typeof value === 'object' && 'richText' in value)
@@ -221,11 +240,6 @@ const withGlassOtherSplit = (published) => {
       { ...last, text: last.text.trimEnd() }
     ]
   }
-
-  expect(published.getCell('B12').value).toBe('Exp & Rep')
-  published.duplicateRow(12, 1, true)
-  published.getCell('B12').value = 'Exporter'
-  published.getCell('B13').value = 'Reprocessor'
 }
 
 /**
@@ -351,7 +365,7 @@ describe('the waste balance tab', () => {
   itMatchesThePublishedTab(
     WORKSHEET_NAME.WASTE_BALANCE,
     async () => render(JANUARY_TO_JUNE_2026, await publishedRegister()),
-    withGlassOtherSplit
+    withoutTheGlassOtherSentence
   )
 
   it('links the note to its GOV.UK page', async () => {
@@ -384,8 +398,9 @@ describe('the waste balance tab', () => {
           sentOnRow('row-3', '2026-03-25', 30.1)
         ]
       })
+      await seedSilentOperators(register, { material: MATERIAL.PLASTIC })
       await seedOperator(register, {
-        material: 'glass_other',
+        material: GLASS_RECYCLING_PROCESS.GLASS_OTHER,
         rows: [receivedRow('row-1', '2026-01-15', 12)]
       })
       worksheet = await render(JANUARY_TO_MARCH_2026, register)
@@ -404,31 +419,30 @@ describe('the waste balance tab', () => {
       ).toEqual([0, 40.25, 70.4, 110.65])
     })
 
-    it('splits glass-other by accreditation type', () => {
+    it('prints a material whose figures would identify an operator as one "Exp & Rep" row, in place of its two', () => {
+      expect(rowLabels(worksheet)).toEqual([
+        ['Glass-other', 'Exp & Rep'],
+        ['Plastic', 'Exporter'],
+        ['Plastic', 'Reprocessor']
+      ])
       expect(
         figuresOfRow(worksheet, JANUARY_TO_MARCH_2026, [
           'Glass-other',
-          'Reprocessor'
+          'Exp & Rep'
         ])
       ).toEqual([12, 0, 0, 12])
-      expect(
-        figuresOfRow(worksheet, JANUARY_TO_MARCH_2026, [
-          'Glass-other',
-          'Exporter'
-        ])
-      ).toEqual([0, 0, 0, 0])
     })
 
     it('sets the figures as whole tonnes', () => {
-      expect(worksheet.getCell('D13').numFmt).toBe('#,##0')
-      expect(worksheet.getCell('F13').numFmt).toBe('#,##0')
+      expect(worksheet.getCell('D12').numFmt).toBe('#,##0')
+      expect(worksheet.getCell('F12').numFmt).toBe('#,##0')
     })
   })
 
   it('lists only the materials the period has an accredited operator for, each accreditation type at zero where nothing was reported', async () => {
     const register = emptyRegister()
-    await seedOperator(register, { material: MATERIAL.WOOD })
-    await seedOperator(register, { material: MATERIAL.ALUMINIUM })
+    await seedSilentOperators(register, { material: MATERIAL.WOOD })
+    await seedSilentOperators(register, { material: MATERIAL.ALUMINIUM })
 
     const worksheet = await render(JANUARY_TO_MARCH_2026, register)
 
@@ -456,10 +470,8 @@ describe('the waste balance tab', () => {
     const worksheet = await render(JANUARY_TO_MARCH_2026, register)
 
     expect(rowLabels(worksheet)).toEqual([
-      ['Steel', 'Exporter'],
-      ['Steel', 'Reprocessor'],
-      ['Wood', 'Exporter'],
-      ['Wood', 'Reprocessor']
+      ['Steel', 'Exp & Rep'],
+      ['Wood', 'Exp & Rep']
     ])
     await expectTheServedFigures(worksheet, JANUARY_TO_MARCH_2026, register)
   })
@@ -495,18 +507,28 @@ describe('the waste balance tab', () => {
       full = await render(JANUARY_TO_MARCH_2026, register)
     })
 
-    it('shows "[c]" for every net credit and total with fewer than three operators accredited, zeros included', () => {
+    it('merges the same rows in full as redacted', () => {
+      expect(rowLabels(full)).toEqual(rowLabels(redacted))
+      expect(rowLabels(redacted)).toEqual([
+        ['Plastic', 'Exp & Rep'],
+        ['Steel', 'Exp & Rep'],
+        ['Wood', 'Exporter'],
+        ['Wood', 'Reprocessor']
+      ])
+    })
+
+    it('shows "[c]" for every net credit and total of a merged row still from fewer than three operators accredited, zeros included', () => {
       expect(
-        figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Steel', 'Reprocessor'])
+        figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Steel', 'Exp & Rep'])
       ).toEqual([0, 0, 5, 5])
       expect(
-        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Steel', 'Reprocessor'])
+        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Steel', 'Exp & Rep'])
       ).toEqual(['[c]', '[c]', '[c]', '[c]'])
     })
 
     it('aligns "[c]" right, like the numbers beside it', () => {
       const index = rowLabels(redacted).findIndex(
-        ([material, type]) => material === 'Steel' && type === 'Reprocessor'
+        ([material, type]) => material === 'Steel' && type === 'Exp & Rep'
       )
       expect(
         redacted.getCell(HEADING_ROW + 1 + index, FIRST_FIGURE_COLUMN).alignment
@@ -520,22 +542,20 @@ describe('the waste balance tab', () => {
       ).toEqual([0, 12, 0, 12])
     })
 
-    it("judges each month's net credit on that month's operators, and the total on the period's", () => {
-      // Plastic's third reprocessor is accredited from February.
+    it("judges each month's net credit of a merged row on that month's operators, and the total on the period's", () => {
+      // Plastic's third reprocessor is accredited from February, so its
+      // January figure comes from two operators and the row merges.
       expect(
-        figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Plastic', 'Reprocessor'])
+        figuresOfRow(full, JANUARY_TO_MARCH_2026, ['Plastic', 'Exp & Rep'])
       ).toEqual([0, 40.25, 0, 40.25])
       expect(
-        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, [
-          'Plastic',
-          'Reprocessor'
-        ])
+        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Plastic', 'Exp & Rep'])
       ).toEqual(['[c]', 40.25, 0, 40.25])
     })
 
     it('shows a net credit and total with no operator accredited and nothing in it', () => {
       expect(
-        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Steel', 'Exporter'])
+        figuresOfRow(redacted, JANUARY_TO_MARCH_2026, ['Wood', 'Exporter'])
       ).toEqual([0, 0, 0, 0])
     })
   })
@@ -546,7 +566,8 @@ describe('the waste balance tab', () => {
       material: MATERIAL.FIBRE,
       rows: [receivedRow('row-1', '2026-02-10', 7)]
     })
-    await seedOperator(register, { material: MATERIAL.WOOD })
+    await seedSilentOperators(register, { material: MATERIAL.FIBRE })
+    await seedSilentOperators(register, { material: MATERIAL.WOOD })
 
     const worksheet = await render(JANUARY_TO_MARCH_2026, register)
 

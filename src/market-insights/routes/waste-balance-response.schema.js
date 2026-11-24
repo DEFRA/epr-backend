@@ -4,6 +4,7 @@ import {
   TONNAGE_MONITORING_MATERIALS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { EXPORTER_AND_REPROCESSOR } from '#market-insights/domain/waste-balance-figures.js'
 import {
   byReportingMonth,
   metaSchema,
@@ -25,7 +26,10 @@ const figureKeys = {
 const byMaterialAndType = (figuresSchema) =>
   recordOf(
     TONNAGE_MONITORING_MATERIALS,
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), figuresSchema)
+    Joi.alternatives().try(
+      recordOf(Object.values(WASTE_PROCESSING_TYPE), figuresSchema),
+      recordOf([EXPORTER_AND_REPROCESSOR], figuresSchema)
+    )
   )
 
 const figuresByMaterialSchema = byMaterialAndType(
@@ -44,6 +48,12 @@ const operatorCountsByMaterialSchema = byMaterialAndType(
  * and the period carries the sum. That count covers every accredited
  * registration on the register, whatever status its accreditation holds now,
  * matching the loads this table keeps.
+ *
+ * A material is keyed by `exporter` and `reprocessor`, or by
+ * `exporterAndReprocessor` alone where any figure in either of those rows, in
+ * any month or across the period, comes from fewer than three operators
+ * accredited for it. The merged row covers the whole period and sums both
+ * accreditation types.
  *
  * Every figure also carries two operator counts, for the regulators to judge
  * whether it would identify an operator. An operator is a business, and

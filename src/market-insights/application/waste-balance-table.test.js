@@ -30,9 +30,14 @@ import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
 import { buildUnsubmittedReport } from '#vite/helpers/build-unsubmitted-report.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
+import { EXPORTER_AND_REPROCESSOR } from '#market-insights/domain/waste-balance-figures.js'
 import { partialMock } from '#test/type-helpers.js'
+import { recordOf } from '#common/helpers/record-of.js'
 import { toYearMonth, yearOf } from '#common/helpers/dates/year-month.js'
-import { buildWasteBalanceTable } from './waste-balance-table.js'
+import {
+  aggregateWasteBalanceTable,
+  mergeRowsFromFewOperators
+} from './waste-balance-table.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -715,7 +720,7 @@ const run = async ({
 
   const logger = { info: vi.fn(), warn: vi.fn() }
 
-  const table = await buildWasteBalanceTable({
+  const table = await aggregateWasteBalanceTable({
     ledgerRepository,
     summaryLogRowStatesRepository,
     organisationReadRepository: createInMemoryOrganisationReadRepository(
@@ -742,16 +747,31 @@ const NO_ACTIVITY = {
 }
 
 /**
+ * A material's exporter and reprocessor rows, leaving out the row merging them.
+ *
+ * @template T
+ * @param {Partial<Record<string, T>>} byAccreditationType
+ * @returns {[string, T][]}
+ */
+const separateRows = (byAccreditationType) =>
+  /** @type {[string, T][]} */ (
+    Object.entries(byAccreditationType).filter(
+      ([accreditationType]) => accreditationType !== EXPORTER_AND_REPROCESSOR
+    )
+  )
+
+/**
  * The cells something was reported into, flattened to one row each, without
  * their operator counts. The table carries a zero cell for every other
- * combination, which these tests are not about.
+ * combination, and a merged row beside each pair, which these tests are not
+ * about.
  *
  * @param {WasteBalanceTable} table
  */
 const reported = (table) =>
   Object.entries(table.data.months).flatMap(([month, { figures }]) =>
     Object.entries(figures).flatMap(([material, byAccreditationType]) =>
-      Object.entries(byAccreditationType)
+      separateRows(byAccreditationType)
         .filter(
           ([, cell]) => cell.totalCredited !== 0 || cell.sentOnDeductions !== 0
         )
@@ -779,7 +799,7 @@ const operatorCounts = (table, count = 'operatorCount') =>
   Object.fromEntries(
     Object.entries(table.data.months).flatMap(([month, { figures }]) =>
       Object.entries(figures).flatMap(([material, byAccreditationType]) =>
-        Object.entries(byAccreditationType)
+        separateRows(byAccreditationType)
           .filter(([, cell]) => cell[count] !== 0)
           .map(([accreditationType, cell]) => [
             `${month} ${material} ${accreditationType}`,
@@ -805,7 +825,7 @@ const periodOperatorCounts = (table) =>
   Object.fromEntries(
     Object.entries(table.data.period.operatorCounts).flatMap(
       ([material, byAccreditationType]) =>
-        Object.entries(byAccreditationType)
+        separateRows(byAccreditationType)
           .filter(([, counts]) => counts.operatorCount !== 0)
           .map(([accreditationType, counts]) => [
             `${material} ${accreditationType}`,
@@ -827,7 +847,7 @@ const monthlyReports = ({ data: { months, period } }) => ({
   period: period.reports
 })
 
-describe('buildWasteBalanceTable', () => {
+describe('aggregateWasteBalanceTable', () => {
   it('stamps the clock it was given', async () => {
     const { table } = await run({ organisations: [], submissions: [] })
 
@@ -1299,6 +1319,33 @@ describe('buildWasteBalanceTable', () => {
       })
     })
 
+    it('counts an operator accredited as both exporter and reprocessor once in the row merging them', async () => {
+      const reprocessing = makeOperator({ orgId: 500052 })
+      const exporting = makeOperator({
+        orgId: 500053,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        reprocessingType: undefined
+      })
+      const both = oneBusiness(reprocessing, exporting)
+      const another = makeOperator({ orgId: 500054 })
+
+      const { table } = await run({
+        organisations: [both, another.organisation],
+        submissions: []
+      })
+
+      expect(operatorCounts(table)).toEqual({
+        ...everyMonth(2, 'plastic reprocessor'),
+        ...everyMonth(1, 'plastic exporter')
+      })
+      for (const { figures } of Object.values(table.data.months)) {
+        expect(figures.plastic[EXPORTER_AND_REPROCESSOR]?.operatorCount).toBe(2)
+      }
+      expect(
+        table.data.period.operatorCounts.plastic[EXPORTER_AND_REPROCESSOR]
+      ).toEqual({ operatorCount: 2, submittingOperatorCount: 0 })
+    })
+
     it('counts each operator once across the period, however many months it contributes to', async () => {
       const crediting = makeOperator({ orgId: 500041 })
       const silent = makeOperator({ orgId: 500042 })
@@ -1411,9 +1458,10 @@ describe('buildWasteBalanceTable', () => {
       for (const { figures } of Object.values(table.data.months)) {
         expect(Object.keys(figures)).toEqual(TONNAGE_MONITORING_MATERIALS)
         for (const byAccreditationType of Object.values(figures)) {
-          expect(Object.keys(byAccreditationType)).toEqual(
-            Object.values(WASTE_PROCESSING_TYPE)
-          )
+          expect(Object.keys(byAccreditationType)).toEqual([
+            ...Object.values(WASTE_PROCESSING_TYPE),
+            EXPORTER_AND_REPROCESSOR
+          ])
         }
       }
     })
@@ -1597,7 +1645,7 @@ describe('buildWasteBalanceTable', () => {
 
       return table.data.months[toYearMonth('2026-02')].figures[
         MATERIAL.PLASTIC
-      ][WASTE_PROCESSING_TYPE.EXPORTER].eligibleForWasteBalance
+      ][WASTE_PROCESSING_TYPE.EXPORTER]?.eligibleForWasteBalance
     }
 
     it('is eligible when its overseas site was approved by the date of export', async () => {
@@ -1637,7 +1685,7 @@ describe('buildWasteBalanceTable', () => {
       expect(
         table.data.months[toYearMonth('2025-12')].figures[MATERIAL.PLASTIC][
           WASTE_PROCESSING_TYPE.REPROCESSOR
-        ].eligibleForWasteBalance
+        ]?.eligibleForWasteBalance
       ).toBe(0)
     })
   })
@@ -1731,7 +1779,7 @@ describe('buildWasteBalanceTable', () => {
       expect(
         table.data.period.figures[MATERIAL.PLASTIC][
           WASTE_PROCESSING_TYPE.REPROCESSOR
-        ].netCredit
+        ]?.netCredit
       ).toBe(40)
     })
 
@@ -1972,10 +2020,50 @@ describe('buildWasteBalanceTable', () => {
     })
 
     const { figures } = table.data.months[toYearMonth('2026-02')]
-    expect(figures.paper.reprocessor.totalCredited).toBe(10)
-    expect(figures.plastic.exporter.totalCredited).toBe(30)
-    expect(figures.plastic.reprocessor.totalCredited).toBe(20)
+    expect(figures.paper.reprocessor?.totalCredited).toBe(10)
+    expect(figures.plastic.exporter?.totalCredited).toBe(30)
+    expect(figures.plastic.reprocessor?.totalCredited).toBe(20)
     expect(reported(table)).toHaveLength(3)
+  })
+
+  it("sums a material's exporter and reprocessor figures into the row merging them", async () => {
+    const reprocessor = makeOperator({ orgId: 500050 })
+    const exporter = makeOperator({
+      orgId: 500051,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+      reprocessingType: undefined,
+      overseasSites: { '099': { overseasSiteId: 'site-1' } }
+    })
+
+    const { table } = await run({
+      organisations: [reprocessor.organisation, exporter.organisation],
+      submissions: [
+        { ...reprocessor, rows: [receivedRow('row-1', '2026-02-10', 20)] },
+        { ...exporter, rows: [exportedRow('row-1', '2026-03-10', 30)] }
+      ]
+    })
+
+    const merged = (month) =>
+      table.data.months[toYearMonth(month)].figures.plastic[
+        EXPORTER_AND_REPROCESSOR
+      ]
+    expect(merged('2026-02')).toEqual({
+      totalCredited: 20,
+      eligibleForWasteBalance: 20,
+      sentOnDeductions: 0,
+      netCredit: 20,
+      operatorCount: 2,
+      submittingOperatorCount: 1
+    })
+    expect(merged('2026-03')).toEqual(
+      expect.objectContaining({ netCredit: 30, submittingOperatorCount: 1 })
+    )
+    expect(table.data.period.figures.plastic[EXPORTER_AND_REPROCESSOR]).toEqual(
+      expect.objectContaining({ netCredit: 50 })
+    )
+    expect(
+      table.data.period.operatorCounts.plastic[EXPORTER_AND_REPROCESSOR]
+    ).toEqual({ operatorCount: 2, submittingOperatorCount: 2 })
   })
 
   it('leaves out a month before the window', async () => {
@@ -2088,5 +2176,163 @@ describe('buildWasteBalanceTable', () => {
         netCredit: 40
       }
     ])
+  })
+})
+
+describe('mergeRowsFromFewOperators', () => {
+  const FEBRUARY = toYearMonth('2026-02')
+  const MARCH = toYearMonth('2026-03')
+  const NO_REPORTS = { expected: 0, submitted: 0 }
+  const SEPARATE = Object.values(WASTE_PROCESSING_TYPE)
+
+  /**
+   * @param {number} netCredit
+   * @param {number} operatorCount
+   * @returns {PublishedWasteBalanceFigures & OperatorCounts}
+   */
+  const figure = (netCredit, operatorCount) => ({
+    totalCredited: netCredit,
+    eligibleForWasteBalance: netCredit,
+    sentOnDeductions: 0,
+    netCredit,
+    operatorCount,
+    submittingOperatorCount: operatorCount
+  })
+
+  const MERGED_FIGURE = figure(99, 4)
+
+  /**
+   * Every material's rows from three operators, its merged row distinct from
+   * them, and plastic's rows overridden as given.
+   *
+   * @param {Partial<Record<string, PublishedWasteBalanceFigures & OperatorCounts>>} plastic
+   */
+  const everyMaterial = (plastic) =>
+    recordOf(TONNAGE_MONITORING_MATERIALS, (material) => ({
+      reprocessor: figure(10, 3),
+      exporter: figure(20, 3),
+      [EXPORTER_AND_REPROCESSOR]: MERGED_FIGURE,
+      ...(material === MATERIAL.PLASTIC ? plastic : {})
+    }))
+
+  /**
+   * An aggregate over February and March, with plastic's February and period
+   * figures overridden as given.
+   *
+   * @param {{
+   *   february?: Partial<Record<string, PublishedWasteBalanceFigures & OperatorCounts>>,
+   *   period?: Partial<Record<string, PublishedWasteBalanceFigures & OperatorCounts>>
+   * }} [plastic]
+   * @returns {WasteBalanceTable}
+   */
+  const aggregate = ({ february = {}, period = {} } = {}) => {
+    const periodFigures = everyMaterial(period)
+    return {
+      meta: { generatedAt: NOW.toISOString() },
+      data: {
+        months: {
+          [FEBRUARY]: { reports: NO_REPORTS, figures: everyMaterial(february) },
+          [MARCH]: { reports: NO_REPORTS, figures: everyMaterial({}) }
+        },
+        period: {
+          reports: NO_REPORTS,
+          figures: periodFigures,
+          operatorCounts: recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+            Object.fromEntries(
+              Object.entries(periodFigures[material]).map(
+                ([row, { operatorCount, submittingOperatorCount }]) => [
+                  row,
+                  { operatorCount, submittingOperatorCount }
+                ]
+              )
+            )
+          )
+        }
+      }
+    }
+  }
+
+  /**
+   * The rows each part of the table serves plastic as.
+   *
+   * @param {WasteBalanceTable} table
+   */
+  const plasticRows = ({ data: { months, period } }) => [
+    ...Object.values(months).map(({ figures }) => Object.keys(figures.plastic)),
+    Object.keys(period.figures.plastic),
+    Object.keys(period.operatorCounts.plastic)
+  ]
+
+  const SERVED_SEPARATELY = Array(4).fill(SEPARATE)
+  const SERVED_MERGED = Array(4).fill([EXPORTER_AND_REPROCESSOR])
+
+  it('keeps separate rows for a material whose every figure comes from three or more operators', () => {
+    const table = mergeRowsFromFewOperators(aggregate())
+
+    expect(plasticRows(table)).toEqual(SERVED_SEPARATELY)
+    expect(table.data.months[FEBRUARY].figures.plastic.exporter).toEqual(
+      figure(20, 3)
+    )
+  })
+
+  it.each([
+    ['two operators', figure(20, 2)],
+    ['one operator', figure(20, 1)],
+    ['no accredited operator, though it holds tonnage', figure(20, 0)],
+    ['two operators, though it holds no tonnage', figure(0, 2)]
+  ])(
+    "merges a material's rows for the whole period where one month's figure comes from %s",
+    (_, fewOperators) => {
+      const table = mergeRowsFromFewOperators(
+        aggregate({ february: { exporter: fewOperators } })
+      )
+
+      expect(plasticRows(table)).toEqual(SERVED_MERGED)
+      expect(
+        table.data.months[MARCH].figures.plastic[EXPORTER_AND_REPROCESSOR]
+      ).toBe(MERGED_FIGURE)
+      expect(table.data.period.figures.plastic[EXPORTER_AND_REPROCESSOR]).toBe(
+        MERGED_FIGURE
+      )
+      expect(
+        table.data.period.operatorCounts.plastic[EXPORTER_AND_REPROCESSOR]
+      ).toEqual({ operatorCount: 4, submittingOperatorCount: 4 })
+    }
+  )
+
+  it("merges a material's rows where only the period's figure comes from two operators", () => {
+    const table = mergeRowsFromFewOperators(
+      aggregate({ period: { reprocessor: figure(10, 2) } })
+    )
+
+    expect(plasticRows(table)).toEqual(SERVED_MERGED)
+  })
+
+  it('keeps separate rows where a figure comes from no accredited operator and holds nothing', () => {
+    const table = mergeRowsFromFewOperators(
+      aggregate({ february: { exporter: figure(0, 0) } })
+    )
+
+    expect(plasticRows(table)).toEqual(SERVED_SEPARATELY)
+  })
+
+  it('leaves every other material as it is', () => {
+    const table = mergeRowsFromFewOperators(
+      aggregate({ february: { exporter: figure(20, 2) } })
+    )
+
+    expect(Object.keys(table.data.months[FEBRUARY].figures.paper)).toEqual(
+      SEPARATE
+    )
+  })
+
+  it('keeps the meta and the report counts', () => {
+    const before = aggregate({ february: { exporter: figure(20, 2) } })
+
+    const table = mergeRowsFromFewOperators(before)
+
+    expect(table.meta).toBe(before.meta)
+    expect(table.data.months[FEBRUARY].reports).toBe(NO_REPORTS)
+    expect(table.data.period.reports).toBe(NO_REPORTS)
   })
 })
