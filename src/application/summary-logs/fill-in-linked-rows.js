@@ -34,39 +34,51 @@ import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline
 const isSupplied = (value) => isFilled(value, DROPDOWN_PLACEHOLDER)
 
 /**
+ * How fill-in treats a column: kept as entered, or taken from the previous
+ * year unless the column is suppliable and the row supplies it.
+ *
+ * @typedef {{ kept: true } | { kept: false, header: string, suppliable: boolean }} FillInColumn
+ */
+
+/**
+ * @param {Array<string | null>} headers
+ * @param {LinkingTableSchema} schema
+ * @returns {FillInColumn[]}
+ */
+const fillInColumnsOf = (headers, { rowIdField, linking }) => {
+  const suppliable = new Set(linking.suppliableOnLinkedRow)
+  return headers.map((header) =>
+    header === null ||
+    isEprMarker(header) ||
+    header === rowIdField ||
+    header === linking.previousYearRowIdField
+      ? { kept: true }
+      : { kept: false, header, suppliable: suppliable.has(header) }
+  )
+}
+
+/**
  * @param {{
  *   row: DataRow,
- *   headers: Array<string | null>,
- *   schema: LinkingTableSchema,
+ *   columns: FillInColumn[],
  *   previousYearRowState: SummaryLogRowState
  * }} params
  * @returns {FilledInRow}
  */
-const fillInRow = ({
-  row,
-  headers,
-  schema: { rowIdField, linking },
-  previousYearRowState
-}) => {
-  const suppliable = new Set(linking.suppliableOnLinkedRow)
+const fillInRow = ({ row, columns, previousYearRowState }) => {
   /** @type {string[]} */
   const suppliedFields = []
 
-  const values = headers.map((header, index) => {
+  const values = columns.map((column, index) => {
     const entered = row.values[index]
-    if (
-      header === null ||
-      isEprMarker(header) ||
-      header === rowIdField ||
-      header === linking.previousYearRowIdField
-    ) {
+    if (column.kept) {
       return entered
     }
-    if (suppliable.has(header) && isSupplied(entered)) {
-      suppliedFields.push(header)
+    if (column.suppliable && isSupplied(entered)) {
+      suppliedFields.push(column.header)
       return entered
     }
-    return previousYearRowState.data[header] ?? null
+    return previousYearRowState.data[column.header] ?? null
   })
 
   return {
@@ -130,18 +142,14 @@ const fillInTable = async ({
   const byRowId = new Map(
     previousYearRowStates.map((state) => [state.rowId, state])
   )
+  const columns = fillInColumnsOf(section.headers, schema)
 
   return {
     ...section,
     rows: section.rows.map((row) => {
       const previousYearRowState = byRowId.get(toRowId(row.values[column]))
       return previousYearRowState
-        ? fillInRow({
-            row,
-            headers: section.headers,
-            schema,
-            previousYearRowState
-          })
+        ? fillInRow({ row, columns, previousYearRowState })
         : row
     })
   }
