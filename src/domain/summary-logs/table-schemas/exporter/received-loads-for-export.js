@@ -57,16 +57,22 @@ const isLiveOn = (date, accreditation) =>
 
 /**
  * Each accreditation is live only within its own year, so an export date live
- * under either one is live under the accreditation of its year.
+ * under either one is live under the accreditation of its year. A null
+ * accreditation skips the check, as the validation pipeline's does.
  *
  * @param {Record<string, any>} data
- * @param {AccreditationValidity} accreditation
- * @param {AccreditationValidity | null} previousYearAccreditation
+ * @param {ClassificationContext} context
  */
-const isCreditedOnItsDates = (data, accreditation, previousYearAccreditation) =>
-  isLiveOn(data[FIELDS.DATE_RECEIVED_BY_OSR], accreditation) &&
-  (isLiveOn(data[FIELDS.DATE_OF_EXPORT], accreditation) ||
-    isLiveOn(data[FIELDS.DATE_OF_EXPORT], previousYearAccreditation))
+const isOutsideItsAccreditations = (
+  data,
+  { accreditation, previousYearAccreditation = null }
+) =>
+  accreditation !== null &&
+  !(
+    isLiveOn(data[FIELDS.DATE_RECEIVED_BY_OSR], accreditation) &&
+    (isLiveOn(data[FIELDS.DATE_OF_EXPORT], accreditation) ||
+      isLiveOn(data[FIELDS.DATE_OF_EXPORT], previousYearAccreditation))
+  )
 
 /**
  * Fields required for waste balance calculation (per PAE-984 business spec).
@@ -270,12 +276,9 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 
   classifyForWasteBalance: (
     /** @type {Record<string, any>} */ data,
-    /** @type {ClassificationContext} */ {
-      accreditation,
-      overseasSites,
-      previousYearAccreditation = null
-    }
+    /** @type {ClassificationContext} */ context
   ) => {
+    const { overseasSites } = context
     const missingResult = checkRequiredFields(
       data,
       WASTE_BALANCE_CONTENT_FIELDS,
@@ -285,10 +288,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
       return missingResult
     }
 
-    if (
-      accreditation &&
-      !isCreditedOnItsDates(data, accreditation, previousYearAccreditation)
-    ) {
+    if (isOutsideItsAccreditations(data, context)) {
       return {
         outcome: ROW_OUTCOME.IGNORED,
         reasons: [{ code: CLASSIFICATION_REASON.OUTSIDE_ACCREDITATION_PERIOD }]
