@@ -17,6 +17,7 @@ export const SENT_ON_LOADS = {
       wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
       processingType: PROCESSING_TYPES.EXPORTER,
       rowIdField: FIELDS.ROW_ID
-    })
+    }),
+    { rejectOpenEarlierYear: true }
   )
 }

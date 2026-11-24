@@ -502,6 +502,7 @@ describe('SummaryLogsValidator', () => {
       registrationNumber: FIXTURE_LEDGER.registrationNumber,
       accreditationNumber: FIXTURE_LEDGER.accreditationNumber,
       year: FIXTURE_LEDGER.year,
+      createdAt: '2026-06-01T09:00:00.000Z',
       file: {
         id: 'file-123',
         name: 'test.xlsx',
@@ -555,6 +556,18 @@ describe('SummaryLogsValidator', () => {
     expect(result.message).toBe(
       'Summary log not found: summaryLogId=summary-log-123'
     )
+  })
+
+  it('should throw PermanentError when the summary log has no createdAt', async () => {
+    delete summaryLog.createdAt
+
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
+
+    expect(result).toBeInstanceOf(PermanentError)
+    expect(result.message).toBe(
+      'Summary log has no createdAt: summaryLogId=summary-log-123'
+    )
+    expect(summaryLogsRepository.update).not.toHaveBeenCalled()
   })
 
   it('should throw PermanentError when summary log is already validated (SQS retry after success)', async () => {

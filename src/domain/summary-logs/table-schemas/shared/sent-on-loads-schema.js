@@ -43,8 +43,13 @@ const SUPPLEMENTARY_FIELDS = [
  *
  * @param {number} rowIdMinimum - Minimum ROW_ID value for this variant
  * @param {TableSchema['rowTransformer']} rowTransformer - Function to transform a row into waste record metadata
+ * @param {import('./field-schemas.js').DateFieldOptions} [dateFieldOptions]
  */
-export const createSentOnLoadsSchema = (rowIdMinimum, rowTransformer) => ({
+export const createSentOnLoadsSchema = (
+  rowIdMinimum,
+  rowTransformer,
+  dateFieldOptions = {}
+) => ({
   rowIdField: FIELDS.ROW_ID,
   wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
   sheetName: 'Sent on',
@@ -69,7 +74,7 @@ export const createSentOnLoadsSchema = (rowIdMinimum, rowTransformer) => ({
    */
   validationSchema: Joi.object({
     [FIELDS.ROW_ID]: createRowIdSchema(rowIdMinimum).optional(),
-    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(),
+    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(dateFieldOptions),
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: createWeightFieldSchema()
   })
     .unknown(true)

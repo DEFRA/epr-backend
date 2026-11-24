@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { toYear } from '#common/helpers/dates/year.js'
+import { validationOptionsIn } from '#domain/summary-logs/table-schemas/validation-options-test-helpers.js'
 import {
   createDataSyntaxValidator,
   JOI_MESSAGE_TO_ERROR_CODE
@@ -309,9 +310,10 @@ describe('createDataSyntaxValidator', () => {
       data: dataSections
     })
 
-  const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS.TEST, {
-    summaryLogYear: toYear(2026)
-  })
+  const validateDataSyntax = createDataSyntaxValidator(
+    TEST_SCHEMAS.TEST,
+    validationOptionsIn(toYear(2026))
+  )
 
   /**
    * Validates from row-object fixtures (headers auto-computed from keys).
@@ -1347,9 +1349,10 @@ describe('createDataSyntaxValidator with high issue volume', () => {
       }
     })
 
-    const validate = createDataSyntaxValidator(registry.TEST, {
-      summaryLogYear: toYear(2026)
-    })
+    const validate = createDataSyntaxValidator(
+      registry.TEST,
+      validationOptionsIn(toYear(2026))
+    )
 
     const result = validate(parsed)
 
@@ -1408,7 +1411,7 @@ describe('error codes for the shared field schemas', () => {
             )
           }
         },
-        { summaryLogYear: toYear(2026) }
+        validationOptionsIn(toYear(2026))
       )
 
       const result = validateDataSyntax(
@@ -1474,9 +1477,7 @@ describe('dates in a later year than the summary log', () => {
     )
 
   it('reports a later-year date as fatal with the summary log year expected', () => {
-    const result = validateDate('2027-01-01', {
-      summaryLogYear: toYear(2026)
-    })
+    const result = validateDate('2027-01-01', validationOptionsIn(toYear(2026)))
 
     const fatal = expectOne(
       result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
@@ -1494,17 +1495,13 @@ describe('dates in a later year than the summary log', () => {
   })
 
   it('accepts a date in the summary log year', () => {
-    const result = validateDate('2026-12-31', {
-      summaryLogYear: toYear(2026)
-    })
+    const result = validateDate('2026-12-31', validationOptionsIn(toYear(2026)))
 
     expect(result.issues.getAllIssues()).toStrictEqual([])
   })
 
   it('does not add an expected value to other cell errors', () => {
-    const result = validateDate('2026-02-30', {
-      summaryLogYear: toYear(2026)
-    })
+    const result = validateDate('2026-02-30', validationOptionsIn(toYear(2026)))
 
     const fatal = expectOne(result.issues.getAllIssues())
     expect(fatal.context).not.toHaveProperty('expected')

@@ -1,8 +1,6 @@
 import { toYear } from '#common/helpers/dates/year.js'
 import { http, HttpResponse } from 'msw'
-import { onTestFinished } from 'vitest'
 import { calendarDate } from '#common/helpers/date-formatter.js'
-import { config } from '#root/config.js'
 import { ObjectId } from 'mongodb'
 
 import {
@@ -32,7 +30,8 @@ import {
   setupWasteBalanceIntegrationEnvironment,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
-  tableOf
+  tableOf,
+  uploadOn
 } from './integration-test-helpers.js'
 
 // Data tables start with their header at row 7, so data rows begin at row 8.
@@ -625,9 +624,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
     expect(loadsByReportingPeriod.openPeriodLoads.added).toEqual(emptyChange())
   })
 
-  it('places a 2027 load received in December 2026 in no period of 2026, so submitting the log leaves the December 2026 report as it was', async () => {
-    config.set('openNextYear', true)
-    onTestFinished(() => config.reset('openNextYear'))
+  it('places a 2027 load received in December 2026, uploaded once 2026 has closed, in no period of 2026, so submitting the log leaves the December 2026 report as it was', async () => {
+    uploadOn('2027-03-01T09:00:00.000Z')
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       year: toYear(2027)

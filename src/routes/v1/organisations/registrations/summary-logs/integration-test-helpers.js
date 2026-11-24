@@ -52,7 +52,7 @@ import { signedCallback } from '#test/upload-callback.js'
 import { asOperator } from '#test/inject-auth.js'
 import { ObjectId } from 'mongodb'
 import assert from 'node:assert/strict'
-import { onTestFinished } from 'vitest'
+import { onTestFinished, vi } from 'vitest'
 import { config } from '#root/config.js'
 import {
   toAccreditationNumber,
@@ -703,6 +703,19 @@ export const withTemplateYear = (meta, year) => ({
 export const openNextYear = () => {
   config.set('openNextYear', true)
   onTestFinished(() => config.reset('openNextYear'))
+}
+
+/**
+ * Fakes only `Date`, so the summary log's upload date is `uploadedAt` while
+ * timers still run.
+ * @param {string} uploadedAt
+ */
+export const uploadOn = (uploadedAt) => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(uploadedAt))
+  onTestFinished(() => {
+    vi.useRealTimers()
+  })
 }
 
 export const EXPORTER_2027_HEADERS = [
