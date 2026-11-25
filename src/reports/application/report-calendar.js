@@ -234,7 +234,7 @@ export const reportingPeriodsByKind = ({
   now = new Date()
 }) => {
   const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
-  const storedReports = storedReport ? [storedReport] : []
+  const storedReports = storedReport?.year === year ? [storedReport] : []
   const accreditation = accreditationForYear(registration, year)
   const options = { now, wholePeriods }
 

@@ -62,9 +62,9 @@ const toNewHeadRowStates = (wasteRecords, classificationContext) =>
  */
 const latestSubmittedReportIdForPeriod = (periodicReport, periodRef) => {
   const { year, cadence, period } = periodRef
-  // Closed periods are derived from these periodic reports, so the slot exists.
+  // Closed periods are derived from this periodic report, so the slot exists.
   const slot = /** @type {ReportPerPeriod} */ (
-    findPeriodSlot(periodicReport, periodRef)
+    findPeriodSlot(periodicReport, { cadence, period })
   )
   const report = latestSubmitted(slot.current, slot.previousSubmissions)
   /* v8 ignore next 5 -- a closed period always has a submitted report */

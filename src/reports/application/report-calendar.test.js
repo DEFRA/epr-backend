@@ -360,6 +360,19 @@ describe('yearCalendar', () => {
         ])
       })
     })
+
+    it('ignores a stored report from another year', () => {
+      const result = calendar({
+        registration: registeredSinceLastYear(),
+        storedReport: storedQuarterOne(2025)
+      })
+
+      expect(
+        result.registeredOnly?.reportingPeriods.map(
+          (period) => 'report' in period
+        )
+      ).toEqual([false, false, false, false])
+    })
   })
 })
 

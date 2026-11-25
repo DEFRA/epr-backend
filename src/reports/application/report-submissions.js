@@ -17,10 +17,8 @@ import {
 import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
-import {
-  groupByRegistration,
-  periodicReportForYear
-} from '#reports/application/report-compliance.js'
+import { groupByRegistration } from '#reports/application/report-compliance.js'
+import { periodicReportForYear } from '#reports/domain/periodic-report-for-year.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 
 /**

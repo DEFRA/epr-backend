@@ -1,6 +1,7 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
+import { periodicReportForYear } from '#reports/domain/periodic-report-for-year.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
@@ -69,16 +70,6 @@ export function groupByRegistration(allPeriodicReports) {
     return map.set(key, [...existing, pr])
   }, new Map())
 }
-
-/**
- * A registration's periodic report for one year, from its reports of every year.
- *
- * @param {import('#reports/repository/port.js').PeriodicReport[]} storedReports
- * @param {Year} year
- * @returns {import('#reports/repository/port.js').PeriodicReport | null}
- */
-export const periodicReportForYear = (storedReports, year) =>
-  storedReports.find((report) => report.year === year) ?? null
 
 /**
  * Builds a map of report compliance data for every registration of the
