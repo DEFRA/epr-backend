@@ -5,7 +5,7 @@ import {
 import { HELD_ACCREDITATION_STATUSES } from './model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { AccreditationCommon, RegistrationStatus, Status } from './model.js' */
+/** @import { AccreditationCommon, RegistrationStatus, Status, StatusTimeline } from './model.js' */
 
 /**
  * Re-ex cancels a stored accreditation when its registration is cancelled.
@@ -21,17 +21,20 @@ export const withRegistrationCancellation = (
   externalAccreditations,
   registrationStatus
 ) => {
-  const lastChange = registrationStatus.timeline.at(-1)
-  if (lastChange?.status !== REGISTRATION_STATUS.CANCELLED) {
+  if (registrationStatus.current !== REGISTRATION_STATUS.CANCELLED) {
     return externalAccreditations
   }
+  const { at: cancelledAt } =
+    /** @type {StatusTimeline<RegistrationStatus>[number]} */ (
+      registrationStatus.timeline.at(-1)
+    )
   return /** @type {Record<Year, AccreditationCommon>} */ (
     Object.fromEntries(
       Object.entries(externalAccreditations).flatMap(
         ([year, accreditation]) => {
           const cancelled = cancelledFrom(
             accreditation,
-            lastChange.at,
+            cancelledAt,
             registrationStatus.lastUpdatedAt
           )
           return cancelled ? [[year, cancelled]] : []
