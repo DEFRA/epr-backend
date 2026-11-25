@@ -26,7 +26,9 @@ export const withRegistrationCancellation = (
   }
   const { at: cancelledAt } =
     /** @type {StatusTimeline<RegistrationStatus>[number]} */ (
-      registrationStatus.timeline.at(-1)
+      registrationStatus.timeline.findLast(
+        ({ status }) => status === REGISTRATION_STATUS.CANCELLED
+      )
     )
   return /** @type {Record<Year, AccreditationCommon>} */ (
     Object.fromEntries(
