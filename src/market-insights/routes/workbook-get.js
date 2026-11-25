@@ -39,9 +39,9 @@ export const marketInsightsWorkbookGet = {
    * the same reason: it is run occasionally, by one regulator who is waiting
    * for it.
    *
-   * It is redacted unless asked for unredacted: redacted, it shows "[c]" in
-   * place of every figure from too few operators. The full workbook is for
-   * regulators to compare against.
+   * It is the workbook as published unless asked for unredacted. The full
+   * workbook is for regulators to compare against and to analyse, and adds
+   * the England tab and the waste balance figures from too few operators.
    *
    * @param {HapiRequest & {
    *   params: { year: Year, cadence: 'monthly', period: number },
