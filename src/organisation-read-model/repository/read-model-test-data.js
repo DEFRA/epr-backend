@@ -321,9 +321,9 @@ export const buildReadOrganisationWithNumbersOf = ({
   })
 
 /**
- * The repository while the Registration and Accreditation service is down. A
- * read with no year, or for the year that service serves, loads from it, so it
- * fails, while a read for any other year is served as before.
+ * The repository while the Registration and Accreditation service is down,
+ * once the year it serves is open. A read with no year, or for that year, loads
+ * from it, so it fails, while a read for any other year is served as before.
  *
  * @param {OrganisationReadRepository} repository
  * @returns {OrganisationReadRepository}
