@@ -194,13 +194,18 @@ describe('read-model-test-data', () => {
   })
 
   describe('whileRegAccredIsDown', () => {
-    it('fails a read with no year and serves a read for a year', async () => {
+    it('fails a read with no year or for the service’s year, and serves a read for any other year', async () => {
       const served = servedOrganisations()
       const { organisationNumber } = served.approved({ year: 2026 })
       const repository = whileRegAccredIsDown(served.repository())
 
       await expect(
         repository.findByOrganisationNumber(organisationNumber)
+      ).rejects.toThrow('Registration and Accreditation service unavailable')
+      await expect(
+        repository.findByOrganisationNumber(organisationNumber, {
+          year: toYear(2027)
+        })
       ).rejects.toThrow('Registration and Accreditation service unavailable')
       expect(
         await repository.findByOrganisationNumber(organisationNumber, {

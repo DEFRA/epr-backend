@@ -1,4 +1,5 @@
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from './reg-accred-accreditations.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber
@@ -321,8 +322,8 @@ export const buildReadOrganisationWithNumbersOf = ({
 
 /**
  * The repository while the Registration and Accreditation service is down. A
- * read with no year loads from that service, so it fails, while a read for a
- * year is served as before.
+ * read with no year, or for the year that service serves, loads from it, so it
+ * fails, while a read for any other year is served as before.
  *
  * @param {OrganisationReadRepository} repository
  * @returns {OrganisationReadRepository}
@@ -330,7 +331,10 @@ export const buildReadOrganisationWithNumbersOf = ({
 export const whileRegAccredIsDown = (repository) => ({
   ...repository,
   findByOrganisationNumber: async (organisationNumber, options) => {
-    if (options?.year === undefined) {
+    if (
+      options?.year === undefined ||
+      options.year === REG_ACCRED_ACCREDITATION_YEAR
+    ) {
       throw new Error('Registration and Accreditation service unavailable')
     }
     return repository.findByOrganisationNumber(organisationNumber, options)

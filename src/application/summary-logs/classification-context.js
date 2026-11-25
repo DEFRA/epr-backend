@@ -3,14 +3,16 @@ import {
   linksYears,
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import {
   classificationContextOf,
-  previousYearAccreditationOf,
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { SummaryLogFileId } from '#domain/summary-logs/ids.js' */
@@ -48,23 +50,28 @@ import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
  */
 
 /**
- * The accreditation the summary log's registration held the year before the
- * summary log's, read for that year alone.
+ * The accreditation the registration held in `year`, read for that year alone.
  *
- * @param {Omit<SummaryLogContextParams, 'processingType' | 'ledgerRepository'>} params
+ * @param {{
+ *   organisationReadRepository: OrganisationReadRepository,
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
+ *   year: Year
+ * }} params
  */
-const previousYearAccreditationFor = async ({
+const accreditationHeldIn = async ({
   organisationReadRepository,
-  summaryLog: { organisationNumber, year },
-  registration: { registrationNumber }
+  organisationNumber,
+  registrationNumber,
+  year
 }) => {
   const organisation =
     await organisationReadRepository.findByOrganisationNumber(
       organisationNumber,
-      { year: previousYear(year) }
+      { year }
     )
   const registration = organisation?.registrations[registrationNumber]
-  return registration ? previousYearAccreditationOf(registration, year) : null
+  return (registration && accreditationForYear(registration, year)) ?? null
 }
 
 /**
@@ -113,10 +120,11 @@ const previousYearOf = async ({
     }
   }
 
-  const accreditation = await previousYearAccreditationFor({
+  const accreditation = await accreditationHeldIn({
     organisationReadRepository,
-    summaryLog,
-    registration
+    organisationNumber: summaryLog.organisationNumber,
+    registrationNumber: registration.registrationNumber,
+    year
   })
   const previousYearSubmission =
     accreditation &&
