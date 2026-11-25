@@ -16,6 +16,8 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { toYear } from '#common/helpers/dates/year.js'
@@ -531,9 +533,7 @@ describe('SummaryLogsValidator', () => {
       ),
       summaryLogRowStatesRepository,
       ledgerRepository,
-      reportsService: /** @type {any} */ ({
-        findPeriodicReport: vi.fn().mockResolvedValue(null)
-      }),
+      reportsService: createReportsService(createInMemoryReportsRepository()()),
       summaryLogExtractor
     })
   })
@@ -1164,9 +1164,7 @@ describe('SummaryLogsValidator', () => {
       ),
       summaryLogRowStatesRepository,
       ledgerRepository,
-      reportsService: /** @type {any} */ ({
-        findPeriodicReport: vi.fn().mockResolvedValue(null)
-      }),
+      reportsService: createReportsService(createInMemoryReportsRepository()()),
       summaryLogExtractor
     })
 

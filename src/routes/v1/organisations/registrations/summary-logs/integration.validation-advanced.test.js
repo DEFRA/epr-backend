@@ -11,6 +11,8 @@ import { createInMemorySummaryLogExtractor } from '#application/summary-logs/ext
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
@@ -457,9 +459,9 @@ describe('Advanced validation scenarios', () => {
         ledgerRepository: createInMemoryLedgerRepository()(),
         summaryLogExtractor,
         logger: mockLogger,
-        reportsService: /** @type {any} */ ({
-          findPeriodicReport: async () => null
-        })
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        )
       })
       server = await createTestServer({
         repositories: {
@@ -625,9 +627,9 @@ describe('Advanced validation scenarios', () => {
         ledgerRepository: createInMemoryLedgerRepository()(),
         summaryLogExtractor,
         logger: mockLogger,
-        reportsService: /** @type {any} */ ({
-          findPeriodicReport: async () => null
-        })
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        )
       })
       server = await createTestServer({
         repositories: {
