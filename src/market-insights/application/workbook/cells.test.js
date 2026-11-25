@@ -77,7 +77,7 @@ describe('fitting columns to their tables', () => {
         })
       }).getColumn('A').width
 
-    expect(widthAt(22)).toBeGreaterThan(widthAt(11))
+    expect(widthAt(22)).toBeGreaterThan(widthAt(11) ?? Infinity)
   })
 
   it('never narrows a column', () => {
