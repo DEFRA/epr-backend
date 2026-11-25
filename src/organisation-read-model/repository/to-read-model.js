@@ -13,6 +13,7 @@ import {
   REGISTRATION_STATUSES,
   statusOn
 } from '#organisation-read-model/domain/model.js'
+import { withRegistrationCancellation } from '#organisation-read-model/domain/registration-cancellation.js'
 import { standingByYear } from '#organisation-read-model/domain/registration-standing.js'
 import { accreditationsForRegistration } from './accreditations-for-registration.js'
 import {
@@ -29,6 +30,7 @@ import { organisationInYear } from './organisation-in-year.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
+/** @import { RegistrationStatus, Status } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
@@ -246,13 +248,16 @@ export function toLinkedDefraOrganisation(linked) {
 }
 
 /**
- * A registration's stored and external accreditations by year.
+ * A registration's stored and external accreditations by year. A year the
+ * registration service holds is never served from a stored accreditation, even
+ * when the registration's cancellation leaves the external one out.
  *
  * @param {{
  *   registration: StoredRegistration
  *   organisation: StoredOrganisation
  *   context: Context
  *   externalAccreditations: Record<Year, AccreditationCommon>
+ *   registrationStatus: Status<RegistrationStatus>
  * }} options
  * @returns {Record<Year, AccreditationCommon>}
  */
@@ -260,16 +265,22 @@ function accreditationsOf({
   registration,
   organisation,
   context,
-  externalAccreditations
+  externalAccreditations,
+  registrationStatus
 }) {
+  const stored = keyedRecords(
+    accreditationsForRegistration(registration, organisation),
+    (accreditation) => toAccreditationEntry(accreditation, context),
+    `Registration ${registration.registrationNumber} accreditation year`,
+    context.onDrop
+  )
   return {
-    ...keyedRecords(
-      accreditationsForRegistration(registration, organisation),
-      (accreditation) => toAccreditationEntry(accreditation, context),
-      `Registration ${registration.registrationNumber} accreditation year`,
-      context.onDrop
+    ...Object.fromEntries(
+      Object.entries(stored).filter(
+        ([year]) => !(year in externalAccreditations)
+      )
     ),
-    ...externalAccreditations
+    ...withRegistrationCancellation(externalAccreditations, registrationStatus)
   }
 }
 
@@ -317,13 +328,16 @@ function toRegistrationEntry(
   }
 
   const openYear = latestOpenYear(new Date(context.today))
+  /** @type {Status<RegistrationStatus>} */
+  const registrationStatus = { current: status, ...statusTimeline }
   const accreditations = accreditationsOf({
     registration,
     organisation,
     context,
-    externalAccreditations: externalByRegistration.get(registrationNumber) ?? {}
+    externalAccreditations:
+      externalByRegistration.get(registrationNumber) ?? {},
+    registrationStatus
   })
-  const registrationStatus = { current: status, ...statusTimeline }
 
   /** @type {RegistrationCommon} */
   const common = {

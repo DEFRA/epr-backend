@@ -14,10 +14,16 @@ import {
   approvedTimeline,
   exporter,
   findOrganisation,
+  granted,
   overseasSites,
   reprocessor,
   storedWithout
 } from './contract/organisation-read-test-helpers.js'
+
+/** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
+/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/domain/model.js' */
+/** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
+/** @import { StoredRegistrationStatus } from '#domain/organisations/model.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -138,6 +144,164 @@ describe('stored and external accreditations together', () => {
     const registration = organisation.registrations[REPROCESSOR_NUMBER]
     expect(Object.keys(registration.accreditations)).toEqual(['2026'])
     expect(Object.keys(registration.standingByDate)).toEqual(['2026'])
+  })
+
+  describe('when the registration is cancelled', () => {
+    const CANCELLED_AT = '2027-02-15T09:00:00.000Z'
+
+    /**
+     * The 2027 accreditation's status, served when the registration service
+     * holds `timeline` and the registration, once approved, makes
+     * `registrationChanges`.
+     *
+     * @param {OrganisationReadRepositoryWith} organisationReadRepositoryWith
+     * @param {StatusTimeline<AccreditationStatus>} timeline
+     * @param {StatusHistoryEntryOf<StoredRegistrationStatus>[]} [registrationChanges]
+     */
+    const findCancelledWithExternal = async (
+      organisationReadRepositoryWith,
+      timeline,
+      registrationChanges = [{ status: 'cancelled', updatedAt: CANCELLED_AT }]
+    ) => {
+      const stored = buildOrganisation({
+        registrations: [
+          reprocessor({
+            statusHistory: [...granted('approved'), ...registrationChanges]
+          })
+        ]
+      })
+      const repository = await organisationReadRepositoryWith({
+        organisations: [stored],
+        externalAccreditations: [
+          buildExternalAccreditationFor(stored, {
+            registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+            status: {
+              current: timeline[timeline.length - 1].status,
+              lastUpdatedAt: '2026-12-14T10:31:00.000Z',
+              timeline
+            }
+          })
+        ]
+      })
+      const organisation = await findOrganisation(
+        repository,
+        stored.organisationNumber
+      )
+      return organisation.registrations[REPROCESSOR_NUMBER]?.accreditations[
+        toYear(2027)
+      ]?.status
+    }
+
+    it('serves its external accreditation as cancelled from the day the registration was cancelled', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const status = await findCancelledWithExternal(
+        organisationReadRepositoryWith,
+        [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+      )
+
+      expect(status).toStrictEqual({
+        current: 'cancelled',
+        lastUpdatedAt: CANCELLED_AT,
+        timeline: [
+          { status: 'approved', at: '2027-01-01T00:00:00.000Z' },
+          { status: 'cancelled', at: CANCELLED_AT }
+        ]
+      })
+    })
+
+    it('leaves out the changes the registration service records after the registration was cancelled', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const status = await findCancelledWithExternal(
+        organisationReadRepositoryWith,
+        [
+          { status: 'approved', at: '2027-01-01T00:00:00.000Z' },
+          { status: 'suspended', at: '2027-03-01T00:00:00.000Z' }
+        ]
+      )
+
+      expect(status.timeline).toStrictEqual([
+        { status: 'approved', at: '2027-01-01T00:00:00.000Z' },
+        { status: 'cancelled', at: CANCELLED_AT }
+      ])
+    })
+
+    it("cancels its external accreditation from the registration's cancellation when the registration service cancels it later", async ({
+      organisationReadRepositoryWith
+    }) => {
+      const status = await findCancelledWithExternal(
+        organisationReadRepositoryWith,
+        [
+          { status: 'approved', at: '2027-01-01T00:00:00.000Z' },
+          { status: 'cancelled', at: '2027-03-01T00:00:00.000Z' }
+        ]
+      )
+
+      expect(status).toStrictEqual({
+        current: 'cancelled',
+        lastUpdatedAt: CANCELLED_AT,
+        timeline: [
+          { status: 'approved', at: '2027-01-01T00:00:00.000Z' },
+          { status: 'cancelled', at: CANCELLED_AT }
+        ]
+      })
+    })
+
+    it('leaves out an external accreditation that starts after the registration was cancelled', async ({
+      organisationReadRepositoryWith
+    }) => {
+      const status = await findCancelledWithExternal(
+        organisationReadRepositoryWith,
+        [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }],
+        [{ status: 'cancelled', updatedAt: '2026-11-01T09:00:00.000Z' }]
+      )
+
+      expect(status).toBeUndefined()
+    })
+
+    it('serves the external accreditation as the registration service holds it once the registration is reinstated', async ({
+      organisationReadRepositoryWith
+    }) => {
+      /** @type {StatusTimeline<AccreditationStatus>} */
+      const timeline = [{ status: 'approved', at: '2027-01-01T00:00:00.000Z' }]
+
+      const status = await findCancelledWithExternal(
+        organisationReadRepositoryWith,
+        timeline,
+        [
+          { status: 'cancelled', updatedAt: CANCELLED_AT },
+          { status: 'approved', updatedAt: '2027-03-01T09:00:00.000Z' }
+        ]
+      )
+
+      expect(status).toStrictEqual({
+        current: 'approved',
+        lastUpdatedAt: '2026-12-14T10:31:00.000Z',
+        timeline
+      })
+    })
+
+    it('serves an external accreditation the registration service has already cancelled as it holds it', async ({
+      organisationReadRepositoryWith
+    }) => {
+      /** @type {StatusTimeline<AccreditationStatus>} */
+      const timeline = [
+        { status: 'approved', at: '2027-01-01T00:00:00.000Z' },
+        { status: 'cancelled', at: '2027-01-20T00:00:00.000Z' }
+      ]
+
+      const status = await findCancelledWithExternal(
+        organisationReadRepositoryWith,
+        timeline
+      )
+
+      expect(status).toStrictEqual({
+        current: 'cancelled',
+        lastUpdatedAt: '2026-12-14T10:31:00.000Z',
+        timeline
+      })
+    })
   })
 
   it('leaves out and logs an external accreditation with no status changes', async ({
