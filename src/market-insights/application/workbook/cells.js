@@ -1,6 +1,9 @@
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { CONFIDENTIAL } from '#market-insights/domain/confidential-figures.js'
-import { NOTE } from '#market-insights/domain/published-workbook-style.js'
+import {
+  NOTE,
+  WHOLE_TONNES
+} from '#market-insights/domain/published-workbook-style.js'
 import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
 
 /** @import ExcelJS from 'exceljs' */
@@ -161,7 +164,7 @@ const WHOLE_NUMBER = new Intl.NumberFormat('en-GB', {
  */
 const shownText = ({ value, numFmt }) => {
   if (typeof value === 'number') {
-    return numFmt === '#,##0' ? WHOLE_NUMBER.format(value) : String(value)
+    return numFmt === WHOLE_TONNES ? WHOLE_NUMBER.format(value) : String(value)
   }
   if (typeof value === 'string') {
     return value
@@ -174,8 +177,10 @@ const shownText = ({ value, numFmt }) => {
 
 const DEFAULT_FONT_SIZE = 11
 const EXCEL_DEFAULT_COLUMN_WIDTH = 8.43
-// ponytail: counts characters, not glyph widths; padding covers bold and wide letters.
-const WIDTH_PADDING = 2
+// Excel's width for n characters is n plus its 5-pixel cell margin, 5/7 of a character.
+const CELL_MARGIN = 5 / 7
+// ponytail: counts characters, not glyph widths; one spare character covers bold and wide letters.
+const SPARE_CHARACTERS = 1
 
 /**
  * Widens each column so every table cell in it shows its full text, so nobody
@@ -194,7 +199,10 @@ export const fitColumnsToTables = (worksheet) => {
         return
       }
       const scale = (cell.font?.size ?? DEFAULT_FONT_SIZE) / DEFAULT_FONT_SIZE
-      const needed = Math.ceil(shownText(cell).length * scale) + WIDTH_PADDING
+      const needed =
+        Math.ceil(shownText(cell).length * scale) +
+        SPARE_CHARACTERS +
+        CELL_MARGIN
       const column = worksheet.getColumn(cell.col)
       if (needed > (column.width ?? EXCEL_DEFAULT_COLUMN_WIDTH)) {
         column.width = needed

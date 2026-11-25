@@ -1,5 +1,6 @@
 import ExcelJS from 'exceljs'
 import { toYearMonth } from '#common/helpers/dates/year-month.js'
+import { WHOLE_TONNES } from '#market-insights/domain/published-workbook-style.js'
 import { fitColumnsToTables, frameOf, write } from './cells.js'
 import {
   JANUARY_TO_JUNE_2026,
@@ -32,6 +33,22 @@ describe('the frame every tab is laid out for', () => {
 })
 
 describe('fitting columns to their tables', () => {
+  it('keeps a width that ExcelJS would otherwise take for its default and drop', async () => {
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('fitted')
+    write(worksheet.getCell('A1'), 'Plastic', {
+      border: { top: { style: 'thin' } }
+    })
+    fitColumnsToTables(worksheet)
+
+    const file = new ExcelJS.Workbook()
+    await file.xlsx.load(await workbook.xlsx.writeBuffer())
+
+    expect(file.worksheets[0]?.getColumn('A').width).toBeGreaterThan(
+      'Plastic'.length
+    )
+  })
+
   /** @type {Partial<ExcelJS.Borders>} */
   const boxed = { top: { style: 'thin' } }
 
@@ -58,13 +75,16 @@ describe('fitting columns to their tables', () => {
 
   it('widens a column to show a figure as formatted', () => {
     const worksheet = fitted((sheet) => {
-      write(sheet.getCell('A1'), 12345678.9, {
+      write(sheet.getCell('A1'), 1234567.4, {
         border: boxed,
-        numFmt: '#,##0'
+        numFmt: WHOLE_TONNES
       })
     })
 
-    expect(worksheet.getColumn('A').width).toBeGreaterThan('12,345,679'.length)
+    // Longer than '1234567.4', so only the formatted figure needs this much.
+    expect(worksheet.getColumn('A').width).toBeGreaterThan(
+      '1,234,567'.length + 1
+    )
   })
 
   it('widens a column further for a larger typeface', () => {

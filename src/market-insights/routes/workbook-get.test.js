@@ -268,7 +268,9 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
         )
       const redacted = ukTabOf(await download(MARCH))
 
-      expect(redacted.map(([, value]) => value)).not.toContain('[c]')
+      const values = redacted.map(([, value]) => value)
+      expect(values.some((value) => typeof value === 'number')).toBe(true)
+      expect(values).not.toContain('[c]')
       expect(redacted).toEqual(
         ukTabOf(await download(`${MARCH}?unredacted=true`))
       )

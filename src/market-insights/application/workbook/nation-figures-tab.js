@@ -30,7 +30,6 @@ import {
   tableOf,
   UK_SCOPE,
   write,
-  writeFigure,
   writeRow
 } from './cells.js'
 
@@ -132,7 +131,7 @@ const servedMonthOf = (table, scope, month) => {
  */
 const writeFigures = (worksheet, row, values, styleOf) => {
   values.forEach((value, index) => {
-    writeFigure(worksheet.getCell(row, 2 + index), value, styleOf(value))
+    write(worksheet.getCell(row, 2 + index), value, styleOf(value))
   })
 }
 
