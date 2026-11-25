@@ -117,11 +117,11 @@ export const fetchRegistrationServiceApplications = async (
       `${config.baseUrl}/v1/organisations/${organisationNumber}/registrations/${registrationNumber}`,
       regAccredRequestOptions(config)
     )
-  } catch (error) {
-    if (Boom.isBoom(error, NOT_FOUND)) {
+  } catch (failure) {
+    if (Boom.isBoom(failure, NOT_FOUND)) {
       return null
     }
-    throw error
+    throw failure
   }
 
   const { value, error } = registrationSchema.validate(registration, {

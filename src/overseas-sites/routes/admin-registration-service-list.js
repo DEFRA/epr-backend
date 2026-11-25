@@ -82,7 +82,7 @@ const mapConcurrently = async (items, limit, fn) => {
         return
       }
       try {
-        results[index] = await fn(item)
+        results[index] = await fn(item) // NOSONAR(javascript:S9382) each worker takes its next item only once this one is done
       } catch (error) {
         failed = true
         throw error
