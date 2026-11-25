@@ -177,8 +177,10 @@ const shownText = ({ value, numFmt }) => {
 
 const DEFAULT_FONT_SIZE = 11
 const EXCEL_DEFAULT_COLUMN_WIDTH = 8.43
-// Excel's width for n characters is n plus its 5-pixel cell margin, 5/7 of a character.
-const CELL_MARGIN = 5 / 7
+// Excel's width for n characters is n plus its cell margin, in characters of its default font.
+const CELL_MARGIN_PIXELS = 5
+const CHARACTER_PIXELS = 7
+const CELL_MARGIN = CELL_MARGIN_PIXELS / CHARACTER_PIXELS
 // Counts characters, not glyph widths; one spare character covers bold and wide letters.
 const SPARE_CHARACTERS = 1
 
