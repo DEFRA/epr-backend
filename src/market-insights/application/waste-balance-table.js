@@ -14,10 +14,14 @@ import {
 } from '#domain/organisations/model.js'
 import {
   addFigures,
+  EXPORTER_AND_REPROCESSOR,
+  MERGED_ROWS,
   monthlyContribution,
   NO_FIGURES,
+  SEPARATE_ROWS,
   withNetCredit
 } from '#market-insights/domain/waste-balance-figures.js'
+import { fromFewOperators } from '#market-insights/domain/confidential-figures.js'
 import {
   countMonthlyReports,
   owedMonthlyReports
@@ -48,6 +52,7 @@ import { recordOf } from '#common/helpers/record-of.js'
  * @typedef {import('#waste-records/repository/port.js').SubmittedRowState} SubmittedRowState
  * @typedef {import('#domain/organisations/model.js').Material} Material
  * @typedef {import('#market-insights/domain/waste-balance-figures.js').MonthlyContribution} MonthlyContribution
+ * @typedef {import('#market-insights/domain/waste-balance-figures.js').WasteBalanceRowType} WasteBalanceRowType
  * @typedef {import('#market-insights/application/operator-counts.js').Contribution} Contribution
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorCounts} OperatorCounts
  * @typedef {import('#market-insights/application/operator-counts.js').OperatorsByFigure} OperatorsByFigure
@@ -74,10 +79,26 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
- * @typedef {Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures & OperatorCounts>} FiguresByAccreditationType
- * @typedef {Record<Material, FiguresByAccreditationType>} FiguresByMaterial
- * @typedef {Record<Material, Record<WasteProcessingTypeValue, OperatorCounts>>} OperatorCountsByMaterial
- * @typedef {Record<Material, Record<WasteProcessingTypeValue, PublishedWasteBalanceFigures>>} PeriodFiguresByMaterial
+ * A value for each of a material's exporter, reprocessor and merged rows.
+ *
+ * @template T
+ * @typedef {Record<WasteBalanceRowType, T>} EveryRow
+ */
+
+/**
+ * A value for each row a material is served as: either its exporter and
+ * reprocessor rows or, where those would identify an operator, the one row
+ * merging them.
+ *
+ * @template T
+ * @typedef {Partial<Record<WasteBalanceRowType, T>>} ServedRows
+ */
+
+/**
+ * @typedef {Record<Material, ServedRows<PublishedWasteBalanceFigures & OperatorCounts>>} FiguresByMaterial
+ * @typedef {Record<Material, ServedRows<OperatorCounts>>} OperatorCountsByMaterial
+ * @typedef {Record<Material, ServedRows<PublishedWasteBalanceFigures>>} PeriodFiguresByMaterial
+ * @typedef {Record<Material, readonly WasteBalanceRowType[]>} RowsByMaterial
  */
 
 /**
@@ -106,6 +127,28 @@ import { recordOf } from '#common/helpers/record-of.js'
  */
 
 /**
+ * @typedef {Object} AggregateMonth
+ * @property {ReportCount} reports
+ * @property {Record<Material, EveryRow<PublishedWasteBalanceFigures & OperatorCounts>>} figures
+ */
+
+/**
+ * @typedef {Object} AggregatePeriod
+ * @property {ReportCount} reports
+ * @property {Record<Material, EveryRow<PublishedWasteBalanceFigures>>} figures
+ * @property {Record<Material, EveryRow<OperatorCounts>>} operatorCounts
+ */
+
+/**
+ * The waste balance table before the rows that would identify an operator
+ * are merged: every material carries all three of its rows.
+ *
+ * @typedef {Object} AggregateWasteBalanceTable
+ * @property {{ generatedAt: string }} meta
+ * @property {{ months: Record<YearMonth, AggregateMonth>, period: AggregatePeriod }} data
+ */
+
+/**
  * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>} cell
  * @returns {string}
  */
@@ -120,74 +163,107 @@ const periodKey = ({ material, accreditationType }) =>
   `${material}::${accreditationType}`
 
 /**
- * The cell a contribution counts towards, and its row's whole-period total. An
- * operator counts once in each, however many sites it reports from and
- * however many months it contributes to.
+ * The rows a registration's tonnage counts towards: its own accreditation
+ * type's, and the merged row that stands in for both types where they would
+ * identify an operator.
+ *
+ * @param {ReadModelRegistration} registration
+ * @returns {Pick<WasteBalanceCell, 'material' | 'accreditationType'>[]}
+ */
+const rowsOfRegistration = ({ material, wasteProcessingType }) => [
+  { material, accreditationType: wasteProcessingType },
+  { material, accreditationType: EXPORTER_AND_REPROCESSOR }
+]
+
+/**
+ * The cells a contribution counts towards, and their rows' whole-period
+ * totals. An operator counts once in each, however many sites it reports from
+ * and however many months it contributes to, so one accredited as both
+ * exporter and reprocessor counts once in the merged row.
  *
  * @param {Contribution} contribution
+ * @returns {string[]}
  */
-const figuresOf = ({ month, registration }) => {
-  const row = {
-    material: registration.material,
-    accreditationType: registration.wasteProcessingType
+const figuresOf = ({ month, registration }) =>
+  rowsOfRegistration(registration).flatMap((row) => [
+    cellKey({ ...row, month }),
+    periodKey(row)
+  ])
+
+/** @type {readonly WasteBalanceRowType[]} */
+const EVERY_ROW = [...SEPARATE_ROWS, ...MERGED_ROWS]
+
+/**
+ * @param {Map<string, WasteBalanceCell>} cells
+ * @param {OperatorsByFigure} operators
+ * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType' | 'month'>} cell
+ * @returns {PublishedWasteBalanceFigures & OperatorCounts}
+ */
+const publishedFigure = (cells, operators, cell) => {
+  const key = cellKey(cell)
+  return {
+    ...withNetCredit(cells.get(key)?.figures ?? NO_FIGURES),
+    ...operatorCountsOf(operators, key)
   }
-  return [cellKey({ ...row, month }), periodKey(row)]
 }
 
 /**
+ * A row's figures summed across the months served, so a reader of the period
+ * never adds them up itself.
+ *
+ * @param {Map<string, WasteBalanceCell>} cells
+ * @param {YearMonth[]} months
+ * @param {Pick<WasteBalanceCell, 'material' | 'accreditationType'>} row
+ * @returns {PublishedWasteBalanceFigures}
+ */
+const periodFigure = (cells, months, row) =>
+  withNetCredit(
+    months
+      .map(
+        (month) => cells.get(cellKey({ ...row, month }))?.figures ?? NO_FIGURES
+      )
+      .reduce((sum, figures) => addFigures(sum, figures), NO_FIGURES)
+  )
+
+/**
  * The operators behind each row's whole-period total, for every material and
- * accreditation type the publication prints.
+ * row the aggregate carries.
  *
  * @param {OperatorsByFigure} operators
- * @returns {OperatorCountsByMaterial}
+ * @returns {AggregatePeriod['operatorCounts']}
  */
 const periodOperatorCounts = (operators) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
+    recordOf(EVERY_ROW, (accreditationType) =>
       operatorCountsOf(operators, periodKey({ material, accreditationType }))
     )
   )
 
 /**
- * The publication prints every material and accreditation type, so one
- * nothing reported into is still served, at zero.
+ * The publication prints every material, so one nothing reported into is
+ * still served, at zero.
  *
  * @param {Map<string, WasteBalanceCell>} cells
  * @param {OperatorsByFigure} operators
  * @param {YearMonth} month
- * @returns {FiguresByMaterial}
+ * @returns {AggregateMonth['figures']}
  */
 const publishedFigures = (cells, operators, month) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) => {
-      const key = cellKey({ material, accreditationType, month })
-      return {
-        ...withNetCredit(cells.get(key)?.figures ?? NO_FIGURES),
-        ...operatorCountsOf(operators, key)
-      }
-    })
+    recordOf(EVERY_ROW, (accreditationType) =>
+      publishedFigure(cells, operators, { material, accreditationType, month })
+    )
   )
 
 /**
- * Each row's figures summed across the months served, so a reader of the
- * period never adds them up itself.
- *
  * @param {Map<string, WasteBalanceCell>} cells
  * @param {YearMonth[]} months
- * @returns {PeriodFiguresByMaterial}
+ * @returns {AggregatePeriod['figures']}
  */
 const periodFigures = (cells, months) =>
   recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), (accreditationType) =>
-      withNetCredit(
-        months
-          .map(
-            (month) =>
-              cells.get(cellKey({ material, accreditationType, month }))
-                ?.figures ?? NO_FIGURES
-          )
-          .reduce((sum, figures) => addFigures(sum, figures), NO_FIGURES)
-      )
+    recordOf(EVERY_ROW, (accreditationType) =>
+      periodFigure(cells, months, { material, accreditationType })
     )
   )
 
@@ -296,17 +372,14 @@ const publishedContribution = (rowState, partitions) => {
  * @param {WasteBalanceFigures} figures
  */
 const foldIntoCell = (cells, registration, month, figures) => {
-  const cell = {
-    material: registration.material,
-    accreditationType: registration.wasteProcessingType,
-    month
+  for (const row of rowsOfRegistration(registration)) {
+    const cell = { ...row, month }
+    const key = cellKey(cell)
+    cells.set(key, {
+      ...cell,
+      figures: addFigures(cells.get(key)?.figures ?? NO_FIGURES, figures)
+    })
   }
-  const key = cellKey(cell)
-
-  cells.set(key, {
-    ...cell,
-    figures: addFigures(cells.get(key)?.figures ?? NO_FIGURES, figures)
-  })
 }
 
 /**
@@ -402,7 +475,8 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * period carries the sum, which says how close the figures are to publication.
  * Every figure carries how many operators were accredited for it that month,
  * and how many it includes tonnage from, and the period carries the same for
- * each row's total across its months.
+ * each row's total across its months. Every material carries its exporter and
+ * reprocessor rows and the row merging them.
  *
  * @param {Object} params
  * @param {WasteBalanceLedgerRepository} params.ledgerRepository
@@ -413,9 +487,9 @@ const warnAboutUndatedRows = (logger, { credits, deductions }) => {
  * @param {Year} params.year - the reporting year
  * @param {YearMonth[]} params.months - the reporting months of that year to publish
  * @param {Date} params.now - clock reading supplied by the caller
- * @returns {Promise<WasteBalanceTable>}
+ * @returns {Promise<AggregateWasteBalanceTable>}
  */
-export const buildWasteBalanceTable = async ({
+export const aggregateWasteBalanceTable = async ({
   ledgerRepository,
   summaryLogRowStatesRepository,
   organisationReadRepository,
@@ -489,3 +563,90 @@ export const buildWasteBalanceTable = async ({
     }
   }
 }
+
+/**
+ * @param {PublishedWasteBalanceFigures} figure
+ * @returns {boolean}
+ */
+const holdsTonnage = ({
+  totalCredited,
+  eligibleForWasteBalance,
+  sentOnDeductions,
+  netCredit
+}) =>
+  [totalCredited, eligibleForWasteBalance, sentOnDeductions, netCredit].some(
+    (tonnage) => tonnage !== 0
+  )
+
+/**
+ * Whether any month's figure in a material's exporter or reprocessor row comes
+ * from fewer than three operators. The period's operators take in every
+ * month's, so its figures can identify an operator only where a month's does.
+ *
+ * @param {AggregateWasteBalanceTable} table
+ * @param {Material} material
+ * @returns {boolean}
+ */
+const identifiesAnOperator = ({ data: { months } }, material) =>
+  SEPARATE_ROWS.some((accreditationType) =>
+    Object.values(months).some(({ figures }) => {
+      const figure = figures[material][accreditationType]
+      return fromFewOperators(figure, holdsTonnage(figure))
+    })
+  )
+
+/**
+ * @template T
+ * @param {Record<Material, EveryRow<T>>} byMaterial
+ * @param {RowsByMaterial} rows
+ * @returns {Record<Material, ServedRows<T>>}
+ */
+const onlyRows = (byMaterial, rows) =>
+  recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    recordOf(rows[material], (row) => byMaterial[material][row])
+  )
+
+/**
+ * The table as published: a material whose exporter or reprocessor figures
+ * would identify an operator is served as the one row merging the two, for
+ * the whole period, and every other material as its two separate rows. No
+ * material is a special case.
+ *
+ * @param {AggregateWasteBalanceTable} table
+ * @returns {WasteBalanceTable}
+ */
+export const mergeRowsFromFewOperators = (table) => {
+  /** @type {RowsByMaterial} */
+  const rows = recordOf(TONNAGE_MONITORING_MATERIALS, (material) =>
+    identifiesAnOperator(table, material) ? MERGED_ROWS : SEPARATE_ROWS
+  )
+  const { months, period } = table.data
+  return {
+    ...table,
+    data: {
+      months: /** @type {Record<YearMonth, PublishedMonth>} */ (
+        Object.fromEntries(
+          Object.entries(months).map(([month, published]) => [
+            month,
+            { ...published, figures: onlyRows(published.figures, rows) }
+          ])
+        )
+      ),
+      period: {
+        ...period,
+        figures: onlyRows(period.figures, rows),
+        operatorCounts: onlyRows(period.operatorCounts, rows)
+      }
+    }
+  }
+}
+
+/**
+ * The published UK Waste Balance figures for the given reporting months, as
+ * every page and workbook shows them.
+ *
+ * @param {Parameters<typeof aggregateWasteBalanceTable>[0]} params
+ * @returns {Promise<WasteBalanceTable>}
+ */
+export const buildWasteBalanceTable = async (params) =>
+  mergeRowsFromFewOperators(await aggregateWasteBalanceTable(params))
