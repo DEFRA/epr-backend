@@ -1,7 +1,7 @@
 import { portAdapter } from '#plugins/port-adapter.js'
 import { createOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
 
-/** @import { RegAccredApiConfig } from './repository/reg-accred-accreditations.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 /**
  * The MongoDB adapter for the organisation read repository. Given

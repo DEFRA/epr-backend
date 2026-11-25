@@ -34,7 +34,7 @@ import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
-/** @import { RegAccredApiConfig } from '#organisation-read-model/index.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 function getServerConfig(config) {
   return {

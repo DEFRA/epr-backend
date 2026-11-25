@@ -16,7 +16,7 @@ import { toReadModelOrganisations } from './to-read-model.js'
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */
-/** @import { RegAccredApiConfig } from './reg-accred-accreditations.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 /**
  * Loads the external accreditations for a year of the given organisation, or

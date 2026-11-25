@@ -1,21 +1,17 @@
-import { createHmac, randomBytes } from 'node:crypto'
 import Joi from 'joi'
 
 import { fetchJson } from '#common/helpers/fetch-json.js'
+import {
+  REG_ACCRED_REQUEST_TIMEOUT_MS,
+  regAccredRequestOptions
+} from '#common/helpers/reg-accred-api.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 /** @import { ExternalAccreditation, OnDrop } from './to-read-model.js' */
 /** @import { ExternalAccreditationsLoader } from './mongodb-and-reg-accred-api.js' */
-
-/**
- * @typedef {{
- *   baseUrl: string
- *   clientId: string
- *   sharedSecret: string
- * }} RegAccredApiConfig
- */
 
 /**
  * An accreditation as `GET /v1/accreditations` serves it, once validated.
@@ -29,38 +25,6 @@ import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js
  *   tonnageBand: ExternalAccreditation['prnIssuance']['tonnageBand']
  * }} RegAccredAccreditationSummary
  */
-
-/**
- * The CDP v3 HMAC headers Reg Accred authenticates callers with.
- *
- * @param {Pick<RegAccredApiConfig, 'clientId' | 'sharedSecret'>} config
- * @param {{ now?: () => Date, newNonce?: () => string }} [sources]
- * @returns {Record<string, string>}
- */
-export const signedHeaders = (
-  { clientId, sharedSecret },
-  {
-    now = () => new Date(),
-    newNonce = () => randomBytes(16).toString('base64')
-  } = {}
-) => {
-  // yyyy-MM-ddTHH:mm:ssZ (no milliseconds)
-  const timestamp = now()
-    .toISOString()
-    .replace(/\.\d{3}Z$/, 'Z')
-  const nonce = newNonce()
-  const payload = ['v3', clientId, '', '', timestamp, nonce].join('\n')
-  const signature = createHmac('sha256', sharedSecret)
-    .update(payload)
-    .digest('base64')
-
-  return {
-    'x-cdp-client-id': clientId,
-    'x-cdp-auth-timestamp': timestamp,
-    'x-cdp-auth-nonce': nonce,
-    'x-cdp-auth-signature': signature
-  }
-}
 
 /**
  * When Reg Accred's current status for an accreditation took effect. Reg
@@ -144,13 +108,6 @@ const toExternalAccreditation = (summary, loadedAt) =>
 const PAGE_LIMIT = 100
 
 /**
- * How long one page request may take before it is abandoned and the load
- * fails. Without it a slow Reg Accred holds the read for undici's 300 second
- * default on each page.
- */
-const PAGE_TIMEOUT_MS = 10_000
-
-/**
  * A page of `GET /v1/accreditations`, its items not yet validated.
  *
  * @typedef {{
@@ -183,13 +140,10 @@ const fetchEveryAccreditation = async (config, timeoutMs, year, filter) => {
       limit: String(PAGE_LIMIT)
     })
     const { items, totalItems } = /** @type {RegAccredAccreditationsPage} */ (
-      await fetchJson(`${config.baseUrl}/v1/accreditations?${query}`, {
-        headers: {
-          accept: 'application/json',
-          ...signedHeaders(config)
-        },
-        signal: AbortSignal.timeout(timeoutMs)
-      })
+      await fetchJson(
+        `${config.baseUrl}/v1/accreditations?${query}`,
+        regAccredRequestOptions(config, timeoutMs)
+      )
     )
     accreditations.push(...items)
     // An empty page ends the search even short of `totalItems`, in case
@@ -212,7 +166,14 @@ const fetchEveryAccreditation = async (config, timeoutMs, year, filter) => {
  * @returns {ExternalAccreditationsLoader}
  */
 export const createRegAccredAccreditationsLoader =
-  (config, { onDrop, now = () => new Date(), timeoutMs = PAGE_TIMEOUT_MS }) =>
+  (
+    config,
+    {
+      onDrop,
+      now = () => new Date(),
+      timeoutMs = REG_ACCRED_REQUEST_TIMEOUT_MS
+    }
+  ) =>
   async (year, organisationNumber) => {
     const accreditations = await fetchEveryAccreditation(
       config,
