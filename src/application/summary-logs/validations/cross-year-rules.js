@@ -224,7 +224,7 @@ const previousYearRowMissingData = (context) => {
       errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
       field,
       context,
-      actual: previousYearLink.previousYear[field],
+      actual: previousYearLink.previousYear[field] ?? null,
       previousYearRowId: rowId,
       deadline
     })
@@ -316,8 +316,9 @@ const checkTable = ({
 
 /**
  * The rules on a row that names a previous year's row (ADR-0060): that the
- * row exists, that it is still open, and how the linked row compares with
- * it. The field schemas know only that a row was filled in.
+ * row exists, that it is still open, that it holds what it should while it
+ * can still be corrected, and how the linked row compares with it. The field
+ * schemas know only that a row was filled in.
  *
  * @param {{
  *   parsed: ParsedSummaryLog,
