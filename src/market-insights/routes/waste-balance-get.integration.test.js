@@ -271,13 +271,16 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     const payload = JSON.parse(response.payload)
 
     const { months, period } = payload.data
-    expect(months['2026-02'].figures.plastic.reprocessor).toEqual({
-      totalCredited: 100,
-      eligibleForWasteBalance: 100,
-      sentOnDeductions: 30,
-      netCredit: 70,
-      operatorCount: 1,
-      submittingOperatorCount: 1
+    // Plastic's one operator would be identified, so its rows are merged.
+    expect(months['2026-02'].figures.plastic).toEqual({
+      exporterAndReprocessor: {
+        totalCredited: 100,
+        eligibleForWasteBalance: 100,
+        sentOnDeductions: 30,
+        netCredit: 70,
+        operatorCount: 1,
+        submittingOperatorCount: 1
+      }
     })
     expect(months['2026-02'].figures.wood.exporter).toEqual({
       totalCredited: 0,
@@ -299,15 +302,16 @@ describe(`GET ${marketInsightsWasteBalancePath} (integration)`, () => {
     expect(months['2026-01'].reports).toEqual({ expected: 1, submitted: 1 })
     expect(months['2026-02'].reports).toEqual({ expected: 1, submitted: 0 })
     expect(period.reports).toEqual({ expected: 2, submitted: 1 })
-    expect(period.figures.plastic.reprocessor).toEqual({
-      totalCredited: 100,
-      eligibleForWasteBalance: 100,
-      sentOnDeductions: 30,
-      netCredit: 70
+    expect(period.figures.plastic).toEqual({
+      exporterAndReprocessor: {
+        totalCredited: 100,
+        eligibleForWasteBalance: 100,
+        sentOnDeductions: 30,
+        netCredit: 70
+      }
     })
-    expect(period.operatorCounts.plastic.reprocessor).toEqual({
-      operatorCount: 1,
-      submittingOperatorCount: 1
+    expect(period.operatorCounts.plastic).toEqual({
+      exporterAndReprocessor: { operatorCount: 1, submittingOperatorCount: 1 }
     })
   })
 
