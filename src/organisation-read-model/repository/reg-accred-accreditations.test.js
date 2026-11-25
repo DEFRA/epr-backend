@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto'
 import { tracing } from '@defra/hapi-tracing'
 import Hapi from '@hapi/hapi'
 import { delay, http, HttpResponse } from 'msw'
@@ -9,10 +8,9 @@ import { getTracingHeaderName } from '#common/helpers/request-tracing.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupMsw } from '#vite/setup-msw.js'
 
-import {
-  createRegAccredAccreditationsLoader,
-  signedHeaders
-} from './reg-accred-accreditations.js'
+import { expectedSignature } from '#common/helpers/reg-accred-signed-headers-test-helpers.js'
+
+import { createRegAccredAccreditationsLoader } from './reg-accred-accreditations.js'
 
 const config = {
   baseUrl: 'https://reg-accred.test',
@@ -23,25 +21,6 @@ const config = {
 const ACCREDITATIONS_URL = `${config.baseUrl}/v1/accreditations`
 
 const mswServer = setupMsw()
-
-/**
- * The CDP v3 signature for the given headers, as Reg Accred checks it.
- *
- * @param {{ get: (name: string) => string | null }} headers
- */
-const expectedSignature = (headers) =>
-  createHmac('sha256', config.sharedSecret)
-    .update(
-      [
-        'v3',
-        headers.get('x-cdp-client-id'),
-        '',
-        '',
-        headers.get('x-cdp-auth-timestamp'),
-        headers.get('x-cdp-auth-nonce')
-      ].join('\n')
-    )
-    .digest('base64')
 
 /** A reprocessor accreditation as Reg Accred serves it. */
 const validItem = {
@@ -141,42 +120,6 @@ const loadFor = (
       ? undefined
       : toOrganisationNumber(organisationNumber)
   )
-
-describe('signedHeaders', () => {
-  it("matches the worked example in Reg Accred's onboarding guide", () => {
-    // From "Worked example (not a real credential)" in
-    // DEFRA/epr-register-enrol-backend docs/reex-api-onboarding.md
-    const headers = signedHeaders(
-      { clientId: 'example-client', sharedSecret: 'example-secret-do-not-use' },
-      {
-        now: () => new Date('2027-01-15T10:30:00Z'),
-        newNonce: () => 'bm9uY2UtZXhhbXBsZS0wMDAx'
-      }
-    )
-
-    expect(headers).toStrictEqual({
-      'x-cdp-client-id': 'example-client',
-      'x-cdp-auth-timestamp': '2027-01-15T10:30:00Z',
-      'x-cdp-auth-nonce': 'bm9uY2UtZXhhbXBsZS0wMDAx', // gitleaks:allow
-      'x-cdp-auth-signature': 'mJPc+QOEbTNBzB60Pj2NjSOy8bOYmvoCjCwPQS2CSTk=' // gitleaks:allow
-    })
-  })
-
-  it('leaves the milliseconds out of the timestamp', () => {
-    const headers = signedHeaders(config, {
-      now: () => new Date('2027-01-02T03:04:05.678Z')
-    })
-
-    expect(headers['x-cdp-auth-timestamp']).toBe('2027-01-02T03:04:05Z')
-  })
-
-  it('signs each request with a new nonce', () => {
-    const first = signedHeaders(config)
-    const second = signedHeaders(config)
-
-    expect(first['x-cdp-auth-nonce']).not.toBe(second['x-cdp-auth-nonce'])
-  })
-})
 
 describe('createRegAccredAccreditationsLoader', () => {
   it("serves an organisation's 2027 accreditations from Reg Accred as external accreditations", async () => {
@@ -367,7 +310,9 @@ describe('createRegAccredAccreditationsLoader', () => {
 
     const [{ headers }] = received
     expect(headers.get('x-cdp-client-id')).toBe('epr-ReEx-Client')
-    expect(headers.get('x-cdp-auth-signature')).toBe(expectedSignature(headers))
+    expect(headers.get('x-cdp-auth-signature')).toBe(
+      expectedSignature(headers, config.sharedSecret)
+    )
     expect(headers.has('x-api-key')).toBe(false)
   })
 

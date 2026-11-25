@@ -1,24 +1,17 @@
-import { createHmac, randomBytes } from 'node:crypto'
 import Joi from 'joi'
 
 import { fetchJson } from '#common/helpers/fetch-json.js'
+import { signedHeaders } from '#common/helpers/reg-accred-signed-headers.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-signed-headers.js' */
 /** @import { ExternalAccreditation, OnDrop } from './to-read-model.js' */
 /** @import { ExternalAccreditationsLoader } from './mongodb-and-reg-accred-api.js' */
 
 /** The only year Reg Accred holds accreditations for. */
 export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
-
-/**
- * @typedef {{
- *   baseUrl: string
- *   clientId: string
- *   sharedSecret: string
- * }} RegAccredApiConfig
- */
 
 /**
  * An accreditation as `GET /v1/accreditations` serves it, once validated.
@@ -32,38 +25,6 @@ export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
  *   tonnageBand: ExternalAccreditation['prnIssuance']['tonnageBand']
  * }} RegAccredAccreditationSummary
  */
-
-/**
- * The CDP v3 HMAC headers Reg Accred authenticates callers with.
- *
- * @param {Pick<RegAccredApiConfig, 'clientId' | 'sharedSecret'>} config
- * @param {{ now?: () => Date, newNonce?: () => string }} [sources]
- * @returns {Record<string, string>}
- */
-export const signedHeaders = (
-  { clientId, sharedSecret },
-  {
-    now = () => new Date(),
-    newNonce = () => randomBytes(16).toString('base64')
-  } = {}
-) => {
-  // yyyy-MM-ddTHH:mm:ssZ (no milliseconds)
-  const timestamp = now()
-    .toISOString()
-    .replace(/\.\d{3}Z$/, 'Z')
-  const nonce = newNonce()
-  const payload = ['v3', clientId, '', '', timestamp, nonce].join('\n')
-  const signature = createHmac('sha256', sharedSecret)
-    .update(payload)
-    .digest('base64')
-
-  return {
-    'x-cdp-client-id': clientId,
-    'x-cdp-auth-timestamp': timestamp,
-    'x-cdp-auth-nonce': nonce,
-    'x-cdp-auth-signature': signature
-  }
-}
 
 /**
  * When Reg Accred's current status for an accreditation took effect. Reg
