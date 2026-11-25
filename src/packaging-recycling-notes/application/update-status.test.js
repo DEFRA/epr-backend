@@ -29,6 +29,7 @@ import {
   DEFAULT_REG_NUMBER,
   DEFAULT_REPORT_START_DATE
 } from '#reports/repository/contract/test-data.js'
+import { whileRegAccredIsDown } from '#organisation-read-model/test-support.js'
 import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
 import { createOnPrnCancelled } from '#reports/application/prn-cancellation-events.js'
 import { createDraftReport } from '#vite/helpers/create-draft-report.js'
@@ -531,6 +532,31 @@ describe('updatePrnStatus', () => {
       expect(await readBalance(repositories.wasteBalanceService)).toMatchObject(
         { amount: 925, availableAmount: 1000 }
       )
+    })
+
+    it("issues a PRN while the Registration and Accreditation service is down, reading only its accreditation's year", async () => {
+      const repositories = seedRepositories({
+        prn: buildPrn({
+          tonnage: 75,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: []
+          }
+        }),
+        balance: { amount: 1000, availableAmount: 1000 }
+      })
+
+      await callUpdate({
+        ...repositories,
+        organisationReadRepository: whileRegAccredIsDown(
+          repositories.organisationReadRepository
+        ),
+        newStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+        actor: PRN_ACTOR.SIGNATORY
+      })
+
+      const reread = await repositories.prnRepository.findById(PRN_ID)
+      expect(reread?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
     })
 
     it('throws conflict and leaves the balance untouched when the tonnage exceeds the total balance', async () => {

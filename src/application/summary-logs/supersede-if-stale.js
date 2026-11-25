@@ -90,6 +90,7 @@ const committableAs = async ({
   const submittedLog = /** @type {SubmittedSummaryLog} */ (summaryLog)
   const { context } = await summaryLogContextOf({
     ledgerRepository,
+    organisationReadRepository,
     summaryLog: submittedLog,
     registration: await registrationForSummaryLog(
       organisationReadRepository,

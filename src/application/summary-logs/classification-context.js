@@ -3,15 +3,18 @@ import {
   linksYears,
   tableSchemasOf
 } from '#domain/summary-logs/table-schemas/index.js'
+import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
 import { latestSubmittedSummaryLog } from '#waste-balances/application/latest-submitted-summary-log.js'
 import {
   classificationContextOf,
-  previousYearAccreditationOf,
   validityOf
 } from '#waste-balances/application/read-model-accreditations.js'
 import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 
+/** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ProcessingType } from '#domain/summary-logs/meta-fields.js' */
+/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { SummaryLogFileId } from '#domain/summary-logs/ids.js' */
 /** @import { RowClassificationContext } from '#waste-balances/domain/waste-balance-classification.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */
@@ -39,11 +42,37 @@ import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 /**
  * @typedef {{
  *   ledgerRepository: WasteBalanceLedgerRepository,
+ *   organisationReadRepository: OrganisationReadRepository,
  *   summaryLog: Pick<SubmittedSummaryLog, 'organisationNumber' | 'registrationNumber' | 'accreditationNumber' | 'year'>,
  *   registration: SummaryLogRegistration,
  *   processingType: ProcessingType
  * }} SummaryLogContextParams
  */
+
+/**
+ * The accreditation the registration held in `year`, read for that year alone.
+ *
+ * @param {{
+ *   organisationReadRepository: OrganisationReadRepository,
+ *   organisationNumber: OrganisationNumber,
+ *   registrationNumber: RegistrationNumber,
+ *   year: Year
+ * }} params
+ */
+const accreditationHeldIn = async ({
+  organisationReadRepository,
+  organisationNumber,
+  registrationNumber,
+  year
+}) => {
+  const organisation =
+    await organisationReadRepository.findByOrganisationNumber(
+      organisationNumber,
+      { year }
+    )
+  const registration = organisation?.registrations[registrationNumber]
+  return (registration && accreditationForYear(registration, year)) ?? null
+}
 
 /**
  * @param {WasteBalanceLedgerRepository} ledgerRepository
@@ -71,6 +100,7 @@ const latestSubmissionIn = async (ledgerRepository, ledgerId) => {
  */
 const previousYearOf = async ({
   ledgerRepository,
+  organisationReadRepository,
   summaryLog,
   registration
 }) => {
@@ -90,10 +120,12 @@ const previousYearOf = async ({
     }
   }
 
-  const accreditation = previousYearAccreditationOf(
-    registration.registration,
-    summaryLog.year
-  )
+  const accreditation = await accreditationHeldIn({
+    organisationReadRepository,
+    organisationNumber: summaryLog.organisationNumber,
+    registrationNumber: registration.registrationNumber,
+    year
+  })
   const previousYearSubmission =
     accreditation &&
     (await latestSubmissionIn(ledgerRepository, {

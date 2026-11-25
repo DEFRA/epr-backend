@@ -318,6 +318,7 @@ const runValidationChecks = async (
   const { context: classificationContext, previousYearSubmission } =
     await summaryLogContextOf({
       ledgerRepository,
+      organisationReadRepository,
       summaryLog,
       registration,
       processingType: meta.PROCESSING_TYPE

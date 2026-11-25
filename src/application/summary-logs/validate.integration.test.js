@@ -13,7 +13,10 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createInMemoryOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import {
+  approvedStatusFrom,
+  createInMemoryOrganisationReadRepository
+} from '#organisation-read-model/test-support.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -118,12 +121,14 @@ describe('SummaryLogsValidator integration', () => {
       (/** @type {any} */ candidate) =>
         candidate.accreditationNumber === accreditationNumber
     )
-    const at = `${year}-01-01T00:00:00.000Z`
+    const approved = approvedStatusFrom(`${year}-01-01`)
     return createInMemoryOrganisationReadRepository([
       /** @type {any} */ ({
         organisationNumber,
         registrations: {
           [registrationNumber]: {
+            status: approved,
+            standingByDate: {},
             wasteProcessingType,
             ...(reprocessingType && { reprocessingType }),
             ...(wasteProcessingType === 'exporter' && { overseasSites: {} }),
@@ -132,10 +137,7 @@ describe('SummaryLogsValidator integration', () => {
               ? {
                   [year]: {
                     accreditationNumber,
-                    status: {
-                      current: 'approved',
-                      timeline: [{ status: 'approved', at, updatedAt: at }]
-                    },
+                    status: approved,
                     ...(wasteProcessingType === 'exporter' && {
                       overseasSites: {}
                     }),
