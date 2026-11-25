@@ -194,10 +194,11 @@ export const testFindPeriodicReportBehaviour = (it) => {
       })
     })
 
-    it('throws on missing required params', async () => {
+    it('throws when registrationNumber is missing', async () => {
       await expect(
         repository.findPeriodicReport({
-          organisationNumber: DEFAULT_ORG_NUMBER
+          organisationNumber: DEFAULT_ORG_NUMBER,
+          year: DEFAULT_REPORT_YEAR
         })
       ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
