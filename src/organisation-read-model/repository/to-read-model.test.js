@@ -11,6 +11,8 @@ import {
 } from './contract/organisation-read-test-helpers.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 import { toYear } from '#common/helpers/dates/year.js'
+import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { buildExternalAccreditationFor } from './contract/test-data.js'
 
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 
@@ -150,5 +152,45 @@ describe('toReadModelOrganisations', () => {
       lastUpdatedAt: '2026-10-14T14:30:47.204Z',
       timeline: [{ status: 'approved', at: '2026-01-01T00:00:00.000Z' }]
     })
+  })
+
+  it('serves no stored accreditation for a year whose external accreditation the registration cancellation leaves out', async () => {
+    const granted2026 = accreditation()
+    const organisation = buildOrganisation({
+      registrations: [
+        reprocessor({
+          accreditationId: granted2026.id,
+          statusHistory: [
+            ...approvedSince('2026-02-01T09:00:00.000Z'),
+            { status: 'cancelled', updatedAt: '2026-03-01T09:00:00.000Z' }
+          ]
+        })
+      ],
+      accreditations: [granted2026]
+    })
+    const stored = await createInMemoryOrganisationsRepository([
+      partialMock(organisation)
+    ])().findById(organisation.id)
+
+    const [served] = await toReadModelOrganisations(
+      [stored],
+      [
+        buildExternalAccreditationFor(organisation, {
+          registrationNumber: toRegistrationNumber(REPROCESSOR_NUMBER),
+          year: toYear(2026),
+          status: {
+            current: 'approved',
+            lastUpdatedAt: '2026-05-14T10:31:00.000Z',
+            timeline: [{ status: 'approved', at: '2026-06-01T00:00:00.000Z' }]
+          }
+        })
+      ],
+      {
+        overseasSitesRepository: { findByIds: async () => [] },
+        logger: { warn: () => {} }
+      }
+    )
+
+    expect(served.registrations[REPROCESSOR_NUMBER].accreditations).toEqual({})
   })
 })

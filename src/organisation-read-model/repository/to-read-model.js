@@ -248,13 +248,16 @@ export function toLinkedDefraOrganisation(linked) {
 }
 
 /**
- * A registration's stored and external accreditations by year.
+ * A registration's stored and external accreditations by year. A year the
+ * registration service holds is never served from a stored accreditation, even
+ * when the registration's cancellation leaves the external one out.
  *
  * @param {{
  *   registration: StoredRegistration
  *   organisation: StoredOrganisation
  *   context: Context
  *   externalAccreditations: Record<Year, AccreditationCommon>
+ *   registrationStatus: Status<RegistrationStatus>
  * }} options
  * @returns {Record<Year, AccreditationCommon>}
  */
@@ -262,16 +265,22 @@ function accreditationsOf({
   registration,
   organisation,
   context,
-  externalAccreditations
+  externalAccreditations,
+  registrationStatus
 }) {
+  const stored = keyedRecords(
+    accreditationsForRegistration(registration, organisation),
+    (accreditation) => toAccreditationEntry(accreditation, context),
+    `Registration ${registration.registrationNumber} accreditation year`,
+    context.onDrop
+  )
   return {
-    ...keyedRecords(
-      accreditationsForRegistration(registration, organisation),
-      (accreditation) => toAccreditationEntry(accreditation, context),
-      `Registration ${registration.registrationNumber} accreditation year`,
-      context.onDrop
+    ...Object.fromEntries(
+      Object.entries(stored).filter(
+        ([year]) => !(year in externalAccreditations)
+      )
     ),
-    ...externalAccreditations
+    ...withRegistrationCancellation(externalAccreditations, registrationStatus)
   }
 }
 
@@ -325,10 +334,9 @@ function toRegistrationEntry(
     registration,
     organisation,
     context,
-    externalAccreditations: withRegistrationCancellation(
+    externalAccreditations:
       externalByRegistration.get(registrationNumber) ?? {},
-      registrationStatus
-    )
+    registrationStatus
   })
 
   /** @type {RegistrationCommon} */
