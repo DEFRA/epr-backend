@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { delay, http, HttpResponse } from 'msw'
+import { onTestFinished } from 'vitest'
 
 import { expectedSignature } from '#common/helpers/reg-accred-api-test-helpers.js'
 import {
@@ -448,6 +449,7 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
       .mockImplementation(() =>
         AbortSignal.abort(new DOMException('', 'TimeoutError'))
       )
+    onTestFinished(() => timeout.mockRestore())
     mswServer.use(
       http.get(REGISTRATION_URL, () => HttpResponse.json(alphaRegistration))
     )
@@ -457,7 +459,6 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
 
     expect(timeout).toHaveBeenCalledWith(10_000)
     expect(response.statusCode).toBe(StatusCodes.BAD_GATEWAY)
-    timeout.mockRestore()
   })
 
   it('answers 503 when the connection to the registration service has no shared secret', async () => {
