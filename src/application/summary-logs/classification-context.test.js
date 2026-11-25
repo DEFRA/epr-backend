@@ -12,7 +12,9 @@ import {
   buildReadAccreditation,
   buildReadExporterAccreditation,
   buildReadExporterRegistration,
-  buildReadReprocessorRegistration
+  buildReadOrganisation,
+  buildReadReprocessorRegistration,
+  createInMemoryOrganisationReadRepository
 } from '#organisation-read-model/test-support.js'
 import { validityOf } from '#waste-balances/application/read-model-accreditations.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
@@ -80,6 +82,12 @@ const contextFor = ({
     ledgerRepository: createInMemoryLedgerRepository(
       /** @type {LedgerEvent[]} */ (events.map((event) => partialMock(event)))
     )(),
+    organisationReadRepository: createInMemoryOrganisationReadRepository([
+      buildReadOrganisation({
+        organisationNumber,
+        registrations: { [registrationNumber]: registration }
+      })
+    ])(),
     summaryLog: {
       organisationNumber,
       registrationNumber,
@@ -171,6 +179,22 @@ describe('summaryLogContextOf', () => {
       previousYearPosition: null
     })
     expect(previousYearSubmission).toBeNull()
+  })
+
+  it('gives a 2027 accredited exporter whose registration was first approved in 2027 no 2026 accreditation', async () => {
+    const { context } = await contextFor({
+      year: YEAR,
+      processingType: PROCESSING_TYPES.EXPORTER,
+      registration: buildReadExporterRegistration({
+        status: approvedStatusFrom(`${YEAR}-01-01`),
+        accreditations: accreditationsByYear(ACCREDITATION_2027)
+      })
+    })
+
+    expect(context).toMatchObject({
+      previousYearAccreditation: null,
+      previousYearPosition: null
+    })
   })
 
   it('gives a 2027 registered-only exporter the 2026 registered-only position and no 2026 accreditation', async () => {

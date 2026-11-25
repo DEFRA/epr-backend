@@ -119,11 +119,17 @@ describe('SummaryLogsValidator integration', () => {
         candidate.accreditationNumber === accreditationNumber
     )
     const at = `${year}-01-01T00:00:00.000Z`
+    const approved = {
+      current: 'approved',
+      timeline: [{ status: 'approved', at, updatedAt: at }]
+    }
     return createInMemoryOrganisationReadRepository([
       /** @type {any} */ ({
         organisationNumber,
         registrations: {
           [registrationNumber]: {
+            status: approved,
+            standingByDate: {},
             wasteProcessingType,
             ...(reprocessingType && { reprocessingType }),
             ...(wasteProcessingType === 'exporter' && { overseasSites: {} }),
@@ -132,10 +138,7 @@ describe('SummaryLogsValidator integration', () => {
               ? {
                   [year]: {
                     accreditationNumber,
-                    status: {
-                      current: 'approved',
-                      timeline: [{ status: 'approved', at, updatedAt: at }]
-                    },
+                    status: approved,
                     ...(wasteProcessingType === 'exporter' && {
                       overseasSites: {}
                     }),

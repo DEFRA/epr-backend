@@ -41,7 +41,8 @@ export const registrationForSummaryLog = async (
   }
   const organisation =
     await organisationReadRepository.findByOrganisationNumber(
-      organisationNumber
+      organisationNumber,
+      { year }
     )
   if (!organisation) {
     throw Boom.notFound(
