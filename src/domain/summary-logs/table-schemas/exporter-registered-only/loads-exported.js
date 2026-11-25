@@ -15,7 +15,9 @@ import {
   DROPDOWN_PLACEHOLDER,
   MESSAGES,
   BASEL_CODES,
+  isAnswered,
   isDateNoLaterThan,
+  unansweredOf,
   isNo,
   isYes
 } from '../shared/index.js'
@@ -118,6 +120,20 @@ const loadExportedCompletionsOf = (row, year) => {
     : []
 }
 
+/**
+ * @param {Record<string, unknown>} row
+ * @returns {string[]}
+ */
+const loadExportedMissingFieldsOf = (row) =>
+  unansweredOf(row, [
+    ...(isAnswered(row[FIELDS.DATE_OF_EXPORT])
+      ? [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED, FIELDS.OSR_ID]
+      : []),
+    ...(isAnswered(row[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED])
+      ? [FIELDS.DATE_OF_EXPORT]
+      : [])
+  ])
+
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
   linking: {
@@ -127,7 +143,8 @@ export const LOADS_EXPORTED_2027 = {
       FIELDS.WAS_THE_WASTE_STOPPED,
       FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
     ],
-    completionsOf: loadExportedCompletionsOf
+    completionsOf: loadExportedCompletionsOf,
+    missingFieldsOf: loadExportedMissingFieldsOf
   },
   requiredHeaders: [
     ...LOADS_EXPORTED.requiredHeaders,

@@ -14,7 +14,7 @@ export {
   YES_NO_VALUES,
   DROPDOWN_PLACEHOLDER
 } from './joi-messages.js'
-export { isAnswered, isNo, isYes } from './answers.js'
+export { isAnswered, isNo, isYes, unansweredOf } from './answers.js'
 export {
   areNumbersEqual,
   isProductCorrect,

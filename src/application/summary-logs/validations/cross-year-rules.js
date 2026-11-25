@@ -5,6 +5,10 @@ import {
 } from '#common/enums/validation.js'
 import { previousYear } from '#common/helpers/dates/year.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import {
+  isBeforeCorrectionDeadline,
+  lastCorrectionDay
+} from '#domain/summary-logs/correction-deadline.js'
 import { isHeaderDescriptionRow } from '#domain/summary-logs/markers.js'
 import {
   PREVIOUS_YEAR_LINK_STATUS,
@@ -25,6 +29,7 @@ import {
 } from './data-syntax.js'
 
 /** @import {Schema} from 'joi' */
+/** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema, YearLinking} from '#domain/summary-logs/table-schemas/index.js' */
@@ -82,7 +87,8 @@ const coerced = (schema, value) => schema.validate(value).value
  *   field: string,
  *   context: LinkedRowContext<PreviousYearLink>,
  *   actual: unknown,
- *   previousYearRowId?: string
+ *   previousYearRowId?: string,
+ *   deadline?: CalendarDate
  * }} params
  * @returns {ValidationIssue}
  */
@@ -91,7 +97,8 @@ const toPreviousYearLinkIssue = ({
   field,
   context,
   actual,
-  previousYearRowId
+  previousYearRowId,
+  deadline
 }) => {
   const { headerToIndexMap, tableName, rowNumber, location } =
     context.issueLocation
@@ -112,7 +119,8 @@ const toPreviousYearLinkIssue = ({
       actual,
       expected: previousYear(context.options.summaryLogYear),
       errorCode,
-      ...(previousYearRowId && { previousYearRowId })
+      ...(previousYearRowId && { previousYearRowId }),
+      ...(deadline && { deadline })
     }
   }
 }
@@ -203,10 +211,31 @@ const previousYearRowComplete = (context) => {
     )
 }
 
+/** @type {FoundLinkRule} */
+const previousYearRowMissingData = (context) => {
+  const { previousYearLink, linking, options } = context
+  const { year, rowId } = previousYearLink.link
+  if (!isBeforeCorrectionDeadline(year, options, options.createdAt)) {
+    return []
+  }
+  const deadline = lastCorrectionDay(year, options)
+  return linking.missingFieldsOf(previousYearLink.previousYear).map((field) =>
+    toPreviousYearLinkIssue({
+      errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
+      field,
+      context,
+      actual: previousYearLink.previousYear[field],
+      previousYearRowId: rowId,
+      deadline
+    })
+  )
+}
+
 /** @type {readonly FoundLinkRule[]} */
 const FOUND_LINK_RULES = Object.freeze([
   earlierYearDates,
-  previousYearRowComplete
+  previousYearRowComplete,
+  previousYearRowMissingData
 ])
 
 /**

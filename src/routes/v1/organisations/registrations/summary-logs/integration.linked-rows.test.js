@@ -922,6 +922,43 @@ describe('2027 rows linked to a 2026 row', () => {
       ])
     })
 
+    it('rejects a link to a 2026 row with no supplier name, on that cell, ignoring the one typed in 2027', async () => {
+      uploadOn('2027-01-20T10:00:00.000Z')
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log({ supplierName: null })
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([linkedRow({ supplierName: 'Supplier 2027 Ltd' })])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        {
+          code: 'PREVIOUS_YEAR_LINK',
+          errorCode: 'PREVIOUS_YEAR_ROW_MISSING_DATA',
+          actual: null,
+          expected: 2026,
+          previousYearRowId: '1500',
+          deadline: '2027-02-27',
+          location: expect.objectContaining({
+            rowId: '1001',
+            header: 'SUPPLIER_NAME'
+          })
+        }
+      ])
+      expect(
+        await storedRow(env, ledgerIdOf(env), 'log-2027', '1001')
+      ).toBeUndefined()
+    })
+
     it('rejects a row that names a 2026 row but has no row ID', async () => {
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
@@ -1181,6 +1218,37 @@ describe('2027 rows linked to a 2026 row', () => {
           })
         })
       ])
+    })
+
+    it('rejects a link to a 2026 export with no overseas reprocessor ID, until the registered-only correction deadline', async () => {
+      uploadOn('2027-03-20T10:00:00.000Z')
+      const env = await setupWith2026Row({ OSR_ID: null })
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        registeredOnly2027Log()
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        expect.objectContaining({
+          code: 'PREVIOUS_YEAR_LINK',
+          errorCode: 'PREVIOUS_YEAR_ROW_MISSING_DATA',
+          previousYearRowId: '2001',
+          deadline: '2027-03-20',
+          location: expect.objectContaining({ rowId: '2002', header: 'OSR_ID' })
+        })
+      ])
+      expect(
+        await storedRow(
+          env,
+          ledgerIdOf({ ...env, accreditationNumber: null }),
+          'log-2027',
+          '2002'
+        )
+      ).toBeUndefined()
     })
 
     it.each([

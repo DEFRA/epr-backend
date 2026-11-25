@@ -58,7 +58,9 @@ const tableSchemas = {
               }
             ]
           : [])
-      ]
+      ],
+      /** @param {Record<string, unknown>} row */
+      missingFieldsOf: (row) => (row.OSR_NAME ? [] : ['OSR_NAME'])
     },
     validationSchema: Joi.object({
       ROW_ID: Joi.number(),
@@ -81,6 +83,7 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
  *   dateOfExport: unknown,
  *   previousYearDateOfExport?: unknown,
  *   suppliedFields?: string[],
+ *   previousYearOsrName?: string | null,
  *   previousYearCompletion?: Record<string, unknown>,
  *   dateReceivedByOsr?: string
  * }} row
@@ -91,6 +94,7 @@ const filledInRow = ({
   dateOfExport,
   previousYearDateOfExport = '2026-11-01',
   suppliedFields = ['DATE_OF_EXPORT'],
+  previousYearOsrName = 'Overseas 2026 Ltd',
   previousYearCompletion = {},
   dateReceivedByOsr
 }) => {
@@ -98,7 +102,7 @@ const filledInRow = ({
   const previousYear = {
     ROW_ID: 1500,
     DATE_OF_EXPORT: previousYearDateOfExport,
-    OSR_NAME: 'Overseas 2026 Ltd',
+    OSR_NAME: previousYearOsrName,
     ...previousYearCompletion
   }
   const values = [
@@ -141,11 +145,11 @@ const unmatchedRow = ({ rowNumber = 8, rowId = 1001, previousYearRowId }) => ({
 
 /**
  * @param {{ row: number, rowId: string, column: string, header: string }} cell
- * @param {{ errorCode: string, actual: unknown, previousYearRowId?: string }} issue
+ * @param {{ errorCode: string, actual: unknown, previousYearRowId?: string, deadline?: string }} issue
  */
 const previousYearLinkIssue = (
   cell,
-  { errorCode, actual, previousYearRowId }
+  { errorCode, actual, previousYearRowId, deadline }
 ) => ({
   category: VALIDATION_CATEGORY.BUSINESS,
   severity: VALIDATION_SEVERITY.FATAL,
@@ -156,7 +160,8 @@ const previousYearLinkIssue = (
     actual,
     expected: 2026,
     errorCode,
-    ...(previousYearRowId && { previousYearRowId })
+    ...(previousYearRowId && { previousYearRowId }),
+    ...(deadline && { deadline })
   }
 })
 
@@ -452,6 +457,90 @@ describe('checkCrossYearRules', () => {
             createdAt: new Date('2027-06-01T00:00:00.000Z')
           }
         )
+      ).toHaveLength(1)
+    })
+  })
+
+  describe('a previous year row missing data it should already hold', () => {
+    const missingOsrName = filledInRow({
+      dateOfExport: '2026-11-01',
+      previousYearOsrName: null
+    })
+
+    it("rejects the row on the missing column's cell, showing the previous year's blank", () => {
+      expect(check([missingOsrName])).toStrictEqual([
+        previousYearLinkIssue(
+          { row: 8, rowId: '1001', column: 'E', header: 'OSR_NAME' },
+          {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
+            actual: null,
+            previousYearRowId: '1500',
+            deadline: '2027-02-27'
+          }
+        )
+      ])
+    })
+
+    it('accepts a previous year row holding everything it should', () => {
+      expect(
+        check([filledInRow({ dateOfExport: '2026-11-01' })])
+      ).toStrictEqual([])
+    })
+
+    it('rejects alongside a link to a complete row', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearOsrName: null,
+            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+          })
+        ]).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([
+        VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR,
+        VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA
+      ])
+    })
+
+    it.each([
+      ['accredited', false, '2027-02-27T23:59:59.000Z', '2027-02-27'],
+      ['registered-only', true, '2027-03-20T23:59:59.000Z', '2027-03-20']
+    ])(
+      'rejects %s uploads on the last correction day',
+      (_, registeredOnly, createdAt, deadline) => {
+        expect(
+          check([missingOsrName], {
+            ...BEFORE_2026_CORRECTION_DEADLINE,
+            registeredOnly,
+            createdAt: new Date(createdAt)
+          }).map(({ context }) => context?.deadline)
+        ).toStrictEqual([deadline])
+      }
+    )
+
+    it.each([
+      ['accredited', false, '2027-02-28T00:00:00.000Z'],
+      ['registered-only', true, '2027-03-21T00:00:00.000Z']
+    ])(
+      'accepts %s uploads the day after the correction deadline',
+      (_, registeredOnly, createdAt) => {
+        expect(
+          check([missingOsrName], {
+            ...BEFORE_2026_CORRECTION_DEADLINE,
+            registeredOnly,
+            createdAt: new Date(createdAt)
+          })
+        ).toStrictEqual([])
+      }
+    )
+
+    it('rejects a registered-only upload after the accredited deadline', () => {
+      expect(
+        check([missingOsrName], {
+          ...BEFORE_2026_CORRECTION_DEADLINE,
+          registeredOnly: true,
+          createdAt: new Date('2027-03-01T09:00:00.000Z')
+        })
       ).toHaveLength(1)
     })
   })

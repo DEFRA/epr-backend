@@ -11,6 +11,14 @@ const NO = YES_NO_VALUES.NO.toLowerCase()
 export const isAnswered = (value) => isFilled(value, DROPDOWN_PLACEHOLDER)
 
 /**
+ * @param {Record<string, unknown>} row
+ * @param {readonly string[]} fields
+ * @returns {string[]}
+ */
+export const unansweredOf = (row, fields) =>
+  fields.filter((field) => !isAnswered(row[field]))
+
+/**
  * Whether a Yes/No field answers Yes, ignoring case and surrounding whitespace.
  *
  * Shared so that everything reading the same column — waste-balance

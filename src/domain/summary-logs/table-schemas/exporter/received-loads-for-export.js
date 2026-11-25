@@ -19,6 +19,7 @@ import {
   isYes,
   isAnswered,
   isDateNoLaterThan,
+  unansweredOf,
   YES_NO_VALUES
 } from '../shared/index.js'
 import {
@@ -388,6 +389,32 @@ const receivedLoadCompletionsOf = (row, year) => [
     : [])
 ]
 
+const KNOWN_ON_EVERY_PREVIOUS_YEAR_ROW = [
+  FIELDS.SUPPLIER_NAME,
+  FIELDS.SUPPLIER_ADDRESS,
+  FIELDS.SUPPLIER_POSTCODE,
+  FIELDS.SUPPLIER_EMAIL,
+  FIELDS.SUPPLIER_PHONE_NUMBER,
+  FIELDS.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER,
+  FIELDS.DATE_RECEIVED_FOR_EXPORT,
+  FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
+  FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
+  FIELDS.TONNAGE_RECEIVED_FOR_EXPORT
+]
+
+/**
+ * @param {Record<string, unknown>} row
+ * @returns {string[]}
+ */
+const receivedLoadMissingFieldsOf = (row) =>
+  unansweredOf(row, [
+    ...KNOWN_ON_EVERY_PREVIOUS_YEAR_ROW,
+    ...(isAnswered(row[FIELDS.DATE_OF_EXPORT]) ? [FIELDS.OSR_ID] : []),
+    ...(isAnswered(row[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED])
+      ? [FIELDS.DATE_OF_EXPORT]
+      : [])
+  ])
+
 export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
   ...RECEIVED_LOADS_FOR_EXPORT,
   linking: {
@@ -417,7 +444,8 @@ export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
       FIELDS.BILL_OF_LANDING_REFERENCE_NUMBER,
       FIELDS.CUSTOMS_DECLARATION_NUMBER
     ],
-    completionsOf: receivedLoadCompletionsOf
+    completionsOf: receivedLoadCompletionsOf,
+    missingFieldsOf: receivedLoadMissingFieldsOf
   },
   requiredHeaders: [
     ...RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,
