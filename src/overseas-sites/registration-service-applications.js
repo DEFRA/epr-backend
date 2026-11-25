@@ -117,22 +117,22 @@ export const fetchRegistrationServiceApplications = async (
       `${config.baseUrl}/v1/organisations/${organisationNumber}/registrations/${registrationNumber}`,
       regAccredRequestOptions(config)
     )
-  } catch (failure) {
-    if (Boom.isBoom(failure, NOT_FOUND)) {
+  } catch (error) {
+    if (Boom.isBoom(error, NOT_FOUND)) {
       return null
     }
-    throw failure
+    throw error
   }
 
-  const { value, error } = registrationSchema.validate(registration, {
+  const { value, error: mismatch } = registrationSchema.validate(registration, {
     context: {
       organisationNumber: Number(organisationNumber),
       registrationNumber
     }
   })
-  if (error) {
+  if (mismatch) {
     throw new Error(
-      `The registration service served registration ${registrationNumber} in a shape it does not publish: ${error.message}`
+      `The registration service served registration ${registrationNumber} in a shape it does not publish: ${mismatch.message}`
     )
   }
   return value.applications
