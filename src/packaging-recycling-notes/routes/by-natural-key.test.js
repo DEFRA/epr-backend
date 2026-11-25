@@ -272,12 +272,32 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: issued.obligationYear,
+        obligation: { year: issued.obligationYear, allowedYears: [2026] },
         createdAt: '2026-04-01T10:00:00.000Z',
         issued: {
           at: issued.status.issued?.at.toISOString(),
           by: { name: 'Issuer User', position: 'Manager' }
         },
         regulatorCancellable: true
+      })
+    })
+
+    it('serves the obligation years a December PRN can be accepted towards', async () => {
+      const { id } = await packagingRecyclingNotesRepository.create(
+        buildAwaitingAcceptancePrn({
+          ...underAccreditation(ownNumbers),
+          isDecemberWaste: true
+        })
+      )
+
+      const response = await server.inject({
+        url: `${prns}/${id}`,
+        ...asOperator()
+      })
+
+      expect(body(response).obligation).toStrictEqual({
+        year: 2026,
+        allowedYears: [2026, 2027]
       })
     })
 
@@ -319,6 +339,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: 'R3',
         isDecemberWaste: false,
         obligationYear: draft.obligationYear,
+        obligation: { year: draft.obligationYear, allowedYears: [2026] },
         notes: 'For the spring run',
         createdAt: '2026-03-01T10:00:00.000Z',
         regulatorCancellable: false
@@ -598,6 +619,7 @@ describe('PRN routes by natural key', () => {
         processToBeUsed: expect.any(String),
         isDecemberWaste: false,
         obligationYear: 2026,
+        obligation: { year: 2026, allowedYears: [2026] },
         createdAt: '2026-06-01T00:00:00.000Z',
         regulatorCancellable: false
       })
