@@ -10,6 +10,7 @@ import {
   processingTypeFor
 } from '#waste-balances/domain/credited-tonnage.js'
 import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-classification.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
  * @typedef {import('#waste-balances/domain/credited-tonnage.js').CreditableWasteRecordState} CreditableWasteRecordState
@@ -28,6 +29,30 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 /**
  * @typedef {WasteBalanceFigures & { netCredit: number }} PublishedWasteBalanceFigures
  */
+
+/**
+ * The row standing in for a material's exporter and reprocessor rows where
+ * those would identify an operator.
+ */
+export const EXPORTER_AND_REPROCESSOR = 'exporterAndReprocessor'
+
+/**
+ * @typedef {import('#domain/organisations/model.js').WasteProcessingTypeValue | typeof EXPORTER_AND_REPROCESSOR} WasteBalanceRowType
+ */
+
+/**
+ * The rows of a material served separately, by accreditation type.
+ *
+ * @type {readonly WasteBalanceRowType[]}
+ */
+export const SEPARATE_ROWS = Object.freeze(Object.values(WASTE_PROCESSING_TYPE))
+
+/**
+ * The one row of a material served merged.
+ *
+ * @type {readonly WasteBalanceRowType[]}
+ */
+export const MERGED_ROWS = Object.freeze([EXPORTER_AND_REPROCESSOR])
 
 /** @type {WasteBalanceFigures} */
 export const NO_FIGURES = Object.freeze({

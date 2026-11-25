@@ -1,9 +1,10 @@
 import Joi from 'joi'
 
+import { TONNAGE_MONITORING_MATERIALS } from '#domain/organisations/model.js'
 import {
-  TONNAGE_MONITORING_MATERIALS,
-  WASTE_PROCESSING_TYPE
-} from '#domain/organisations/model.js'
+  MERGED_ROWS,
+  SEPARATE_ROWS
+} from '#market-insights/domain/waste-balance-figures.js'
 import {
   byReportingMonth,
   metaSchema,
@@ -25,7 +26,10 @@ const figureKeys = {
 const byMaterialAndType = (figuresSchema) =>
   recordOf(
     TONNAGE_MONITORING_MATERIALS,
-    recordOf(Object.values(WASTE_PROCESSING_TYPE), figuresSchema)
+    Joi.alternatives().try(
+      recordOf(SEPARATE_ROWS, figuresSchema),
+      recordOf(MERGED_ROWS, figuresSchema)
+    )
   )
 
 const figuresByMaterialSchema = byMaterialAndType(
@@ -38,12 +42,18 @@ const operatorCountsByMaterialSchema = byMaterialAndType(
 
 /**
  * Response contract for the published UK Waste Balance table. Keyed by
- * reporting month, then material, then accreditation type, with the net credit
+ * reporting month, then material, then row, with the net credit
  * the publication prints alongside the figures it is derived from. Each month
  * says how many monthly reports it was owed and how many have been submitted,
  * and the period carries the sum. That count covers every accredited
  * registration on the register, whatever status its accreditation holds now,
  * matching the loads this table keeps.
+ *
+ * A material is keyed by `exporter` and `reprocessor`, or by
+ * `exporterAndReprocessor` alone where any figure in either of those rows, in
+ * any month, comes from fewer than three operators
+ * accredited for it. The merged row covers the whole period and sums both
+ * accreditation types.
  *
  * Every figure also carries two operator counts, for the regulators to judge
  * whether it would identify an operator. An operator is a business, and
@@ -61,7 +71,7 @@ const operatorCountsByMaterialSchema = byMaterialAndType(
  *   accreditation was suspended, adds to the gross credited tonnage only, so
  *   its operator does not count.
  *
- * The period carries each material and accreditation type's figures summed
+ * The period carries each material and row's figures summed
  * across the months served, net credit included. It carries the same two
  * counts for each of those totals. An operator counts once there, however
  * many of those months it contributes to, so a period count is not the sum of
