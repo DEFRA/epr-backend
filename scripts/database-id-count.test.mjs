@@ -11,7 +11,7 @@ const countsFor = (source, path = PATH) => measure([{ path, source }])
 
 describe('isCounted', () => {
   it.each([
-    'src/registration-accreditation-admin/routes/get-by-id.js',
+    'src/routes/v1/organisations/get-by-id.js',
     'src/repositories/organisations/port.js',
     'src/reports/repository/port.js',
     'src/waste-balances/repository/ledger-port.js',
@@ -38,7 +38,7 @@ describe('isCounted', () => {
     'src/repositories/summary-logs/schema.js',
     'src/organisation-read-model/repository/to-read-model.js',
     'src/adapters/repositories/uploads/cdp-uploader.js',
-    'src/registration-accreditation-admin/routes/get-by-id.test.js',
+    'src/routes/v1/organisations/get-by-id.test.js',
     'src/repositories/organisations/contract/find.contract.js',
     'src/repositories/organisations/contract/test-data.js',
     'src/routes/v1/organisations/registrations/summary-logs/integration-test-helpers.js',
@@ -47,7 +47,6 @@ describe('isCounted', () => {
     'src/server/seed/create-seed-data.js',
     'src/server/seed/seed-scenarios.js',
     'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
-    'src/registration-accreditation-admin/routes/dev-put-by-id.js',
     'src/non-prod-data-reset/mongodb.js',
     'scripts/database-id-count.mjs'
   ])('leaves out %s', (path) => {
