@@ -179,7 +179,7 @@ const DEFAULT_FONT_SIZE = 11
 const EXCEL_DEFAULT_COLUMN_WIDTH = 8.43
 // Excel's width for n characters is n plus its 5-pixel cell margin, 5/7 of a character.
 const CELL_MARGIN = 5 / 7
-// ponytail: counts characters, not glyph widths; one spare character covers bold and wide letters.
+// Counts characters, not glyph widths; one spare character covers bold and wide letters.
 const SPARE_CHARACTERS = 1
 
 /**
@@ -187,7 +187,8 @@ const SPARE_CHARACTERS = 1
  * has to adjust the workbook after it is generated. A table cell is one with a
  * border, and only tables have borders. Text that wraps or sits in merged
  * cells keeps its own layout, as does text outside a table, which runs on
- * into the empty cells beside it. A column is never narrowed.
+ * into the empty cells beside it. A column is never narrowed. A date is not
+ * measured, because the only dates in a table are month headings, which wrap.
  *
  * @param {ExcelJS.Worksheet} worksheet
  */

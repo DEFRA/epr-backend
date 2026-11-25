@@ -148,15 +148,15 @@ describe('fitting columns to their tables', () => {
     )
   })
 
-  it('leaves a column alone for a table cell holding a date, which only month headings do, and they wrap', () => {
+  it('does not measure a date, so a table cell holding one leaves its column as it was', () => {
     const worksheet = fitted((sheet) => {
-      sheet.getColumn('A').width = 4
+      sheet.getColumn('A').width = 12
       write(sheet.getCell('A1'), new Date('2026-01-01'), {
         border: boxed,
         numFmt: 'mmm-yy'
       })
     })
 
-    expect(worksheet.getColumn('A').width).toBe(4)
+    expect(worksheet.getColumn('A').width).toBe(12)
   })
 })

@@ -470,7 +470,7 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
 
     // Each table's rows are Paper and board, Plastic, then Grand Total.
 
-    it('show as reported, since the regulations require them published', () => {
+    it('show as reported', () => {
       // February's plastic reprocessor row, then its PRN row.
       expect(valuesIn(worksheet, 'B19', 'D19')).toEqual([[30, 20, 10]])
       expect(valuesIn(worksheet, 'B58', 'D58')).toEqual([[20, 1000, 50]])
