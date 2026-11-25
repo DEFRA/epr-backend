@@ -15,6 +15,7 @@ import {
   AFTER_SUMMARY_LOG_YEAR_ERROR,
   BEFORE_SUMMARY_LOG_YEAR_ERROR
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
+import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
 import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
@@ -216,7 +217,7 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
  * }} params
  * @returns {ValidationIssueLocation}
  */
-const buildCellLocation = ({
+export const buildCellLocation = ({
   tableName,
   rowNumber,
   rowId,
@@ -361,47 +362,53 @@ const validateRows = ({
   location,
   options
 }) => {
-  const validatedRows = rows.flatMap(({ rowNumber, values, linked }) => {
-    /** @type {Record<string, unknown>} */
-    const rowObject = {}
-    for (const [headerName, colIndex] of headerToIndexMap) {
-      rowObject[headerName] = values[colIndex]
-    }
-
-    if (isTemplateRow(rowObject, domainSchema.rowIdField)) {
-      return []
-    }
-
-    const classification = classifyRow(
-      rowObject,
-      domainSchema,
-      linked ? { ...options, filledIn: true } : options
-    )
-    const rowId = toRowId(rowObject[domainSchema.rowIdField])
-
-    const rowIssues = classification.issues.map((issue) =>
-      toApplicationIssue({
-        issue,
-        classification,
-        headerToIndexMap,
-        rowObject,
-        rowId,
-        tableName,
-        rowNumber,
-        location
-      })
-    )
-
-    return [
-      {
-        data: rowObject,
-        rowId,
-        outcome: classification.outcome,
-        issues: rowIssues,
-        ...(linked && { link: linked.link })
+  const validatedRows = rows.flatMap(
+    ({ rowNumber, values, previousYearLink }) => {
+      const foundLink =
+        previousYearLink?.status === PREVIOUS_YEAR_LINK_STATUS.FOUND
+          ? previousYearLink
+          : undefined
+      /** @type {Record<string, unknown>} */
+      const rowObject = {}
+      for (const [headerName, colIndex] of headerToIndexMap) {
+        rowObject[headerName] = values[colIndex]
       }
-    ]
-  })
+
+      if (isTemplateRow(rowObject, domainSchema.rowIdField)) {
+        return []
+      }
+
+      const classification = classifyRow(
+        rowObject,
+        domainSchema,
+        foundLink ? { ...options, filledIn: true } : options
+      )
+      const rowId = toRowId(rowObject[domainSchema.rowIdField])
+
+      const rowIssues = classification.issues.map((issue) =>
+        toApplicationIssue({
+          issue,
+          classification,
+          headerToIndexMap,
+          rowObject,
+          rowId,
+          tableName,
+          rowNumber,
+          location
+        })
+      )
+
+      return [
+        {
+          data: rowObject,
+          rowId,
+          outcome: classification.outcome,
+          issues: rowIssues,
+          ...(foundLink && { link: foundLink.link })
+        }
+      ]
+    }
+  )
 
   return {
     issues: validatedRows.flatMap((row) => row.issues),

@@ -779,11 +779,11 @@ describe('2027 rows linked to a 2026 row', () => {
       expect((await getWasteBalance(env)).amount).toBe(3.7)
     })
 
-    it('stores a row as written when its previous-year row ID names no 2026 row', async () => {
+    it('rejects a row whose previous-year row ID names no 2026 row, on that cell', async () => {
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
 
-      await submitted(
+      const validated = await upload(
         env,
         YEAR,
         'log-2027',
@@ -792,9 +792,134 @@ describe('2027 rows linked to a 2026 row', () => {
         ])
       )
 
-      const row = await storedRow(env, ledgerIdOf(env), 'log-2027', '1001')
-      expect(row?.data.DATE_RECEIVED_FOR_EXPORT).toBe('2027-01-15')
-      expect(row).not.toHaveProperty('link')
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        {
+          code: 'PREVIOUS_YEAR_LINK',
+          errorCode: 'PREVIOUS_YEAR_ROW_NOT_FOUND',
+          actual: 1999,
+          expected: 2026,
+          location: expect.objectContaining({
+            sheet: 'Exported (sections 1, 2 and 3)',
+            table: 'RECEIVED_LOADS_FOR_EXPORT',
+            row: 8,
+            rowId: '1001',
+            header: 'PREVIOUS_YEAR_ROW_ID'
+          })
+        }
+      ])
+      expect(
+        await storedRow(env, ledgerIdOf(env), 'log-2027', '1001')
+      ).toBeUndefined()
+    })
+
+    it('rejects every linked row when no 2026 log was submitted', async () => {
+      const env = await setup()
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow(),
+          linkedRow({ rowId: 1002, previousYearRowId: 1501 })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(
+        validated.validation.failures.map(({ errorCode, location }) => [
+          errorCode,
+          location.rowId
+        ])
+      ).toStrictEqual([
+        ['PREVIOUS_YEAR_ROW_NOT_FOUND', '1001'],
+        ['PREVIOUS_YEAR_ROW_NOT_FOUND', '1002']
+      ])
+    })
+
+    it('rejects a link to a 2026 load received overseas, on its received date', async () => {
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log({
+          ...EXPORTED_IN_DECEMBER_2026,
+          dateReceivedByOsr: '2026-12-30'
+        })
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow({
+            exportTonnage: null,
+            exportDate: null,
+            dateReceivedByOsr: null
+          })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        {
+          code: 'PREVIOUS_YEAR_LINK',
+          errorCode: 'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
+          actual: '2026-12-30',
+          expected: 2026,
+          previousYearRowId: '1500',
+          location: expect.objectContaining({
+            rowId: '1001',
+            header: 'DATE_RECEIVED_BY_OSR'
+          })
+        }
+      ])
+      expect(
+        await storedRow(env, ledgerIdOf(env), 'log-2027', '1001')
+      ).toBeUndefined()
+    })
+
+    it('rejects a link to a 2026 load refused and repatriated, on its repatriation date', async () => {
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log({
+          ...EXPORTED_IN_DECEMBER_2026,
+          wasteRefused: 'Yes',
+          dateRepatriated: '2026-12-31'
+        })
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow({
+            exportTonnage: null,
+            exportDate: null,
+            dateReceivedByOsr: null,
+            wasteRefused: null,
+            wasteStopped: null
+          })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        expect.objectContaining({
+          errorCode: 'PREVIOUS_YEAR_ROW_REPATRIATED',
+          previousYearRowId: '1500',
+          location: expect.objectContaining({
+            header: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
+          })
+        })
+      ])
     })
 
     it('rejects a row that names a 2026 row but has no row ID', async () => {
@@ -976,6 +1101,7 @@ describe('2027 rows linked to a 2026 row', () => {
       )
       expect(row?.data).toEqual(
         expect.objectContaining({
+          PREVIOUS_YEAR_ROW_ID: 2001,
           TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 9.5,
           DATE_OF_EXPORT: '2026-12-20T00:00:00.000Z',
           OSR_ID: 100,
@@ -990,5 +1116,120 @@ describe('2027 rows linked to a 2026 row', () => {
         })
       )
     })
+
+    /** @param {Record<string, unknown>} [row] */
+    const registeredOnly2027Log = (row = {}) => ({
+      meta: withTemplateYear(
+        createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY'),
+        YEAR
+      ),
+      data: {
+        LOADS_EXPORTED: tableOf('Exported', [
+          {
+            ...exportedRow,
+            ROW_ID: 2002,
+            PREVIOUS_YEAR_ROW_ID: 2001,
+            EXIT_PORT: null,
+            DWT_EXPORT_ID: null,
+            ...row
+          }
+        ])
+      }
+    })
+
+    /** @param {Record<string, unknown>} [previousYearRow] */
+    const setupWith2026Row = async (previousYearRow = {}) => {
+      openNextYear()
+      const env = await setupWasteBalanceIntegrationEnvironment({
+        processingType: 'exporter',
+        accredited: false,
+        year: YEAR
+      })
+      await submitted(env, PREVIOUS_YEAR, 'log-2026', {
+        meta: createRegisteredOnlyMeta('EXPORTER_REGISTERED_ONLY'),
+        data: {
+          LOADS_EXPORTED: tableOf('Exported', [
+            { ...exportedRow, ...previousYearRow }
+          ])
+        }
+      })
+      return env
+    }
+
+    it('rejects a row whose previous-year row ID names no 2026 row', async () => {
+      const env = await setupWith2026Row()
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        registeredOnly2027Log({
+          PREVIOUS_YEAR_ROW_ID: 2999,
+          DATE_OF_EXPORT: '2027-01-05T00:00:00.000Z'
+        })
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        expect.objectContaining({
+          errorCode: 'PREVIOUS_YEAR_ROW_NOT_FOUND',
+          actual: 2999,
+          location: expect.objectContaining({
+            table: 'LOADS_EXPORTED',
+            rowId: '2002',
+            header: 'PREVIOUS_YEAR_ROW_ID'
+          })
+        })
+      ])
+    })
+
+    it.each([
+      [
+        'neither refused nor stopped, on stopped',
+        { WAS_THE_WASTE_REFUSED: 'No', WAS_THE_WASTE_STOPPED: 'No' },
+        'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
+        'WAS_THE_WASTE_STOPPED'
+      ],
+      [
+        'stopped and repatriated, on its repatriation date',
+        {
+          WAS_THE_WASTE_REFUSED: 'No',
+          WAS_THE_WASTE_STOPPED: 'Yes',
+          DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: '2026-12-30T00:00:00.000Z'
+        },
+        'PREVIOUS_YEAR_ROW_REPATRIATED',
+        'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
+      ]
+    ])(
+      'rejects a link to a 2026 load %s',
+      async (_, previousYearRow, errorCode, header) => {
+        const env = await setupWith2026Row(previousYearRow)
+
+        const validated = await upload(
+          env,
+          YEAR,
+          'log-2027',
+          registeredOnly2027Log()
+        )
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(validated.validation.failures).toStrictEqual([
+          expect.objectContaining({
+            code: 'PREVIOUS_YEAR_LINK',
+            errorCode,
+            previousYearRowId: '2001',
+            location: expect.objectContaining({ rowId: '2002', header })
+          })
+        ])
+        expect(
+          await storedRow(
+            env,
+            ledgerIdOf({ ...env, accreditationNumber: null }),
+            'log-2027',
+            '2002'
+          )
+        ).toBeUndefined()
+      }
+    )
   })
 })

@@ -82,6 +82,64 @@ describe('transformValidationResponse', () => {
       })
     })
 
+    it('includes the previous year row ID a link error names', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'business',
+            message: 'Previous year link complete',
+            code: 'PREVIOUS_YEAR_LINK',
+            context: {
+              location: {
+                sheet: 'Exported',
+                table: 'RECEIVED_LOADS_FOR_EXPORT',
+                row: 12,
+                rowId: '1001',
+                column: 'Y',
+                header: 'DATE_RECEIVED_BY_OSR'
+              },
+              actual: '2026-12-14',
+              expected: 2026,
+              errorCode: 'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
+              previousYearRowId: '1000'
+            }
+          }
+        ],
+        counts: { fatal: 1, error: 0, warning: 0, total: 1 }
+      }
+
+      const httpResponse = {
+        status: SUMMARY_LOG_STATUS.INVALID,
+        year: 2027,
+        ledgerAccreditation: {
+          kind: LEDGER_ACCREDITATION_KIND.REGISTERED_ONLY
+        },
+        ...transformValidationResponse(validation)
+      }
+
+      expect(httpResponse.validation.failures).toStrictEqual([
+        {
+          code: 'PREVIOUS_YEAR_LINK',
+          errorCode: 'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
+          location: {
+            sheet: 'Exported',
+            table: 'RECEIVED_LOADS_FOR_EXPORT',
+            row: 12,
+            rowId: '1001',
+            column: 'Y',
+            header: 'DATE_RECEIVED_BY_OSR'
+          },
+          actual: '2026-12-14',
+          expected: 2026,
+          previousYearRowId: '1000'
+        }
+      ])
+      expect(
+        summaryLogResponseSchema.validate(httpResponse).error
+      ).toBeUndefined()
+    })
+
     it('transforms fatal issues with only code when no context', () => {
       const validation = {
         issues: [
@@ -390,6 +448,38 @@ describe('transformValidationResponse', () => {
         expected: 2027,
         deadline: '2027-02-28'
       })
+    })
+
+    it('includes the previous year row ID when present in context', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category: 'business',
+            message: 'Previous year link repatriated',
+            code: 'PREVIOUS_YEAR_LINK',
+            context: {
+              location: {
+                sheet: 'Exported',
+                table: 'RECEIVED_LOADS_FOR_EXPORT',
+                row: 8,
+                column: 'AP',
+                header: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
+              },
+              actual: '2026-12-20',
+              expected: 2026,
+              errorCode: 'PREVIOUS_YEAR_ROW_REPATRIATED',
+              previousYearRowId: '1000'
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(
+        result.validation.concerns.RECEIVED_LOADS_FOR_EXPORT.rows[0].issues[0]
+      ).toMatchObject({ previousYearRowId: '1000' })
     })
 
     it('sorts rows in ascending order', () => {

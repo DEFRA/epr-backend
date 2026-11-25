@@ -17,6 +17,7 @@ import {
   createEnumFieldSchema,
   toThreeDigitId,
   isYes,
+  isAnswered,
   YES_NO_VALUES
 } from '../shared/index.js'
 import {
@@ -27,6 +28,7 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { PREVIOUS_YEAR_ROW_COMPLETION } from '#domain/summary-logs/previous-year-link.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
@@ -353,6 +355,33 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
   }
 }
 
+/** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/previous-year-link.js' */
+
+/**
+ * @param {Record<string, unknown>} row
+ * @returns {PreviousYearRowCompletionAt[]}
+ */
+const receivedLoadCompletionsOf = (row) => [
+  ...(isAnswered(row[FIELDS.DATE_RECEIVED_BY_OSR])
+    ? [
+        {
+          completion: PREVIOUS_YEAR_ROW_COMPLETION.RECEIVED_BY_OSR,
+          field: FIELDS.DATE_RECEIVED_BY_OSR
+        }
+      ]
+    : []),
+  ...(isAnswered(row[FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]) &&
+  (isAnswered(row[FIELDS.WAS_THE_WASTE_REFUSED]) ||
+    isAnswered(row[FIELDS.WAS_THE_WASTE_STOPPED]))
+    ? [
+        {
+          completion: PREVIOUS_YEAR_ROW_COMPLETION.REPATRIATED,
+          field: FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
+        }
+      ]
+    : [])
+]
+
 export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
   ...RECEIVED_LOADS_FOR_EXPORT,
   linking: {
@@ -381,7 +410,8 @@ export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
       FIELDS.TONNAGE_RECEIVED_BY_OSR,
       FIELDS.BILL_OF_LANDING_REFERENCE_NUMBER,
       FIELDS.CUSTOMS_DECLARATION_NUMBER
-    ]
+    ],
+    completionsOf: receivedLoadCompletionsOf
   },
   requiredHeaders: [
     ...RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,

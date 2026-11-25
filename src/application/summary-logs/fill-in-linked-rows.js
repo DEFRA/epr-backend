@@ -1,4 +1,5 @@
 import { isEprMarker } from '#domain/summary-logs/markers.js'
+import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
 import {
   DROPDOWN_PLACEHOLDER,
   toRowId
@@ -16,10 +17,28 @@ import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline
  * `entered` the row as entered and `previousYear` the previous-year row as
  * stored, for the rules that compare the years.
  *
- * @typedef {{ link: RowStateLink, entered: unknown[], previousYear: Record<string, unknown> }} LinkedRow
+ * @typedef {{
+ *   status: typeof PREVIOUS_YEAR_LINK_STATUS.FOUND,
+ *   link: RowStateLink,
+ *   entered: unknown[],
+ *   previousYear: Record<string, unknown>
+ * }} FoundPreviousYearLink
  */
 
-/** @typedef {DataRow & { linked?: LinkedRow }} FilledInRow */
+/**
+ * A row naming a previous-year row that the previous year's submission does
+ * not have, or naming one when there is no such submission. The row is left
+ * as written.
+ *
+ * @typedef {{
+ *   status: typeof PREVIOUS_YEAR_LINK_STATUS.NOT_FOUND,
+ *   previousYearRowId: string
+ * }} NotFoundPreviousYearLink
+ */
+
+/** @typedef {FoundPreviousYearLink | NotFoundPreviousYearLink} PreviousYearLink */
+
+/** @typedef {DataRow & { previousYearLink?: PreviousYearLink }} FilledInRow */
 
 /**
  * @typedef {Pick<TableSchema, 'rowIdField' | 'wasteRecordType'> & { linking: YearLinking }} LinkingTableSchema
@@ -84,7 +103,8 @@ const fillInRow = ({ row, columns, previousYearRowState }) => {
   return {
     ...row,
     values,
-    linked: {
+    previousYearLink: {
+      status: PREVIOUS_YEAR_LINK_STATUS.FOUND,
       link: {
         year: previousYearRowState.year,
         rowId: previousYearRowState.rowId,
@@ -99,6 +119,18 @@ const fillInRow = ({ row, columns, previousYearRowState }) => {
 }
 
 /**
+ * A row ID typed as text, such as "1001 " or "1001.0", names the row the
+ * row ID schema reads it as.
+ *
+ * @param {unknown} cellValue
+ * @returns {string}
+ */
+const previousYearRowIdOf = (cellValue) => {
+  const number = typeof cellValue === 'string' ? Number(cellValue) : cellValue
+  return toRowId(Number.isFinite(number) ? number : cellValue)
+}
+
+/**
  * @param {DataSection} section
  * @param {number} column
  * @returns {string[]}
@@ -108,15 +140,38 @@ const previousYearRowIdsOf = (section, column) => [
     section.rows
       .map(({ values }) => values[column])
       .filter((value) => isFilled(value))
-      .map(toRowId)
+      .map(previousYearRowIdOf)
   )
 ]
 
 /**
  * @param {{
+ *   previousYearSubmission: PreviousYearSubmission | null,
+ *   schema: LinkingTableSchema,
+ *   rowIds: string[],
+ *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
+ * }} params
+ * @returns {Promise<SummaryLogRowState[]>}
+ */
+const previousYearRowStatesOf = async ({
+  previousYearSubmission,
+  schema,
+  rowIds,
+  summaryLogRowStatesRepository
+}) =>
+  previousYearSubmission === null
+    ? []
+    : summaryLogRowStatesRepository.findRowStatesInSummaryLog(
+        previousYearSubmission.ledgerId,
+        previousYearSubmission.summaryLogId,
+        { wasteRecordType: schema.wasteRecordType, rowIds }
+      )
+
+/**
+ * @param {{
  *   section: DataSection,
  *   schema: LinkingTableSchema,
- *   previousYearSubmission: PreviousYearSubmission,
+ *   previousYearSubmission: PreviousYearSubmission | null,
  *   summaryLogRowStatesRepository: SummaryLogRowStatesRepository
  * }} params
  * @returns {Promise<DataSection>}
@@ -133,12 +188,12 @@ const fillInTable = async ({
     return section
   }
 
-  const previousYearRowStates =
-    await summaryLogRowStatesRepository.findRowStatesInSummaryLog(
-      previousYearSubmission.ledgerId,
-      previousYearSubmission.summaryLogId,
-      { wasteRecordType: schema.wasteRecordType, rowIds }
-    )
+  const previousYearRowStates = await previousYearRowStatesOf({
+    previousYearSubmission,
+    schema,
+    rowIds,
+    summaryLogRowStatesRepository
+  })
   const byRowId = new Map(
     previousYearRowStates.map((state) => [state.rowId, state])
   )
@@ -147,10 +202,20 @@ const fillInTable = async ({
   return {
     ...section,
     rows: section.rows.map((row) => {
-      const previousYearRowState = byRowId.get(toRowId(row.values[column]))
+      if (!isFilled(row.values[column])) {
+        return row
+      }
+      const previousYearRowId = previousYearRowIdOf(row.values[column])
+      const previousYearRowState = byRowId.get(previousYearRowId)
       return previousYearRowState
         ? fillInRow({ row, columns, previousYearRowState })
-        : row
+        : {
+            ...row,
+            previousYearLink: {
+              status: PREVIOUS_YEAR_LINK_STATUS.NOT_FOUND,
+              previousYearRowId
+            }
+          }
     })
   }
 }
@@ -159,8 +224,9 @@ const fillInTable = async ({
  * Fills in each linked row of a log's tables that link years from the
  * previous year's row it names, in the submission the context was read from
  * (ADR-0060). Runs before every other data check, so they all read the
- * filled-in row. A row whose link resolves to no previous-year row is left as
- * written.
+ * filled-in row. A row whose link resolves to no previous-year row, or that
+ * names one when there is no previous-year submission, is left as written and
+ * marked as not found.
  *
  * @param {{
  *   parsed: ParsedSummaryLog,
@@ -176,10 +242,6 @@ export const fillInLinkedRows = async ({
   previousYearSubmission,
   summaryLogRowStatesRepository
 }) => {
-  if (previousYearSubmission === null) {
-    return parsed
-  }
-
   const tables = await Promise.all(
     Object.entries(parsed.data).map(async ([tableName, section]) => {
       const schema = tableSchemas[tableName]
