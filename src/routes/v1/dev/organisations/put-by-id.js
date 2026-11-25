@@ -1,4 +1,7 @@
-import { makePutOrganisationHandler, validateMyPayload } from './put-by-id.js'
+import {
+  makePutOrganisationHandler,
+  validateMyPayload
+} from '#routes/v1/organisations/put-by-id.js'
 
 // Non-prod seeding twin of PUT /v1/organisations/{id} (registered only when
 // dev endpoints are enabled). Journey-test fixtures seed registration and

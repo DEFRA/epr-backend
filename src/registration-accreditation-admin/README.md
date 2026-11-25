@@ -1,13 +1,13 @@
 # Registration and accreditation admin
 
-This module holds the admin routes that serve an organisation, registration or accreditation record by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes those routes, and the repository functions only they use, and nothing else.
+This module holds the admin routes that change or serve a registration or accreditation by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes those routes, and the repository functions only they use, and nothing else.
 
 The routes keep their paths:
 
-- `GET` and `PUT /v1/organisations/{id}`, which the admin UI's JSON editor reads and writes.
 - The registration and accreditation `status-history` routes, which make status changes.
 - The overseas sites of a registration or accreditation, addressed by id.
-- `PUT /v1/dev/organisations/{id}`, the non-production seeding twin of the `PUT`.
+
+Organisations stay in epr-backend, so the routes that read or write an organisation as a whole, `GET` and `PUT /v1/organisations/{id}` and its dev twin, are not in this module.
 
 Code outside the module imports from two entry points, and each lists its exports by name:
 
