@@ -62,6 +62,12 @@ const toNewHeadRowStates = (wasteRecords, classificationContext) =>
  */
 const latestSubmittedReportIdForPeriod = (periodicReport, periodRef) => {
   const { year, cadence, period } = periodRef
+  /* v8 ignore next 5 -- closed periods are derived from this periodic report */
+  if (periodicReport?.year !== year) {
+    throw new Error(
+      `Closed period ${year} ${cadence} ${period} is outside the periodic report's year`
+    )
+  }
   // Closed periods are derived from this periodic report, so the slot exists.
   const slot = /** @type {ReportPerPeriod} */ (
     findPeriodSlot(periodicReport, { cadence, period })
