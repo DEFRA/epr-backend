@@ -1,5 +1,6 @@
 export { overseasSiteDelete } from './delete-by-id.js'
 export { adminOverseasSitesList } from './admin-list.js'
+export { adminRegistrationServiceOverseasSitesList } from './admin-registration-service-list.js'
 export { orsImportStatus } from './get-import-status.js'
 export { overseasSitesCreate } from './post.js'
 export { orsImportCreate } from './post-import.js'
