@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs'
 
 import { readMarketInsightsFigures } from '#market-insights/application/read-figures.js'
 import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
-import { frameOf } from './workbook/cells.js'
+import { fitColumnsToTables, frameOf } from './workbook/cells.js'
 import { addKey } from './workbook/key-tab.js'
 import { addNationFigures } from './workbook/nation-figures-tab.js'
 import { addOutstandingReturns } from './workbook/outstanding-returns-tab.js'
@@ -16,7 +16,7 @@ import { addWasteBalance } from './workbook/waste-balance-tab.js'
  * @property {MarketInsightsFigures} figures
  * @property {YearMonth[]} months
  * @property {Date} now - when the figures were taken
- * @property {boolean} redacted - whether a figure from too few operators shows as "[c]"
+ * @property {boolean} redacted - whether it is the workbook as published, rather than the full one
  */
 
 /**
@@ -30,7 +30,13 @@ const renderWorkbook = ({ figures, months, now, redacted }) => {
   addKey(workbook, { redacted })
   addOutstandingReturns(workbook, contents)
   addNationFigures(workbook, WORKSHEET_NAME.UK, contents)
-  addNationFigures(workbook, WORKSHEET_NAME.ENGLAND, contents)
+  if (!redacted) {
+    addNationFigures(workbook, WORKSHEET_NAME.ENGLAND, contents)
+  }
+  workbook.eachSheet((worksheet) => {
+    worksheet.views = [{ showGridLines: false }]
+    fitColumnsToTables(worksheet)
+  })
   return workbook
 }
 
@@ -41,9 +47,12 @@ const renderWorkbook = ({ figures, months, now, redacted }) => {
  * It reads its figures with the same function the export archive uses, so
  * every tab is taken from one reading of the register.
  *
- * Redacted, it shows "[c]" in place of every figure the regulator pages mark
- * as coming from too few operators. A total is judged on its own operators
- * alone, so it can still give away a figure that was replaced.
+ * Redacted, it is the workbook as published: the waste balance shows "[c]" in
+ * place of every figure the regulator pages mark as coming from too few
+ * operators, and it has no England tab, whose figures could identify an
+ * operator the UK figures hide. The UK tab is never redacted, because the
+ * regulations require its figures published. Only the tables have borders,
+ * with no gridlines elsewhere.
  *
  * @param {ReadMarketInsightsFiguresParams & { redacted: boolean }} params
  * @returns {Promise<ExcelJS.Workbook>}

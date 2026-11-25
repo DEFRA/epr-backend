@@ -149,6 +149,60 @@ export const setWidths = (worksheet, widths, firstColumn = 1) => {
   })
 }
 
+const WHOLE_NUMBER = new Intl.NumberFormat('en-GB', {
+  maximumFractionDigits: 0
+})
+
+/**
+ * The text a cell shows, as far as its width is concerned.
+ *
+ * @param {ExcelJS.Cell} cell
+ * @returns {string}
+ */
+const shownText = ({ value, numFmt }) => {
+  if (typeof value === 'number') {
+    return numFmt === '#,##0' ? WHOLE_NUMBER.format(value) : String(value)
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  if (value && typeof value === 'object' && 'richText' in value) {
+    return value.richText.map(({ text }) => text).join('')
+  }
+  return ''
+}
+
+const DEFAULT_FONT_SIZE = 11
+const EXCEL_DEFAULT_COLUMN_WIDTH = 8.43
+// ponytail: counts characters, not glyph widths; padding covers bold and wide letters.
+const WIDTH_PADDING = 2
+
+/**
+ * Widens each column so every table cell in it shows its full text, so nobody
+ * has to adjust the workbook after it is generated. A table cell is one with a
+ * border, and only tables have borders. Text that wraps or sits in merged
+ * cells keeps its own layout, as does text outside a table, which runs on
+ * into the empty cells beside it. A column is never narrowed.
+ *
+ * @param {ExcelJS.Worksheet} worksheet
+ */
+export const fitColumnsToTables = (worksheet) => {
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      const inTable = Object.keys(cell.border ?? {}).length > 0
+      if (!inTable || cell.isMerged || cell.alignment?.wrapText) {
+        return
+      }
+      const scale = (cell.font?.size ?? DEFAULT_FONT_SIZE) / DEFAULT_FONT_SIZE
+      const needed = Math.ceil(shownText(cell).length * scale) + WIDTH_PADDING
+      const column = worksheet.getColumn(cell.col)
+      if (needed > (column.width ?? EXCEL_DEFAULT_COLUMN_WIDTH)) {
+        column.width = needed
+      }
+    })
+  })
+}
+
 export const UK_SCOPE = 'uk'
 
 /**

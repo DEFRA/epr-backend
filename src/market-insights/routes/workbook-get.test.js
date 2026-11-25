@@ -16,6 +16,7 @@ import {
   readPublishedWorkbook,
   reread
 } from '#market-insights/application/workbook/published-workbook-test-helpers.js'
+import { WORKSHEET_NAME } from '#market-insights/domain/published-workbook-text.js'
 import { marketInsightsWorkbookPath } from './workbook-get.js'
 
 const organisationBuilders = createOrganisationBuilders()
@@ -145,13 +146,23 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
       )
     })
 
-    it('has every published tab, in the published order', async () => {
+    it('has every published tab bar England, in the published order', async () => {
       const published = await readPublishedWorkbook()
 
       expect(workbook.worksheets.map(({ name }) => name)).toEqual(
-        published.worksheets.map(({ name }) => name)
+        published.worksheets
+          .map(({ name }) => name)
+          .filter((name) => name !== WORKSHEET_NAME.ENGLAND)
       )
     })
+  })
+
+  it('serves the England tab in the full workbook', async () => {
+    const full = await workbookIn(
+      await request(asRegulator(), `${MARCH}?unredacted=true`)
+    )
+
+    expect(full.getWorksheet(WORKSHEET_NAME.ENGLAND)).toBeDefined()
   })
 
   it('names the download for the period it holds and the second it was taken', async () => {
@@ -246,6 +257,20 @@ describe(`GET ${marketInsightsWorkbookPath}`, () => {
     it('serves the full workbook built from that register when asked for it unredacted', async () => {
       expect(await download(`${MARCH}?unredacted=true`)).toEqual(
         await built(register, false)
+      )
+    })
+
+    it("serves the UK tab's figures from its one operator as reported, redacted or not", async () => {
+      /** @param {Record<string, unknown>} cells */
+      const ukTabOf = (cells) =>
+        Object.entries(cells).filter(([address]) =>
+          address.startsWith(`${WORKSHEET_NAME.UK}!`)
+        )
+      const redacted = ukTabOf(await download(MARCH))
+
+      expect(redacted.map(([, value]) => value)).not.toContain('[c]')
+      expect(redacted).toEqual(
+        ukTabOf(await download(`${MARCH}?unredacted=true`))
       )
     })
 
