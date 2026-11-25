@@ -1,6 +1,5 @@
 import { health } from '#routes/health.js'
 import { apply } from '#routes/v1/apply/index.js'
-import { registrationAccreditationAdminRoutes } from '#registration-accreditation-admin/index.js'
 import * as organisationRoutes from '#routes/v1/organisations/index.js'
 import * as organisationViewRoutes from '#routes/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
@@ -56,7 +55,6 @@ const router = {
         ...summaryLogRoutesByNaturalKey,
         ...devRoutesBehindFeatureFlag,
         ...Object.values(organisationRoutes),
-        ...registrationAccreditationAdminRoutes,
         ...Object.values(organisationViewRoutes),
         ...formSubmissionsRoutes,
         ...Object.values(systemLogsRoutes),

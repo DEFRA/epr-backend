@@ -131,7 +131,7 @@ export default [
             ...moduleFence(
               'registration-accreditation-admin',
               'the registration and accreditation admin module',
-              ['./index.js', './test-support.js']
+              ['./index.js', './plugin.js', './test-support.js']
             )
           ]
         }

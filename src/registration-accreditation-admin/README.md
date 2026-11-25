@@ -9,14 +9,13 @@ The routes keep their paths:
 
 Organisations stay in epr-backend, so the routes that read or write an organisation as a whole, `GET` and `PUT /v1/organisations/{id}` and its dev twin, are not in this module.
 
-Code outside the module imports from two entry points, and each lists its exports by name:
+The module takes the shape [`src/modules.md`](../modules.md) describes, and lint refuses an import of anything but its entry points:
 
-- **`index.js`** holds the routes, the repository plugin and the repository's type.
-- **`test-support.js`** holds the repository's adapters, and only a test may import it.
+- **`index.js`** holds the repository's type.
+- **`plugin.js`** holds the route plugin and the repository's MongoDB adapter.
+- **`test-support.js`** holds the repository's in-memory adapter, and only a test may import it.
 
-Lint refuses any other import into the module, but it cannot see a JSDoc `@import`.
-
-[`src/modules.md`](../modules.md) describes the shape every module takes. This module's plugin has not moved to it yet.
+Lint cannot see a JSDoc `@import`, so it lets one through.
 
 ## Shape
 
