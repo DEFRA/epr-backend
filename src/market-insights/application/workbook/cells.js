@@ -1,6 +1,9 @@
 import { UK_TIME_ZONE } from '#common/helpers/dates/uk-time-zone.js'
 import { CONFIDENTIAL } from '#market-insights/domain/confidential-figures.js'
-import { NOTE } from '#market-insights/domain/published-workbook-style.js'
+import {
+  NOTE,
+  WHOLE_TONNES
+} from '#market-insights/domain/published-workbook-style.js'
 import { dataAsOf } from '#market-insights/domain/published-workbook-text.js'
 
 /** @import ExcelJS from 'exceljs' */
@@ -146,6 +149,68 @@ export const styleEmptyCells = (worksheet, row, firstColumn, count, style) => {
 export const setWidths = (worksheet, widths, firstColumn = 1) => {
   Object.values(widths).forEach((width, index) => {
     worksheet.getColumn(firstColumn + index).width = width
+  })
+}
+
+const WHOLE_NUMBER = new Intl.NumberFormat('en-GB', {
+  maximumFractionDigits: 0
+})
+
+/**
+ * The text a cell shows, as far as its width is concerned.
+ *
+ * @param {ExcelJS.Cell} cell
+ * @returns {string}
+ */
+const shownText = ({ value, numFmt }) => {
+  if (typeof value === 'number') {
+    return numFmt === WHOLE_TONNES ? WHOLE_NUMBER.format(value) : String(value)
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  if (value && typeof value === 'object' && 'richText' in value) {
+    return value.richText.map(({ text }) => text).join('')
+  }
+  return ''
+}
+
+const DEFAULT_FONT_SIZE = 11
+const EXCEL_DEFAULT_COLUMN_WIDTH = 8.43
+// Excel's width for n characters is n plus its cell margin, in characters of its default font.
+const CELL_MARGIN_PIXELS = 5
+const CHARACTER_PIXELS = 7
+const CELL_MARGIN = CELL_MARGIN_PIXELS / CHARACTER_PIXELS
+// Counts characters, not glyph widths; one spare character covers bold and wide letters.
+const SPARE_CHARACTERS = 1
+
+/**
+ * Widens each column so every table cell in it shows its full text, so nobody
+ * has to adjust the workbook after it is generated. A table cell is one with a
+ * border, and only tables have borders. Text that wraps or sits in merged
+ * cells keeps its own layout, as does text outside a table, which runs on
+ * into the empty cells beside it. A column is never narrowed. A date is not
+ * measured, because the only dates in a table are month headings, which wrap.
+ *
+ * @param {ExcelJS.Worksheet} worksheet
+ */
+export const fitColumnsToTables = (worksheet) => {
+  worksheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      const inTable = Object.keys(cell.border ?? {}).length > 0
+      if (!inTable || cell.isMerged || cell.alignment?.wrapText) {
+        return
+      }
+      const scale = (cell.font?.size ?? DEFAULT_FONT_SIZE) / DEFAULT_FONT_SIZE
+      const needed =
+        Math.ceil(shownText(cell).length * scale) +
+        SPARE_CHARACTERS +
+        CELL_MARGIN
+      const column = worksheet.getColumn(cell.col)
+      if (needed > (column.width ?? EXCEL_DEFAULT_COLUMN_WIDTH)) {
+        column.width = needed
+      }
+    })
   })
 }
 

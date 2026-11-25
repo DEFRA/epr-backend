@@ -15,8 +15,10 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { CONFIDENTIAL } from './confidential-figures.js'
+import { EXPORTER_AND_REPROCESSOR } from './waste-balance-figures.js'
 
-/** @import { Material, TonnageBand, WasteProcessingTypeValue } from '#domain/organisations/model.js' */
+/** @import { Material, TonnageBand } from '#domain/organisations/model.js' */
+/** @import { WasteBalanceRowType } from './waste-balance-figures.js' */
 /** @import { ExporterMeasures, PublishedExtras, ReprocessorMeasures } from './reprocessor-exporter-figures.js' */
 
 export const WORKSHEET_NAME = Object.freeze({
@@ -35,8 +37,8 @@ export const WORKSHEET_NAME = Object.freeze({
 
 /**
  * The published note ends by saying glass-other is not split by accreditation
- * type. This tab splits it until glass-other is amalgamated, so the note
- * leaves that sentence out.
+ * type. The operator counts decide which materials are merged, and a merged
+ * row's label says what it is, so the note leaves that sentence out.
  *
  * @type {Note}
  */
@@ -164,13 +166,15 @@ export const NATION_FIGURES_MATERIALS = Object.freeze([
 export const WASTE_BALANCE_MATERIALS = NATION_FIGURES_MATERIALS
 
 /**
- * Each accreditation type, and its label, in the order a material's rows run.
+ * Each row a material can be served as, and its label, in the order a
+ * material's rows run.
  *
- * @type {readonly (readonly [WasteProcessingTypeValue, string])[]}
+ * @type {readonly (readonly [WasteBalanceRowType, string])[]}
  */
-export const WASTE_BALANCE_ACCREDITATION_TYPES = Object.freeze([
+export const WASTE_BALANCE_ROWS = Object.freeze([
   [WASTE_PROCESSING_TYPE.EXPORTER, 'Exporter'],
-  [WASTE_PROCESSING_TYPE.REPROCESSOR, 'Reprocessor']
+  [WASTE_PROCESSING_TYPE.REPROCESSOR, 'Reprocessor'],
+  [EXPORTER_AND_REPROCESSOR, 'Exp & Rep']
 ])
 
 export const GRAND_TOTAL = 'Grand Total'

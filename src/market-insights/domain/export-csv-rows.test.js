@@ -12,7 +12,11 @@ import {
   withPublishedFigures,
   withSentOnTotal
 } from '#market-insights/domain/reprocessor-exporter-figures.js'
-import { NO_FIGURES, withNetCredit } from './waste-balance-figures.js'
+import {
+  EXPORTER_AND_REPROCESSOR,
+  NO_FIGURES,
+  withNetCredit
+} from './waste-balance-figures.js'
 import {
   buildExporterRows,
   buildManifestRow,
@@ -38,6 +42,7 @@ const TONNAGE_BANDS = Object.values(TONNAGE_BAND)
  *
  * @param {string[]} months
  * @param {Record<string, Partial<import('./waste-balance-figures.js').WasteBalanceFigures>>} [overrides] - keyed `month::material::type`
+ * @returns {import('#market-insights/application/waste-balance-table.js').WasteBalanceTable}
  */
 const wasteBalanceTable = (months, overrides = {}) => ({
   meta: { generatedAt: '2026-09-18T14:15:30.000Z' },
@@ -155,6 +160,24 @@ describe('market insights export CSV rows', () => {
       ).toEqual(new Set(TONNAGE_MONITORING_MATERIALS))
       expect(columnOf(rows, WASTE_BALANCE_COLUMNS, 'net_credit')).toEqual(
         Array(MATERIAL_COUNT * ACCREDITATION_TYPES.length).fill(0)
+      )
+    })
+
+    it("writes a merged material's one row in place of its two", () => {
+      const table = wasteBalanceTable(['2026-01'])
+      const { figures } = table.data.months['2026-01']
+      figures.wood = {
+        [EXPORTER_AND_REPROCESSOR]: {
+          ...withNetCredit({ ...NO_FIGURES, eligibleForWasteBalance: 15 }),
+          operatorCount: 2,
+          submittingOperatorCount: 2
+        }
+      }
+
+      const rows = buildWasteBalanceRows(table)
+
+      expect(rows.filter(([, material]) => material === MATERIAL.WOOD)).toEqual(
+        [['2026-01', MATERIAL.WOOD, EXPORTER_AND_REPROCESSOR, 15]]
       )
     })
 

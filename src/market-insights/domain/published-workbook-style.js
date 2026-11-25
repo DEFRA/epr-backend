@@ -36,7 +36,7 @@ const BLACK = {
 /** @type {Partial<Alignment>} */
 const WRAPPED_TOP = { vertical: 'top', wrapText: true }
 
-const WHOLE_TONNES = '#,##0'
+export const WHOLE_TONNES = '#,##0'
 
 /** @type {Partial<Style>} */
 export const NOTE = {

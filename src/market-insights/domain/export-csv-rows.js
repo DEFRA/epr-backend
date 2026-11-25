@@ -13,7 +13,6 @@ import { sanitiseFormulaInjection } from '#waste-records-export/index.js'
 
 /** @typedef {(string | number)[]} CsvRow */
 
-const ACCREDITATION_TYPES = Object.values(WASTE_PROCESSING_TYPE)
 const TONNAGE_BANDS = Object.values(TONNAGE_BAND)
 
 /**
@@ -90,9 +89,10 @@ export const MANIFEST_COLUMNS = Object.freeze([
 ])
 
 /**
- * The net credit of every material and accreditation type, month by month. The
- * endpoint also serves the three figures the net credit is reached from; the
- * page prints the net credit alone and so does the export.
+ * The net credit of every material and row served, month by month: its
+ * accreditation types, or the one row merging them. The endpoint also serves
+ * the three figures the net credit is reached from; the page prints the net
+ * credit alone and so does the export.
  *
  * @param {WasteBalanceTable} table
  * @returns {CsvRow[]}
@@ -100,13 +100,8 @@ export const MANIFEST_COLUMNS = Object.freeze([
 export const buildWasteBalanceRows = ({ data }) =>
   Object.entries(data.months).flatMap(([month, { figures }]) =>
     TONNAGE_MONITORING_MATERIALS.flatMap((material) =>
-      ACCREDITATION_TYPES.map((accreditationType) =>
-        row([
-          month,
-          material,
-          accreditationType,
-          figures[material][accreditationType].netCredit
-        ])
+      Object.entries(figures[material]).map(([rowType, { netCredit }]) =>
+        row([month, material, rowType, netCredit])
       )
     )
   )
