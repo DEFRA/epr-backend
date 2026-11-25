@@ -1,6 +1,8 @@
 import { registerDependency } from '#plugins/register-dependency.js'
 import { createInMemoryRegistrationAccreditationAdminRepository } from './inmemory.js'
 
+/** @import { ServerApp } from '#common/hapi-types.js' */
+
 /**
  * The in-memory adapter, over whichever organisations repository the test
  * server holds, so a test that seeds organisations through that repository
@@ -12,15 +14,17 @@ export const createInMemoryRegistrationAccreditationAdminRepositoryPlugin =
   () => ({
     name: 'registrationAccreditationAdminRepository',
     version: '1.0.0',
-    dependencies: ['organisationsRepository'],
-    /** @param {import('@hapi/hapi').Server & import('#common/hapi-types.js').HapiServer} server */
+    /** @param {import('@hapi/hapi').Server} server */
     register: (server) => {
-      registerDependency(
-        server,
-        'registrationAccreditationAdminRepository',
-        createInMemoryRegistrationAccreditationAdminRepository(
-          server.app.organisationAdministrationRepository
+      server.dependency('organisationsRepository', async (started) => {
+        const app = /** @type {ServerApp} */ (started.app)
+        registerDependency(
+          started,
+          'registrationAccreditationAdminRepository',
+          createInMemoryRegistrationAccreditationAdminRepository(
+            app.organisationAdministrationRepository
+          )
         )
-      )
+      })
     }
   })
