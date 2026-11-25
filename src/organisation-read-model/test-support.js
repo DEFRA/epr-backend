@@ -16,6 +16,7 @@ export {
   nextReadOrganisationNumber,
   registrationOf,
   servedOrganisations,
+  whileRegAccredIsDown,
   withStandingThrough
 } from './repository/read-model-test-data.js'
 export {

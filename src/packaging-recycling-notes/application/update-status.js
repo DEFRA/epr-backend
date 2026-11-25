@@ -334,7 +334,8 @@ async function findIssuingAccreditation(organisationReadRepository, prn) {
   const year = prn.accreditation.accreditationYear
   const organisation =
     await organisationReadRepository.findByOrganisationNumber(
-      organisationNumber
+      organisationNumber,
+      { year }
     )
   const registration = organisation?.registrations[registrationNumber]
   const accreditation = registration && accreditationForYear(registration, year)

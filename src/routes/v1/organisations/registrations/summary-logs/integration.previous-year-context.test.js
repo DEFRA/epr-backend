@@ -170,15 +170,18 @@ const suspendPreviousYearAccreditation = (env) => {
     'findByOrganisationNumber'
   ).mockImplementation(async (...args) => {
     const organisation = await served(...args)
-    const { status } =
-      organisation.registrations[registrationNumber].accreditations[
+    const previousYearAccreditation =
+      organisation.registrations[registrationNumber]?.accreditations[
         PREVIOUS_YEAR
       ]
-    status.current = 'suspended'
-    status.timeline.push({
-      status: 'suspended',
-      at: '2026-11-01T00:00:00.000Z'
-    })
+    if (previousYearAccreditation) {
+      const { status } = previousYearAccreditation
+      status.current = 'suspended'
+      status.timeline.push({
+        status: 'suspended',
+        at: '2026-11-01T00:00:00.000Z'
+      })
+    }
     return organisation
   })
 }

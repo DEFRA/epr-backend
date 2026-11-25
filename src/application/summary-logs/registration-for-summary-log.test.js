@@ -1,15 +1,24 @@
-import { toRegistrationNumber } from '#domain/organisations/numbers.js'
+import { toYear } from '#common/helpers/dates/year.js'
+import {
+  toAccreditationNumber,
+  toRegistrationNumber
+} from '#domain/organisations/numbers.js'
 import {
   buildReadAccreditation,
   buildReadExporterRegistration,
-  buildReadReprocessorRegistration
+  buildReadReprocessorRegistration,
+  servedOrganisations,
+  whileRegAccredIsDown
 } from '#organisation-read-model/test-support.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import {
   OPERATOR_CATEGORY,
   reportOperatorCategory
 } from '#reports/domain/operator-category.js'
-import { reportingCadenceOf } from './registration-for-summary-log.js'
+import {
+  registrationForSummaryLog,
+  reportingCadenceOf
+} from './registration-for-summary-log.js'
 
 /** @import {AccreditationCommon, Registration} from '#organisation-read-model/vocabulary.js' */
 /** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
@@ -90,4 +99,25 @@ describe('operator category of a summary log registration', () => {
       )
     }
   )
+})
+
+describe('registrationForSummaryLog', () => {
+  it("finds the accreditation for the summary log's year while the Registration and Accreditation service is down", async () => {
+    const served = servedOrganisations()
+    const { organisationNumber } = served.approved({ year: 2026 })
+
+    const found = await registrationForSummaryLog(
+      whileRegAccredIsDown(served.repository()),
+      {
+        organisationNumber,
+        registrationNumber: toRegistrationNumber(`REG${organisationNumber}`),
+        accreditationNumber: toAccreditationNumber(`ACC${organisationNumber}`),
+        year: toYear(2026)
+      }
+    )
+
+    expect(found.accreditation?.accreditationNumber).toBe(
+      `ACC${organisationNumber}`
+    )
+  })
 })
