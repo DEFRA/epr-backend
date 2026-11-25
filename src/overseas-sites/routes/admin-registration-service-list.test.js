@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { delay, http, HttpResponse } from 'msw'
 
-import { expectedSignature } from '#common/helpers/reg-accred-signed-headers-test-helpers.js'
+import { expectedSignature } from '#common/helpers/reg-accred-api-test-helpers.js'
 import {
   buildReadExporterRegistration,
   buildReadOrganisation,
@@ -15,8 +15,12 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { adminRegistrationServiceOverseasSitesListPath } from './admin-registration-service-list.js'
 
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 /** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
+/** @import { TestServer } from '#test/create-test-server.js' */
+/** @import { RegistrationServiceOverseasSiteRow } from './admin-registration-service-list.js' */
 
+/** @type {RegAccredApiConfig} */
 const regAccredApi = {
   baseUrl: 'https://registration-service.test',
   clientId: 'epr-ReEx-Client',
@@ -124,6 +128,17 @@ const fullSiteRow = {
   coordinates: '48.8566,2.3522'
 }
 
+/** Twelve organisations, each with one exporter registration. */
+const twelveExporters = Array.from({ length: 12 }, (_, index) =>
+  buildReadOrganisation({
+    registrations: {
+      [toRegistrationNumber(
+        `R27EX50011801${String(index).padStart(2, '0')}PL`
+      )]: buildReadExporterRegistration()
+    }
+  })
+)
+
 const notFound = () =>
   HttpResponse.json(
     { code: 'not_found', title: 'Not Found', status: 404 },
@@ -149,7 +164,7 @@ const serveRegistrations = (registrations, requests = []) =>
 
 /**
  * @param {Organisation[]} organisations
- * @param {object} [config]
+ * @param {{ regAccredApi: RegAccredApiConfig }} [config]
  */
 const serverWith = (organisations, config = { regAccredApi }) =>
   createTestServer({
@@ -160,6 +175,7 @@ const serverWith = (organisations, config = { regAccredApi }) =>
     }
   })
 
+/** @param {TestServer} server */
 const list = (server) =>
   server.inject({
     method: 'GET',
@@ -167,7 +183,14 @@ const list = (server) =>
     ...asServiceMaintainer()
   })
 
+/**
+ * @param {{ payload: string }} response
+ * @returns {RegistrationServiceOverseasSiteRow[]}
+ */
+const rowsOf = (response) => JSON.parse(response.payload).rows
+
 describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
+  /** @type {TestServer | undefined} */
   let server
 
   afterEach(async () => {
@@ -234,9 +257,10 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
     const response = await list(server)
 
     expect(
-      JSON.parse(response.payload).rows.map(
-        ({ registrationNumber, siteId }) => [registrationNumber, siteId]
-      )
+      rowsOf(response).map(({ registrationNumber, siteId }) => [
+        registrationNumber,
+        siteId
+      ])
     ).toStrictEqual([
       [ALPHA_REGISTRATION, 1],
       [ALPHA_REGISTRATION, 2],
@@ -248,6 +272,7 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
     serveRegistrations({
       [BETA_REGISTRATION]: {
         ...alphaRegistration,
+        organisationNumber: Number(betaOrganisation.organisationNumber),
         registrationNumber: BETA_REGISTRATION,
         applications: [alphaRegistration.applications[0]]
       }
@@ -257,7 +282,7 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
     const response = await list(server)
 
     expect(
-      JSON.parse(response.payload).rows.map((row) => row.packagingWasteCategory)
+      rowsOf(response).map((row) => row.packagingWasteCategory)
     ).toStrictEqual(['glass_other', 'glass_other'])
   })
 
@@ -284,24 +309,43 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
     ).toStrictEqual([
       `/v1/organisations/${alphaOrganisation.organisationNumber}/registrations/${ALPHA_REGISTRATION}`
     ])
-    expect(requests[0].headers.get('x-cdp-client-id')).toBe(
-      regAccredApi.clientId
-    )
-    expect(requests[0].headers.get('x-cdp-auth-signature')).toBe(
-      expectedSignature(requests[0].headers, regAccredApi.sharedSecret)
-    )
+    expect(
+      requests.map((request) => ({
+        clientId: request.headers.get('x-cdp-client-id'),
+        signature: request.headers.get('x-cdp-auth-signature')
+      }))
+    ).toStrictEqual([
+      {
+        clientId: regAccredApi.clientId,
+        signature: expectedSignature(
+          requests[0]?.headers ?? new Headers(),
+          regAccredApi.sharedSecret
+        )
+      }
+    ])
+  })
+
+  it('does not ask about a registration number the registration service would refuse', async () => {
+    /** @type {Request[]} */
+    const requests = []
+    serveRegistrations({}, requests)
+    server = await serverWith([
+      buildReadOrganisation({
+        registrations: {
+          [toRegistrationNumber('EPR/AB1234CD/R1')]:
+            buildReadExporterRegistration()
+        }
+      })
+    ])
+
+    const response = await list(server)
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toStrictEqual({ rows: [] })
+    expect(requests).toStrictEqual([])
   })
 
   it('asks about no more than five registrations at once', async () => {
-    const organisations = Array.from({ length: 12 }, (_, index) =>
-      buildReadOrganisation({
-        registrations: {
-          [toRegistrationNumber(
-            `R27EX50011801${String(index).padStart(2, '0')}PL`
-          )]: buildReadExporterRegistration()
-        }
-      })
-    )
     let inFlight = 0
     let mostInFlight = 0
     mswServer.use(
@@ -313,12 +357,37 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
         return notFound()
       })
     )
-    server = await serverWith(organisations)
+    server = await serverWith(twelveExporters)
 
     const response = await list(server)
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(mostInFlight).toBe(5)
+  })
+
+  it('asks about no further registration once one has failed', async () => {
+    /** @type {Request[]} */
+    const requests = []
+    const theRest = Promise.withResolvers()
+    mswServer.use(
+      http.get(REGISTRATION_URL, async ({ request }) => {
+        requests.push(request)
+        if (requests.length === 1) {
+          return HttpResponse.json({}, { status: 500 })
+        }
+        await theRest.promise
+        return notFound()
+      })
+    )
+    server = await serverWith(twelveExporters)
+
+    const response = await list(server)
+    theRest.resolve(undefined)
+    // Time for any worker still running to ask about another registration.
+    await delay(50)
+
+    expect(response.statusCode).toBe(StatusCodes.BAD_GATEWAY)
+    expect(requests).toHaveLength(5)
   })
 
   it.for([
@@ -332,7 +401,32 @@ describe(`${adminRegistrationServiceOverseasSitesListPath} route`, () => {
     },
     {
       when: 'the registration service serves something that is not a registration',
-      respond: () => HttpResponse.json({ applications: [{ year: 2027 }] })
+      respond: () =>
+        HttpResponse.json({
+          ...alphaRegistration,
+          applications: [{ year: 2027 }]
+        })
+    },
+    {
+      when: 'the registration service serves a registration with no applications',
+      respond: () =>
+        HttpResponse.json({ ...alphaRegistration, applications: [] })
+    },
+    {
+      when: 'the registration service serves another registration',
+      respond: () =>
+        HttpResponse.json({
+          ...alphaRegistration,
+          registrationNumber: BETA_REGISTRATION
+        })
+    },
+    {
+      when: "the registration service serves another organisation's registration",
+      respond: () =>
+        HttpResponse.json({
+          ...alphaRegistration,
+          organisationNumber: Number(betaOrganisation.organisationNumber)
+        })
     }
   ])('answers 502 when $when', async ({ respond }) => {
     mswServer.use(http.get(REGISTRATION_URL, respond))

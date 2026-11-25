@@ -12,7 +12,8 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { fetchRegistrationServiceApplications } from '#overseas-sites/registration-service-applications.js'
 
-/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-signed-headers.js' */
+/** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExporterRegistration, Organisation } from '#organisation-read-model/vocabulary.js' */
 /** @import { RegistrationServiceApplication, RegistrationServiceOverseasSite } from '#overseas-sites/registration-service-applications.js' */
@@ -43,22 +44,25 @@ const CONCURRENT_REQUESTS = 5
 const exporterRegistrations = (organisations) =>
   organisations
     .flatMap((organisation) =>
-      Object.entries(organisation.registrations)
-        .filter(
-          ([, registration]) =>
-            registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-        )
-        .map(([registrationNumber, registration]) => ({
-          organisation,
-          registrationNumber: toRegistrationNumber(registrationNumber),
-          registration: /** @type {ExporterRegistration} */ (registration)
-        }))
+      Object.entries(organisation.registrations).flatMap(
+        ([registrationNumber, registration]) =>
+          registration.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
+            ? [
+                {
+                  organisation,
+                  registrationNumber: toRegistrationNumber(registrationNumber),
+                  registration
+                }
+              ]
+            : []
+      )
     )
     .sort((a, b) => a.registrationNumber.localeCompare(b.registrationNumber))
 
 /**
  * `fn` applied to each item, with no more than `limit` calls pending at once,
- * the results in the order of the items.
+ * the results in the order of the items. Once a call fails, no further call
+ * starts.
  *
  * @template T, R
  * @param {T[]} items
@@ -69,23 +73,60 @@ const exporterRegistrations = (organisations) =>
 const mapConcurrently = async (items, limit, fn) => {
   /** @type {R[]} */
   const results = []
-  let next = 0
+  // The workers share one iterator, so each item is taken once.
+  const entries = items.entries()
+  let failed = false
   const worker = async () => {
-    while (next < items.length) {
-      const index = next++
-      results[index] = await fn(items[index])
+    for (const [index, item] of entries) {
+      if (failed) {
+        return
+      }
+      try {
+        results[index] = await fn(item)
+      } catch (error) {
+        failed = true
+        throw error
+      }
     }
   }
   await Promise.all(Array.from({ length: limit }, worker))
   return results
 }
 
+/**
+ * @template T
+ * @param {T | undefined} value
+ * @returns {T | null}
+ */
 const nullable = (value) => value ?? null
+
+/**
+ * @typedef {{
+ *   orgId: number
+ *   registrationNumber: RegistrationNumber
+ *   packagingWasteCategory: ExporterRegistration['material']
+ *   year: number
+ *   applicationReference: string | null
+ *   applicationStatus: string
+ *   accreditationNumber: string | null
+ *   siteId: number
+ *   orsId: string | null
+ *   selected: boolean
+ *   overseasReprocessorName: string
+ *   formattedAddress: string | null
+ *   destinationCountry: string | null
+ *   addressLine1: string | null
+ *   addressLine2: string | null
+ *   cityOrTown: string | null
+ *   coordinates: string | null
+ * }} RegistrationServiceOverseasSiteRow
+ */
 
 /**
  * @param {ExporterRegistrationOf} exporter
  * @param {RegistrationServiceApplication} application
  * @param {RegistrationServiceOverseasSite} site
+ * @returns {RegistrationServiceOverseasSiteRow}
  */
 const toRow = (
   { organisation, registrationNumber, registration },
@@ -122,6 +163,7 @@ export const adminRegistrationServiceOverseasSitesList = {
    * @param {import('#common/hapi-types.js').HapiRequest & {
    *   organisationReadRepository: import('#organisation-read-model/index.js').OrganisationReadRepository
    * }} request
+   * @param {HapiResponseToolkit} h
    */
   handler: async (request, h) => {
     const { logger, organisationReadRepository } = request
@@ -152,7 +194,7 @@ export const adminRegistrationServiceOverseasSitesList = {
       )
     } catch (error) {
       logger.error({
-        err: error,
+        err: /** @type {Error} */ (error),
         message: `Failure on ${adminRegistrationServiceOverseasSitesListPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

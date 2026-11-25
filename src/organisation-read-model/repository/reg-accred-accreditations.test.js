@@ -8,7 +8,7 @@ import { getTracingHeaderName } from '#common/helpers/request-tracing.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { setupMsw } from '#vite/setup-msw.js'
 
-import { expectedSignature } from '#common/helpers/reg-accred-signed-headers-test-helpers.js'
+import { expectedSignature } from '#common/helpers/reg-accred-api-test-helpers.js'
 
 import { createRegAccredAccreditationsLoader } from './reg-accred-accreditations.js'
 

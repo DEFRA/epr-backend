@@ -1,12 +1,15 @@
 import Joi from 'joi'
 
 import { fetchJson } from '#common/helpers/fetch-json.js'
-import { signedHeaders } from '#common/helpers/reg-accred-signed-headers.js'
+import {
+  REG_ACCRED_REQUEST_TIMEOUT_MS,
+  regAccredRequestOptions
+} from '#common/helpers/reg-accred-api.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-signed-headers.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 /** @import { ExternalAccreditation, OnDrop } from './to-read-model.js' */
 /** @import { ExternalAccreditationsLoader } from './mongodb-and-reg-accred-api.js' */
 
@@ -108,13 +111,6 @@ const toExternalAccreditation = (summary, loadedAt) =>
 const PAGE_LIMIT = 100
 
 /**
- * How long one page request may take before it is abandoned and the load
- * fails. Without it a slow Reg Accred holds the read for undici's 300 second
- * default on each page.
- */
-const PAGE_TIMEOUT_MS = 10_000
-
-/**
  * A page of `GET /v1/accreditations`, its items not yet validated.
  *
  * @typedef {{
@@ -147,13 +143,10 @@ const fetchEveryAccreditation = async (config, timeoutMs, year, filter) => {
       limit: String(PAGE_LIMIT)
     })
     const { items, totalItems } = /** @type {RegAccredAccreditationsPage} */ (
-      await fetchJson(`${config.baseUrl}/v1/accreditations?${query}`, {
-        headers: {
-          accept: 'application/json',
-          ...signedHeaders(config)
-        },
-        signal: AbortSignal.timeout(timeoutMs)
-      })
+      await fetchJson(
+        `${config.baseUrl}/v1/accreditations?${query}`,
+        regAccredRequestOptions(config, timeoutMs)
+      )
     )
     accreditations.push(...items)
     // An empty page ends the search even short of `totalItems`, in case
@@ -176,7 +169,14 @@ const fetchEveryAccreditation = async (config, timeoutMs, year, filter) => {
  * @returns {ExternalAccreditationsLoader}
  */
 export const createRegAccredAccreditationsLoader =
-  (config, { onDrop, now = () => new Date(), timeoutMs = PAGE_TIMEOUT_MS }) =>
+  (
+    config,
+    {
+      onDrop,
+      now = () => new Date(),
+      timeoutMs = REG_ACCRED_REQUEST_TIMEOUT_MS
+    }
+  ) =>
   async (year, organisationNumber) => {
     const accreditations = await fetchEveryAccreditation(
       config,

@@ -3,7 +3,7 @@ import { createOrganisationReadRepository } from './mongodb-and-reg-accred-api.j
 
 /** @import { Db } from 'mongodb' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-signed-headers.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 /**
  * Reads exporters' sites through `server.app.overseasSitesRepository`, so it

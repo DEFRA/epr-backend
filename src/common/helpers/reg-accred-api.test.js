@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { signedHeaders } from './reg-accred-signed-headers.js'
+import { signedHeaders } from './reg-accred-api.js'
 
 const config = { clientId: 'epr-ReEx-Client', sharedSecret: 'secret' }
 
