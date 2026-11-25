@@ -43,14 +43,14 @@ const insertAccreditedOperator =
 /** @import { AccreditationStatus, OrganisationReadRepository, StatusTimeline } from '#organisation-read-model/index.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
-/** @import { RedactableTabContents } from './cells.js' */
+/** @import { TabContents } from './cells.js' */
 /** @import { NationFiguresTabName } from './nation-figures-tab.js' */
 
 const JANUARY_TO_MARCH_2026 = ['2026-01', '2026-02', '2026-03'].map(toYearMonth)
 
 /**
  * @param {NationFiguresTabName} name
- * @param {RedactableTabContents} contents
+ * @param {TabContents} contents
  */
 const renderWith = (name, contents) =>
   renderTab((workbook) => addNationFigures(workbook, name, contents))
@@ -193,25 +193,21 @@ const seedPublishedMaterialOperators = async (register) => {
 }
 
 /**
- * The tab's contents for the months, read from the register, in full unless
- * asked for redacted.
+ * The tab's contents for the months, read from the register.
  *
  * @param {Register} register
  * @param {YearMonth[]} [months]
- * @param {boolean} [redacted]
- * @returns {Promise<RedactableTabContents>}
+ * @returns {Promise<TabContents>}
  */
 const contentsOfRegister = async (
   register,
-  months = JANUARY_TO_MARCH_2026,
-  redacted = false
+  months = JANUARY_TO_MARCH_2026
 ) => ({
   ...frameOf({ months, now: PUBLISHED_EXTRACTION }),
   figures: await readMarketInsightsFigures({
     ...readParamsFor(months),
     ...register
-  }),
-  redacted
+  })
 })
 
 /**
@@ -437,37 +433,24 @@ describe("the UK and England tabs' figures", () => {
 /**
  * @param {number} count
  */
-const confidential = (count) => Array.from({ length: count }, () => '[c]')
-
-/**
- * @param {number} count
- */
 const zeros = (count) => Array.from({ length: count }, () => 0)
 
 describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
-  "the %j tab's figures, redacted",
+  "the %j tab's figures from fewer than three operators",
   (name) => {
     const register = newRegister([
       accreditedExporter({ material: MATERIAL.PAPER })
     ])
 
     /** @type {ExcelJS.Worksheet} */
-    let redacted
-    /** @type {ExcelJS.Worksheet} */
-    let full
+    let worksheet
 
     beforeAll(async () => {
       const [plasticReprocessor] = [
         await seedOperator(register, { material: MATERIAL.PLASTIC }),
         await seedOperator(register, { material: MATERIAL.PLASTIC })
       ]
-      const [woodReprocessor] = [
-        await seedOperator(register, { material: MATERIAL.WOOD }),
-        await seedOperator(register, { material: MATERIAL.WOOD }),
-        await seedOperator(register, { material: MATERIAL.WOOD })
-      ]
-      /** @type {Partial<CreateReportBase>} */
-      const reported = {
+      await submitMonthlyReport(register, plasticReprocessor, 2, {
         recyclingActivity: {
           suppliers: [],
           totalTonnageReceived: 30,
@@ -480,117 +463,24 @@ describe.each([WORKSHEET_NAME.UK, WORKSHEET_NAME.ENGLAND])(
           totalRevenue: 1000,
           averagePricePerTonne: 50
         }
-      }
-      await submitMonthlyReport(register, plasticReprocessor, 2, reported)
-      await submitMonthlyReport(register, woodReprocessor, 2, {
-        ...reported,
-        material: MATERIAL.WOOD
       })
-      redacted = await renderWith(
-        name,
-        await contentsOfRegister(register, JANUARY_TO_MARCH_2026, true)
-      )
-      full = await renderWith(name, await contentsOfRegister(register))
+      worksheet = await renderWith(name, await contentsOfRegister(register))
     })
 
-    // Each table's rows are Paper and board, Plastic, Wood, then Grand Total.
+    // Each table's rows are Paper and board, Plastic, then Grand Total.
 
-    it('show "[c]" for every figure of a row with fewer than three operators accredited, zeros included', () => {
-      // February's plastic reprocessor row, which one of its two reported into.
-      expect(valuesIn(redacted, 'B21', 'H21')).toEqual([confidential(7)])
-      expect(valuesIn(redacted, 'B66', 'D66')).toEqual([confidential(3)])
-      // January's, which nobody reported into.
-      expect(valuesIn(full, 'B6', 'H6')).toEqual([zeros(7)])
-      expect(valuesIn(redacted, 'B6', 'H6')).toEqual([confidential(7)])
+    it('show as reported', () => {
+      // February's plastic reprocessor row, then its PRN row.
+      expect(valuesIn(worksheet, 'B19', 'D19')).toEqual([[30, 20, 10]])
+      expect(valuesIn(worksheet, 'B58', 'D58')).toEqual([[20, 1000, 50]])
+    })
+
+    it('show zeros where nothing was reported', () => {
       // January's paper exporter row, from its one exporter.
-      expect(valuesIn(redacted, 'B12', 'K12')).toEqual([confidential(10)])
-    })
-
-    it('align "[c]" right, like the numbers beside it', () => {
-      // February's plastic reprocessor row, then January's exporter grand total.
-      expect(redacted.getCell('B21').alignment?.horizontal).toBe('right')
-      expect(redacted.getCell('B15').alignment?.horizontal).toBe('right')
-    })
-
-    it('show every figure of a row with three operators accredited', () => {
-      // February's wood reprocessor row, then its PRN row.
-      expect(valuesIn(full, 'B22', 'H22')).not.toEqual([zeros(7)])
-      expect(valuesIn(redacted, 'B22', 'H22')).toEqual(
-        valuesIn(full, 'B22', 'H22')
-      )
-      expect(valuesIn(redacted, 'B67', 'D67')).toEqual(
-        valuesIn(full, 'B67', 'D67')
-      )
-    })
-
-    it('show a row with no operator accredited and nothing in it', () => {
-      // January's paper reprocessor row, then its plastic exporter row.
-      expect(valuesIn(redacted, 'B5', 'H5')).toEqual([zeros(7)])
-      expect(valuesIn(redacted, 'B13', 'K13')).toEqual([zeros(10)])
-    })
-
-    it('show "[c]" for every figure of a grand total from fewer than three operators, keeping the dash under its average price', () => {
-      // January's exporter grand total, then its PERN grand total.
-      expect(valuesIn(redacted, 'B15', 'K15')).toEqual([confidential(10)])
-      expect(valuesIn(redacted, 'B60', 'D60')).toEqual([['[c]', '[c]', '-']])
-    })
-
-    it('show a grand total from three or more operators', () => {
-      // February's reprocessor grand total, then its PRN grand total.
-      expect(valuesIn(redacted, 'B23', 'H23')).toEqual(
-        valuesIn(full, 'B23', 'H23')
-      )
-      expect(valuesIn(redacted, 'B68', 'D68')).toEqual(
-        valuesIn(full, 'B68', 'D68')
-      )
+      expect(valuesIn(worksheet, 'B11', 'K11')).toEqual([zeros(10)])
     })
   }
 )
-
-describe("a redacted UK tab's row with no operator accredited", () => {
-  it('shows "[c]" for every figure of the row where either of its tables holds data', async () => {
-    const cancelledThroughoutFebruary = accreditedExporter({
-      material: MATERIAL.ALUMINIUM,
-      timeline: [
-        ...approvedFrom(),
-        changed('suspended', '2026-01-20'),
-        changed('cancelled', '2026-01-20T09:00:00.000Z'),
-        changed('approved', '2026-03-01')
-      ]
-    })
-    const register = newRegister([cancelledThroughoutFebruary])
-    await submitMonthlyReport(
-      register,
-      cancelledThroughoutFebruary.operator,
-      2,
-      {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.ALUMINIUM,
-        prn: {
-          issuedTonnage: 20,
-          freeTonnage: 0,
-          totalRevenue: 1000,
-          averagePricePerTonne: 50
-        }
-      }
-    )
-
-    const full = await renderWith(
-      WORKSHEET_NAME.UK,
-      await contentsOfRegister(register)
-    )
-    const redacted = await renderWith(
-      WORKSHEET_NAME.UK,
-      await contentsOfRegister(register, JANUARY_TO_MARCH_2026, true)
-    )
-
-    // February's aluminium exporter row, whose PERN row alone holds data.
-    expect(valuesIn(full, 'B21', 'K21')).toEqual([zeros(10)])
-    expect(valuesIn(redacted, 'B21', 'K21')).toEqual([confidential(10)])
-    expect(valuesIn(full, 'B54', 'D54')).toEqual([[20, 1000, 50]])
-    expect(valuesIn(redacted, 'B54', 'D54')).toEqual([confidential(3)])
-  })
-})
 
 describe("a UK or England tab's materials", () => {
   it('are those the period has an accredited operator for, in published order, with zeros where nothing was reported', async () => {
