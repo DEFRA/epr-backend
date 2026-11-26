@@ -29,7 +29,7 @@ import {
 } from './classify-and-persist.js'
 import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
 import { logValidationIssues } from './validate-issue-logging.js'
-import { checkCrossYearRules } from './validations/cross-year-rules.js'
+import { checkCrossYearRules } from './validations/cross-year/index.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateMetaSyntax } from './validations/meta-syntax.js'

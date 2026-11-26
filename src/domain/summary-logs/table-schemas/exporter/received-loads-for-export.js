@@ -29,7 +29,7 @@ import {
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { PREVIOUS_YEAR_ROW_COMPLETION } from '#domain/summary-logs/previous-year-link.js'
+import { PREVIOUS_YEAR_ROW_COMPLETION } from '#domain/summary-logs/linked-row.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
@@ -356,7 +356,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
   }
 }
 
-/** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/previous-year-link.js' */
+/** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/linked-row.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
 
 /**

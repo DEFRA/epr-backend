@@ -8,7 +8,7 @@ import {
   DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 
-import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
+import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/linked-row.js'
 
 import { fillInLinkedRows } from './fill-in-linked-rows.js'
 
