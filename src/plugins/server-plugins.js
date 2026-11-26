@@ -48,7 +48,11 @@ function getSwaggerPlugins() {
   ]
 }
 
-/** The modules' route plugins, which every server but the legacy one registers. */
+/**
+ * The modules' route plugins, which every server but the legacy one registers.
+ *
+ * @param {ReturnType<typeof import('#root/config.js').getConfig>} config
+ */
 const moduleRoutePlugins = (config) => [
   {
     plugin: formsSubmissionDataRoutesPlugin,

@@ -38,10 +38,11 @@ export const mongoDbPlugin = {
 
       const db = client.db(options.databaseName)
 
-      const locker = new LockManager(db.collection('mongo-locks'))
+      const locks = db.collection('mongo-locks')
+      const locker = new LockManager(locks)
 
       await options.createFormCollections(db)
-      await db.collection('mongo-locks').createIndex({ id: 1 })
+      await locks.createIndex({ id: 1 })
       await options.seedDatabase(db)
 
       server.logger.info({
