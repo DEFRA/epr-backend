@@ -7,11 +7,18 @@ import { registerDependency } from '#plugins/register-dependency.js'
 /** @typedef {ServerApp & { mongodb: Db }} Needable */
 
 /**
+ * @template {keyof ServerApp} P
+ * @typedef {(request: { logger: TypedLogger }) => ServerApp[P]} PortFactory
+ */
+
+/**
  * A Hapi plugin for one adapter of a port, named after the port. When the
  * server starts, it builds the adapter from the plugin's options and the
  * dependencies it declares, and provides the port on `server.app` and on each
  * request with that request's logger. A dependency named `mongodb` is the
- * database.
+ * database. A build that returns a promise, such as one that creates indexes
+ * first, holds the server's start until it settles, and a rejection stops the
+ * server starting.
  *
  * @template {keyof ServerApp} P
  * @template {keyof Needable} N
@@ -22,7 +29,7 @@ import { registerDependency } from '#plugins/register-dependency.js'
  *   build: (
  *     options: O,
  *     needs: Pick<Needable, N>
- *   ) => (request: { logger: TypedLogger }) => ServerApp[P]
+ *   ) => PortFactory<P> | Promise<PortFactory<P>>
  * }} adapter
  */
 export const portAdapter = ({ provides, needs, build }) => ({
@@ -47,7 +54,7 @@ export const portAdapter = ({ provides, needs, build }) => ({
           ])
         )
       )
-      registerDependency(started, provides, build(options, needed))
+      registerDependency(started, provides, await build(options, needed))
     })
   }
 })
