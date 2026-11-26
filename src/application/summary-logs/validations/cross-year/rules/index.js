@@ -1,5 +1,6 @@
 import { earlierYearDates } from './earlier-year-dates.js'
 import { previousYearRowComplete } from './previous-year-row-complete.js'
+import { previousYearRowMissingData } from './previous-year-row-missing-data.js'
 
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {FoundLinkedRow} from '../index.js' */
@@ -15,7 +16,8 @@ import { previousYearRowComplete } from './previous-year-row-complete.js'
  */
 const LINKED_ROW_RULES = Object.freeze([
   earlierYearDates,
-  previousYearRowComplete
+  previousYearRowComplete,
+  previousYearRowMissingData
 ])
 
 /** @type {LinkedRowCheck} */

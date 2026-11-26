@@ -14,6 +14,7 @@ import {
   createDateFieldSchema,
   isDateNoLaterThan
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
+import { isAnswered } from '#domain/summary-logs/table-schemas/shared/answers.js'
 
 import { checkCrossYearRules } from './index.js'
 
@@ -67,7 +68,8 @@ const tableSchemas = {
             ]
           : [])
       ],
-      missingFieldsOf: () => []
+      /** @param {Record<string, unknown>} row */
+      missingFieldsOf: (row) => (isAnswered(row.OSR_NAME) ? [] : ['OSR_NAME'])
     },
     validationSchema: Joi.object({
       ROW_ID: Joi.number(),
@@ -90,7 +92,7 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
  *   dateOfExport: unknown,
  *   previousYearDateOfExport?: unknown,
  *   suppliedFields?: string[],
- *   previousYearCompletion?: Record<string, unknown>,
+ *   previousYearValues?: Record<string, unknown>,
  *   dateReceivedByOsr?: string
  * }} row
  * @returns {FilledInRow}
@@ -100,7 +102,7 @@ const filledInRow = ({
   dateOfExport,
   previousYearDateOfExport = '2026-11-01',
   suppliedFields = ['DATE_OF_EXPORT'],
-  previousYearCompletion = {},
+  previousYearValues = {},
   dateReceivedByOsr
 }) => {
   /** @type {Record<string, unknown>} */
@@ -108,7 +110,7 @@ const filledInRow = ({
     ROW_ID: 1500,
     DATE_OF_EXPORT: previousYearDateOfExport,
     OSR_NAME: 'Overseas 2026 Ltd',
-    ...previousYearCompletion
+    ...previousYearValues
   }
   const values = [
     rowId,
@@ -150,11 +152,11 @@ const unmatchedRow = ({ rowNumber = 8, rowId = 1001, previousYearRowId }) => ({
 
 /**
  * @param {{ row: number, rowId: string, column: string, header: string }} cell
- * @param {{ errorCode: string, actual: unknown, previousYearRowId?: string }} issue
+ * @param {{ errorCode: string, actual: unknown, previousYearRowId?: string, deadline?: string }} issue
  */
 const previousYearLinkIssue = (
   cell,
-  { errorCode, actual, previousYearRowId }
+  { errorCode, actual, previousYearRowId, deadline }
 ) => ({
   category: VALIDATION_CATEGORY.BUSINESS,
   severity: VALIDATION_SEVERITY.FATAL,
@@ -165,7 +167,8 @@ const previousYearLinkIssue = (
     actual,
     expected: 2026,
     errorCode,
-    ...(previousYearRowId && { previousYearRowId })
+    ...(previousYearRowId && { previousYearRowId }),
+    ...(deadline && { deadline })
   }
 })
 
@@ -366,7 +369,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+            previousYearValues: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
           })
         ])
       ).toStrictEqual([
@@ -391,7 +394,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' },
+            previousYearValues: { DATE_RECEIVED_BY_OSR: '2026-12-14' },
             dateReceivedByOsr: '2027-01-05',
             suppliedFields: ['DATE_OF_EXPORT', 'DATE_RECEIVED_BY_OSR']
           })
@@ -404,7 +407,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearCompletion: { WAS_THE_WASTE_STOPPED: 'No' }
+            previousYearValues: { WAS_THE_WASTE_STOPPED: 'No' }
           })
         ])
       ).toStrictEqual([
@@ -429,7 +432,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2027-01-05' }
+            previousYearValues: { DATE_RECEIVED_BY_OSR: '2027-01-05' }
           })
         ])
       ).toStrictEqual([])
@@ -440,7 +443,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearCompletion: { DATE_REPATRIATED: '2026-12-20' }
+            previousYearValues: { DATE_REPATRIATED: '2026-12-20' }
           })
         ])
       ).toStrictEqual([
@@ -460,7 +463,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearCompletion: {
+            previousYearValues: {
               DATE_RECEIVED_BY_OSR: '2026-12-14',
               DATE_REPATRIATED: '2026-12-20'
             }
@@ -478,7 +481,7 @@ describe('checkCrossYearRules', () => {
           [
             filledInRow({
               dateOfExport: '2026-11-01',
-              previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+              previousYearValues: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
             })
           ],
           {
@@ -487,6 +490,97 @@ describe('checkCrossYearRules', () => {
           }
         )
       ).toHaveLength(1)
+    })
+  })
+
+  describe('a previous year row missing data', () => {
+    const missingOsrName = () =>
+      filledInRow({
+        dateOfExport: '2026-11-01',
+        previousYearValues: { OSR_NAME: null }
+      })
+
+    it('rejects the row on its previous year Row ID, with the last day it can be added', () => {
+      expect(check([missingOsrName()])).toStrictEqual([
+        previousYearLinkIssue(
+          {
+            row: 8,
+            rowId: '1001',
+            column: 'C',
+            header: 'PREVIOUS_YEAR_ROW_ID'
+          },
+          {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
+            actual: 1500,
+            previousYearRowId: '1500',
+            deadline: '2027-02-27'
+          }
+        )
+      ])
+    })
+
+    it.for(
+      /**
+       * @type {{
+       *   description: string,
+       *   registeredOnly: boolean,
+       *   createdAt: string,
+       *   deadlines: string[]
+       * }[]}
+       */ ([
+        {
+          description: 'accredited, on the last correction day',
+          registeredOnly: false,
+          createdAt: '2027-02-27T23:59:59.000Z',
+          deadlines: ['2027-02-27']
+        },
+        {
+          description: 'accredited, after the last correction day',
+          registeredOnly: false,
+          createdAt: '2027-02-28T00:00:00.000Z',
+          deadlines: []
+        },
+        {
+          description: 'registered-only, on the last correction day',
+          registeredOnly: true,
+          createdAt: '2027-03-20T23:59:59.000Z',
+          deadlines: ['2027-03-20']
+        },
+        {
+          description: 'registered-only, after the last correction day',
+          registeredOnly: true,
+          createdAt: '2027-03-21T00:00:00.000Z',
+          deadlines: []
+        }
+      ])
+    )(
+      'applies until the correction deadline: $description',
+      ({ registeredOnly, createdAt, deadlines }) => {
+        expect(
+          check([missingOsrName()], {
+            ...BEFORE_2026_CORRECTION_DEADLINE,
+            registeredOnly,
+            createdAt: new Date(createdAt)
+          }).map(({ context }) => context?.deadline)
+        ).toStrictEqual(deadlines)
+      }
+    )
+
+    it('reports both when the previous year row is complete and missing data', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearValues: {
+              OSR_NAME: null,
+              DATE_RECEIVED_BY_OSR: '2026-12-14'
+            }
+          })
+        ]).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([
+        VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR,
+        VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA
+      ])
     })
   })
 
