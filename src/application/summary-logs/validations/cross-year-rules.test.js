@@ -57,6 +57,14 @@ const tableSchemas = {
                 field: 'DATE_REPATRIATED'
               }
             ]
+          : []),
+        ...(row.WAS_THE_WASTE_STOPPED === 'No'
+          ? [
+              {
+                completion: PREVIOUS_YEAR_ROW_COMPLETION.RECEIVED_BY_OSR,
+                field: 'PREVIOUS_YEAR_ROW_ID'
+              }
+            ]
           : [])
       ]
     },
@@ -388,6 +396,31 @@ describe('checkCrossYearRules', () => {
           })
         ]).map(({ context }) => context?.actual)
       ).toStrictEqual(['2027-01-05'])
+    })
+
+    it('shows the previous year Row ID the linked row entered, for a completion with no date to point at', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearCompletion: { WAS_THE_WASTE_STOPPED: 'No' }
+          })
+        ])
+      ).toStrictEqual([
+        previousYearLinkIssue(
+          {
+            row: 8,
+            rowId: '1001',
+            column: 'C',
+            header: 'PREVIOUS_YEAR_ROW_ID'
+          },
+          {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR,
+            actual: 1500,
+            previousYearRowId: '1500'
+          }
+        )
+      ])
     })
 
     it('accepts a link to a row whose received date is after its year', () => {

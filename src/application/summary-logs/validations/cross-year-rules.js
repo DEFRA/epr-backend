@@ -184,8 +184,11 @@ const COMPLETION_ERROR_CODES = Object.freeze({
  * @param {string} field
  * @returns {unknown}
  */
-const enteredValueOf = ({ rowObject, previousYearLink }, field) =>
-  previousYearLink.link.suppliedFields.includes(field) ? rowObject[field] : null
+const enteredValueOf = ({ rowObject, previousYearLink, linking }, field) =>
+  field === linking.previousYearRowIdField ||
+  previousYearLink.link.suppliedFields.includes(field)
+    ? rowObject[field]
+    : null
 
 /** @type {FoundLinkRule} */
 const previousYearRowComplete = (context) => {

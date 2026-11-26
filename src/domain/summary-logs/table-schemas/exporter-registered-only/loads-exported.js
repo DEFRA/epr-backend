@@ -87,7 +87,7 @@ export const LOADS_EXPORTED = {
 /**
  * Neither refused nor stopped, so received; or refused or stopped and
  * repatriated. With no received date in this table, a received load's error
- * sits on its last answer, stopped.
+ * sits on the Previous year Row ID the operator entered.
  *
  * @param {Record<string, unknown>} row
  * @param {Year} year
@@ -100,7 +100,7 @@ const loadExportedCompletionsOf = (row, year) => {
     return [
       {
         completion: PREVIOUS_YEAR_ROW_COMPLETION.RECEIVED_BY_OSR,
-        field: FIELDS.WAS_THE_WASTE_STOPPED
+        field: LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID
       }
     ]
   }

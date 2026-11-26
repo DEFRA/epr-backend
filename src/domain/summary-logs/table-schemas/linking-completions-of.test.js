@@ -102,7 +102,7 @@ describe('linking.completionsOf', () => {
       [
         'neither refused nor stopped',
         { WAS_THE_WASTE_REFUSED: 'No', WAS_THE_WASTE_STOPPED: 'No' },
-        [{ completion: RECEIVED_BY_OSR, field: 'WAS_THE_WASTE_STOPPED' }]
+        [{ completion: RECEIVED_BY_OSR, field: 'PREVIOUS_YEAR_ROW_ID' }]
       ],
       [
         'only refused answered No',

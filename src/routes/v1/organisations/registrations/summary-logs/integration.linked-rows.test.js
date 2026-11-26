@@ -1185,10 +1185,11 @@ describe('2027 rows linked to a 2026 row', () => {
 
     it.each([
       [
-        'neither refused nor stopped, on stopped',
+        'neither refused nor stopped, on the previous year Row ID entered',
         { WAS_THE_WASTE_REFUSED: 'No', WAS_THE_WASTE_STOPPED: 'No' },
         'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
-        'WAS_THE_WASTE_STOPPED'
+        'PREVIOUS_YEAR_ROW_ID',
+        2001
       ],
       [
         'stopped and repatriated, on its repatriation date',
@@ -1198,11 +1199,12 @@ describe('2027 rows linked to a 2026 row', () => {
           DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED: '2026-12-30T00:00:00.000Z'
         },
         'PREVIOUS_YEAR_ROW_REPATRIATED',
-        'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
+        'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED',
+        null
       ]
     ])(
       'rejects a link to a 2026 load %s',
-      async (_, previousYearRow, errorCode, header) => {
+      async (_, previousYearRow, errorCode, header, actual) => {
         const env = await setupWith2026Row(previousYearRow)
 
         const validated = await upload(
@@ -1217,6 +1219,7 @@ describe('2027 rows linked to a 2026 row', () => {
           expect.objectContaining({
             code: 'PREVIOUS_YEAR_LINK',
             errorCode,
+            actual,
             previousYearRowId: '2001',
             location: expect.objectContaining({ rowId: '2002', header })
           })
