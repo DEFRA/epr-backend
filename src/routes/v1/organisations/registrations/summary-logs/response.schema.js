@@ -17,6 +17,7 @@ const validationIssueSchema = Joi.object({
   actual: Joi.any().optional(),
   expected: Joi.any().optional(),
   deadline: Joi.string().isoDate().optional(),
+  previousYearRowId: Joi.string().optional(),
   location: Joi.object({
     field: Joi.string().optional(),
     sheet: Joi.string().optional(),
