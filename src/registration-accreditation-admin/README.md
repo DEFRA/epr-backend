@@ -17,6 +17,8 @@ The module takes the shape [`src/modules.md`](../modules.md) describes, and lint
 
 Lint cannot see a JSDoc `@import`, so it lets one through.
 
+[`src/modules.md`](../modules.md) describes the shape every module takes. This module's plugin has not moved to it yet.
+
 ## Shape
 
 The routes read and write organisations through the administration port, which the context's data tooling also uses. The module holds only what no other user of that port needs:
