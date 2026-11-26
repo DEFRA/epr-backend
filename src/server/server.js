@@ -127,7 +127,7 @@ function getProductionPlugins(config) {
 /**
  * The plugins only a server with dev endpoints on registers.
  *
- * @param {{ get: (key: string) => unknown }} config
+ * @param {ReturnType<typeof getConfig>} config
  */
 function devEndpointsPlugins(config) {
   return config.get('featureFlags.devEndpoints')

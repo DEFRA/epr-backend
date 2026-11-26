@@ -129,6 +129,7 @@ describe('the production server with dev endpoints on', () => {
     vi.stubEnv('MONGO_URI', globalThis.__MONGO_URI__)
     vi.stubEnv('MONGO_DATABASE', `epr-backend-test-${randomUUID()}`)
     vi.stubEnv('FEATURE_FLAG_DEV_ENDPOINTS', 'true')
+    vi.stubEnv('FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS', 'false')
 
     const { createServer } = await import('#server/server.js')
     server = /** @type {StartedServer} */ (
