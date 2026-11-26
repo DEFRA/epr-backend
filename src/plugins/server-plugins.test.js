@@ -2,6 +2,7 @@ import HapiSwagger from 'hapi-swagger'
 import { describe, it, expect } from 'vitest'
 
 import { getConfig } from '#root/config.js'
+import { systemLogsRoutesPlugin } from '#system-logs/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
 import { serverPlugins } from './server-plugins.js'
@@ -12,9 +13,13 @@ const registersSwagger = (isSwaggerEnabled) =>
     (entry) => entry.plugin === HapiSwagger
   )
 
+const MODULE_ROUTE_PLUGINS = [wasteRecordsExport, systemLogsRoutesPlugin]
+
 /** @param {{ modules?: boolean }} [options] */
-const registersModuleRoutes = (options) =>
-  serverPlugins(getConfig(), [], options).includes(wasteRecordsExport)
+const registeredModuleRoutes = (options) => {
+  const plugins = serverPlugins(getConfig(), [], options)
+  return MODULE_ROUTE_PLUGINS.filter((plugin) => plugins.includes(plugin))
+}
 
 describe('serverPlugins', () => {
   it('registers Swagger when the config enables it', () => {
@@ -26,10 +31,10 @@ describe('serverPlugins', () => {
   })
 
   it("registers the modules' route plugins", () => {
-    expect(registersModuleRoutes()).toBe(true)
+    expect(registeredModuleRoutes()).toEqual(MODULE_ROUTE_PLUGINS)
   })
 
   it("leaves the modules' route plugins out when asked for none", () => {
-    expect(registersModuleRoutes({ modules: false })).toBe(false)
+    expect(registeredModuleRoutes({ modules: false })).toEqual([])
   })
 })
