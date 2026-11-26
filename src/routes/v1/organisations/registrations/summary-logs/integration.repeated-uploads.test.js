@@ -224,9 +224,9 @@ describe('Repeated uploads of identical data', () => {
         ledgerRepository,
         summaryLogExtractor,
         logger: mockLogger,
-        reportsService: /** @type {any} */ ({
-          findPeriodicReports: async () => []
-        })
+        reportsService: createReportsService(
+          createInMemoryReportsRepository()()
+        )
       })
 
       const summaryLogsWorker = createTestSubmitterWorker({

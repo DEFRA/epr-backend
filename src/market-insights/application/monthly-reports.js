@@ -7,6 +7,7 @@ import {
   selectSubmittedReports
 } from '#reports/domain/merge-reporting-periods.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
+import { periodicReportForYear } from '#reports/domain/periodic-report-for-year.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import { grantedRegistrations } from '#market-insights/application/accredited-months.js'
 import { recordOf } from '#common/helpers/record-of.js'
@@ -118,13 +119,16 @@ export function* owedMonthlyReports({
   } of grantedRegistrations(organisations, years, covers)) {
     const owed = owedPeriods(served, years, { window, accreditation })
     const owedMonths = new Set(owed.map((p) => toYearMonth(p.startDate)))
-    const reports = reportsByRegistration.get(key) ?? []
+    const periodicReport = periodicReportForYear(
+      reportsByRegistration.get(key) ?? [],
+      year
+    )
 
     // The merge also appends any report the operator submitted for a month it
     // does not owe, and those count for nothing.
     for (const period of mergeReportingPeriods(
       owed,
-      reports,
+      periodicReport,
       CADENCE.monthly
     )) {
       const month = toYearMonth(period.startDate)

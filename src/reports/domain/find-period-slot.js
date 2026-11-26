@@ -3,11 +3,9 @@
 /** @import {Cadence} from './cadence.js' */
 
 /**
- * @param {PeriodicReport[]} periodicReports
- * @param {PeriodRef} period
+ * @param {PeriodicReport | null} periodicReport
+ * @param {Pick<PeriodRef, 'cadence' | 'period'>} period
  * @returns {ReportPerPeriod | null}
  */
-export const findPeriodSlot = (periodicReports, { year, cadence, period }) =>
-  periodicReports.find((pr) => pr.year === year)?.reports?.[
-    /** @type {Cadence} */ (cadence)
-  ]?.[period] ?? null
+export const findPeriodSlot = (periodicReport, { cadence, period }) =>
+  periodicReport?.reports?.[/** @type {Cadence} */ (cadence)]?.[period] ?? null

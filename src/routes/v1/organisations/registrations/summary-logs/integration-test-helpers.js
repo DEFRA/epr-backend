@@ -861,9 +861,7 @@ export const createTestInfrastructure = async (
     organisationReadRepository,
     summaryLogRowStatesRepository,
     ledgerRepository,
-    reportsService: /** @type {any} */ ({
-      findPeriodicReports: async () => []
-    }),
+    reportsService: createReportsService(createInMemoryReportsRepository()()),
     summaryLogExtractor,
     logger: mockLogger
   })

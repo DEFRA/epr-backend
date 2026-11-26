@@ -45,7 +45,7 @@ describe('summaryLogCommandHandlers', () => {
       wasteBalanceService: {},
       reportsService: {
         hasReportSubmittedSince: vi.fn(),
-        findPeriodicReports: vi.fn()
+        findPeriodicReport: vi.fn()
       },
       summaryLogExtractor: {}
     }

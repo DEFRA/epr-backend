@@ -18,6 +18,7 @@ import { formatPeriodLabel } from '#reports/domain/period-labels.js'
 import { REGULATOR_DISPLAY } from '#domain/organisations/model.js'
 import { reportingPeriodsByKind } from '#reports/application/report-calendar.js'
 import { groupByRegistration } from '#reports/application/report-compliance.js'
+import { periodicReportForYear } from '#reports/domain/periodic-report-for-year.js'
 import { reportableRegistrations } from '#reports/application/reportable-registrations.js'
 
 /**
@@ -218,7 +219,7 @@ function periodRows(reportable, periodicReports, year, { storedOnly }) {
   const { registeredOnly, accredited, accreditationNumber } =
     reportingPeriodsByKind({
       registration: reportable.registration,
-      storedReports: periodicReports,
+      storedReport: periodicReportForYear(periodicReports, year),
       year
     })
   const byCadence = /** @type {const} */ ([
