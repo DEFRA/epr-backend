@@ -1,6 +1,7 @@
 import HapiSwagger from 'hapi-swagger'
 import { describe, it, expect } from 'vitest'
 
+import { formsSubmissionDataRoutesPlugin } from '#formsubmission/plugin.js'
 import { getConfig } from '#root/config.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
@@ -13,8 +14,15 @@ const registersSwagger = (isSwaggerEnabled) =>
   )
 
 /** @param {{ modules?: boolean }} [options] */
-const registersModuleRoutes = (options) =>
-  serverPlugins(getConfig(), [], options).includes(wasteRecordsExport)
+const moduleRoutePluginsRegistered = (options) => {
+  const plugins = serverPlugins(getConfig(), [], options)
+  return {
+    formsSubmissionData: plugins.some(
+      (entry) => entry.plugin === formsSubmissionDataRoutesPlugin
+    ),
+    wasteRecordsExport: plugins.includes(wasteRecordsExport)
+  }
+}
 
 describe('serverPlugins', () => {
   it('registers Swagger when the config enables it', () => {
@@ -26,10 +34,16 @@ describe('serverPlugins', () => {
   })
 
   it("registers the modules' route plugins", () => {
-    expect(registersModuleRoutes()).toBe(true)
+    expect(moduleRoutePluginsRegistered()).toEqual({
+      formsSubmissionData: true,
+      wasteRecordsExport: true
+    })
   })
 
   it("leaves the modules' route plugins out when asked for none", () => {
-    expect(registersModuleRoutes({ modules: false })).toBe(false)
+    expect(moduleRoutePluginsRegistered({ modules: false })).toEqual({
+      formsSubmissionData: false,
+      wasteRecordsExport: false
+    })
   })
 })
