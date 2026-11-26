@@ -141,11 +141,12 @@ async function createServer(options = {}) {
   // These routes reach their collections directly and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
   // See: src/routes/v1/apply/*.js
-  const infrastructure = options._testOnlyLegacyApplyRoutes
-    ? []
-    : getProductionPlugins(config)
+  const legacyApplyRoutes = Boolean(options._testOnlyLegacyApplyRoutes)
+  const infrastructure = legacyApplyRoutes ? [] : getProductionPlugins(config)
 
-  await server.register(serverPlugins(config, infrastructure))
+  await server.register(
+    serverPlugins(config, infrastructure, { modules: !legacyApplyRoutes })
+  )
 
   server.ext('onPostStart', () => {
     const startedServer = /** @type {StartedServer} */ (
