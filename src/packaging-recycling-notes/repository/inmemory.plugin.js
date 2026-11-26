@@ -4,7 +4,7 @@ import {
 } from '#common/enums/event.js'
 import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { registerDependency } from '#plugins/register-dependency.js'
+import { portAdapter } from '#plugins/port-adapter.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { PrnNumberConflictError, PRN_VERSION_CONFLICT } from './port.js'
@@ -422,6 +422,12 @@ export function createInMemoryPackagingRecyclingNotesRepository(
   })
 }
 
+/**
+ * The in-memory adapter for the PRN repository, which the test server
+ * registers.
+ *
+ * @param {PackagingRecyclingNote[]} [initialPrns]
+ */
 export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
   initialPrns
 ) {
@@ -430,14 +436,12 @@ export function createInMemoryPackagingRecyclingNotesRepositoryPlugin(
     []
   )
 
-  return {
-    name: 'packagingRecyclingNotesRepository',
-    register: (server) => {
-      registerDependency(
-        server,
-        'packagingRecyclingNotesRepository',
-        (request) => factory(request.logger)
-      )
-    }
-  }
+  return portAdapter({
+    provides: 'packagingRecyclingNotesRepository',
+    needs: [],
+    build:
+      () =>
+      ({ logger }) =>
+        factory(logger)
+  })
 }

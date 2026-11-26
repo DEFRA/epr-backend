@@ -10,12 +10,12 @@ import {
 } from '#reports/domain/report-status.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { buildSummaryLogRowStateEntry } from '#waste-records/repository/test-data.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/index.js'
 import {
   buildAwaitingAcceptancePrn,
-  underAccreditation
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+  underAccreditation,
+  createInMemoryPackagingRecyclingNotesRepository
+} from '#packaging-recycling-notes/test-support.js'
 import {
   fetchOrGenerateReportForPeriod,
   createReportForPeriod,

@@ -20,7 +20,7 @@ import {
   buildAccreditationSnapshot,
   PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { REGISTRATION_TYPE } from '#packaging-recycling-notes/application/aggregate-prn-tonnage.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {

@@ -13,19 +13,9 @@ import * as wasteBalanceRoutes from '#waste-balances/routes/index.js'
 import { wasteBalanceRoutesByNaturalKey } from '#waste-balances/routes/by-natural-key.js'
 import { generateLatestPublicRegister } from '#public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
-import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
 import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availability/index.js'
 import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import * as marketInsightsRoutes from '#market-insights/routes/index.js'
-import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
-import { adminPackagingRecyclingNotesCancel } from '#packaging-recycling-notes/routes/admin-cancel.js'
-import { adminPackagingRecyclingNotesList } from '#packaging-recycling-notes/routes/admin-list.js'
-import { packagingRecyclingNotesList } from '#packaging-recycling-notes/routes/list.js'
-import { packagingRecyclingNotesReject } from '#packaging-recycling-notes/routes/reject.js'
-import {
-  prnCancelByNaturalKey,
-  prnRoutesByNaturalKey
-} from '#packaging-recycling-notes/routes/by-natural-key.js'
 import * as linkedOrganisationsRoutes from '#routes/v1/linked-organisations/index.js'
 import { summaryLogRoutesByNaturalKey } from '#routes/v1/organisations/registrations/summary-logs/by-natural-key.js'
 import { summaryLogUploadsReportRoutes } from '#routes/v1/organisations/registrations/summary-logs/reports/uploads/index.js'
@@ -48,12 +38,6 @@ const router = {
           ]
         : []
 
-      const prnAdminCancellationRoutesBehindFeatureFlag = options.config.get(
-        'featureFlags.prnAdminCancellation'
-      )
-        ? [adminPackagingRecyclingNotesCancel, prnCancelByNaturalKey]
-        : []
-
       server.route([
         health,
         ...apply,
@@ -68,16 +52,9 @@ const router = {
         ...wasteBalanceRoutesByNaturalKey,
         generateLatestPublicRegister,
         ...Object.values(tonnageMonitoringRoutes),
-        ...Object.values(prnTonnageRoutes),
         ...Object.values(wasteBalanceAvailabilityRoutes),
         ...Object.values(linkedOrganisationsRoutes),
-        packagingRecyclingNotesAccept,
-        packagingRecyclingNotesList,
-        packagingRecyclingNotesReject,
-        ...prnRoutesByNaturalKey,
         ...summaryLogUploadsReportRoutes,
-        adminPackagingRecyclingNotesList,
-        ...prnAdminCancellationRoutesBehindFeatureFlag,
         ...Object.values(overseasSitesRoutes),
         ...Object.values(marketInsightsRoutes),
         ...Object.values(reportsRoutes),

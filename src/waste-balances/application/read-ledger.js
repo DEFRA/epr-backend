@@ -88,7 +88,7 @@
  * notes are not among them, so a ledger states null for every event of one.
  *
  * @typedef {Object} LedgerNoteReader
- * @property {(params: import('#packaging-recycling-notes/repository/port.js').FindByIdsParams) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
+ * @property {(params: import('#packaging-recycling-notes/index.js').FindByIdsParams) => Promise<Array<{ id: string, prnNumber?: string | null }>>} findByIds
  */
 
 /**

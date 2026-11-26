@@ -26,7 +26,7 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/test-support.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
