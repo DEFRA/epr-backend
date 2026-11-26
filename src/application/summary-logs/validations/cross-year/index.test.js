@@ -519,41 +519,41 @@ describe('checkCrossYearRules', () => {
       ])
     })
 
-    it.for(
-      /**
-       * @type {{
-       *   description: string,
-       *   registeredOnly: boolean,
-       *   createdAt: string,
-       *   deadlines: string[]
-       * }[]}
-       */ ([
-        {
-          description: 'accredited, on the last correction day',
-          registeredOnly: false,
-          createdAt: '2027-02-27T23:59:59.000Z',
-          deadlines: ['2027-02-27']
-        },
-        {
-          description: 'accredited, after the last correction day',
-          registeredOnly: false,
-          createdAt: '2027-02-28T00:00:00.000Z',
-          deadlines: []
-        },
-        {
-          description: 'registered-only, on the last correction day',
-          registeredOnly: true,
-          createdAt: '2027-03-20T23:59:59.000Z',
-          deadlines: ['2027-03-20']
-        },
-        {
-          description: 'registered-only, after the last correction day',
-          registeredOnly: true,
-          createdAt: '2027-03-21T00:00:00.000Z',
-          deadlines: []
-        }
-      ])
-    )(
+    /**
+     * @type {Array<Pick<SummaryLogValidationOptions, 'registeredOnly'> & {
+     *   description: string,
+     *   createdAt: string,
+     *   deadlines: string[]
+     * }>}
+     */
+    const deadlineCases = [
+      {
+        description: 'accredited, on the last correction day',
+        registeredOnly: false,
+        createdAt: '2027-02-27T23:59:59.000Z',
+        deadlines: ['2027-02-27']
+      },
+      {
+        description: 'accredited, after the last correction day',
+        registeredOnly: false,
+        createdAt: '2027-02-28T00:00:00.000Z',
+        deadlines: []
+      },
+      {
+        description: 'registered-only, on the last correction day',
+        registeredOnly: true,
+        createdAt: '2027-03-20T23:59:59.000Z',
+        deadlines: ['2027-03-20']
+      },
+      {
+        description: 'registered-only, after the last correction day',
+        registeredOnly: true,
+        createdAt: '2027-03-21T00:00:00.000Z',
+        deadlines: []
+      }
+    ]
+
+    it.for(deadlineCases)(
       'applies until the correction deadline: $description',
       ({ registeredOnly, createdAt, deadlines }) => {
         expect(
