@@ -8,6 +8,13 @@ A module is a directory under `src/` that owns one responsibility. Code outside 
 - **`plugin.js`** holds the module's production plugins. Only the server setup and the test servers import it.
 - **`test-support.js`** holds the module's in-memory adapters, their plugins and its test builders. Only tests import it.
 
+## The index and the port
+
+A module's index and its port are one interface. The index says what the module offers, and the port is that offer running, provided on `server.app` and on each request.
+
+- **A pure rule over the module's own types goes in `index.js`,** and callers import it. It works only on the values it is given.
+- **Anything that reads data or depends on config is a method on the port.** Callers use it from the request or from `server.app`, typed by the port's type from `index.js`.
+
 ## Plugins
 
 A module offers routes, ports, or both. A port is a capability other code uses, such as a repository or an application service.
