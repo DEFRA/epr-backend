@@ -30,6 +30,10 @@ const transformFatalIssue = (issue) => {
     result.deadline = issue.context.deadline
   }
 
+  if (issue.context?.previousYearRowId !== undefined) {
+    result.previousYearRowId = issue.context.previousYearRowId
+  }
+
   return result
 }
 
@@ -68,6 +72,10 @@ const transformDataIssue = (issue) => {
 
   if (issue.context?.deadline !== undefined) {
     result.deadline = issue.context.deadline
+  }
+
+  if (issue.context?.previousYearRowId !== undefined) {
+    result.previousYearRowId = issue.context.previousYearRowId
   }
 
   return result

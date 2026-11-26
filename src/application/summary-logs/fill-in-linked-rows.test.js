@@ -8,6 +8,8 @@ import {
   DEFAULT_LEDGER_ID
 } from '#waste-records/repository/test-data.js'
 
+import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
+
 import { fillInLinkedRows } from './fill-in-linked-rows.js'
 
 /** @import { FilledInRow } from './fill-in-linked-rows.js' */
@@ -112,15 +114,23 @@ const setup = async () => {
 const filledRow = async (row) => {
   const { fillIn } = await setup()
   const filled = await fillIn(parsedWith([row]))
-  const [{ values, linked }] = /** @type {FilledInRow[]} */ (
+  const [{ values, previousYearLink }] = /** @type {FilledInRow[]} */ (
     filled.data.LINKING.rows
   )
   return {
     data: Object.fromEntries(
       HEADERS.map((header, index) => [header, values[index]])
     ),
-    linked
+    previousYearLink
   }
+}
+
+/** @param {FilledInRow['previousYearLink']} previousYearLink */
+const foundLinkOf = (previousYearLink) => {
+  if (previousYearLink?.status !== PREVIOUS_YEAR_LINK_STATUS.FOUND) {
+    throw new Error('expected a found previous-year link')
+  }
+  return previousYearLink
 }
 
 describe('fillInLinkedRows', () => {
@@ -132,13 +142,13 @@ describe('fillInLinkedRows', () => {
   ])(
     'takes the previous-year value for an allowed column left %s',
     async (_, value) => {
-      const { data, linked: link } = await filledRow({
+      const { data, previousYearLink } = await filledRow({
         ...linked,
         DATE_OF_EXPORT: value
       })
 
       expect(data.DATE_OF_EXPORT).toBe('2026-12-28')
-      expect(link?.link.suppliedFields).toEqual([])
+      expect(foundLinkOf(previousYearLink).link.suppliedFields).toEqual([])
     }
   )
 
@@ -169,10 +179,10 @@ describe('fillInLinkedRows', () => {
     }
     const suppliedFieldsWith = async (headers) => {
       const filled = await fillIn(parsedWith([row], { headers }))
-      const [{ linked: link }] = /** @type {FilledInRow[]} */ (
+      const [{ previousYearLink }] = /** @type {FilledInRow[]} */ (
         filled.data.LINKING.rows
       )
-      return link?.link.suppliedFields
+      return foundLinkOf(previousYearLink).link.suppliedFields
     }
 
     expect(await suppliedFieldsWith([...HEADERS].reverse())).toEqual(
@@ -183,17 +193,74 @@ describe('fillInLinkedRows', () => {
   it('keeps the row as entered and the previous-year row as stored for the rules that compare years', async () => {
     const row = { ...linked, NET_WEIGHT: 0, DATE_OF_EXPORT: '2027-01-04' }
 
-    const { linked: link } = await filledRow(row)
+    const { previousYearLink } = await filledRow(row)
 
-    expect(link?.entered).toEqual(valuesOf(row))
-    expect(link?.previousYear).toEqual(PREVIOUS_YEAR_DATA)
+    expect(foundLinkOf(previousYearLink).entered).toEqual(valuesOf(row))
+    expect(foundLinkOf(previousYearLink).previousYear).toEqual(
+      PREVIOUS_YEAR_DATA
+    )
   })
 
-  it('leaves every row as written when there is no previous-year submission', async () => {
+  it('marks a row whose link names no previous-year row as not found, leaving it as written', async () => {
     const { fillIn } = await setup()
-    const parsed = parsedWith([linked])
+    const row = { ROW_ID: 1002, PREVIOUS_YEAR_ROW_ID: 1888, NET_WEIGHT: 5 }
 
-    expect(await fillIn(parsed, null)).toEqual(parsed)
+    const filled = await fillIn(parsedWith([linked, row]))
+
+    expect(filled.data.LINKING.rows[1]).toStrictEqual({
+      rowNumber: 9,
+      values: valuesOf(row),
+      previousYearLink: {
+        status: PREVIOUS_YEAR_LINK_STATUS.NOT_FOUND,
+        previousYearRowId: '1888'
+      }
+    })
+  })
+
+  it.each([
+    ['with spaces around it', ' 1500 '],
+    ['with a decimal point', '1500.0']
+  ])(
+    'finds the previous-year row a row ID typed as text %s names',
+    async (_, previousYearRowId) => {
+      const { previousYearLink } = await filledRow({
+        ...linked,
+        PREVIOUS_YEAR_ROW_ID: previousYearRowId
+      })
+
+      expect(foundLinkOf(previousYearLink).link.rowId).toBe('1500')
+    }
+  )
+
+  it('marks every linked row as not found when there is no previous-year submission', async () => {
+    const { repository, fillIn } = await setup()
+    const read = vi.spyOn(repository, 'findRowStatesInSummaryLog')
+
+    const filled = await fillIn(parsedWith([linked]), null)
+
+    expect(filled.data.LINKING.rows).toStrictEqual([
+      {
+        rowNumber: 8,
+        values: valuesOf(linked),
+        previousYearLink: {
+          status: PREVIOUS_YEAR_LINK_STATUS.NOT_FOUND,
+          previousYearRowId: '1500'
+        }
+      }
+    ])
+    expect(read).not.toHaveBeenCalled()
+  })
+
+  it('leaves a row naming no previous-year row as written, beside a linked row', async () => {
+    const { fillIn } = await setup()
+    const unlinked = { ROW_ID: 1002, PREVIOUS_YEAR_ROW_ID: '' }
+
+    const filled = await fillIn(parsedWith([linked, unlinked]))
+
+    expect(filled.data.LINKING.rows[1]).toStrictEqual({
+      rowNumber: 9,
+      values: valuesOf(unlinked)
+    })
   })
 
   it('leaves a table that does not link years as written', async () => {

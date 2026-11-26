@@ -64,7 +64,6 @@ describe('2027 summary logs', () => {
           {
             rowId: 1001,
             exportTonnage: 100,
-            previousYearRowId: 1500,
             exitPort: 'Dover',
             dwtExportId: 987654,
             dwtSupplyId: 'DWT-2027-00012345'
@@ -84,7 +83,7 @@ describe('2027 summary logs', () => {
       const rows = await storedRows(env, ledgerIdOf(env), ids.fileId)
       expect(rows.find(({ rowId }) => rowId === '1001')).toMatchObject({
         data: {
-          PREVIOUS_YEAR_ROW_ID: 1500,
+          PREVIOUS_YEAR_ROW_ID: null,
           EXIT_PORT: 'Dover',
           DWT_EXPORT_ID: 987654,
           DWT_SUPPLY_ID: 'DWT-2027-00012345'
@@ -319,7 +318,7 @@ describe('2027 summary logs', () => {
               OSR_COUNTRY: 'Vietnam-VN',
               CUSTOMS_CODES: '123456',
               CONTAINER_NUMBER: 'CONT123456',
-              PREVIOUS_YEAR_ROW_ID: 2500,
+              PREVIOUS_YEAR_ROW_ID: null,
               EXIT_PORT: 'Felixstowe',
               DWT_EXPORT_ID: 555123
             }
@@ -344,7 +343,7 @@ describe('2027 summary logs', () => {
         expect.objectContaining({
           processingType: 'EXPORTER_REGISTERED_ONLY',
           data: expect.objectContaining({
-            PREVIOUS_YEAR_ROW_ID: 2500,
+            PREVIOUS_YEAR_ROW_ID: null,
             EXIT_PORT: 'Felixstowe',
             DWT_EXPORT_ID: 555123
           })

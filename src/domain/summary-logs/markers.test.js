@@ -6,10 +6,23 @@ import {
   SKIP_COLUMN,
   SKIP_EXAMPLE_ROW_TEXT,
   SKIP_HEADER_ROW_TEXT,
-  isEprMarker
+  isEprMarker,
+  isHeaderDescriptionRow
 } from './markers.js'
 
 describe('Summary Log Markers', () => {
+  describe('isHeaderDescriptionRow', () => {
+    it.each([
+      ['Row ID', true],
+      ['Row ID (automatically generated)', true],
+      ['1001', false],
+      [1001, false],
+      [null, false]
+    ])('reads %j as a header description row: %s', (rowIdValue, expected) => {
+      expect(isHeaderDescriptionRow(rowIdValue)).toBe(expected)
+    })
+  })
+
   describe('constants', () => {
     it('should have correct EPR_PREFIX', () => {
       expect(EPR_PREFIX).toBe('__EPR')
