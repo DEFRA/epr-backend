@@ -15,7 +15,7 @@ import {
   AFTER_SUMMARY_LOG_YEAR_ERROR,
   BEFORE_SUMMARY_LOG_YEAR_ERROR
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
-import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
+import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/linked-row.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
 import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
