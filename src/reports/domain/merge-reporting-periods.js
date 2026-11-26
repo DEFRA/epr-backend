@@ -49,30 +49,24 @@ export function selectSubmittedReports(slot) {
 }
 
 /**
- * Indexes persisted periodic-report slots by "year:period" key for a given cadence.
- * @param {PeriodicReport[]} periodicReports
+ * Indexes a periodic report's persisted slots by "year:period" key for a given cadence.
+ * @param {PeriodicReport | null} periodicReport
  * @param {string} cadence
  * @returns {Map<string, IndexedSlot>}
  */
-function indexPersistedSlots(periodicReports, cadence) {
-  const slots = new Map()
-
-  for (const pr of periodicReports) {
-    const cadenceSlots = pr.reports?.[cadence]
-    if (!cadenceSlots) {
-      continue
-    }
-
-    for (const [periodKey, slot] of Object.entries(cadenceSlots)) {
-      slots.set(`${pr.year}:${periodKey}`, {
-        ...slot,
-        year: pr.year,
-        period: Number(periodKey)
-      })
-    }
+function indexPersistedSlots(periodicReport, cadence) {
+  if (!periodicReport) {
+    return new Map()
   }
+  const { year } = periodicReport
+  const cadenceSlots = periodicReport.reports?.[cadence] ?? {}
 
-  return slots
+  return new Map(
+    Object.entries(cadenceSlots).map(([periodKey, slot]) => [
+      `${year}:${periodKey}`,
+      { ...slot, year, period: Number(periodKey) }
+    ])
+  )
 }
 
 /**
@@ -93,7 +87,7 @@ function indexPersistedSlots(periodicReports, cadence) {
  */
 
 /**
- * Merges computed reporting periods with persisted periodic-report slots.
+ * Merges computed reporting periods with a periodic report's persisted slots.
  *
  * For each period:
  * - `report` is the current report (highest submissionNumber), or null
@@ -103,16 +97,16 @@ function indexPersistedSlots(periodicReports, cadence) {
  * - Periods with active drafts that aren't in the computed set are appended
  *
  * @param {Array<{year: Year, period: number, startDate: CalendarDate, endDate: CalendarDate, dueDate: CalendarDate}>} computedPeriods
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @param {string} cadence
  * @returns {MergedPeriod[]}
  */
 export function mergeReportingPeriods(
   computedPeriods,
-  periodicReports,
+  periodicReport,
   cadence
 ) {
-  const persistedSlots = indexPersistedSlots(periodicReports, cadence)
+  const persistedSlots = indexPersistedSlots(periodicReport, cadence)
   const merged = new Map()
 
   for (const cp of computedPeriods) {

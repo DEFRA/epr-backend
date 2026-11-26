@@ -189,14 +189,14 @@ const endedPeriodsIn = (cadence, reportingWindows, { now, wholePeriods }) =>
 /**
  * @param {Cadence} cadence
  * @param {CalendarDateRange[]} reportingWindows
- * @param {PeriodicReport[]} storedReports
+ * @param {PeriodicReport | null} storedReport
  * @param {{ now: Date, wholePeriods: boolean, served: (period: MergedPeriod) => boolean }} options
  * @returns {MergedPeriod[]}
  */
 const mergedPeriods = (
   cadence,
   reportingWindows,
-  storedReports,
+  storedReport,
   { now, wholePeriods, served }
 ) => {
   const periods = endedPeriodsIn(cadence, reportingWindows, {
@@ -204,7 +204,7 @@ const mergedPeriods = (
     wholePeriods
   })
   const listed = new Set(periods.map(({ period }) => period))
-  return mergeReportingPeriods(periods, storedReports, cadence).filter(
+  return mergeReportingPeriods(periods, storedReport, cadence).filter(
     (period) => listed.has(period.period) || served(period)
   )
 }
@@ -234,7 +234,7 @@ export const reportingPeriodsByKind = ({
   now = new Date()
 }) => {
   const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
-  const storedReports = storedReport?.year === year ? [storedReport] : []
+  const reportForYear = storedReport?.year === year ? storedReport : null
   const accreditation = accreditationForYear(registration, year)
   const options = { now, wholePeriods }
 
@@ -242,13 +242,13 @@ export const reportingPeriodsByKind = ({
     registeredOnly: mergedPeriods(
       CADENCE.quarterly,
       windows.registeredOnly,
-      storedReports,
+      reportForYear,
       { ...options, served: () => true }
     ),
     accredited: mergedPeriods(
       CADENCE.monthly,
       windows.accredited,
-      storedReports,
+      reportForYear,
       { ...options, served: servesAccreditedReport(registration, year) }
     ),
     accreditationNumber: accreditation?.accreditationNumber

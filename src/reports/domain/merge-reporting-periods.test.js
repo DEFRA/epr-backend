@@ -47,10 +47,10 @@ const reportSummary = (overrides = {}) => {
  */
 
 /**
- * @param {unknown} reports
- * @returns {PeriodicReport[]}
+ * @param {unknown} report
+ * @returns {PeriodicReport}
  */
-const asPeriodicReports = (reports) => /** @type {PeriodicReport[]} */ (reports)
+const asPeriodicReport = (report) => /** @type {PeriodicReport} */ (report)
 
 describe('mergeReportingPeriods', () => {
   const computedPeriods = [
@@ -73,7 +73,7 @@ describe('mergeReportingPeriods', () => {
   ]
 
   it('returns computed periods unchanged when no persisted reports exist', () => {
-    const result = mergeReportingPeriods(computedPeriods, [], 'monthly')
+    const result = mergeReportingPeriods(computedPeriods, null, 'monthly')
 
     expect(result).toHaveLength(2)
     expect(result[0].report).toBeNull()
@@ -81,28 +81,26 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('merges persisted report into matching period', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              current: reportSummary({ id: 'report-uuid-1' }),
-              previousSubmissions: []
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            current: reportSummary({ id: 'report-uuid-1' }),
+            previousSubmissions: []
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -111,31 +109,29 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('exposes report with submitted status when current report is submitted', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              current: reportSummary({
-                id: 'report-uuid-1',
-                status: REPORT_STATUS.SUBMITTED
-              }),
-              previousSubmissions: []
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            current: reportSummary({
+              id: 'report-uuid-1',
+              status: REPORT_STATUS.SUBMITTED
+            }),
+            previousSubmissions: []
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -145,28 +141,26 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('derives no submitted reports when the period has no submitted report', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              current: reportSummary({ id: 'submission-1' }),
-              previousSubmissions: []
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            current: reportSummary({ id: 'submission-1' }),
+            previousSubmissions: []
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -177,44 +171,42 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('lists submitted reports ascending, excluding the in-flight draft', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              // current is the in-flight submission 3 draft; previousSubmissions
-              // are ordered by submissionNumber descending
-              current: reportSummary({
-                id: 'submission-3',
-                submissionNumber: 3
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            // current is the in-flight submission 3 draft; previousSubmissions
+            // are ordered by submissionNumber descending
+            current: reportSummary({
+              id: 'submission-3',
+              submissionNumber: 3
+            }),
+            previousSubmissions: [
+              reportSummary({
+                id: 'submission-2',
+                status: REPORT_STATUS.SUBMITTED,
+                submissionNumber: 2
               }),
-              previousSubmissions: [
-                reportSummary({
-                  id: 'submission-2',
-                  status: REPORT_STATUS.SUBMITTED,
-                  submissionNumber: 2
-                }),
-                reportSummary({
-                  id: 'submission-1',
-                  status: REPORT_STATUS.SUBMITTED,
-                  submissionNumber: 1
-                })
-              ]
-            }
+              reportSummary({
+                id: 'submission-1',
+                status: REPORT_STATUS.SUBMITTED,
+                submissionNumber: 1
+              })
+            ]
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -230,44 +222,42 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('selects the highest-numbered submission regardless of slot ordering', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              // previousSubmissions deliberately in ascending order: selection
-              // must go by submissionNumber, not by position in the array
-              current: reportSummary({
-                id: 'submission-3',
-                submissionNumber: 3
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            // previousSubmissions deliberately in ascending order: selection
+            // must go by submissionNumber, not by position in the array
+            current: reportSummary({
+              id: 'submission-3',
+              submissionNumber: 3
+            }),
+            previousSubmissions: [
+              reportSummary({
+                id: 'submission-1',
+                status: REPORT_STATUS.SUBMITTED,
+                submissionNumber: 1
               }),
-              previousSubmissions: [
-                reportSummary({
-                  id: 'submission-1',
-                  status: REPORT_STATUS.SUBMITTED,
-                  submissionNumber: 1
-                }),
-                reportSummary({
-                  id: 'submission-2',
-                  status: REPORT_STATUS.SUBMITTED,
-                  submissionNumber: 2
-                })
-              ]
-            }
+              reportSummary({
+                id: 'submission-2',
+                status: REPORT_STATUS.SUBMITTED,
+                submissionNumber: 2
+              })
+            ]
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -280,35 +270,33 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('keeps an unsubmitted-but-previously-submitted report in the derived submissions', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              // Submitted then unsubmitted: currentStatus reverts to
-              // ready_to_submit but the submitted instant is retained
-              current: reportSummary({
-                id: 'submission-1',
-                status: REPORT_STATUS.READY_TO_SUBMIT,
-                submittedAt: '2026-02-10T00:00:00.000Z',
-                submissionNumber: 1
-              }),
-              previousSubmissions: []
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            // Submitted then unsubmitted: currentStatus reverts to
+            // ready_to_submit but the submitted instant is retained
+            current: reportSummary({
+              id: 'submission-1',
+              status: REPORT_STATUS.READY_TO_SUBMIT,
+              submittedAt: '2026-02-10T00:00:00.000Z',
+              submissionNumber: 1
+            }),
+            previousSubmissions: []
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -320,33 +308,31 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('sets report to null when current is null (no active draft)', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-01-31',
-              dueDate: '2026-02-20',
-              current: null,
-              previousSubmissions: [
-                reportSummary({
-                  id: 'old-report-id',
-                  status: REPORT_STATUS.SUBMITTED
-                })
-              ]
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            current: null,
+            previousSubmissions: [
+              reportSummary({
+                id: 'old-report-id',
+                status: REPORT_STATUS.SUBMITTED
+              })
+            ]
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -354,28 +340,26 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('includes persisted periods not in computed set when current is non-null', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            3: {
-              startDate: '2026-03-01',
-              endDate: '2026-03-31',
-              dueDate: '2026-04-20',
-              current: reportSummary({ id: 'report-uuid-3' }),
-              previousSubmissions: []
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          3: {
+            startDate: '2026-03-01',
+            endDate: '2026-03-31',
+            dueDate: '2026-04-20',
+            current: reportSummary({ id: 'report-uuid-3' }),
+            previousSubmissions: []
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -387,33 +371,31 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('ignores persisted slots with null current not in computed set', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          monthly: {
-            3: {
-              startDate: '2026-03-01',
-              endDate: '2026-03-31',
-              dueDate: '2026-04-20',
-              current: null,
-              previousSubmissions: [
-                reportSummary({
-                  id: 'old-id',
-                  status: REPORT_STATUS.SUBMITTED
-                })
-              ]
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          3: {
+            startDate: '2026-03-01',
+            endDate: '2026-03-31',
+            dueDate: '2026-04-20',
+            current: null,
+            previousSubmissions: [
+              reportSummary({
+                id: 'old-id',
+                status: REPORT_STATUS.SUBMITTED
+              })
+            ]
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -421,28 +403,26 @@ describe('mergeReportingPeriods', () => {
   })
 
   it('ignores slots from a different cadence', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2026),
-        reports: {
-          quarterly: {
-            1: {
-              startDate: '2026-01-01',
-              endDate: '2026-03-31',
-              dueDate: '2026-04-20',
-              current: reportSummary({ id: 'quarterly-report' }),
-              previousSubmissions: []
-            }
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        quarterly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-03-31',
+            dueDate: '2026-04-20',
+            current: reportSummary({ id: 'quarterly-report' }),
+            previousSubmissions: []
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
       computedPeriods,
-      asPeriodicReports(periodicReports),
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
@@ -450,37 +430,31 @@ describe('mergeReportingPeriods', () => {
     expect(result[0].report).toBeNull()
   })
 
-  it('sorts output by year then period', () => {
-    const periodicReports = [
-      {
-        organisationNumber: '500001',
-        registrationNumber: 'R25SR500010912PL',
-        year: toYear(2025),
-        reports: {
-          monthly: {
-            12: {
-              startDate: '2025-12-01',
-              endDate: '2025-12-31',
-              dueDate: '2026-01-20',
-              current: reportSummary({ id: 'report-2025-12' }),
-              previousSubmissions: []
-            }
+  it('places an appended period in period order', () => {
+    const periodicReport = {
+      organisationNumber: '500001',
+      registrationNumber: 'R25SR500010912PL',
+      year: toYear(2026),
+      reports: {
+        monthly: {
+          1: {
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
+            dueDate: '2026-02-20',
+            current: reportSummary({ id: 'report-uuid-1' }),
+            previousSubmissions: []
           }
         }
       }
-    ]
+    }
 
     const result = mergeReportingPeriods(
-      computedPeriods,
-      asPeriodicReports(periodicReports),
+      [computedPeriods[1]],
+      asPeriodicReport(periodicReport),
       'monthly'
     )
 
-    expect(result).toHaveLength(3)
-    expect(result[0].year).toBe(2025)
-    expect(result[0].period).toBe(12)
-    expect(result[1].year).toBe(2026)
-    expect(result[1].period).toBe(1)
+    expect(result.map(({ period }) => period)).toEqual([1, 2])
   })
 })
 
