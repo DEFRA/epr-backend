@@ -48,7 +48,7 @@ export const testDeleteReportBehaviour = (it) => {
       })
     })
 
-    it('removes the slot from findPeriodicReports after delete', async () => {
+    it('removes the slot from findPeriodicReport after delete', async () => {
       const { submissionNumber } = await repository.createReport(
         buildCreateReportParams({
           cadence: 'monthly',
@@ -58,11 +58,12 @@ export const testDeleteReportBehaviour = (it) => {
 
       await repository.deleteReport(buildDeleteParams({ submissionNumber }))
 
-      const result = await repository.findPeriodicReports({
+      const result = await repository.findPeriodicReport({
         organisationNumber: DEFAULT_ORG_NUMBER,
-        registrationNumber: DEFAULT_REG_NUMBER
+        registrationNumber: DEFAULT_REG_NUMBER,
+        year: DEFAULT_REPORT_YEAR
       })
-      expect(result).toEqual([])
+      expect(result).toBeNull()
     })
 
     it('throws notFound on second delete', async () => {

@@ -19,32 +19,31 @@ const q1Slot = {
   previousSubmissions: []
 }
 
-/** @type {PeriodicReport[]} */
-const periodicReports = [
-  {
-    organisationNumber: toOrganisationNumber('500001'),
-    registrationNumber: toRegistrationNumber('R25SR500010912PL'),
-    year: toYear(2026),
-    reports: { [CADENCE.quarterly]: { 1: q1Slot } }
-  }
-]
+/** @type {PeriodicReport} */
+const periodicReport = {
+  organisationNumber: toOrganisationNumber('500001'),
+  registrationNumber: toRegistrationNumber('R25SR500010912PL'),
+  year: toYear(2026),
+  reports: { [CADENCE.quarterly]: { 1: q1Slot } }
+}
 
 describe('findPeriodSlot', () => {
   it('returns the slot for the period', () => {
     expect(
-      findPeriodSlot(periodicReports, {
-        year: toYear(2026),
-        cadence: CADENCE.quarterly,
-        period: 1
-      })
+      findPeriodSlot(periodicReport, { cadence: CADENCE.quarterly, period: 1 })
     ).toBe(q1Slot)
   })
 
   it.each([
-    ['year', { year: toYear(2025), cadence: CADENCE.quarterly, period: 1 }],
-    ['cadence', { year: toYear(2026), cadence: CADENCE.monthly, period: 1 }],
-    ['period', { year: toYear(2026), cadence: CADENCE.quarterly, period: 2 }]
+    ['cadence', { cadence: CADENCE.monthly, period: 1 }],
+    ['period', { cadence: CADENCE.quarterly, period: 2 }]
   ])('returns null when the %s has no reports', (_, period) => {
-    expect(findPeriodSlot(periodicReports, period)).toBeNull()
+    expect(findPeriodSlot(periodicReport, period)).toBeNull()
+  })
+
+  it('returns null when there is no periodic report', () => {
+    expect(
+      findPeriodSlot(null, { cadence: CADENCE.quarterly, period: 1 })
+    ).toBeNull()
   })
 })

@@ -349,6 +349,44 @@ describe('generateReportCompliance', () => {
     })
   })
 
+  it("takes the current year's dates from that year's report, not an earlier year's", async () => {
+    const orgs = servedOrganisations()
+    const reportsRepo = createInMemoryReportsRepository()()
+
+    const org = orgs.approved()
+    const reg = registrationOf(org)
+
+    vi.setSystemTime(new Date('2025-02-10T10:00:00.000Z'))
+    await buildSubmittedReport(reportsRepo, {
+      ...reportKeyOf(org, reg),
+      year: toYear(2025),
+      cadence: 'monthly',
+      period: 1
+    })
+    vi.setSystemTime(FIXED_DATE)
+    await buildSubmittedReport(reportsRepo, {
+      ...reportKeyOf(org, reg),
+      year: toYear(2026),
+      cadence: 'monthly',
+      period: 1
+    })
+
+    const result = await generateReportCompliance(
+      await orgs.repository().findAll(),
+      reportsRepo
+    )
+
+    expect(
+      result.entries.get(registrationKey(reportKeyOf(org, reg)))?.submittedDates
+    ).toEqual(
+      new Map([
+        ['2026:monthly:1', SUBMITTED_DATE],
+        ['2026:monthly:2', null],
+        ['2026:monthly:3', null]
+      ])
+    )
+  })
+
   // The register date is the original submission date, stable across every
   // state of the resubmission lifecycle: an in-flight redraft, a completed
   // correction, and an unsubmit all leave period 1 showing its 17 Apr date.

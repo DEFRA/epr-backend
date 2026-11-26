@@ -22,6 +22,8 @@ import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
+import { createReportsService } from '#reports/application/report-service.js'
+import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { toSummaryLogId } from '#domain/summary-logs/ids.js'
 
 const { buildOrganisation } = createOrganisationBuilders()
@@ -209,9 +211,7 @@ describe('SummaryLogsValidator integration', () => {
       organisationReadRepository: readModelServing(summaryLog, testOrg),
       summaryLogRowStatesRepository,
       ledgerRepository,
-      reportsService: /** @type {any} */ ({
-        findPeriodicReports: async () => []
-      }),
+      reportsService: createReportsService(createInMemoryReportsRepository()()),
       summaryLogExtractor: extractor
     })
 

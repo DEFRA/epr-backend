@@ -380,7 +380,7 @@
  */
 
 /**
- * @typedef {RegistrationKey} FindPeriodicReportsParams
+ * @typedef {RegistrationKey & { year: Year }} FindPeriodicReportParams
  */
 
 /**
@@ -394,7 +394,8 @@
  * @property {(params: UpdateReportParams) => Promise<Report>} updateReport
  * @property {(params: UpdateReportStatusParams) => Promise<Report>} updateReportStatus
  * @property {(params: DeleteReportParams) => Promise<void>} deleteReport
- * @property {(params: FindPeriodicReportsParams) => Promise<PeriodicReport[]>} findPeriodicReports
+ * @property {(params: FindPeriodicReportParams) => Promise<PeriodicReport | null>} findPeriodicReport
+ *   The registration's periodic report for one reporting year, or null when it has none.
  * @property {() => Promise<PeriodicReport[]>} findAllPeriodicReports
  * @property {(params: FindPeriodicReportsForYearParams) => Promise<PeriodicReport[]>} findPeriodicReportsForYear
  *   The periodic reports of every org/registration for one reporting year, shaped

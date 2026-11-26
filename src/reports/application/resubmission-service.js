@@ -41,40 +41,33 @@ export async function isLatestSubmission(
   period,
   submissionNumber
 ) {
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  const periodicReport = await reportsRepository.findPeriodicReport({
     organisationNumber,
-    registrationNumber
+    registrationNumber,
+    year
   })
-  return isLatestSubmissionOf(
-    periodicReports,
-    year,
-    cadence,
-    period,
-    submissionNumber
-  )
+  return isLatestSubmissionOf(periodicReport, cadence, period, submissionNumber)
 }
 
 /**
  * Whether `submissionNumber` is the highest submission number recorded for
  * its period, regardless of status — the same "absolute latest, not merely
  * latest submitted" rule {@link isLatestSubmission} enforces, extracted here
- * so it can run against a `periodicReports` list already fetched once by the
+ * so it can run against a periodic report already fetched once by the
  * caller instead of each check re-fetching it.
- * @param {PeriodicReport[]} periodicReports
- * @param {Year} year
+ * @param {PeriodicReport | null} periodicReport
  * @param {Cadence} cadence
  * @param {number} period
  * @param {number} submissionNumber
  * @returns {boolean}
  */
 export function isLatestSubmissionOf(
-  periodicReports,
-  year,
+  periodicReport,
   cadence,
   period,
   submissionNumber
 ) {
-  const slot = findPeriodSlot(periodicReports, { year, cadence, period })
+  const slot = findPeriodSlot(periodicReport, { cadence, period })
   const submissions = [
     slot?.current,
     ...(slot?.previousSubmissions ?? [])
@@ -87,32 +80,25 @@ export function isLatestSubmissionOf(
 
 /**
  * Whether an operator may request resubmission on a submitted report
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @param {object} target
  * @param {import('#reports/domain/report-status.js').ReportStatus} target.status
  * @param {import('#reports/repository/port.js').ReportResubmissionRequired|null} [target.resubmissionRequired]
- * @param {Year} target.year
  * @param {Cadence} target.cadence
  * @param {number} target.period
  * @param {number} target.submissionNumber
  * @returns {import('#reports/repository/port.js').ResubmissionIneligibleReason}
  */
-export function resubmissionEligibility(periodicReports, target) {
+export function resubmissionEligibility(periodicReport, target) {
   if (target.status !== REPORT_STATUS.SUBMITTED) {
     return RESUBMISSION_INELIGIBLE_REASON.NOT_SUBMITTED
   }
   if (isResubmissionRequired(target.resubmissionRequired)) {
     return RESUBMISSION_INELIGIBLE_REASON.ALREADY_REQUESTED
   }
-  const { year, cadence, period, submissionNumber } = target
+  const { cadence, period, submissionNumber } = target
   if (
-    !isLatestSubmissionOf(
-      periodicReports,
-      year,
-      cadence,
-      period,
-      submissionNumber
-    )
+    !isLatestSubmissionOf(periodicReport, cadence, period, submissionNumber)
   ) {
     return RESUBMISSION_INELIGIBLE_REASON.NOT_LATEST_SUBMISSION
   }
@@ -122,19 +108,18 @@ export function resubmissionEligibility(periodicReports, target) {
 /**
  * Whether an operator may request resubmission on the given submitted
  * report right now. Thin boolean wrapper over {@link resubmissionEligibility}.
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @param {object} target
  * @param {import('#reports/domain/report-status.js').ReportStatus} target.status
  * @param {import('#reports/repository/port.js').ReportResubmissionRequired|null} [target.resubmissionRequired]
- * @param {Year} target.year
  * @param {Cadence} target.cadence
  * @param {number} target.period
  * @param {number} target.submissionNumber
  * @returns {boolean}
  */
-export function canRequestResubmission(periodicReports, target) {
+export function canRequestResubmission(periodicReport, target) {
   return (
-    resubmissionEligibility(periodicReports, target) ===
+    resubmissionEligibility(periodicReport, target) ===
     RESUBMISSION_INELIGIBLE_REASON.ELIGIBLE
   )
 }
@@ -178,14 +163,14 @@ export async function requestOperatorResubmission({
       }
     )
 
-  const periodicReports = await reportsRepository.findPeriodicReports({
+  const periodicReport = await reportsRepository.findPeriodicReport({
     organisationNumber,
-    registrationNumber
+    registrationNumber,
+    year
   })
 
   const target = findSubmissionByNumber(
-    periodicReports,
-    year,
+    periodicReport,
     cadence,
     period,
     submissionNumber
@@ -197,10 +182,9 @@ export async function requestOperatorResubmission({
     )
   }
 
-  const eligibility = resubmissionEligibility(periodicReports, {
+  const eligibility = resubmissionEligibility(periodicReport, {
     status: target.status,
     resubmissionRequired: target.resubmissionRequired,
-    year,
     cadence,
     period,
     submissionNumber

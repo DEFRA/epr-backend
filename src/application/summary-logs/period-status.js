@@ -491,7 +491,7 @@ const contributesLoadLegs = (
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {Map<string, WasteRecordState>} params.submittedRowStatesByKey
  * @param {Map<string, RecordChange>} params.recordChanges
- * @param {PeriodicReport[]} params.periodicReports
+ * @param {PeriodicReport | null} params.periodicReport
  * @param {Cadence} params.cadence
  * @param {OperatorCategory} params.operatorCategory - the registration's category, as the report uses, so rows land in the periods the report places them in
  * @param {RowClassificationContext} params.classificationContext
@@ -501,13 +501,13 @@ export const classifyByPeriodStatus = ({
   wasteRecords,
   submittedRowStatesByKey,
   recordChanges,
-  periodicReports,
+  periodicReport,
   cadence,
   operatorCategory,
   classificationContext
 }) => {
   const { tableSchemas, ...classifierContext } = classificationContext
-  const submittedPeriods = buildSubmittedPeriods(periodicReports, cadence)
+  const submittedPeriods = buildSubmittedPeriods(periodicReport, cadence)
   const reportingDateFields = reportingDateFieldsFor(operatorCategory)
   const periodContext = {
     submittedRowStatesByKey,

@@ -1,6 +1,7 @@
 import { calendarDate } from '#common/helpers/date-formatter.js'
 import { CADENCE } from '#reports/domain/cadence.js'
 import { periodKey } from '#reports/domain/period-key.js'
+import { periodicReportForYear } from '#reports/domain/periodic-report-for-year.js'
 import { registrationKey } from '#reports/domain/registration-key.js'
 import { selectSubmittedReports } from '#reports/domain/merge-reporting-periods.js'
 import { generateComplianceReportingPeriods } from '#reports/domain/compliance-reporting-periods.js'
@@ -130,7 +131,7 @@ function submittedDatesFor({ registration, storedReports, years, now }) {
   for (const year of years) {
     const { registeredOnly, accredited } = reportingPeriodsByKind({
       registration,
-      storedReports,
+      storedReport: periodicReportForYear(storedReports, year),
       year,
       now
     })

@@ -13,31 +13,29 @@ import { REPORT_STATUS } from './report-status.js'
 const periodKey = (year, period) => `${year}:${period}`
 
 /**
- * Builds the set of reporting periods that have been submitted for the given
- * cadence. A period counts as submitted when its current report has status
+ * Builds the set of reporting periods of a periodic report that have been
+ * submitted for the given cadence. A period counts as submitted when its current report has status
  * 'submitted' or it has any previous submissions.
  *
  * Keys are opaque to callers: use {@link isDateInSubmittedPeriod} to test a date
  * against the result.
  *
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @param {string} cadence - 'monthly' or 'quarterly'
  * @returns {Set<string>}
  */
-export const buildSubmittedPeriods = (periodicReports, cadence) => {
+export const buildSubmittedPeriods = (periodicReport, cadence) => {
   const submitted = new Set()
-  for (const periodicReport of periodicReports) {
-    const slots = periodicReport.reports[cadence]
-    if (!slots) {
-      continue
-    }
-    for (const [period, slot] of Object.entries(slots)) {
-      const hasBeenSubmitted =
-        slot.current?.status === REPORT_STATUS.SUBMITTED ||
-        slot.previousSubmissions?.length > 0
-      if (hasBeenSubmitted) {
-        submitted.add(periodKey(periodicReport.year, period))
-      }
+  if (!periodicReport) {
+    return submitted
+  }
+  const slots = periodicReport.reports[cadence] ?? {}
+  for (const [period, slot] of Object.entries(slots)) {
+    const hasBeenSubmitted =
+      slot.current?.status === REPORT_STATUS.SUBMITTED ||
+      slot.previousSubmissions?.length > 0
+    if (hasBeenSubmitted) {
+      submitted.add(periodKey(periodicReport.year, period))
     }
   }
   return submitted

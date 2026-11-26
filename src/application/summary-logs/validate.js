@@ -24,7 +24,7 @@ import { summaryLogContextOf } from './classification-context.js'
 import { fillInLinkedRows } from './fill-in-linked-rows.js'
 import {
   classifyLoads,
-  fetchPeriodicReports,
+  fetchPeriodicReport,
   filterWasteBalanceRecords
 } from './classify-and-persist.js'
 import { withPeriodsRequiringResubmission } from './periods-requiring-resubmission.js'
@@ -500,7 +500,7 @@ const classifyAndPersistResult = async ({
   reportsService,
   logger
 }) => {
-  const periodicReports = await fetchPeriodicReports({
+  const periodicReport = await fetchPeriodicReport({
     registration,
     status,
     summaryLog,
@@ -517,7 +517,7 @@ const classifyAndPersistResult = async ({
     status,
     wasteBalanceRecords,
     wasteRecords,
-    periodicReports,
+    periodicReport,
     classificationContext,
     registration,
     submittedRowStatesByKey
@@ -525,7 +525,7 @@ const classifyAndPersistResult = async ({
 
   const withResubmissions = await withPeriodsRequiringResubmission({
     loadsByReportingPeriod,
-    periodicReports,
+    periodicReport,
     wasteRecords,
     registration,
     classificationContext,

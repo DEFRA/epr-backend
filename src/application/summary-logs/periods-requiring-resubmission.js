@@ -56,15 +56,15 @@ const toNewHeadRowStates = (wasteRecords, classificationContext) =>
   }))
 
 /**
- * @param {PeriodicReport[]} periodicReports
+ * @param {PeriodicReport | null} periodicReport
  * @param {PeriodRef} periodRef
  * @returns {string}
  */
-const latestSubmittedReportIdForPeriod = (periodicReports, periodRef) => {
+const latestSubmittedReportIdForPeriod = (periodicReport, periodRef) => {
   const { year, cadence, period } = periodRef
-  // Closed periods are derived from these periodic reports, so the slot exists.
+  // Closed periods are derived from this periodic report, so the slot exists.
   const slot = /** @type {ReportPerPeriod} */ (
-    findPeriodSlot(periodicReports, periodRef)
+    findPeriodSlot(periodicReport, { cadence, period })
   )
   const report = latestSubmitted(slot.current, slot.previousSubmissions)
   /* v8 ignore next 5 -- a closed period always has a submitted report */
@@ -229,7 +229,7 @@ const logPeriodOutcome = (
 /**
  * @param {object} params
  * @param {PeriodRef[]} params.closedPeriods
- * @param {PeriodicReport[]} params.periodicReports
+ * @param {PeriodicReport | null} params.periodicReport
  * @param {ValidatedWasteRecord[]} params.wasteRecords
  * @param {SummaryLogRegistration | undefined} params.registration
  * @param {RowClassificationContext | undefined} params.classificationContext
@@ -244,7 +244,7 @@ const computePeriodsRequiringResubmission = async ({
   logger,
   summaryLogId,
   closedPeriods,
-  periodicReports,
+  periodicReport,
   wasteRecords,
   registration,
   classificationContext,
@@ -273,7 +273,7 @@ const computePeriodsRequiringResubmission = async ({
       ...(await compareSubmittedReport({
         period,
         report: await reportsService.findReportById(
-          latestSubmittedReportIdForPeriod(periodicReports, period)
+          latestSubmittedReportIdForPeriod(periodicReport, period)
         ),
         context
       }))
