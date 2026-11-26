@@ -120,7 +120,7 @@
     }
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "5.1.0",
+    "@vitest/coverage-v8": "5.1.1",
     "@vitest/eslint-plugin": "1.6.28",
     "eslint": "9.39.2",
     "eslint-import-resolver-typescript": "4.4.5",
@@ -128,16 +128,16 @@
     "eslint-plugin-n": "18.5.0",
     "husky": "9.1.7",
     "joi-to-json": "5.0.6",
-    "knip": "6.45.1",
+    "knip": "6.46.1",
     "lint-staged": "17.6.1",
     "mongodb-memory-server": "11.3.0",
-    "msw": "3.0.6",
+    "msw": "3.0.7",
     "neostandard": "0.14.1",
     "nodemon": "3.1.14",
     "prettier": "3.10.1",
     "testcontainers": "12.2.1",
     "typescript": "7.0.2",
-    "vitest": "5.1.0",
+    "vitest": "5.1.1",
     "vitest-mongodb": "1.0.3"
   }
 }
