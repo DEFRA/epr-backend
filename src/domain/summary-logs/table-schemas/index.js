@@ -8,7 +8,7 @@ import { REPROCESSOR_OUTPUT_TEMPLATES } from './reprocessor-output/index.js'
 import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-only/index.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
-/** @import {PreviousYearRowCompletionAt} from '../previous-year-link.js' */
+/** @import {PreviousYearRowCompletionAt} from '../linked-row.js' */
 /** @import {ProcessingType} from '../meta-fields.js' */
 
 /** @import {ClassifyForWasteBalance} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
