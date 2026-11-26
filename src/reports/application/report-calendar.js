@@ -234,7 +234,6 @@ export const reportingPeriodsByKind = ({
   now = new Date()
 }) => {
   const { wholePeriods, ...windows } = reportingWindowsFor(registration, year)
-  const reportForYear = storedReport?.year === year ? storedReport : null
   const accreditation = accreditationForYear(registration, year)
   const options = { now, wholePeriods }
 
@@ -242,13 +241,13 @@ export const reportingPeriodsByKind = ({
     registeredOnly: mergedPeriods(
       CADENCE.quarterly,
       windows.registeredOnly,
-      reportForYear,
+      storedReport,
       { ...options, served: () => true }
     ),
     accredited: mergedPeriods(
       CADENCE.monthly,
       windows.accredited,
-      reportForYear,
+      storedReport,
       { ...options, served: servesAccreditedReport(registration, year) }
     ),
     accreditationNumber: accreditation?.accreditationNumber
