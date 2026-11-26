@@ -1,6 +1,6 @@
 import { RECEIVED_LOADS_FOR_EXPORT_2027 } from './exporter/received-loads-for-export.js'
 import { LOADS_EXPORTED_2027 } from './exporter-registered-only/loads-exported.js'
-import { PREVIOUS_YEAR_ROW_COMPLETION } from '../previous-year-link.js'
+import { PREVIOUS_YEAR_ROW_COMPLETION } from '../linked-row.js'
 import { toYear } from '#common/helpers/dates/year.js'
 
 const { RECEIVED_BY_OSR, REPATRIATED } = PREVIOUS_YEAR_ROW_COMPLETION
