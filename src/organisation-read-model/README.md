@@ -6,7 +6,7 @@ Code outside the module imports from three entry points, and each lists its expo
 
 - **`index.js`** is the public interface: the read model's types, its pure rules and what a caller needs to know about the stores it reads. It loads no route, adapter or Hapi code.
 - **`plugin.js`** holds the MongoDB adapters' plugins, which provide the read repository and the external accreditations repository, and the plugin for the dev routes. Only code in `src/server`, `src/plugins` and `src/test` may import it.
-- **`test-support.js`** holds the in-memory repository, its plugin and the test builders, and only a test may import it. The test server registers that plugin.
+- **`test-support.js`** holds the in-memory repository, its plugin, the test builders and the MongoDB factories that fixtures use to seed a real database. Only a test may import it. The test server registers that plugin.
 
 [`src/modules.md`](../modules.md) describes the shape every module takes.
 
