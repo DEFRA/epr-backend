@@ -922,6 +922,61 @@ describe('2027 rows linked to a 2026 row', () => {
       ])
     })
 
+    describe('a link to a 2026 row with no supplier email', () => {
+      /** @param {string} uploadedAt */
+      const uploadLinkedOn = async (uploadedAt) => {
+        uploadOn(uploadedAt)
+        const env = await setup()
+        await submitted(
+          env,
+          PREVIOUS_YEAR,
+          'log-2026',
+          accredited2026Log({ supplierEmail: null })
+        )
+        const validated = await upload(
+          env,
+          YEAR,
+          'log-2027',
+          accredited2027Log([linkedRow()])
+        )
+        return { env, validated }
+      }
+
+      it('is rejected on its previous-year row ID until 27 February 2027, with nothing stored', async () => {
+        const { env, validated } = await uploadLinkedOn(
+          '2027-02-27T23:59:59.000Z'
+        )
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(validated.validation.failures).toStrictEqual([
+          {
+            code: 'PREVIOUS_YEAR_LINK',
+            errorCode: 'PREVIOUS_YEAR_ROW_MISSING_DATA',
+            actual: 1500,
+            expected: 2026,
+            previousYearRowId: '1500',
+            deadline: '2027-02-27',
+            location: expect.objectContaining({
+              sheet: 'Exported (sections 1, 2 and 3)',
+              table: 'RECEIVED_LOADS_FOR_EXPORT',
+              row: 8,
+              rowId: '1001',
+              header: 'PREVIOUS_YEAR_ROW_ID'
+            })
+          }
+        ])
+        expect(
+          await storedRow(env, ledgerIdOf(env), 'log-2027', '1001')
+        ).toBeUndefined()
+      })
+
+      it('is accepted from 28 February 2027', async () => {
+        const { validated } = await uploadLinkedOn('2027-02-28T00:00:00.000Z')
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
+    })
+
     it('rejects a row that names a 2026 row but has no row ID', async () => {
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
@@ -1234,5 +1289,57 @@ describe('2027 rows linked to a 2026 row', () => {
         ).toBeUndefined()
       }
     )
+
+    describe('a link to a 2026 row exported with no overseas reprocessor', () => {
+      /** @param {string} uploadedAt */
+      const uploadLinkedOn = async (uploadedAt) => {
+        uploadOn(uploadedAt)
+        const env = await setupWith2026Row({ OSR_ID: null })
+        const validated = await upload(
+          env,
+          YEAR,
+          'log-2027',
+          registeredOnly2027Log()
+        )
+        return { env, validated }
+      }
+
+      it('is rejected on its previous-year row ID until 20 March 2027, with nothing stored', async () => {
+        const { env, validated } = await uploadLinkedOn(
+          '2027-03-20T23:59:59.000Z'
+        )
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(validated.validation.failures).toStrictEqual([
+          {
+            code: 'PREVIOUS_YEAR_LINK',
+            errorCode: 'PREVIOUS_YEAR_ROW_MISSING_DATA',
+            actual: 2001,
+            expected: 2026,
+            previousYearRowId: '2001',
+            deadline: '2027-03-20',
+            location: expect.objectContaining({
+              table: 'LOADS_EXPORTED',
+              rowId: '2002',
+              header: 'PREVIOUS_YEAR_ROW_ID'
+            })
+          }
+        ])
+        expect(
+          await storedRow(
+            env,
+            ledgerIdOf({ ...env, accreditationNumber: null }),
+            'log-2027',
+            '2002'
+          )
+        ).toBeUndefined()
+      })
+
+      it('is accepted from 21 March 2027', async () => {
+        const { validated } = await uploadLinkedOn('2027-03-21T00:00:00.000Z')
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
+    })
   })
 })
