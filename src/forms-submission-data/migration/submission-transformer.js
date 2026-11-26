@@ -8,7 +8,7 @@ import { parseOrgSubmission } from '#formsubmission/organisation/transform-organ
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
 
 /**
- * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {FormSubmissionsRepository} from '#formsubmission/repository/port.js'
  */
 
 const TRANSFORMATION_CONFIG = {
@@ -76,7 +76,7 @@ async function fetchAndTransform(
 
 /**
  * @param {FormSubmissionsRepository} formsSubmissionRepository
- * @param {import('#repositories/form-submissions/port.js').FormSubmissionIds} submissionsToMigrate
+ * @param {import('#formsubmission/repository/port.js').FormSubmissionIds} submissionsToMigrate
  * @returns {Promise<import('#formsubmission/types.js').TransformedSubmissions>}
  */
 export async function transformAll(

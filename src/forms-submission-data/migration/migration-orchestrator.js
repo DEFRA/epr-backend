@@ -12,8 +12,8 @@ import { upsertOrganisations } from './organisation-persistence.js'
 import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 
 /**
- * @import {createFormsFileUploadsRepository} from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
- * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {createFormsFileUploadsRepository} from '#formsubmission/file-uploads/forms-file-uploads.js'
+ * @import {FormSubmissionsRepository} from '#formsubmission/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  * @import {FormDataMigrator, Organisation, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'

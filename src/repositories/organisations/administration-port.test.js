@@ -13,7 +13,7 @@ const ADMINISTRATION_PORT_MODULES = [
   // Wiring
   'src/common/hapi-types.js',
   'src/non-prod-data-reset/mongodb.plugin.js',
-  'src/repositories/form-submissions/mongodb.plugin.js',
+  'src/forms-submission-data/repository/mongodb.plugin.js',
   'src/server/queue-consumer/queue-consumer.plugin.js',
 
   // Registration and accreditation administration
@@ -35,10 +35,10 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/forms-submission-data/migration/migration-orchestrator.js',
   'src/forms-submission-data/migration/organisation-persistence.js',
   'src/non-prod-data-reset/mongodb.js',
-  'src/repositories/form-submissions/mongodb.js',
-  'src/routes/v1/dev/form-submissions/migrate/post.js',
+  'src/forms-submission-data/repository/mongodb.js',
+  'src/forms-submission-data/routes/dev/migrate-post.js',
   'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
-  'src/server/run-forms-data-migration.js',
+  'src/forms-submission-data/migration/run-forms-data-migration.js',
   'src/server/seed/create-seed-data.js',
   'src/server/seed/seed-scenarios.js'
 ]

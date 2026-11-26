@@ -19,7 +19,7 @@ import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packagin
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
 import { createInMemoryRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
-import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
+import { createInMemoryFormSubmissionsRepositoryPlugin } from '#formsubmission/test-support.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'

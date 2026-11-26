@@ -3,7 +3,7 @@ import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/repro
 import { logger } from '#common/helpers/logging/logger.js'
 import { MATERIAL } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
+import { createFormSubmissionsRepository } from '#formsubmission/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { readdirSync, readFileSync } from 'fs'

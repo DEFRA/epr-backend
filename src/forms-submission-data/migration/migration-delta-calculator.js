@@ -1,5 +1,5 @@
 /**
- * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {FormSubmissionsRepository} from '#formsubmission/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  */
 import { config } from '#root/config.js'

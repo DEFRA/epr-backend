@@ -23,7 +23,7 @@ vi.mock('#formsubmission/parsing-common/transform-utils.js', () => ({
 
 const mockAuditIncrementalFormMigration = vi.fn()
 
-vi.mock('#auditing/incremental-form-migration.js', () => ({
+vi.mock('#formsubmission/auditing/incremental-form-migration.js', () => ({
   auditIncrementalFormMigration: (...args) =>
     mockAuditIncrementalFormMigration(...args)
 }))

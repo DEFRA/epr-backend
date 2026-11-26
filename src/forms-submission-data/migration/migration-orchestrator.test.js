@@ -15,7 +15,7 @@ import {
 } from '#formsubmission/link-form-submissions.js'
 
 /**
- * @import { FormSubmissionsRepository } from '#repositories/form-submissions/port.js'
+ * @import { FormSubmissionsRepository } from '#formsubmission/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
  * @import { Organisation, Registration, Accreditation } from '#formsubmission/types.js'

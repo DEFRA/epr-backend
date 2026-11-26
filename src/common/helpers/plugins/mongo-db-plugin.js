@@ -4,10 +4,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
-import {
-  createFormCollections,
-  createLockManagerIndex
-} from '../collections/create-update.js'
 
 /** @import {Db} from 'mongodb' */
 /** @import {HapiServer} from '../../hapi-types.js' */
@@ -22,6 +18,7 @@ export const mongoDbPlugin = {
      *   mongoUrl: string,
      *   mongoOptions: object,
      *   databaseName: string,
+     *   createFormCollections: (db: Db) => Promise<void>,
      *   seedDatabase: (db: Db) => Promise<void>
      * }} options
      */
@@ -43,8 +40,8 @@ export const mongoDbPlugin = {
 
       const locker = new LockManager(db.collection('mongo-locks'))
 
-      await createFormCollections(db)
-      await createLockManagerIndex(db)
+      await options.createFormCollections(db)
+      await db.collection('mongo-locks').createIndex({ id: 1 })
       await options.seedDatabase(db)
 
       server.logger.info({

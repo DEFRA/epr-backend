@@ -8,7 +8,7 @@ import {
 import {
   getRegAccKey,
   isAccreditationForRegistration
-} from '#formsubmission/submission-keys.js'
+} from '#formsubmission/index.js'
 import Boom from '@hapi/boom'
 import { isoDateString } from '#common/validation/iso-date-schema.js'
 import { MIN_YEAR } from '#common/validation/year-schema.js'

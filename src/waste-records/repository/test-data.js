@@ -7,7 +7,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
-import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
+import { generateOrgId } from '#formsubmission/test-support.js'
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */

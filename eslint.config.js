@@ -57,7 +57,7 @@ const moduleFence = (module, name, entryPoints) => [
   },
   {
     target: [
-      './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-fixtures|test-support).js',
+      './src/!(test)/**/!(*.test|*.contract|*-test-helpers|test-data|test-fixtures|test-support).js',
       './src/!(*.test).js',
       './scripts/**/!(*.test).*',
       './benchmarks/**/*'
@@ -124,6 +124,11 @@ export default [
               ['./index.js', './plugin.js', './test-support.js']
             ),
             ...moduleFence('waste-records-export', 'the waste records export', [
+              './index.js',
+              './plugin.js',
+              './test-support.js'
+            ]),
+            ...moduleFence('forms-submission-data', 'forms submission data', [
               './index.js',
               './plugin.js',
               './test-support.js'

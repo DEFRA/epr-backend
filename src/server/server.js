@@ -16,7 +16,11 @@ import {
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { serverPlugins } from '#plugins/server-plugins.js'
-import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
+import {
+  createFormCollections,
+  mongoFormSubmissionsRepositoryPlugin,
+  runFormsDataMigration
+} from '#formsubmission/plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
@@ -28,7 +32,6 @@ import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/reposit
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
-import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
@@ -87,7 +90,7 @@ function getProductionPlugins(config) {
   const plugins = [
     {
       plugin: mongoDbPlugin,
-      options: { ...config.get('mongo'), seedDatabase }
+      options: { ...config.get('mongo'), createFormCollections, seedDatabase }
     },
     {
       plugin: mongoOrganisationsRepositoryPlugin,
@@ -140,7 +143,7 @@ async function createServer(options = {}) {
   // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
   // These routes reach their collections directly and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
-  // See: src/routes/v1/apply/*.js
+  // See: src/forms-submission-data/apply/routes/*.js
   const legacyApplyRoutes = Boolean(options._testOnlyLegacyApplyRoutes)
   const infrastructure = legacyApplyRoutes ? [] : getProductionPlugins(config)
 

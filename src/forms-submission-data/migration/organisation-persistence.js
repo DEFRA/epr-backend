@@ -4,7 +4,7 @@ import {
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
-import { auditIncrementalFormMigration } from '#auditing/incremental-form-migration.js'
+import { auditIncrementalFormMigration } from '#formsubmission/auditing/incremental-form-migration.js'
 import { toRepositoryOrganisation } from './organisation-number.js'
 
 /**
