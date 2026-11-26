@@ -1,5 +1,7 @@
-import { isEprMarker } from '#domain/summary-logs/markers.js'
-import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
+import {
+  isFilledInColumn,
+  PREVIOUS_YEAR_LINK_STATUS
+} from '#domain/summary-logs/linked-row.js'
 import {
   isAnswered,
   toRowId
@@ -56,15 +58,12 @@ import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline
  * @param {LinkingTableSchema} schema
  * @returns {FillInColumn[]}
  */
-const fillInColumnsOf = (headers, { rowIdField, linking }) => {
-  const suppliable = new Set(linking.suppliableOnLinkedRow)
+const fillInColumnsOf = (headers, schema) => {
+  const suppliable = new Set(schema.linking.suppliableOnLinkedRow)
   return headers.map((header) =>
-    header === null ||
-    isEprMarker(header) ||
-    header === rowIdField ||
-    header === linking.previousYearRowIdField
-      ? { kept: true }
-      : { kept: false, header, suppliable: suppliable.has(header) }
+    isFilledInColumn(header, schema)
+      ? { kept: false, header, suppliable: suppliable.has(header) }
+      : { kept: true }
   )
 }
 
