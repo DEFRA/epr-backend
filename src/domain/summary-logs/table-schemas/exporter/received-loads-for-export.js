@@ -394,11 +394,10 @@ const CALCULATED_COLUMNS = Object.freeze([
 ])
 
 // A previous year's "No" means not yet: the load can be refused or stopped later
-const REFUSED_OR_STOPPED_COLUMNS = Object.freeze([
-  FIELDS.WAS_THE_WASTE_REFUSED,
-  FIELDS.WAS_THE_WASTE_STOPPED,
-  FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
-])
+const ANSWERED_LATER_ON_LINKED_ROW = Object.freeze({
+  [FIELDS.WAS_THE_WASTE_REFUSED]: YES_NO_VALUES.NO,
+  [FIELDS.WAS_THE_WASTE_STOPPED]: YES_NO_VALUES.NO
+})
 
 export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
   ...RECEIVED_LOADS_FOR_EXPORT,
@@ -429,10 +428,8 @@ export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
       FIELDS.BILL_OF_LANDING_REFERENCE_NUMBER,
       FIELDS.CUSTOMS_DECLARATION_NUMBER
     ],
-    mayDifferBeforeCorrectionDeadline: [
-      ...CALCULATED_COLUMNS,
-      ...REFUSED_OR_STOPPED_COLUMNS
-    ],
+    mayDifferBeforeCorrectionDeadline: CALCULATED_COLUMNS,
+    answeredLaterOnLinkedRow: ANSWERED_LATER_ON_LINKED_ROW,
     prefilledOnLinkedRow: {
       [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: YES_NO_VALUES.NO
     },

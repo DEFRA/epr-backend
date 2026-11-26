@@ -122,6 +122,14 @@ describe('linked-row', () => {
         comparison: SAME
       },
       {
+        description:
+          'a column with no value rule as text, so a number cell matches a text cell',
+        header: 'WEIGHBRIDGE_TICKET',
+        entered: '12345',
+        previousYear: 12345,
+        comparison: SAME
+      },
+      {
         description: 'a value the template fills in on a linked row as blank',
         header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
         entered: 'No',

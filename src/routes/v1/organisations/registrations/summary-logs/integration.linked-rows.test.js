@@ -777,6 +777,41 @@ describe('2027 rows linked to a 2026 row', () => {
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
     })
 
+    it('rejects a 2026 refused load given as not refused on the linked row, on that cell, while 2026 can still be corrected', async () => {
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log({ ...EXPORTED_IN_DECEMBER_2026, wasteRefused: 'Yes' })
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow({
+            ...EXPORTED_IN_DECEMBER_2026,
+            wasteRefused: 'No',
+            dateReceivedByOsr: '2027-01-25'
+          })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        expect.objectContaining({
+          errorCode: 'PREVIOUS_YEAR_ROW_VALUE_DIFFERS',
+          actual: 'No',
+          location: expect.objectContaining({
+            header: 'WAS_THE_WASTE_REFUSED',
+            rowId: '1001'
+          })
+        })
+      ])
+    })
+
     it('rejects a 2026 export date supplied on a linked row while 2026 can still be corrected', async () => {
       uploadOn('2027-01-10T09:00:00.000Z')
       const env = await setup()

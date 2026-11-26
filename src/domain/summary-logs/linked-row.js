@@ -106,9 +106,10 @@ const comparableValueOf = ({ columnSchema, isRounded }, cellValue) => {
   if (!isAnswered(cellValue)) {
     return null
   }
+  // A column with no value rule is compared as text: a number cell matches a text cell
   const read =
     columnSchema === undefined
-      ? cellValue
+      ? String(cellValue)
       : columnSchema.validate(cellValue).value
   if (typeof read === 'string') {
     return read.trim()

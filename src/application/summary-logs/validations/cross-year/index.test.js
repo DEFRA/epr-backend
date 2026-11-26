@@ -28,7 +28,8 @@ const HEADERS = [
   'OSR_NAME',
   'DATE_RECEIVED_BY_OSR',
   'DATE_REPATRIATED',
-  'NET_WEIGHT'
+  'NET_WEIGHT',
+  'WAS_THE_WASTE_REFUSED'
 ]
 
 const tableSchemas = {
@@ -38,6 +39,7 @@ const tableSchemas = {
       previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID',
       suppliableOnLinkedRow: ['DATE_OF_EXPORT'],
       mayDifferBeforeCorrectionDeadline: ['NET_WEIGHT'],
+      answeredLaterOnLinkedRow: { WAS_THE_WASTE_REFUSED: 'No' },
       prefilledOnLinkedRow: {},
       /**
        * @param {Record<string, unknown>} row
@@ -94,7 +96,8 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
  *   previousYearCompletion?: Record<string, unknown>,
  *   dateReceivedByOsr?: string,
  *   osrName?: string | null,
- *   netWeight?: number | null
+ *   netWeight?: number | null,
+ *   wasteRefused?: string | null
  * }} row
  * @returns {FilledInRow}
  */
@@ -106,7 +109,8 @@ const filledInRow = ({
   previousYearCompletion = {},
   dateReceivedByOsr,
   osrName = null,
-  netWeight = null
+  netWeight = null,
+  wasteRefused = null
 }) => {
   /** @type {Record<string, unknown>} */
   const previousYear = {
@@ -123,12 +127,14 @@ const filledInRow = ({
     osrName,
     dateReceivedByOsr ?? previousYear.DATE_RECEIVED_BY_OSR ?? null,
     previousYear.DATE_REPATRIATED ?? null,
-    netWeight
+    netWeight,
+    wasteRefused
   ]
   // OSR_NAME and NET_WEIGHT are not suppliable, so fill-in takes them from the previous year row
   const values = entered
     .with(3, previousYear.OSR_NAME)
     .with(6, previousYear.NET_WEIGHT)
+    .with(7, wasteRefused ?? previousYear.WAS_THE_WASTE_REFUSED ?? null)
   return {
     rowNumber: 8,
     values,
@@ -157,6 +163,7 @@ const unmatchedRow = ({ rowNumber = 8, rowId = 1001, previousYearRowId }) => ({
     previousYearRowId,
     '2027-01-04',
     'Overseas Ltd',
+    null,
     null,
     null,
     null
@@ -189,8 +196,16 @@ const previousYearLinkIssue = (
   }
 })
 
-/** @param {FilledInRow[]} rows */
-const check = (rows, options = BEFORE_2026_CORRECTION_DEADLINE) =>
+/**
+ * @param {FilledInRow[]} rows
+ * @param {SummaryLogValidationOptions} [options]
+ * @param {typeof tableSchemas} [schemas]
+ */
+const check = (
+  rows,
+  options = BEFORE_2026_CORRECTION_DEADLINE,
+  schemas = tableSchemas
+) =>
   checkCrossYearRules({
     parsed: {
       meta: {},
@@ -202,7 +217,7 @@ const check = (rows, options = BEFORE_2026_CORRECTION_DEADLINE) =>
         }
       }
     },
-    tableSchemas,
+    tableSchemas: schemas,
     options
   }).getAllIssues()
 
@@ -276,6 +291,26 @@ describe('checkCrossYearRules', () => {
       ).toStrictEqual([])
     }
   )
+
+  it('rejects a supplied date in an earlier year that can still be corrected, in a column that may differ from the previous year row', () => {
+    const dateOfExportMayDiffer = {
+      LOADS: {
+        ...tableSchemas.LOADS,
+        linking: {
+          ...tableSchemas.LOADS.linking,
+          mayDifferBeforeCorrectionDeadline: ['DATE_OF_EXPORT']
+        }
+      }
+    }
+
+    expect(
+      check(
+        [filledInRow({ dateOfExport: '2026-12-28' })],
+        BEFORE_2026_CORRECTION_DEADLINE,
+        dateOfExportMayDiffer
+      ).map(({ context }) => context?.errorCode)
+    ).toStrictEqual([VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR])
+  })
 
   it('accepts a supplied date once the earlier year can no longer be corrected', () => {
     expect(
@@ -596,6 +631,45 @@ describe('checkCrossYearRules', () => {
           })
         ])
       ).toStrictEqual([])
+    })
+
+    it('accepts a previous year answer that means not yet, given as another answer', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            wasteRefused: 'Yes',
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: 'No' }
+          })
+        ])
+      ).toStrictEqual([])
+    })
+
+    it('rejects a previous year answer given as the answer that means not yet', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            wasteRefused: 'No',
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: 'Yes' }
+          })
+        ])
+      ).toStrictEqual([
+        previousYearLinkIssue(
+          {
+            row: 8,
+            rowId: '1001',
+            column: 'I',
+            header: 'WAS_THE_WASTE_REFUSED'
+          },
+          {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
+            actual: 'No',
+            previousYearRowId: '1500',
+            deadline: '2027-02-27'
+          }
+        )
+      ])
     })
 
     it('accepts a column that may differ before the correction deadline', () => {

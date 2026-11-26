@@ -22,11 +22,14 @@ const columnsGivenDifferently = ({
   issueLocation
 }) => {
   const mayDiffer = new Set(linking.mayDifferBeforeCorrectionDeadline)
-  return [...issueLocation.headerToIndexMap].filter(
-    ([column]) =>
-      columnComparisons.get(column)?.comparison ===
-        PREVIOUS_YEAR_COMPARISON.CHANGED && !mayDiffer.has(column)
-  )
+  return [...issueLocation.headerToIndexMap].filter(([column]) => {
+    const columnComparison = columnComparisons.get(column)
+    return (
+      columnComparison?.comparison === PREVIOUS_YEAR_COMPARISON.CHANGED &&
+      !mayDiffer.has(column) &&
+      columnComparison.previousYear !== linking.answeredLaterOnLinkedRow[column]
+    )
+  })
 }
 
 /**

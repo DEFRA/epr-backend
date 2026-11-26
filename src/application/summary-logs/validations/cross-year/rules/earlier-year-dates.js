@@ -11,25 +11,33 @@ import { toApplicationIssue } from '../../data-syntax.js'
 /** @import {LinkedRowCheck} from './index.js' */
 
 /**
+ * The supplied columns the previous year's row leaves blank, or that may differ
+ * from it; a different value elsewhere is rejected as such.
+ *
  * @param {FoundLinkedRow} linkedRow
  * @returns {string[]}
  */
-const suppliedColumnsAddedOnLinkedRow = ({
+const suppliedColumnsNewOrMayDiffer = ({
   columnComparisons,
-  previousYearLink
+  previousYearLink,
+  linking
 }) => {
   const supplied = new Set(previousYearLink.link.suppliedFields)
+  const mayDiffer = new Set(linking.mayDifferBeforeCorrectionDeadline)
   return [...columnComparisons]
     .filter(
       ([column, { comparison }]) =>
-        supplied.has(column) && comparison === PREVIOUS_YEAR_COMPARISON.ADDED
+        supplied.has(column) &&
+        (comparison === PREVIOUS_YEAR_COMPARISON.ADDED ||
+          (comparison === PREVIOUS_YEAR_COMPARISON.CHANGED &&
+            mayDiffer.has(column)))
     )
     .map(([column]) => column)
 }
 
 /** @type {LinkedRowCheck} */
 export const earlierYearDates = (linkedRow) =>
-  suppliedColumnsAddedOnLinkedRow(linkedRow).flatMap((field) => {
+  suppliedColumnsNewOrMayDiffer(linkedRow).flatMap((field) => {
     const columnSchema = linkedRow.columnSchemas.get(field)
     if (columnSchema === undefined) {
       return []
