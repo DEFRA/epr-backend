@@ -3,7 +3,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -66,7 +66,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
 

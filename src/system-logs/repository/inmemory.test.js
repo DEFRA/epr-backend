@@ -1,5 +1,5 @@
 import { describe, expect, it as base } from 'vitest'
-import { createSystemLogsRepository } from './inmemory.js'
+import { createInMemorySystemLogsRepository } from './inmemory.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { invalidArg } from '#test/type-helpers.js'
 
@@ -11,7 +11,8 @@ const it =
     base.extend({
       // eslint-disable-next-line no-empty-pattern
       systemLogsRepository: async ({}, use) => {
-        const factory = () => createSystemLogsRepository()(invalidArg(null))
+        const factory = () =>
+          createInMemorySystemLogsRepository()(invalidArg(null))
         await use(factory)
       }
     })

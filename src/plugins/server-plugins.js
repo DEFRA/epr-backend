@@ -17,6 +17,7 @@ import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
+import { systemLogsRoutesPlugin } from '#system-logs/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
 function getSwaggerPlugins() {
@@ -89,6 +90,7 @@ export function serverPlugins(config, infrastructure) {
     ...plugins,
     ...infrastructure,
     { plugin: router, options: { config } },
-    wasteRecordsExport
+    wasteRecordsExport,
+    systemLogsRoutesPlugin
   ]
 }

@@ -132,7 +132,12 @@ export default [
               'registration-accreditation-admin',
               'the registration and accreditation admin module',
               ['./index.js', './test-support.js']
-            )
+            ),
+            ...moduleFence('system-logs', 'system logs', [
+              './index.js',
+              './plugin.js',
+              './test-support.js'
+            ])
           ]
         }
       ]

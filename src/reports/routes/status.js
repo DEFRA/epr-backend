@@ -123,6 +123,6 @@ export const reportsStatus = {
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { ReportStatus } from '#reports/domain/report-status.js'
  * @import { HapiResponseToolkit } from '#common/hapi-types.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '#system-logs/index.js'
  * @import { ReportRequest } from './shared.js'
  */

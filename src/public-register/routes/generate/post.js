@@ -11,7 +11,7 @@ import { auditPublicRegisterGenerate } from '#public-register/auditing.js'
 /**
  * @typedef {import('#organisation-read-model/index.js').OrganisationReadRepository} OrganisationReadRepository
  * @typedef {import('#public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
- * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
+ * @typedef {import('#system-logs/index.js').SystemLogsRepository} SystemLogsRepository
  * @typedef {import('#reports/repository/port.js').ReportsRepository} ReportsRepository
  */
 

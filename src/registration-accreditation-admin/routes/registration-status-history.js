@@ -10,7 +10,7 @@ import { registrationStatusHistoryPayloadSchema } from './registration-status-hi
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
 /** @typedef {import('../repository/port.js').RegistrationAccreditationAdminRepository} RegistrationAccreditationAdminRepository */
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+/** @typedef {import('#system-logs/index.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#domain/organisations/model.js').StoredRegistrationStatus} StoredRegistrationStatus */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 

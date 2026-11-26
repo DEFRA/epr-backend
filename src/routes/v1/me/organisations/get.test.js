@@ -1,6 +1,6 @@
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asUnscopedAdminUser } from '#test/inject-auth.js'
 import { createApprovedOrgBuilder } from '#vite/helpers/build-approved-org.js'
@@ -582,7 +582,7 @@ describe('GET /v1/me/organisations', () => {
 
   describe('system log auditing', () => {
     it('should persist a system log when the endpoint is called', async () => {
-      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepositoryFactory = createInMemorySystemLogsRepository()
       const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])
@@ -609,7 +609,7 @@ describe('GET /v1/me/organisations', () => {
     })
 
     it('should persist a token-validation-failed log when the token has no current organisation', async () => {
-      const systemLogsRepositoryFactory = createSystemLogsRepository()
+      const systemLogsRepositoryFactory = createInMemorySystemLogsRepository()
       const systemLogsRepository = systemLogsRepositoryFactory(logger)
       const organisationsRepositoryFactory =
         createInMemoryOrganisationsRepository([])

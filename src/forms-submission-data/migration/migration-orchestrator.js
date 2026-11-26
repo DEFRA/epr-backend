@@ -15,7 +15,7 @@ import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
  * @import {createFormsFileUploadsRepository} from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/index.js'
  * @import {FormDataMigrator, Organisation, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
  */
 

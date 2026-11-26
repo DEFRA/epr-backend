@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import { TEST_ORGANISATION_NUMBER } from '#packaging-recycling-notes/repository/contract/test-data.js'
@@ -33,7 +33,7 @@ describe('auditPrnStatusTransition', () => {
   let systemLogsRepository
 
   const createMockRequest = () =>
-    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#system-logs/index.js').SystemLogsRepository }} */ ({
       auth: {
         credentials: {
           id: userId,
@@ -47,7 +47,7 @@ describe('auditPrnStatusTransition', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-12-22T10:00:00.000Z'))
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
   })
 
   afterEach(() => {

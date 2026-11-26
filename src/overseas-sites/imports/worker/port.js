@@ -1,5 +1,5 @@
 /**
- * @import { SystemLogHumanActor } from '#repositories/system-logs/port.js'
+ * @import { SystemLogHumanActor } from '#system-logs/index.js'
  *
  * @typedef {Object} OrsImportsCommandExecutor
  * @property {(importId: string, user?: SystemLogHumanActor) => Promise<void>} importOverseasSites

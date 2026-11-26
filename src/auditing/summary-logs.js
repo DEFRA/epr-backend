@@ -1,7 +1,7 @@
 import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/index.js'
  * @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js'
  *
  * @typedef {{

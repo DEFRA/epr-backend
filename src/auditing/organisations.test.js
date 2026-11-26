@@ -1,13 +1,13 @@
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { auditOrganisationUpdate } from './organisations.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest'
 import { randomBytes } from 'crypto'
 
 /**
  * @import { HapiRequest } from '#common/hapi-types.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '#system-logs/index.js'
  */
 
 const mockAudit = vi.fn()
@@ -25,7 +25,7 @@ describe('auditOrganisationUpdate', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(now)
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
   })
 
   afterEach(() => {

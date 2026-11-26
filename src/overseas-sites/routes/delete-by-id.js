@@ -11,7 +11,7 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { SystemLogsRepository } from '#system-logs/index.js' */
 
 export const overseasSiteDeletePath = '/v1/overseas-sites/{id}'
 

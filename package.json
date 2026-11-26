@@ -29,6 +29,7 @@
     "#root/*": "./src/*",
     "#routes/*": "./src/routes/*",
     "#server/*": "./src/server/*",
+    "#system-logs/*": "./src/system-logs/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
     "#waste-balances/*": "./src/waste-balances/*",

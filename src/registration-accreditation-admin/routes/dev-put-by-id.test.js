@@ -7,7 +7,7 @@ import {
   accreditation,
   reprocessor
 } from '#organisation-read-model/test-support.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { partialMock } from '#test/type-helpers.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -91,7 +91,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         repositories: {
           organisationAdministrationRepository:
             createInMemoryOrganisationsRepository([fixture]),
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createInMemorySystemLogsRepository()
         }
       })
     })
@@ -197,7 +197,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       repositories: {
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([partialMock(fixture)]),
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
     const org = await getOrganisation(server, fixture.id)

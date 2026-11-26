@@ -195,7 +195,7 @@ describe('recordSystemLogs', () => {
 
   it('calls insertMany when the repository supports it', async () => {
     const repository =
-      /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */ (
+      /** @type {import('#system-logs/index.js').SystemLogsRepository} */ (
         /** @type {unknown} */ ({
           insert: mockInsert,
           insertMany: mockInsertMany

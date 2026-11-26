@@ -9,7 +9,7 @@ import {
 /**
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AccreditationNumber, OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '#system-logs/index.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
  * @import {
  *   MarkReportStaleResult,
@@ -19,7 +19,7 @@ import {
  * } from '#reports/repository/port.js'
  */
 
-/** @type {import('#repositories/system-logs/port.js').SystemLog['createdBy']} */
+/** @type {import('#system-logs/index.js').SystemLog['createdBy']} */
 const SYSTEM_ACTOR = Object.freeze({
   id: 'system',
   email: 'system',
@@ -42,7 +42,7 @@ export const MARK_STALE_ACTION = Object.freeze({
 
 /**
  * Audits a report status transition via CDP audit and system logs.
- * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#system-logs/index.js').SystemLogsRepository}} request
  * @param {object} params
  * @param {OrganisationNumber} params.organisationNumber
  * @param {RegistrationNumber} params.registrationNumber
@@ -117,7 +117,7 @@ export async function auditReportStatusTransition(request, params) {
 
 /**
  * Audits a report deletion via CDP audit and system logs.
- * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#system-logs/index.js').SystemLogsRepository}} request
  * @param {object} params
  * @param {OrganisationNumber} params.organisationNumber
  * @param {RegistrationNumber} params.registrationNumber
@@ -285,7 +285,7 @@ export async function auditMarkReportsRequiringResubmission({
 
 /**
  * Audits a report creation via CDP audit and system logs.
- * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#system-logs/index.js').SystemLogsRepository}} request
  * @param {object} params
  * @param {OrganisationNumber} params.organisationNumber
  * @param {RegistrationNumber} params.registrationNumber
@@ -338,7 +338,7 @@ export async function auditReportCreate(request, params) {
  * Audits an operator's own request for resubmission. Request-bound like
  * {@link auditReportCreate}, not the system/batch shape
  * {@link auditMarkReportsRequiringResubmission} uses.
- * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository}} request
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: import('#system-logs/index.js').SystemLogsRepository}} request
  * @param {object} params
  * @param {OrganisationNumber} params.organisationNumber
  * @param {RegistrationNumber} params.registrationNumber

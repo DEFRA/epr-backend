@@ -65,6 +65,6 @@ export const reportsRequestResubmission = {
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '#system-logs/index.js'
  * @import { PeriodWithSubmissionPathParams } from './shared.js'
  */

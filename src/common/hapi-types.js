@@ -18,7 +18,7 @@
  * @import {OrganisationAdministrationRepository} from '#repositories/organisations/administration-port.js'
  * @import {OrganisationLinkingRepository} from '#repositories/organisations/linking-port.js'
  * @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js'
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/index.js'
  * @import {WasteBalanceLedgerRepository} from '#waste-balances/repository/ledger-port.js'
  * @import {SummaryLogRowStatesRepository} from '#waste-records/repository/port.js'
  * @typedef {ReturnType<typeof import('#waste-balances/application/waste-balance-service.js').createWasteBalanceService>} WasteBalanceService

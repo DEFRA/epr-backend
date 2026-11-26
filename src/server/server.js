@@ -21,7 +21,7 @@ import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
-import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
+import { systemLogsRepositoryPlugin } from '#system-logs/plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
 import { mongoWasteBalanceServicePlugin } from '#waste-balances/repository/mongodb.plugin.js'
 import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/mongodb.plugin.js'
@@ -98,7 +98,7 @@ function getProductionPlugins(config) {
     mongoFormSubmissionsRepositoryPlugin,
     mongoLedgerRepositoryPlugin,
     mongoWasteBalanceServicePlugin,
-    mongoSystemLogsRepositoryPlugin,
+    systemLogsRepositoryPlugin,
     s3UploadsRepositoryPlugin,
     s3PublicRegisterRepositoryPlugin,
     { plugin: sqsCommandExecutorPlugin, options: { config } },

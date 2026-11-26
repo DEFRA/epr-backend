@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
 const mockAudit = vi.fn()
@@ -21,7 +21,7 @@ describe('auditPublicRegisterGenerate', () => {
   let systemLogsRepository
 
   const createMockRequest = () =>
-    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository }} */ ({
+    /** @type {import('#common/hapi-types.js').HapiRequest & { systemLogsRepository: import('#system-logs/index.js').SystemLogsRepository }} */ ({
       auth: {
         credentials: {
           id: userId,
@@ -35,7 +35,7 @@ describe('auditPublicRegisterGenerate', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2025-12-22T10:00:00.000Z'))
-    systemLogsRepository = createSystemLogsRepository()(logger)
+    systemLogsRepository = createInMemorySystemLogsRepository()(logger)
   })
 
   afterEach(() => {

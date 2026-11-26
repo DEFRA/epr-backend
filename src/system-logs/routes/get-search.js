@@ -16,7 +16,7 @@ import {
 /**
  * @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '../repository/port.js'
  *
  * @typedef {{
  *   organisationNumber?: string,

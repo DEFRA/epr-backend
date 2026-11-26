@@ -1,7 +1,7 @@
 import { isPayloadSmallEnoughToAudit, safeAudit } from './helpers.js'
 
 /**
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/index.js'
  */
 
 const SYSTEM_USER = { id: 'system', email: 'system', scope: [], role: null }

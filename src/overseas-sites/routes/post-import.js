@@ -20,7 +20,7 @@ import { orsImportCreatePayloadSchema } from './post-import.schema.js'
 /** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OrsImportsRepository } from '#overseas-sites/imports/repository/port.js' */
 /** @import { UploadsRepository } from '#domain/uploads/repository/port.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { SystemLogsRepository } from '#system-logs/index.js' */
 
 /**
  * @typedef {{redirectUrl: string}} OrsImportCreatePayload

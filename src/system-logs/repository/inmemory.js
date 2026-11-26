@@ -114,7 +114,7 @@ const performFindSummaryLogSubmitActors =
 /**
  * @returns {SystemLogsRepositoryFactory}
  */
-export function createSystemLogsRepository() {
+export function createInMemorySystemLogsRepository() {
   /** @type {Array<SystemLog & { _internalId: number }>} */
   const storage = []
   const state = { nextId: 1 }
