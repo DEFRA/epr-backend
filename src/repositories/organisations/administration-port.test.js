@@ -17,8 +17,8 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/server/queue-consumer/queue-consumer.plugin.js',
 
   // Organisation administration
-  'src/routes/v1/organisations/get-by-id.js',
-  'src/routes/v1/organisations/put-by-id.js',
+  'src/organisations/routes/get-by-id.js',
+  'src/organisations/routes/put-by-id.js',
 
   // Registration and accreditation administration
   'src/registration-accreditation-admin/find-accreditation-by-id.js',

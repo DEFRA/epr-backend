@@ -128,6 +128,9 @@ export default [
               './plugin.js',
               './test-support.js'
             ]),
+            ...moduleFence('organisations', 'the organisations module', [
+              './plugin.js'
+            ]),
             ...moduleFence(
               'registration-accreditation-admin',
               'the registration and accreditation admin module',

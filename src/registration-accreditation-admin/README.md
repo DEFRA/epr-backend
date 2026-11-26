@@ -7,7 +7,7 @@ The routes keep their paths:
 - The registration and accreditation `status-history` routes, which make status changes.
 - The overseas sites of a registration or accreditation, addressed by id.
 
-Organisations stay in epr-backend, so the routes that read or write an organisation as a whole, `GET` and `PUT /v1/organisations/{id}` and its dev twin, are not in this module.
+Organisations stay in epr-backend, so the routes that read or write an organisation as a whole are in the [organisations module](../organisations/README.md), not this one.
 
 The module takes the shape [`src/modules.md`](../modules.md) describes, and lint refuses an import of anything but its entry points:
 

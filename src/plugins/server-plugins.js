@@ -8,6 +8,7 @@ import { secureContext } from '@defra/hapi-secure-context'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import { organisationsRoutesPlugin } from '#organisations/plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
@@ -90,6 +91,10 @@ export function serverPlugins(config, infrastructure) {
     ...plugins,
     ...infrastructure,
     { plugin: router, options: { config } },
+    {
+      plugin: organisationsRoutesPlugin,
+      options: { devEndpoints: config.get('featureFlags.devEndpoints') }
+    },
     registrationAccreditationAdminRoutesPlugin,
     wasteRecordsExport
   ]

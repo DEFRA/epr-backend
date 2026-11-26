@@ -1,2 +1,0 @@
-export { organisationsGetById } from './get-by-id.js'
-export { organisationsPutById } from './put-by-id.js'
