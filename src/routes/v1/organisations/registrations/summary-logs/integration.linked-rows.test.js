@@ -443,6 +443,51 @@ describe('2027 rows linked to a 2026 row', () => {
       expect((await getWasteBalance(previousYearOf(env))).amount).toBe(0)
     })
 
+    it.each([
+      { refusal: 'awaiting repatriation', dateRepatriated: null },
+      { refusal: 'repatriated in March 2027', dateRepatriated: '2027-03-05' }
+    ])(
+      'credits neither year with a load exported in December 2026 and refused on a linked 2027 row, $refusal',
+      async ({ dateRepatriated }) => {
+        uploadOn('2027-01-10T09:00:00.000Z')
+        const env = await setup()
+        await submitted(
+          env,
+          PREVIOUS_YEAR,
+          'log-2026',
+          accredited2026Log({
+            ...EXPORTED_IN_DECEMBER_2026,
+            wasteRefused: null,
+            wasteStopped: null
+          })
+        )
+
+        uploadOn('2027-03-10T09:00:00.000Z')
+        await submitted(
+          env,
+          YEAR,
+          'log-2027',
+          accredited2027Log([
+            linkedRow({
+              exportTonnage: null,
+              exportDate: null,
+              dateReceivedByOsr: null,
+              wasteRefused: 'Yes',
+              wasteStopped: 'No',
+              dateRepatriated
+            })
+          ])
+        )
+
+        expect(
+          (await storedRow(env, ledgerIdOf(env), 'log-2027', '1001'))
+            ?.classification
+        ).toEqual(expect.objectContaining({ outcome: 'EXCLUDED' }))
+        expect((await getWasteBalance(env)).amount).toBe(0)
+        expect((await getWasteBalance(previousYearOf(env))).amount).toBe(0)
+      }
+    )
+
     it('does not credit a linked row exported on a day the 2026 accreditation was suspended', async () => {
       const env = await setup({
         previousYearAccreditationSuspendedOn: '2026-12-20'
