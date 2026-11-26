@@ -16,6 +16,7 @@ import { uploadCallbackAuthPlugin } from '#plugins/auth/upload-callback-auth-plu
 import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
+import { overseasSitesRoutesPlugin } from '#overseas-sites/plugin.js'
 import { router } from '#plugins/router.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
@@ -48,7 +49,7 @@ function getSwaggerPlugins() {
 }
 
 /** The modules' route plugins, which every server but the legacy one registers. */
-const moduleRoutePlugins = () => [wasteRecordsExport]
+const moduleRoutePlugins = () => [overseasSitesRoutesPlugin, wasteRecordsExport]
 
 /**
  * The plugins every server registers, around the infrastructure plugins that

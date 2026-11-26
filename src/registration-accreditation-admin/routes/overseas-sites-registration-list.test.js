@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import {
   buildAccreditation,
   buildRegistration,

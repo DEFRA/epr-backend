@@ -24,7 +24,7 @@ import {
   createOrganisationReadRepository,
   buildExternalAccreditation
 } from '#organisation-read-model/test-support.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'

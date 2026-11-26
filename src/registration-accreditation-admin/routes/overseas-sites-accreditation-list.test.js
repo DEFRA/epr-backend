@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import {
   buildAccreditation,
   buildRegistration,

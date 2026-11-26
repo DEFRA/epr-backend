@@ -1,4 +1,4 @@
-import { registerDependency } from '#plugins/register-dependency.js'
+import { portAdapter } from '#plugins/port-adapter.js'
 import {
   calculateOrsImportExpiresAt,
   isOrsImportStatusTerminal
@@ -63,14 +63,16 @@ export function createInMemoryOrsImportsRepository() {
   })
 }
 
+/**
+ * The in-memory adapter for the ORS imports repository, which the test server
+ * registers.
+ */
 export function createInMemoryOrsImportsRepositoryPlugin() {
-  const factory = createInMemoryOrsImportsRepository()
-  const repository = factory()
+  const repository = createInMemoryOrsImportsRepository()()
 
-  return {
-    name: 'orsImportsRepository',
-    register: (server) => {
-      registerDependency(server, 'orsImportsRepository', () => repository)
-    }
-  }
+  return portAdapter({
+    provides: 'orsImportsRepository',
+    needs: [],
+    build: () => () => repository
+  })
 }

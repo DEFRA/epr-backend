@@ -10,8 +10,10 @@ import { createMongoExternalAccreditationsRepository } from '#external-accredita
 import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
-import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
-import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
+import {
+  buildOverseasSite,
+  createOverseasSitesRepository
+} from '#overseas-sites/test-support.js'
 import { buildDraftPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {

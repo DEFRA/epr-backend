@@ -5,7 +5,7 @@ import { vi } from 'vitest'
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {OverseasSitesRepository} from '#overseas-sites/index.js' */
 /** @import {ExternalAccreditationsRepository} from '#external-accreditations/repository/port.js' */
 
 /**
