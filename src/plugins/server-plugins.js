@@ -17,6 +17,7 @@ import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
+import { organisationReadModelDevRoutesPlugin } from '#organisation-read-model/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
 function getSwaggerPlugins() {
@@ -47,8 +48,17 @@ function getSwaggerPlugins() {
   ]
 }
 
-/** The modules' route plugins, which every server but the legacy one registers. */
-const moduleRoutePlugins = () => [wasteRecordsExport]
+/**
+ * The modules' route plugins, which every server but the legacy one registers.
+ *
+ * @param {ReturnType<typeof import('#root/config.js').getConfig>} config
+ */
+const moduleRoutePlugins = (config) => [
+  wasteRecordsExport,
+  ...(config.get('featureFlags.devEndpoints')
+    ? [organisationReadModelDevRoutesPlugin]
+    : [])
+]
 
 /**
  * The plugins every server registers, around the infrastructure plugins that
@@ -94,6 +104,6 @@ export function serverPlugins(config, infrastructure, { modules = true } = {}) {
     ...plugins,
     ...infrastructure,
     { plugin: router, options: { config } },
-    ...(modules ? moduleRoutePlugins() : [])
+    ...(modules ? moduleRoutePlugins(config) : [])
   ]
 }

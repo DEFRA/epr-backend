@@ -1,9 +1,9 @@
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/repository/external-accreditation-sources.js'
 import { validateExternalAccreditation } from './validation.js'
 
 /** @import { Collection, Db } from 'mongodb' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 /** @import { ExternalAccreditationsRepositoryFactory } from './port.js' */
 
 /** Unique on registration and year alone, before accreditations carried the organisation. */

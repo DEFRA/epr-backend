@@ -29,6 +29,7 @@ export {
   toLinkedDefraOrganisation
 } from './repository/stored-organisation.js'
 
+/** @typedef {import('./external-accreditations/port.js').ExternalAccreditationsRepository} ExternalAccreditationsRepository */
 /** @typedef {import('./repository/port.js').OrganisationReadRepository} OrganisationReadRepository */
 /** @typedef {import('./repository/to-read-model.js').ExternalAccreditation} ExternalAccreditation */
 /** @typedef {import('./domain/model.js').AccreditationCommon} AccreditationCommon */

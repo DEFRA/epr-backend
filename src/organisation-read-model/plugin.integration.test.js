@@ -13,6 +13,7 @@ import {
   findOrganisation,
   reprocessor
 } from './repository/contract/organisation-read-test-helpers.js'
+import { buildExternalAccreditation } from './repository/contract/test-data.js'
 
 /** @import { ServerApp, StartedServer } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
@@ -30,6 +31,17 @@ const REG_ACCRED_BASE_URL = 'https://reg-accred.test'
 const REG_ACCRED_ACCREDITATION_NUMBER = 'A27ER5000560001AL'
 
 const { buildOrganisation } = createOrganisationBuilders()
+
+/**
+ * @param {StartedServer} server
+ * @param {StoredOrganisation} stored
+ */
+const insertOrganisation = async (server, stored) => {
+  const { id, ...document } = toStoredOrganisation(stored)
+  await server.db
+    .collection('epr-organisations')
+    .insertOne({ _id: ObjectId.createFromHexString(id), ...document })
+}
 
 describe('the production server with Reg Accred external accreditations on', () => {
   const { getServer } = setupAuthContext()
@@ -90,12 +102,7 @@ describe('the production server with Reg Accred external accreditations on', () 
       })
     )
     const stored = buildOrganisation({ registrations: [reprocessor()] })
-    const { id, ...document } = toStoredOrganisation(
-      /** @type {StoredOrganisation} */ (stored)
-    )
-    await server.db
-      .collection('epr-organisations')
-      .insertOne({ _id: ObjectId.createFromHexString(id), ...document })
+    await insertOrganisation(server, /** @type {StoredOrganisation} */ (stored))
 
     const organisation = await findOrganisation(
       /** @type {ServerApp} */ (server.app).organisationReadRepository,
@@ -108,5 +115,64 @@ describe('the production server with Reg Accred external accreditations on', () 
       ]?.accreditationNumber
     ).toBe(REG_ACCRED_ACCREDITATION_NUMBER)
     expect(requested).toHaveLength(1)
+  })
+})
+
+describe('the production server with dev endpoints on', () => {
+  setupAuthContext()
+
+  /** @type {StartedServer} */
+  let server
+
+  beforeAll(async () => {
+    await setupMongo({ serverOptions: {} })
+    vi.stubEnv('MONGO_URI', globalThis.__MONGO_URI__)
+    vi.stubEnv('MONGO_DATABASE', `epr-backend-test-${randomUUID()}`)
+    vi.stubEnv('FEATURE_FLAG_DEV_ENDPOINTS', 'true')
+
+    const { createServer } = await import('#server/server.js')
+    server = /** @type {StartedServer} */ (
+      /** @type {unknown} */ (await createServer())
+    )
+    await server.initialize()
+  })
+
+  afterAll(async () => {
+    await server.db.dropDatabase()
+    await server.stop()
+    await teardownMongo()
+    vi.unstubAllEnvs()
+    vi.useRealTimers()
+  })
+
+  it('serves the 2027 accreditation stored through the dev route', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
+    const stored = buildOrganisation({ registrations: [reprocessor()] })
+    await insertOrganisation(server, /** @type {StoredOrganisation} */ (stored))
+    const {
+      registrationNumber: _registrationNumber,
+      year,
+      status: { current: _current, ...status },
+      ...fields
+    } = buildExternalAccreditation({
+      organisationNumber: stored.organisationNumber
+    })
+
+    const response = await server.inject({
+      method: 'PUT',
+      url: `/v1/dev/external-accreditations/${REPROCESSOR_NUMBER}/${year}`,
+      payload: { ...fields, status }
+    })
+
+    expect(response.statusCode).toBe(200)
+    const organisation = await findOrganisation(
+      /** @type {ServerApp} */ (server.app).organisationReadRepository,
+      stored.organisationNumber
+    )
+    expect(
+      organisation.registrations[REPROCESSOR_NUMBER]?.accreditations[
+        toYear(2027)
+      ]?.accreditationNumber
+    ).toBe(fields.accreditationNumber)
   })
 })

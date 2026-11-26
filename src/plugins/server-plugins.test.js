@@ -2,6 +2,7 @@ import HapiSwagger from 'hapi-swagger'
 import { describe, it, expect } from 'vitest'
 
 import { getConfig } from '#root/config.js'
+import { organisationReadModelDevRoutesPlugin } from '#organisation-read-model/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
 import { serverPlugins } from './server-plugins.js'
@@ -31,5 +32,21 @@ describe('serverPlugins', () => {
 
   it("leaves the modules' route plugins out when asked for none", () => {
     expect(registersModuleRoutes({ modules: false })).toBe(false)
+  })
+})
+
+describe("serverPlugins and the organisation read model's dev routes", () => {
+  /** @param {boolean} devEndpoints */
+  const registersDevRoutes = (devEndpoints) =>
+    serverPlugins(getConfig({ featureFlags: { devEndpoints } }), []).includes(
+      organisationReadModelDevRoutesPlugin
+    )
+
+  it('registers them when dev endpoints are on', () => {
+    expect(registersDevRoutes(true)).toBe(true)
+  })
+
+  it('leaves them out when dev endpoints are off', () => {
+    expect(registersDevRoutes(false)).toBe(false)
   })
 })

@@ -1,11 +1,13 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
-import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
 import { createOverseasSitesRepository } from '#overseas-sites/index.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
-import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
+import {
+  createMongoExternalAccreditationsRepository,
+  createOrganisationReadRepository
+} from '#organisation-read-model/test-support.js'
 
 /** @import { TestAPI } from 'vitest' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */

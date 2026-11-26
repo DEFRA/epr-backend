@@ -1,5 +1,6 @@
 export { createInMemoryOrganisationReadRepository } from './repository/inmemory.js'
 export { createInMemoryOrganisationReadRepositoryPlugin } from './repository/inmemory.plugin.js'
+export { createMongoExternalAccreditationsRepository } from './external-accreditations/mongodb.js'
 export { createOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
 export {
   accreditationsByYear,
