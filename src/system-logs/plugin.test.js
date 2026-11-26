@@ -13,15 +13,20 @@ const serverWithDefaultAuth = () => {
   return server
 }
 
-describe('the system logs routes plugin', () => {
-  it('refuses to start without a system logs repository', async () => {
-    const server = serverWithDefaultAuth()
-    await server.register(
-      /** @type {import('@hapi/hapi').Plugin<void>} */ (
-        /** @type {unknown} */ (systemLogsRoutesPlugin)
-      )
-    )
+const routesPlugin = /** @type {import('@hapi/hapi').Plugin<void>} */ (
+  /** @type {unknown} */ (systemLogsRoutesPlugin)
+)
 
-    await expect(server.initialize()).rejects.toThrow(/systemLogsRepository/)
+const PROVIDERS = ['systemLogsRepository', 'organisationsRepository']
+
+describe('the system logs routes plugin', () => {
+  it.for(PROVIDERS)('refuses to start without %s', async (missing) => {
+    const server = serverWithDefaultAuth()
+    for (const name of PROVIDERS.filter((provider) => provider !== missing)) {
+      await server.register({ name, register: () => {} })
+    }
+    await server.register(routesPlugin)
+
+    await expect(server.initialize()).rejects.toThrow(missing)
   })
 })

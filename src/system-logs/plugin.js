@@ -21,7 +21,7 @@ export const systemLogsRepositoryPlugin = portAdapter({
 /** The system logs module's routes. */
 export const systemLogsRoutesPlugin = {
   name: 'system-logs-routes',
-  dependencies: ['systemLogsRepository'],
+  dependencies: ['systemLogsRepository', 'organisationsRepository'],
   /** @param {import('#common/hapi-types.js').HapiServer} server */
   register: (server) => {
     server.route([systemLogsGetSearch])
