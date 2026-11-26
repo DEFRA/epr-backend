@@ -1,15 +1,15 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
-import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
 import {
+  createDriftQuery,
   createPackagingRecyclingNotesRepository,
-  COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
-} from '#packaging-recycling-notes/repository/mongodb.js'
+  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME,
+  reconcileStalePrnProjections
+} from '#packaging-recycling-notes/plugin.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
-/** @import { DriftReport } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js' */
+/** @import { DriftReport } from '#packaging-recycling-notes/index.js' */
 
 const LOCK_NAME = 'reconcile-stale-prn-projections'
 

@@ -12,6 +12,7 @@ export { isRelevantYearOpen } from './domain/closed-year.js'
 export { getIssuedTonnage } from './application/get-issued-tonnage.js'
 
 /** @typedef {import('./application/prn-events.plugin.js').PrnEvents} PrnEvents */
+/** @typedef {import('./application/reconcile-stale-prn-projections.js').DriftReport} DriftReport */
 /** @typedef {import('./domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote */
 /** @typedef {import('./domain/model.js').PrnStatus} PrnStatus */
 /** @typedef {import('./repository/port.js').FindByIdsParams} FindByIdsParams */

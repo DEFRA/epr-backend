@@ -7,6 +7,7 @@ export {
   createPackagingRecyclingNotesRepository
 } from './repository/mongodb.js'
 export {
+  buildAccreditationKeys,
   buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn,
   buildAwaitingAuthorisationPrn,

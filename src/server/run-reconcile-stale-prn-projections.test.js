@@ -1,22 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import {
+  createPackagingRecyclingNotesRepository,
+  reconcileStalePrnProjections
+} from '#packaging-recycling-notes/plugin.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
 
 import { runReconcileStalePrnProjections } from './run-reconcile-stale-prn-projections.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }))
-vi.mock('#packaging-recycling-notes/repository/mongodb.js', () => ({
+vi.mock('#packaging-recycling-notes/plugin.js', () => ({
+  createDriftQuery: vi.fn(),
   createPackagingRecyclingNotesRepository: vi.fn(),
-  COLLECTION_NAME: 'packaging-recycling-notes'
-}))
-vi.mock('#packaging-recycling-notes/repository/drift-query.mongodb.js', () => ({
-  createDriftQuery: vi.fn()
+  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME: 'packaging-recycling-notes',
+  reconcileStalePrnProjections: vi.fn()
 }))
 vi.mock('#waste-balances/repository/ledger-mongodb.js', () => ({
   createMongoLedgerRepository: vi.fn()
@@ -24,12 +25,6 @@ vi.mock('#waste-balances/repository/ledger-mongodb.js', () => ({
 vi.mock('#waste-balances/application/waste-balance-service.js', () => ({
   createWasteBalanceService: vi.fn()
 }))
-vi.mock(
-  '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js',
-  () => ({
-    reconcileStalePrnProjections: vi.fn()
-  })
-)
 
 const cleanResult = {
   total: 2,

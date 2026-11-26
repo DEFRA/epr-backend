@@ -3,16 +3,14 @@ import { MongoClient, ObjectId } from 'mongodb'
 import { describe, beforeEach, expect, vi } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import {
-  createPackagingRecyclingNotesRepository,
-  COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
-} from '#packaging-recycling-notes/repository/mongodb.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/index.js'
 import {
   buildAccreditationKeys,
   buildAwaitingAcceptancePrn,
+  createPackagingRecyclingNotesRepository,
+  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME,
   underAccreditation
-} from '#packaging-recycling-notes/repository/contract/test-data.js'
+} from '#packaging-recycling-notes/test-support.js'
 import {
   ensureLedgerCollection,
   WASTE_BALANCE_EVENTS_COLLECTION_NAME

@@ -12,7 +12,12 @@ import { getPrnTonnage } from './routes/prn-tonnage/get.js'
 import { packagingRecyclingNotesReject } from './routes/reject.js'
 
 export { prnEventsPlugin } from './application/prn-events.plugin.js'
-export { runReconcileStalePrnProjections } from './application/run-reconcile-stale-prn-projections.js'
+export { reconcileStalePrnProjections } from './application/reconcile-stale-prn-projections.js'
+export { createDriftQuery } from './repository/drift-query.mongodb.js'
+export {
+  COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME,
+  createPackagingRecyclingNotesRepository
+} from './repository/mongodb.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
