@@ -9,15 +9,15 @@ import { toYear } from '#common/helpers/dates/year.js'
 import {
   PREVIOUS_YEAR_LINK_STATUS,
   PREVIOUS_YEAR_ROW_COMPLETION
-} from '#domain/summary-logs/previous-year-link.js'
+} from '#domain/summary-logs/linked-row.js'
 import {
   createDateFieldSchema,
   isDateNoLaterThan
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 
-import { checkCrossYearRules } from './cross-year-rules.js'
+import { checkCrossYearRules } from './index.js'
 
-/** @import {FilledInRow} from '../fill-in-linked-rows.js' */
+/** @import {FilledInRow} from '../../fill-in-linked-rows.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
