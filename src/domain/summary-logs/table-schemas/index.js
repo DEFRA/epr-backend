@@ -21,6 +21,7 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
  * @property {string} previousYearRowIdField - Field naming the previous year's row a row is linked to
  * @property {readonly string[]} suppliableOnLinkedRow - The columns a linked row may supply; it takes every other column from the previous year's row
  * @property {(previousYearRow: Record<string, unknown>, previousYear: Year) => PreviousYearRowCompletionAt[]} completionsOf - How the previous year's row shows its load finished, so no row can link to it; empty while it is open. A date counts only if it is real and no later than the previous year.
+ * @property {(previousYearRow: Record<string, unknown>) => string[]} missingFieldsOf - The columns the previous year's row should have by now but leaves blank, in template order; no row can link to it until they are filled in or the correction deadline passes
  */
 
 /**

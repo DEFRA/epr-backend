@@ -66,7 +66,8 @@ const tableSchemas = {
               }
             ]
           : [])
-      ]
+      ],
+      missingFieldsOf: () => []
     },
     validationSchema: Joi.object({
       ROW_ID: Joi.number(),
