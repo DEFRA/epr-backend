@@ -50,6 +50,7 @@ import { isOrsApprovedAtDate } from '#overseas-sites/index.js'
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {ClassificationContext} from '../validation-pipeline.js' */
+/** @import {ReceivedLoadsField} from './fields.js' */
 
 /**
  * @param {Date | string} date
@@ -390,7 +391,7 @@ const receivedLoadCompletionsOf = (row, year) => [
 
 /**
  * @param {Record<string, unknown>} row
- * @returns {string[]}
+ * @returns {ReceivedLoadsField[]}
  */
 const receivedLoadMissingFieldsOf = (row) =>
   [

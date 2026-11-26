@@ -84,6 +84,7 @@ export const LOADS_EXPORTED = {
 
 /** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/linked-row.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {LoadsExportedField} from './fields.js' */
 
 /**
  * Neither refused nor stopped, so received; or refused or stopped and
@@ -121,7 +122,7 @@ const loadExportedCompletionsOf = (row, year) => {
 
 /**
  * @param {Record<string, unknown>} row
- * @returns {string[]}
+ * @returns {LoadsExportedField[]}
  */
 const loadExportedMissingFieldsOf = (row) => {
   const exportedOn = isAnswered(row[FIELDS.DATE_OF_EXPORT])
