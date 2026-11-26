@@ -4,9 +4,9 @@ This module stores the overseas reprocessing sites that exporters send waste to,
 
 Code outside the module imports from three entry points, and each lists its exports by name:
 
-- **`index.js`** is the public interface: the types of the overseas sites and ORS imports repository ports, the ORS import statuses and commands, and the rules other modules call. It loads no route, adapter or Hapi code.
-- **`plugin.js`** holds the module's production plugins: the overseas sites routes and the MongoDB adapters of both repositories. It also exports what the queue consumer runs to process an ORS import. Only code in `src/server`, `src/plugins` and `src/test` may import it.
-- **`test-support.js`** holds what tests need: the in-memory repositories and their plugins, the MongoDB overseas sites repository and the overseas site builder. Only a test may import it. The test server registers those plugins.
+- **`index.js`** is the public interface: the types of the overseas sites and ORS imports repository ports, the ORS import commands, the approval rule, and the lookup of a registration's overseas site details. It loads no route, adapter or Hapi code.
+- **`plugin.js`** holds the module's production plugins: the overseas sites routes and the MongoDB adapters of both repositories. It also exports the ORS import command handlers that the queue consumer runs. Only code in `src/server`, `src/plugins` and `src/test` may import it.
+- **`test-support.js`** holds what tests need: the in-memory overseas sites repository, the plugins of both in-memory repositories, the MongoDB overseas sites repository and the overseas site builder. Only a test may import it. The test server registers those plugins.
 
 [`src/modules.md`](../modules.md) describes the shape every module takes.
 
@@ -17,5 +17,5 @@ Lint refuses any other import into the module, but it cannot see a `vi.mock` pat
 - **`domain/`** holds the ORS import statuses and the approval rule.
 - **`application/`** processes an ORS import and resolves a registration's overseas sites.
 - **`parsers/`** reads an ORS spreadsheet.
-- **`repository/`** stores overseas sites, and **`imports/`** stores ORS imports and holds the type of the worker that runs them.
+- **`repository/`** stores overseas sites, and **`imports/`** stores ORS imports and holds the commands that run them: the type of the executor that sends them, and their handlers.
 - **`routes/`** holds the HTTP endpoints.

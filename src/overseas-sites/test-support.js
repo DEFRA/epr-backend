@@ -1,7 +1,4 @@
-export {
-  createInMemoryOrsImportsRepository,
-  createInMemoryOrsImportsRepositoryPlugin
-} from './imports/repository/inmemory.js'
+export { createInMemoryOrsImportsRepositoryPlugin } from './imports/repository/inmemory.js'
 export {
   createInMemoryOverseasSitesRepository,
   createInMemoryOverseasSitesRepositoryPlugin

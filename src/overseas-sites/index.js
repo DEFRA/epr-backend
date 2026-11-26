@@ -8,10 +8,7 @@
  * @module overseas-sites
  */
 
-export {
-  ORS_IMPORT_COMMAND,
-  ORS_IMPORT_STATUS
-} from './domain/import-status.js'
+export { ORS_IMPORT_COMMAND } from './domain/import-status.js'
 export { isOrsApprovedAtDate } from './domain/approval.js'
 export { resolveOverseasSiteDetails } from './application/resolve-overseas-site-details.js'
 

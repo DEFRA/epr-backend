@@ -14,7 +14,7 @@ vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#reports/application/summary-log-events.js')
 vi.mock('./consumer.js')
 vi.mock('./summary-log-commands.js')
-vi.mock('./ors-import-commands.js')
+vi.mock('#overseas-sites/plugin.js')
 
 const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
 const { createSummaryLogExtractor } =
@@ -23,7 +23,7 @@ const { createOnSummaryLogUploaded } =
   await import('#reports/application/summary-log-events.js')
 const { createCommandQueueConsumer } = await import('./consumer.js')
 const { summaryLogCommandHandlers } = await import('./summary-log-commands.js')
-const { orsImportCommandHandlers } = await import('./ors-import-commands.js')
+const { orsImportCommandHandlers } = await import('#overseas-sites/plugin.js')
 
 describe('commandQueueConsumerPlugin', () => {
   let server

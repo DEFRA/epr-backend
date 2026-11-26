@@ -6,7 +6,7 @@ import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createCommandQueueConsumer } from './consumer.js'
 import { buildSummaryLogHandlerDeps } from './summary-log-handler-deps.js'
 import { summaryLogCommandHandlers } from './summary-log-commands.js'
-import { orsImportCommandHandlers } from './ors-import-commands.js'
+import { orsImportCommandHandlers } from '#overseas-sites/plugin.js'
 
 /** @import { Consumer } from 'sqs-consumer' */
 

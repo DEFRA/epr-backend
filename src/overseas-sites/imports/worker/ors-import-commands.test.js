@@ -1,14 +1,15 @@
-import { createInMemoryOrsImportsRepository } from '#overseas-sites/test-support.js'
-import { ORS_IMPORT_STATUS } from '#overseas-sites/index.js'
+import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
+import { createInMemoryOrsImportsRepository } from '../repository/inmemory.js'
 import {
   importOverseasSitesHandler,
   orsImportCommandHandlers
 } from './ors-import-commands.js'
 
-vi.mock('#overseas-sites/plugin.js')
+vi.mock('../../application/process-import.js')
+vi.mock('../../metrics/ors-imports.js')
 
-const { orsImportMetrics, processOrsImport } =
-  await import('#overseas-sites/plugin.js')
+const { processOrsImport } = await import('../../application/process-import.js')
+const { orsImportMetrics } = await import('../../metrics/ors-imports.js')
 
 const seedImport = (orsImportsRepository, _id, status) =>
   orsImportsRepository.create({ _id, status, files: [] })

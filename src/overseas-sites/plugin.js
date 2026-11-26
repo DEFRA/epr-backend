@@ -9,8 +9,7 @@ import { overseasSitesCreate } from './routes/post.js'
 import { orsImportCreate } from './routes/post-import.js'
 import { orsUploadCompleted } from './routes/post-upload-completed.js'
 
-export { processOrsImport } from './application/process-import.js'
-export { orsImportMetrics } from './metrics/ors-imports.js'
+export { orsImportCommandHandlers } from './imports/worker/ors-import-commands.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 
