@@ -20,6 +20,8 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
  * @typedef {Object} YearLinking
  * @property {string} previousYearRowIdField - Field naming the previous year's row a row is linked to
  * @property {readonly string[]} suppliableOnLinkedRow - The columns a linked row may supply; it takes every other column from the previous year's row
+ * @property {readonly string[]} mayDifferBeforeCorrectionDeadline - The columns a linked row may give differently from the previous year's row while that year can still be corrected
+ * @property {Readonly<Record<string, string>>} prefilledOnLinkedRow - The value the template fills in for a column; a linked row that keeps it has left the column blank
  * @property {(previousYearRow: Record<string, unknown>, previousYear: Year) => PreviousYearRowCompletionAt[]} completionsOf - How the previous year's row shows its load finished, so no row can link to it; empty while it is open. A date counts only if it is real and no later than the previous year.
  */
 

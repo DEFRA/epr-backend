@@ -1,3 +1,5 @@
+import { roundToTwoDecimalPlaces } from '#common/helpers/decimal-utils.js'
+
 import { isEprMarker } from './markers.js'
 import { isAnswered } from './table-schemas/shared/answers.js'
 
@@ -69,6 +71,19 @@ export const PREVIOUS_YEAR_COMPARISON = Object.freeze(
  */
 
 /**
+ * @typedef {Pick<TableSchema, 'rowIdField'> & {
+ *   linking: Pick<YearLinking, 'previousYearRowIdField' | 'prefilledOnLinkedRow'>
+ * }} ComparedTable
+ */
+
+/**
+ * @typedef {{
+ *   columnSchema: Schema | undefined,
+ *   isRounded: boolean
+ * }} ComparedColumn
+ */
+
+/**
  * Whether fill-in takes the column from the previous year's row: a named data
  * column other than the row's own Row ID and its Previous year Row ID.
  *
@@ -83,11 +98,11 @@ export const isFilledInColumn = (header, { rowIdField, linking }) =>
   header !== linking.previousYearRowIdField
 
 /**
- * @param {Schema | undefined} columnSchema
+ * @param {ComparedColumn} column
  * @param {unknown} cellValue
  * @returns {unknown}
  */
-const comparableValueOf = (columnSchema, cellValue) => {
+const comparableValueOf = ({ columnSchema, isRounded }, cellValue) => {
   if (!isAnswered(cellValue)) {
     return null
   }
@@ -95,7 +110,13 @@ const comparableValueOf = (columnSchema, cellValue) => {
     columnSchema === undefined
       ? cellValue
       : columnSchema.validate(cellValue).value
-  return typeof read === 'string' ? read.trim() : read
+  if (typeof read === 'string') {
+    return read.trim()
+  }
+  // Stored tonnages are held to two decimal places (coerceStoredTonnages)
+  return isRounded && typeof read === 'number'
+    ? roundToTwoDecimalPlaces(read)
+    : read
 }
 
 /**
@@ -116,12 +137,15 @@ const comparisonOf = ({ entered, previousYear }) => {
 
 /**
  * How each filled-in column of a linked row, as entered, compares with the
- * previous year's row.
+ * previous year's row. A value the template fills in on a linked row reads as
+ * blank there; in the previous year's row it is an answer. `roundedColumns`
+ * are compared to two decimal places, as they are stored.
  *
  * @param {{
- *   table: LinkingTable,
+ *   table: ComparedTable,
  *   headers: Array<string | null>,
  *   columnSchemas: Map<string, Schema>,
+ *   roundedColumns: ReadonlySet<string>,
  *   enteredRow: unknown[],
  *   previousYearRow: Record<string, unknown>
  * }} params
@@ -131,6 +155,7 @@ export const columnComparisonsOf = ({
   table,
   headers,
   columnSchemas,
+  roundedColumns,
   enteredRow,
   previousYearRow
 }) =>
@@ -139,10 +164,17 @@ export const columnComparisonsOf = ({
       if (!isFilledInColumn(header, table)) {
         return []
       }
-      const columnSchema = columnSchemas.get(header)
+      const column = {
+        columnSchema: columnSchemas.get(header),
+        isRounded: roundedColumns.has(header)
+      }
+      const enteredValue = enteredRow[index]
       const values = {
-        entered: comparableValueOf(columnSchema, enteredRow[index]),
-        previousYear: comparableValueOf(columnSchema, previousYearRow[header])
+        entered:
+          enteredValue === table.linking.prefilledOnLinkedRow[header]
+            ? null
+            : comparableValueOf(column, enteredValue),
+        previousYear: comparableValueOf(column, previousYearRow[header])
       }
       return [
         /** @type {[string, ColumnComparison]} */ ([

@@ -118,6 +118,13 @@ const loadExportedCompletionsOf = (row, year) => {
     : []
 }
 
+// A previous year's "No" means not yet: the load can be refused or stopped later
+const REFUSED_OR_STOPPED_COLUMNS = Object.freeze([
+  FIELDS.WAS_THE_WASTE_REFUSED,
+  FIELDS.WAS_THE_WASTE_STOPPED,
+  FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
+])
+
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
   linking: {
@@ -127,6 +134,8 @@ export const LOADS_EXPORTED_2027 = {
       FIELDS.WAS_THE_WASTE_STOPPED,
       FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
     ],
+    mayDifferBeforeCorrectionDeadline: REFUSED_OR_STOPPED_COLUMNS,
+    prefilledOnLinkedRow: {},
     completionsOf: loadExportedCompletionsOf
   },
   requiredHeaders: [

@@ -11,6 +11,8 @@ import {
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
+import { STORED_TONNAGE_FIELDS } from '#waste-records/application/stored-tonnage-coercion.js'
+
 import { buildHeaderToIndexMap, toApplicationIssue } from '../data-syntax.js'
 import { linkedRowIssuesOf } from './rules/index.js'
 import { previousYearRowNotFound } from './previous-year-row-not-found.js'
@@ -18,12 +20,14 @@ import { previousYearRowNotFound } from './previous-year-row-not-found.js'
 /** @import {Schema} from 'joi' */
 /** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
-/** @import {ColumnComparison, LinkingTable, PreviousYearRowCompletionAt} from '#domain/summary-logs/linked-row.js' */
+/** @import {ColumnComparison, ComparedTable, PreviousYearRowCompletionAt} from '#domain/summary-logs/linked-row.js' */
 /** @import {TableSchema, YearLinking} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {FilledInRow, FoundPreviousYearLink, PreviousYearLink} from '../../fill-in-linked-rows.js' */
 
 /** @typedef {Pick<TableSchema, 'rowIdField' | 'validationSchema' | 'linking'>} CrossYearTableSchema */
+
+const STORED_TONNAGE_COLUMNS = new Set(STORED_TONNAGE_FIELDS)
 
 /**
  * @typedef {{
@@ -71,7 +75,7 @@ const columnSchemasOf = (validationSchema) =>
 
 /**
  * @param {LinkedRow<FoundPreviousYearLink> & {
- *   table: LinkingTable,
+ *   table: ComparedTable,
  *   headers: Array<string | null>
  * }} params
  * @returns {FoundLinkedRow}
@@ -84,6 +88,7 @@ const foundLinkedRowOf = ({ table, headers, ...linkedRow }) => {
       table,
       headers,
       columnSchemas,
+      roundedColumns: STORED_TONNAGE_COLUMNS,
       enteredRow: previousYearLink.entered,
       previousYearRow: previousYearLink.previousYear
     }),

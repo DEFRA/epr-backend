@@ -11,7 +11,10 @@ const { SAME, INHERITED, ADDED, CHANGED } = PREVIOUS_YEAR_COMPARISON
 
 const table = {
   rowIdField: 'ROW_ID',
-  linking: { previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID' }
+  linking: {
+    previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID',
+    prefilledOnLinkedRow: { WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No' }
+  }
 }
 
 describe('linked-row', () => {
@@ -33,8 +36,11 @@ describe('linked-row', () => {
   describe('columnComparisonsOf', () => {
     const columnSchemas = new Map([
       ['DATE_OF_EXPORT', createDateFieldSchema()],
-      ['OSR_ID', Joi.number()]
+      ['OSR_ID', Joi.number()],
+      ['GROSS_WEIGHT', Joi.number()],
+      ['RECYCLABLE_PROPORTION_PERCENTAGE', Joi.number()]
     ])
+    const roundedColumns = new Set(['GROSS_WEIGHT'])
 
     /**
      * @param {string} header
@@ -47,6 +53,7 @@ describe('linked-row', () => {
         enteredRow: [enteredValue],
         previousYearRow: { [header]: previousYearValue },
         columnSchemas,
+        roundedColumns,
         table
       }).get(header)
 
@@ -113,6 +120,43 @@ describe('linked-row', () => {
         entered: '100',
         previousYear: 100,
         comparison: SAME
+      },
+      {
+        description: 'a value the template fills in on a linked row as blank',
+        header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+        entered: 'No',
+        previousYear: 'Yes',
+        comparison: INHERITED
+      },
+      {
+        description:
+          'a previous year value that matches what the template fills in as answered',
+        header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+        entered: 'Yes',
+        previousYear: 'No',
+        comparison: CHANGED
+      },
+      {
+        description: 'a tonnage to two decimal places, as it is stored',
+        header: 'GROSS_WEIGHT',
+        entered: 10.004,
+        previousYear: 10,
+        comparison: SAME
+      },
+      {
+        description: 'a tonnage rounded half up',
+        header: 'GROSS_WEIGHT',
+        entered: 10.005,
+        previousYear: 10,
+        comparison: CHANGED
+      },
+      {
+        description:
+          'a number in a column not stored rounded at full precision',
+        header: 'RECYCLABLE_PROPORTION_PERCENTAGE',
+        entered: 0.375,
+        previousYear: 0.37,
+        comparison: CHANGED
       }
     ])(
       'compares $description',
@@ -159,6 +203,7 @@ describe('linked-row', () => {
         enteredRow: ['x', 'x', 1001, 1500, 'Overseas Ltd'],
         previousYearRow: { ROW_ID: 1500, OSR_NAME: 'Overseas Ltd' },
         columnSchemas,
+        roundedColumns,
         table
       })
 

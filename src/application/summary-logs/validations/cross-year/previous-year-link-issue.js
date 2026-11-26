@@ -7,6 +7,7 @@ import { previousYear } from '#common/helpers/dates/year.js'
 
 import { buildCellLocation } from '../data-syntax.js'
 
+/** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {LinkedRow} from './index.js' */
 /** @import {PreviousYearLink} from '../../fill-in-linked-rows.js' */
@@ -17,7 +18,8 @@ import { buildCellLocation } from '../data-syntax.js'
  *   field: string,
  *   linkedRow: Pick<LinkedRow<PreviousYearLink>, 'rowId' | 'options' | 'issueLocation'>,
  *   enteredValue: unknown,
- *   previousYearRowId?: string
+ *   previousYearRowId?: string,
+ *   deadline?: CalendarDate
  * }} params
  * @returns {ValidationIssue}
  */
@@ -26,7 +28,8 @@ export const toPreviousYearLinkIssue = ({
   field,
   linkedRow,
   enteredValue,
-  previousYearRowId
+  previousYearRowId,
+  deadline
 }) => {
   const { headerToIndexMap, tableName, rowNumber, location } =
     linkedRow.issueLocation
@@ -47,7 +50,8 @@ export const toPreviousYearLinkIssue = ({
       actual: enteredValue,
       expected: previousYear(linkedRow.options.summaryLogYear),
       errorCode,
-      ...(previousYearRowId && { previousYearRowId })
+      ...(previousYearRowId && { previousYearRowId }),
+      ...(deadline && { deadline })
     }
   }
 }

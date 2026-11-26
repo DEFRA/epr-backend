@@ -7,21 +7,14 @@ import {
 
 import { toApplicationIssue } from '../../data-syntax.js'
 
-/** @import {PreviousYearComparison} from '#domain/summary-logs/linked-row.js' */
 /** @import {FoundLinkedRow} from '../index.js' */
 /** @import {LinkedRowCheck} from './index.js' */
-
-/** @type {ReadonlySet<PreviousYearComparison>} */
-const DIFFERS_FROM_PREVIOUS_YEAR = new Set([
-  PREVIOUS_YEAR_COMPARISON.ADDED,
-  PREVIOUS_YEAR_COMPARISON.CHANGED
-])
 
 /**
  * @param {FoundLinkedRow} linkedRow
  * @returns {string[]}
  */
-const suppliedColumnsDifferingFromPreviousYear = ({
+const suppliedColumnsAddedOnLinkedRow = ({
   columnComparisons,
   previousYearLink
 }) => {
@@ -29,14 +22,14 @@ const suppliedColumnsDifferingFromPreviousYear = ({
   return [...columnComparisons]
     .filter(
       ([column, { comparison }]) =>
-        supplied.has(column) && DIFFERS_FROM_PREVIOUS_YEAR.has(comparison)
+        supplied.has(column) && comparison === PREVIOUS_YEAR_COMPARISON.ADDED
     )
     .map(([column]) => column)
 }
 
 /** @type {LinkedRowCheck} */
 export const earlierYearDates = (linkedRow) =>
-  suppliedColumnsDifferingFromPreviousYear(linkedRow).flatMap((field) => {
+  suppliedColumnsAddedOnLinkedRow(linkedRow).flatMap((field) => {
     const columnSchema = linkedRow.columnSchemas.get(field)
     if (columnSchema === undefined) {
       return []
