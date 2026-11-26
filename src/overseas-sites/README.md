@@ -1,6 +1,6 @@
 # Overseas sites
 
-This module stores the overseas reprocessing sites that exporters send waste to, and imports them from ORS spreadsheets. Its routes serve the admin UI only.
+This module stores the overseas reprocessing sites that exporters send waste to, and imports them from ORS spreadsheets. Its routes serve the admin UI, apart from the callback the CDP uploader makes when an ORS spreadsheet has uploaded.
 
 Code outside the module imports from three entry points, and each lists its exports by name:
 
