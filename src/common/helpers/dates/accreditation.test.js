@@ -6,7 +6,7 @@ import {
 } from './accreditation.js'
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
-/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/vocabulary.js' */
+/** @import {AccreditationStatus, StatusTimeline} from '#organisation-read-model/index.js' */
 /** @import {AccreditationWindow} from './accreditation.js' */
 
 /**

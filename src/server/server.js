@@ -18,7 +18,7 @@ import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-no
 import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
-import { organisationReadRepositoryPlugin } from '#organisation-read-model/index.js'
+import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
@@ -34,6 +34,7 @@ import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
 /** @import { StartedServer } from '#common/hapi-types.js' */
+/** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 function getServerConfig(config) {
   return {
@@ -67,6 +68,19 @@ function getServerConfig(config) {
   }
 }
 
+/**
+ * The Reg Accred API's settings when Reg Accred supplies external
+ * accreditations, otherwise nothing.
+ *
+ * @param {{ get: (key: string) => unknown }} config
+ * @returns {RegAccredApiConfig | undefined}
+ */
+function regAccredApiOf(config) {
+  return config.get('featureFlags.regAccredExternalAccreditations')
+    ? /** @type {RegAccredApiConfig} */ (config.get('regAccredApi'))
+    : undefined
+}
+
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
@@ -90,7 +104,10 @@ function getProductionPlugins(config) {
     { plugin: sqsCommandExecutorPlugin, options: { config } },
     { plugin: dlqAdminPlugin, options: { config } },
     overseasSitesRepositoryPlugin,
-    { plugin: organisationReadRepositoryPlugin, options: { config } },
+    {
+      plugin: organisationReadRepositoryPlugin,
+      options: { regAccredApi: regAccredApiOf(config) }
+    },
     orsImportsRepositoryPlugin,
     mongoSummaryLogRowStatesRepositoryPlugin
   ]

@@ -40,6 +40,7 @@ describe('commandQueueConsumerPlugin', () => {
       events: {
         on: vi.fn()
       },
+      dependency: vi.fn(),
       app: {
         summaryLogsRepository: {},
         organisationAdministrationRepository: {},
@@ -80,18 +81,19 @@ describe('commandQueueConsumerPlugin', () => {
   it('has correct plugin metadata', () => {
     expect(commandQueueConsumerPlugin.name).toBe('command-queue-consumer')
     expect(commandQueueConsumerPlugin.version).toBe('1.0.0')
-    expect(commandQueueConsumerPlugin.dependencies).toContain(
-      'summaryLogsRepository'
-    )
-    expect(commandQueueConsumerPlugin.dependencies).toContain(
-      'uploadsRepository'
-    )
-    expect(commandQueueConsumerPlugin.dependencies).toContain(
-      'organisationReadRepository'
-    )
   })
 
-  describe('startup without a row-state repository', () => {
+  describe('startup', () => {
+    const providers = [
+      'summaryLogsRepository',
+      'organisationsRepository',
+      'organisationReadRepository',
+      'wasteBalanceService',
+      'uploadsRepository',
+      'reportsRepository',
+      'systemLogsRepository'
+    ]
+
     const stubRepositoryPlugin = (name) => ({
       name,
       register: (/** @type {import('@hapi/hapi').Server} */ srv) => {
@@ -99,29 +101,33 @@ describe('commandQueueConsumerPlugin', () => {
       }
     })
 
-    it('initialises when summaryLogRowStatesRepository is not registered', async () => {
+    /** @param {string[]} registered */
+    const serverWith = async (registered) => {
       const hapiServer = Hapi.server()
-
-      await hapiServer.register(
-        [
-          'summaryLogsRepository',
-          'organisationsRepository',
-          'organisationReadRepository',
-          'wasteBalanceService',
-          'uploadsRepository',
-          'reportsRepository',
-          'systemLogsRepository'
-        ].map(stubRepositoryPlugin)
-      )
-
+      await hapiServer.register(registered.map(stubRepositoryPlugin))
       await hapiServer.register(
         /** @type {any} */ ({
           plugin: commandQueueConsumerPlugin,
           options: { config }
         })
       )
+      return hapiServer
+    }
+
+    it('initialises when summaryLogRowStatesRepository is not registered', async () => {
+      const hapiServer = await serverWith(providers)
 
       await expect(hapiServer.initialize()).resolves.toBeUndefined()
+    })
+
+    it('refuses to initialise without the read model', async () => {
+      const hapiServer = await serverWith(
+        providers.filter((name) => name !== 'organisationReadRepository')
+      )
+
+      await expect(hapiServer.initialize()).rejects.toThrow(
+        /organisationReadRepository/
+      )
     })
   })
 
@@ -135,8 +141,13 @@ describe('commandQueueConsumerPlugin', () => {
       })
     })
 
-    it('creates summary log extractor', async () => {
+    it('creates summary log extractor when the server starts', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
+
+      const startHandler = server.events.on.mock.calls.find(
+        (call) => call[0] === 'start'
+      )[1]
+      await startHandler()
 
       expect(createSummaryLogExtractor).toHaveBeenCalledWith({
         uploadsRepository: expect.any(Object)

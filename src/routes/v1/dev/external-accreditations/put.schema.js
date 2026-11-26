@@ -2,7 +2,7 @@ import Joi from 'joi'
 
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
-import { ACCREDITATION_STATUSES } from '#organisation-read-model/vocabulary.js'
+import { ACCREDITATION_STATUSES } from '#organisation-read-model/index.js'
 import { organisationParams } from '#routes/organisations/natural-keys.js'
 
 export const externalAccreditationPayloadSchema = Joi.object({

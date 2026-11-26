@@ -39,7 +39,7 @@ import {
   submitSummaryLog
 } from '#vite/helpers/submit-summary-log.js'
 
-/** @import { ExporterAccreditation, ExporterRegistration } from '#organisation-read-model/vocabulary.js' */
+/** @import { ExporterAccreditation, ExporterRegistration } from '#organisation-read-model/index.js' */
 
 const { buildOrganisation } = createOrganisationBuilders()
 
@@ -91,7 +91,7 @@ const seedRepositories = async (
 /**
  * A registration approved from `validFrom`, as the read model serves it.
  * @param {string} validFrom
- * @returns {Partial<import('#organisation-read-model/vocabulary.js').RegistrationCommon>}
+ * @returns {Partial<import('#organisation-read-model/index.js').RegistrationCommon>}
  */
 const approvedFrom = (validFrom) => ({
   status: approvedStatusFrom(validFrom)
@@ -162,7 +162,7 @@ const accreditedExporter = ({
 /**
  * @param {{
  *   registration: Record<string, any>,
- *   readRegistration: import('#organisation-read-model/vocabulary.js').Registration,
+ *   readRegistration: import('#organisation-read-model/index.js').Registration,
  *   accreditations?: object[],
  *   wasteRecords?: { type: string, data: object }[],
  *   reportDataValidation?: boolean

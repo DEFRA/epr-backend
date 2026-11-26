@@ -2,14 +2,14 @@ import Boom from '@hapi/boom'
 
 import { atKeys } from '#routes/organisations/at-natural-keys.js'
 import { findOrganisationAndRegistrationReadModels } from '#routes/organisations/natural-keys.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 
 /**
  * @import Joi from 'joi'
  * @import { HapiRequest } from '#common/hapi-types.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
- * @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/vocabulary.js'
+ * @import { AccreditationCommon, Organisation, Registration } from '#organisation-read-model/index.js'
  * @import { KeyedOptions, NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  *

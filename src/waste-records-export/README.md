@@ -10,6 +10,8 @@ Code outside the module imports from three entry points, and each lists its expo
 
 Lint refuses any other import into the module, but it cannot see a JSDoc `@import`.
 
+[`src/modules.md`](../modules.md) describes the shape every module takes. This module's plugin has not moved to it yet.
+
 ## Shape
 
 - **`domain/`** holds the CSV columns and the rules over them.

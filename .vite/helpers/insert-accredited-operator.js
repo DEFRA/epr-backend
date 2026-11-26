@@ -64,7 +64,7 @@ export const createAccreditedOperatorInserter = (builders) => {
    * @param {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {import('#domain/organisations/model.js').RegulatorValue} [regulator] - who the registration and accreditation were submitted to
    * @param {AccreditedFor} [accreditedFor]
-   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/vocabulary.js').Organisation }>}
+   * @returns {Promise<{ organisationId: string, registrationId: string, reportKey: ReturnType<typeof reportKeyOf>, ledgerId: WasteBalanceLedgerId, servedOrganisation: import('#organisation-read-model/index.js').Organisation }>}
    */
   return async (
     organisationAdministrationRepository,
@@ -92,14 +92,21 @@ export const createAccreditedOperatorInserter = (builders) => {
       { VALID_FROM: validFrom, VALID_TO: '2026-12-31' }
     )
 
-    const reportKey = reportKeyOf(organisation, organisation.registrations[0])
+    const [storedRegistration] = organisation.registrations
+    const [storedAccreditation] = organisation.accreditations
+    if (!storedRegistration || !storedAccreditation) {
+      throw new Error(
+        'The approved organisation was stored without its accreditation'
+      )
+    }
+    const reportKey = reportKeyOf(organisation, storedRegistration)
     const served = buildReadApprovedOrganisation({
       organisationNumber: organisation.organisationNumber,
       year: 2026,
       validFrom
     })
     const servedRegistration =
-      /** @type {import('#organisation-read-model/vocabulary.js').ReprocessorRegistration} */ (
+      /** @type {import('#organisation-read-model/index.js').ReprocessorRegistration} */ (
         served.registrations[reportKey.registrationNumber]
       )
     const servedOrganisation = {
@@ -126,7 +133,7 @@ export const createAccreditedOperatorInserter = (builders) => {
       ledgerId: {
         ...reportKey,
         accreditationNumber: /** @type {AccreditationNumber} */ (
-          organisation.accreditations[0].accreditationNumber
+          storedAccreditation.accreditationNumber
         ),
         year: utcYearOf(validFrom)
       }

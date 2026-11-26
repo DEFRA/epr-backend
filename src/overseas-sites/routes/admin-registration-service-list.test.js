@@ -17,7 +17,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { adminRegistrationServiceOverseasSitesListPath } from './admin-registration-service-list.js'
 
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
-/** @import { Organisation } from '#organisation-read-model/vocabulary.js' */
+/** @import { Organisation } from '#organisation-read-model/index.js' */
 /** @import { TestServer } from '#test/create-test-server.js' */
 /** @import { RegistrationServiceOverseasSiteRow } from './admin-registration-service-list.js' */
 

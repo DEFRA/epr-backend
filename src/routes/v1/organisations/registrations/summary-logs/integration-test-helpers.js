@@ -1209,7 +1209,7 @@ const buildComplexTestOrg = ({
  *   previousYearAccreditationValidFrom?: string,
  *   previousYearAccreditationSuspendedOn?: string
  * }} options
- * @returns {import('#organisation-read-model/vocabulary.js').Organisation}
+ * @returns {import('#organisation-read-model/index.js').Organisation}
  */
 const buildComplexTestReadOrg = ({
   processingType,

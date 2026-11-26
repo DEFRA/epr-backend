@@ -6,7 +6,7 @@ import {
   toPrnSiteAddress
 } from './issuing-accreditation.js'
 
-/** @import { AccreditationCommon, Registration } from '#organisation-read-model/vocabulary.js' */
+/** @import { AccreditationCommon, Registration } from '#organisation-read-model/index.js' */
 
 const YEAR = toYear(2026)
 

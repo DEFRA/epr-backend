@@ -16,6 +16,8 @@ Code outside the module imports from two entry points, and each lists its export
 
 Lint refuses any other import into the module, but it cannot see a JSDoc `@import`.
 
+[`src/modules.md`](../modules.md) describes the shape every module takes. This module's plugin has not moved to it yet.
+
 ## Shape
 
 The routes read and write organisations through the administration port, which the context's data tooling also uses. The module holds only what no other user of that port needs:

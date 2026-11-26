@@ -4,9 +4,11 @@ This module serves organisations, their registrations and their accreditations i
 
 Code outside the module imports from three entry points, and each lists its exports by name:
 
-- **`index.js`** holds the repository plugin and what a caller needs to wire it.
-- **`vocabulary.js`** holds the read model's types and pure rules. It loads no plugin or adapter.
-- **`test-support.js`** holds the in-memory repository and test builders, and only a test may import it.
+- **`index.js`** is the public interface: the read model's types, its pure rules and what a caller needs to know about the stores it reads. It loads no route, adapter or Hapi code.
+- **`plugin.js`** holds the MongoDB adapter's plugin, which provides the read repository. Only code in `src/server`, `src/plugins` and `src/test` may import it.
+- **`test-support.js`** holds the in-memory repository, its plugin and the test builders, and only a test may import it. The test server registers that plugin.
+
+[`src/modules.md`](../modules.md) describes the shape every module takes.
 
 Lint refuses any other import into the module, but it cannot see a JSDoc `@import`.
 

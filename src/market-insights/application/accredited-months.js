@@ -9,12 +9,12 @@ import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
 import {
   statusOn,
   accreditationForYear
-} from '#organisation-read-model/vocabulary.js'
+} from '#organisation-read-model/index.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { AccreditationStatus, Organisation, Registration, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
+/** @import { AccreditationStatus, Organisation, Registration, StatusTimeline } from '#organisation-read-model/index.js' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { AccreditationWindow } from '#common/helpers/dates/accreditation.js' */

@@ -38,7 +38,7 @@ const servedOrganisation = () => {
     year: 2026
   })
   const registration =
-    /** @type {import('#organisation-read-model/vocabulary.js').ReprocessorRegistration} */ (
+    /** @type {import('#organisation-read-model/index.js').ReprocessorRegistration} */ (
       organisation.registrations[toRegistrationNumber('REG200001')]
     )
   return {

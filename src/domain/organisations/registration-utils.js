@@ -5,11 +5,11 @@ import {
 } from '#domain/organisations/model.js'
 import { toCalendarDate } from '#common/helpers/date-formatter.js'
 import { yearBounds } from '#common/helpers/dates/year.js'
-import { firstApprovedAt } from '#organisation-read-model/vocabulary.js'
+import { firstApprovedAt } from '#organisation-read-model/index.js'
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { StoredAccreditationStatus, AppliedForMaterial, GlassRecyclingProcess, Material } from '#domain/organisations/model.js' */
-/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/vocabulary.js' */
+/** @import { Registration as ReadModelRegistration } from '#organisation-read-model/index.js' */
 
 /**
  * @typedef {{ accreditation: { status: StoredAccreditationStatus } | null }} AccreditationLink

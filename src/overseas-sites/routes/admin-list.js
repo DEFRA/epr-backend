@@ -1,4 +1,4 @@
-/** @import { ExporterRegistration, Organisation, OverseasSite } from '#organisation-read-model/vocabulary.js' */
+/** @import { ExporterRegistration, Organisation, OverseasSite } from '#organisation-read-model/index.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 import { toWireOrgId } from '#common/helpers/organisation-wire.js'
@@ -15,7 +15,7 @@ import { toRegistrationNumber } from '#domain/organisations/numbers.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { openYearSchema } from '#common/validation/year-schema.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { accreditationForYear } from '#organisation-read-model/vocabulary.js'
+import { accreditationForYear } from '#organisation-read-model/index.js'
 
 export const adminOverseasSitesListPath = '/v1/admin/overseas-sites'
 

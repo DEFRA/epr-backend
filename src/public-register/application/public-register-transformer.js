@@ -3,7 +3,7 @@
  */
 
 /** @import {AppliedForMaterial, Material, TonnageBand} from '#domain/organisations/model.js' */
-/** @import {Organisation, Registration} from '#organisation-read-model/vocabulary.js' */
+/** @import {Organisation, Registration} from '#organisation-read-model/index.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 /** @import {ReportComplianceData, ReportComplianceEntry} from '#reports/application/report-compliance.js' */
 /** @import {RegistrationNumber} from '#domain/organisations/numbers.js' */
@@ -11,7 +11,7 @@
 import {
   firstApprovedAt,
   accreditationForYear
-} from '#organisation-read-model/vocabulary.js'
+} from '#organisation-read-model/index.js'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,

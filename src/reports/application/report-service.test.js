@@ -40,7 +40,7 @@ const ACCREDITATION_NUMBER = toAccreditationNumber('A24ER5000000001PL')
 
 /**
  * @import { AccreditationNumber } from '#domain/organisations/numbers.js'
- * @import { ReprocessorAccreditation, ReprocessorRegistration } from '#organisation-read-model/vocabulary.js'
+ * @import { ReprocessorAccreditation, ReprocessorRegistration } from '#organisation-read-model/index.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { Year } from '#common/helpers/dates/year.js'
  * @import { RegistrationKey } from '#reports/repository/port.js'

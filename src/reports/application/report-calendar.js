@@ -5,7 +5,7 @@ import {
   registrationStatusWindows,
   firstApprovedAt,
   accreditationForYear
-} from '#organisation-read-model/vocabulary.js'
+} from '#organisation-read-model/index.js'
 import { buildAllSubmissionPeriods } from '#reports/domain/build-all-submission-periods.js'
 import { buildCalendarPeriods } from '#reports/domain/build-calendar-periods.js'
 import { CADENCE } from '#reports/domain/cadence.js'
@@ -22,9 +22,9 @@ import { config } from '#root/config.js'
 /**
  * @import { CalendarDate } from '#common/helpers/date-formatter.js'
  * @import { Year } from '#common/helpers/dates/year.js'
- * @import { Registration } from '#organisation-read-model/vocabulary.js'
+ * @import { Registration } from '#organisation-read-model/index.js'
  * @import { Cadence } from '#reports/domain/cadence.js'
- * @import { CalendarDateRange } from '#organisation-read-model/vocabulary.js'
+ * @import { CalendarDateRange } from '#organisation-read-model/index.js'
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { MergedPeriod } from '#reports/domain/merge-reporting-periods.js'
  * @import { Person } from '#reports/domain/person.js'

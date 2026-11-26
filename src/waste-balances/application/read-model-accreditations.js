@@ -8,11 +8,11 @@ import { ORS_VALIDATION_DISABLED } from '#domain/summary-logs/table-schemas/shar
 import {
   accreditationForYear,
   firstApprovedAt
-} from '#organisation-read-model/vocabulary.js'
+} from '#organisation-read-model/index.js'
 
 /** @import { ClassificationContext } from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import { ClassificationContextFor } from '#waste-balances/domain/waste-balance-classification.js' */
-/** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/vocabulary.js' */
+/** @import { ExporterAccreditation, Organisation as ReadModelOrganisation, Registration as ReadModelRegistration, ReprocessorAccreditation } from '#organisation-read-model/index.js' */
 /** @import { AccreditationValidity } from '#domain/organisations/accreditation.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */

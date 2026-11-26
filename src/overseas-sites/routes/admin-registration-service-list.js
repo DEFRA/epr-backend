@@ -15,7 +15,7 @@ import { fetchRegistrationServiceApplications } from '#overseas-sites/registrati
 /** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 /** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { ExporterRegistration, Organisation } from '#organisation-read-model/vocabulary.js' */
+/** @import { ExporterRegistration, Organisation } from '#organisation-read-model/index.js' */
 /** @import { RegistrationServiceApplication, RegistrationServiceOverseasSite } from '#overseas-sites/registration-service-applications.js' */
 
 /**

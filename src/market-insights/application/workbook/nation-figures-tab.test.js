@@ -40,8 +40,7 @@ const insertAccreditedOperator =
 /** @import ExcelJS from 'exceljs' */
 /** @import { YearMonth } from '#common/helpers/dates/year-month.js' */
 /** @import { Material, RegulatorValue } from '#domain/organisations/model.js' */
-/** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
-/** @import { AccreditationStatus, StatusTimeline } from '#organisation-read-model/vocabulary.js' */
+/** @import { AccreditationStatus, OrganisationReadRepository, StatusTimeline } from '#organisation-read-model/index.js' */
 /** @import { CreateReportBase, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AccreditedFor } from '#vite/helpers/insert-accredited-operator.js' */
 /** @import { TabContents } from './cells.js' */

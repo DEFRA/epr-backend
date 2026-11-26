@@ -22,10 +22,11 @@ import {
   toRegistrationStatusTimeline
 } from './to-status-timeline.js'
 import { organisationInYear } from './organisation-in-year.js'
+import { toLinkedDefraOrganisation } from './stored-organisation.js'
 
 /** @import { TypedLogger } from '#common/hapi-types.js' */
 /** @import { Accreditation as StoredAccreditation } from '#domain/organisations/accreditation.js' */
-/** @import { Address, StoredLinkedDefraOrganisation, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
+/** @import { Address, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
@@ -162,18 +163,6 @@ export async function toReadModelOrganisations(
 }
 
 /**
- * @param {Pick<StoredOrganisation, 'statusHistory'>} stored
- * @param {CalendarDate} date
- * @returns {boolean}
- */
-export function servesOrganisationOn(stored, date) {
-  return isOneOf(
-    ORGANISATION_STATUSES,
-    statusOn(toOrganisationStatusTimeline(stored.statusHistory).timeline, date)
-  )
-}
-
-/**
  * Serves only registrations and accreditations granted a number. A record the
  * model cannot represent is dropped and reported through `onDrop`.
  *
@@ -232,18 +221,6 @@ function toOrganisation(stored, context, externalByRegistration) {
       'Registration number',
       context.onDrop
     )
-  }
-}
-
-/**
- * @param {StoredLinkedDefraOrganisation} linked
- * @returns {NonNullable<Organisation['linkedDefraOrganisation']>}
- */
-export function toLinkedDefraOrganisation(linked) {
-  return {
-    defraOrganisation: { id: linked.orgId, name: linked.orgName },
-    linkedAt: new Date(linked.linkedAt).toISOString(),
-    linkedBy: { email: linked.linkedBy.email, id: linked.linkedBy.id }
   }
 }
 

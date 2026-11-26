@@ -15,25 +15,6 @@ import { orsImportCommandHandlers } from './ors-import-commands.js'
  * @property {{get: (key: string) => string}} config
  */
 
-/**
- * Builds the base consumer dependencies from server app and config.
- * @param {import('#common/hapi-types.js').HapiServer} server
- * @param {CommandQueueConsumerPluginOptions} options
- */
-function buildConsumerDeps(server, { config }) {
-  const sqsClient = createSqsClient({
-    region: config.get('awsRegion'),
-    endpoint: config.get('commandQueue.endpoint')
-  })
-
-  return {
-    sqsClient,
-    queueName: config.get('commandQueue.queueName'),
-    uploadsRepository: server.app.uploadsRepository,
-    ...buildSummaryLogHandlerDeps(server.app)
-  }
-}
-
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
@@ -51,8 +32,12 @@ export const commandQueueConsumerPlugin = {
     /** @type {import('#common/hapi-types.js').HapiServer} */ server,
     /** @type {CommandQueueConsumerPluginOptions} */ options
   ) => {
-    const { sqsClient, queueName, uploadsRepository, ...baseDeps } =
-      buildConsumerDeps(server, options)
+    const { config } = options
+    const sqsClient = createSqsClient({
+      region: config.get('awsRegion'),
+      endpoint: config.get('commandQueue.endpoint')
+    })
+    const queueName = config.get('commandQueue.queueName')
     /** @type {Consumer | null} */
     let consumer = null
 
@@ -71,7 +56,7 @@ export const commandQueueConsumerPlugin = {
             overseasSitesRepository: server.app.overseasSitesRepository,
             organisationAdministrationRepository:
               server.app.organisationAdministrationRepository,
-            uploadsRepository,
+            uploadsRepository: server.app.uploadsRepository,
             systemLogsRepository: server.app.systemLogsRepository
           }
         : {}
@@ -80,7 +65,7 @@ export const commandQueueConsumerPlugin = {
         sqsClient,
         queueName,
         logger: server.logger,
-        ...baseDeps,
+        ...buildSummaryLogHandlerDeps(server.app),
         ...orsExtras
       }
       const handlers = server.app.orsImportsRepository

@@ -20,7 +20,7 @@ import {
   reportingCadenceOf
 } from './registration-for-summary-log.js'
 
-/** @import {AccreditationCommon, Registration} from '#organisation-read-model/vocabulary.js' */
+/** @import {AccreditationCommon, Registration} from '#organisation-read-model/index.js' */
 /** @import {SummaryLogRegistration} from './registration-for-summary-log.js' */
 
 /**

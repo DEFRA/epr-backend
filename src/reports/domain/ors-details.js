@@ -1,4 +1,4 @@
-/** @import { ExporterAccreditation } from '#organisation-read-model/vocabulary.js' */
+/** @import { ExporterAccreditation } from '#organisation-read-model/index.js' */
 /** @import { ReportRegistration } from './operator-category.js' */
 
 /**
