@@ -48,6 +48,9 @@ function getSwaggerPlugins() {
   ]
 }
 
+/** The modules' route plugins, which every server but the legacy one registers. */
+const moduleRoutePlugins = () => [wasteRecordsExport, systemLogsRoutesPlugin]
+
 /**
  * The plugins every server registers, around the infrastructure plugins that
  * differ between production and tests.
@@ -56,10 +59,12 @@ function getSwaggerPlugins() {
  * @param {any[]} infrastructure - the repository and worker plugins, and the
  *   plugins that depend on repositories, which the legacy apply-routes server
  *   registers none of
+ * @param {{ modules?: boolean }} [options] - `modules: false` leaves out the
+ *   modules' route plugins, for the legacy apply-routes server
  * @returns {any[]} untyped, because Hapi's typings for `server.register`
  *   accept no array that mixes bare and wrapped plugins
  */
-export function serverPlugins(config, infrastructure) {
+export function serverPlugins(config, infrastructure, { modules = true } = {}) {
   const plugins = [
     requestLogger,
     requestTracing,
@@ -90,7 +95,6 @@ export function serverPlugins(config, infrastructure) {
     ...plugins,
     ...infrastructure,
     { plugin: router, options: { config } },
-    wasteRecordsExport,
-    systemLogsRoutesPlugin
+    ...(modules ? moduleRoutePlugins() : [])
   ]
 }
