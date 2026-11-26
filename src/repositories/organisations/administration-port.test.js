@@ -38,7 +38,7 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/forms-submission-data/repository/mongodb.js',
   'src/forms-submission-data/routes/dev/migrate-post.js',
   'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
-  'src/forms-submission-data/migration/run-forms-data-migration.js',
+  'src/server/run-forms-data-migration.js',
   'src/server/seed/create-seed-data.js',
   'src/server/seed/seed-scenarios.js'
 ]

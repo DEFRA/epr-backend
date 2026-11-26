@@ -1,10 +1,12 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
-import { createFormSubmissionsRepository } from '#formsubmission/repository/mongodb.js'
+import {
+  createFormDataMigrator,
+  createFormSubmissionsRepository,
+  createFormsFileUploadsRepository
+} from '#formsubmission/plugin.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
-import { createFormsFileUploadsRepository } from '#formsubmission/file-uploads/forms-file-uploads.js'
 import { config } from '#root/config.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */

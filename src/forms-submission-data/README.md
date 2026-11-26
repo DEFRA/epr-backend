@@ -5,7 +5,7 @@ This module holds the organisation, registration and accreditation submissions m
 Code outside the module imports from three entry points, and each lists its exports by name:
 
 - **`index.js`** is the public interface: the type of the form submissions port, the rules that read a submission's answers and keys, and the factories that build a submission document. It loads no route, adapter or Hapi code.
-- **`plugin.js`** holds the module's production plugins: the MongoDB adapter for the form submissions port and the plugin that adds the module's routes. It also holds what the server setup runs at start-up, which is creating the form collections and running the forms data migration, and the apply routes, which the router still adds. Only code in `src/server`, `src/plugins` and `src/test` may import it.
+- **`plugin.js`** holds the module's production plugins: the MongoDB adapter for the form submissions port and the plugin that adds the module's routes. It also holds what the server setup uses at start-up, which is creating the form collections and building the forms data migration, and the apply routes, which the router still adds. Only code in `src/server`, `src/plugins` and `src/test` may import it.
 - **`test-support.js`** holds the in-memory form submissions plugin and the test builders, and only a test may import it. The test server registers that plugin.
 
 [`src/modules.md`](../modules.md) describes the shape every module takes.

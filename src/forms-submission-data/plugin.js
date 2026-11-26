@@ -3,7 +3,9 @@ import { formSubmissionsDataGet } from './routes/get-by-id.js'
 
 export { apply } from './apply/routes/index.js'
 export { createFormCollections } from './apply/collections/create-update.js'
-export { runFormsDataMigration } from './migration/run-forms-data-migration.js'
+export { createFormsFileUploadsRepository } from './file-uploads/forms-file-uploads.js'
+export { createFormDataMigrator } from './migration/migration-orchestrator.js'
+export { createFormSubmissionsRepository } from './repository/mongodb.js'
 export { mongoFormSubmissionsRepositoryPlugin } from './repository/mongodb.plugin.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */

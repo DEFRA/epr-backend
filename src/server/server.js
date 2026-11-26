@@ -18,9 +18,9 @@ import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-no
 import { serverPlugins } from '#plugins/server-plugins.js'
 import {
   createFormCollections,
-  mongoFormSubmissionsRepositoryPlugin,
-  runFormsDataMigration
+  mongoFormSubmissionsRepositoryPlugin
 } from '#formsubmission/plugin.js'
+import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
