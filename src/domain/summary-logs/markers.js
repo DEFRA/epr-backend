@@ -24,6 +24,13 @@ export const SKIP_EXAMPLE_ROW_TEXT = 'Example'
 export const SKIP_HEADER_ROW_TEXT = 'Row ID'
 
 /**
+ * @param {unknown} rowIdValue - The row's Row ID cell
+ * @returns {boolean}
+ */
+export const isHeaderDescriptionRow = (rowIdValue) =>
+  typeof rowIdValue === 'string' && rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
+
+/**
  * Helper to check if a header is an EPR marker
  * @param {string} header - Header value to check
  * @returns {boolean} True if header is an EPR marker

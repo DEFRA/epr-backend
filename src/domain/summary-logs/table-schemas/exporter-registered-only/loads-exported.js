@@ -14,11 +14,15 @@ import {
   createFreeTextFieldSchema,
   DROPDOWN_PLACEHOLDER,
   MESSAGES,
-  BASEL_CODES
+  BASEL_CODES,
+  isDateNoLaterThan,
+  isNo,
+  isYes
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { PREVIOUS_YEAR_ROW_COMPLETION } from '#domain/summary-logs/previous-year-link.js'
 const ALL_FIELDS = Object.values(FIELDS)
 
 /**
@@ -77,6 +81,43 @@ export const LOADS_EXPORTED = {
     .prefs({ abortEarly: false })
 }
 
+/** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/previous-year-link.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
+
+/**
+ * Neither refused nor stopped, so received; or refused or stopped and
+ * repatriated. With no received date in this table, a received load's error
+ * sits on the Previous year Row ID the operator entered.
+ *
+ * @param {Record<string, unknown>} row
+ * @param {Year} year
+ * @returns {PreviousYearRowCompletionAt[]}
+ */
+const loadExportedCompletionsOf = (row, year) => {
+  const refused = row[FIELDS.WAS_THE_WASTE_REFUSED]
+  const stopped = row[FIELDS.WAS_THE_WASTE_STOPPED]
+  if (isNo(refused) && isNo(stopped)) {
+    return [
+      {
+        completion: PREVIOUS_YEAR_ROW_COMPLETION.RECEIVED_BY_OSR,
+        field: LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID
+      }
+    ]
+  }
+  return (isYes(refused) || isYes(stopped)) &&
+    isDateNoLaterThan(
+      row[FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED],
+      year
+    )
+    ? [
+        {
+          completion: PREVIOUS_YEAR_ROW_COMPLETION.REPATRIATED,
+          field: FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
+        }
+      ]
+    : []
+}
+
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
   linking: {
@@ -85,7 +126,8 @@ export const LOADS_EXPORTED_2027 = {
       FIELDS.WAS_THE_WASTE_REFUSED,
       FIELDS.WAS_THE_WASTE_STOPPED,
       FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
-    ]
+    ],
+    completionsOf: loadExportedCompletionsOf
   },
   requiredHeaders: [
     ...LOADS_EXPORTED.requiredHeaders,
@@ -93,7 +135,7 @@ export const LOADS_EXPORTED_2027 = {
   ],
   validationSchema: LOADS_EXPORTED.validationSchema.keys({
     [LOADS_EXPORTED_FIELDS_2027.PREVIOUS_YEAR_ROW_ID]: createRowIdSchema(
-      ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
+      ROW_ID_MINIMUMS.LOADS_EXPORTED
     ).optional(),
     [LOADS_EXPORTED_FIELDS_2027.EXIT_PORT]: createFreeTextFieldSchema(),
     [LOADS_EXPORTED_FIELDS_2027.DWT_EXPORT_ID]: createFreeTextFieldSchema()

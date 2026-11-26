@@ -7,7 +7,7 @@ import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   isEprMarker,
-  SKIP_HEADER_ROW_TEXT
+  isHeaderDescriptionRow
 } from '#domain/summary-logs/markers.js'
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
@@ -15,6 +15,7 @@ import {
   AFTER_SUMMARY_LOG_YEAR_ERROR,
   BEFORE_SUMMARY_LOG_YEAR_ERROR
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
+import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
 import { toRowId } from '#domain/summary-logs/table-schemas/shared/row-id.schema.js'
 import { NET_WEIGHT_MESSAGES } from '#domain/summary-logs/table-schemas/shared/validators/net-weight-validator.js'
@@ -216,7 +217,7 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
  * }} params
  * @returns {ValidationIssueLocation}
  */
-const buildCellLocation = ({
+export const buildCellLocation = ({
   tableName,
   rowNumber,
   rowId,
@@ -320,19 +321,11 @@ export const toApplicationIssue = ({
  */
 const isTemplateRow = (rowObject, rowIdField) => {
   const rowIdValue = rowObject[rowIdField]
-
-  if (
-    typeof rowIdValue === 'string' &&
-    rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
-  ) {
-    return true
-  }
-
-  if (rowIdValue === null || rowIdValue === undefined) {
-    return true
-  }
-
-  return false
+  return (
+    isHeaderDescriptionRow(rowIdValue) ||
+    rowIdValue === null ||
+    rowIdValue === undefined
+  )
 }
 
 /**
@@ -361,47 +354,53 @@ const validateRows = ({
   location,
   options
 }) => {
-  const validatedRows = rows.flatMap(({ rowNumber, values, linked }) => {
-    /** @type {Record<string, unknown>} */
-    const rowObject = {}
-    for (const [headerName, colIndex] of headerToIndexMap) {
-      rowObject[headerName] = values[colIndex]
-    }
-
-    if (isTemplateRow(rowObject, domainSchema.rowIdField)) {
-      return []
-    }
-
-    const classification = classifyRow(
-      rowObject,
-      domainSchema,
-      linked ? { ...options, filledIn: true } : options
-    )
-    const rowId = toRowId(rowObject[domainSchema.rowIdField])
-
-    const rowIssues = classification.issues.map((issue) =>
-      toApplicationIssue({
-        issue,
-        classification,
-        headerToIndexMap,
-        rowObject,
-        rowId,
-        tableName,
-        rowNumber,
-        location
-      })
-    )
-
-    return [
-      {
-        data: rowObject,
-        rowId,
-        outcome: classification.outcome,
-        issues: rowIssues,
-        ...(linked && { link: linked.link })
+  const validatedRows = rows.flatMap(
+    ({ rowNumber, values, previousYearLink }) => {
+      const foundLink =
+        previousYearLink?.status === PREVIOUS_YEAR_LINK_STATUS.FOUND
+          ? previousYearLink
+          : undefined
+      /** @type {Record<string, unknown>} */
+      const rowObject = {}
+      for (const [headerName, colIndex] of headerToIndexMap) {
+        rowObject[headerName] = values[colIndex]
       }
-    ]
-  })
+
+      if (isTemplateRow(rowObject, domainSchema.rowIdField)) {
+        return []
+      }
+
+      const classification = classifyRow(
+        rowObject,
+        domainSchema,
+        foundLink ? { ...options, filledIn: true } : options
+      )
+      const rowId = toRowId(rowObject[domainSchema.rowIdField])
+
+      const rowIssues = classification.issues.map((issue) =>
+        toApplicationIssue({
+          issue,
+          classification,
+          headerToIndexMap,
+          rowObject,
+          rowId,
+          tableName,
+          rowNumber,
+          location
+        })
+      )
+
+      return [
+        {
+          data: rowObject,
+          rowId,
+          outcome: classification.outcome,
+          issues: rowIssues,
+          ...(foundLink && { link: foundLink.link })
+        }
+      ]
+    }
+  )
 
   return {
     issues: validatedRows.flatMap((row) => row.issues),
