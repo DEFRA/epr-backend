@@ -838,7 +838,7 @@ describe('2027 rows linked to a 2026 row', () => {
       ])
     })
 
-    it('rejects a link to a 2026 load received overseas, on its received date', async () => {
+    it('rejects a link to a 2026 load received overseas, on its received date left blank', async () => {
       const env = await setup()
       await submitted(
         env,
@@ -868,7 +868,7 @@ describe('2027 rows linked to a 2026 row', () => {
         {
           code: 'PREVIOUS_YEAR_LINK',
           errorCode: 'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
-          actual: '2026-12-30',
+          actual: null,
           expected: 2026,
           previousYearRowId: '1500',
           location: expect.objectContaining({

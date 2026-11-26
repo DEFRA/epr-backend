@@ -20,7 +20,7 @@ import { REPROCESSOR_REGISTERED_ONLY_TEMPLATES } from './reprocessor-registered-
  * @typedef {Object} YearLinking
  * @property {string} previousYearRowIdField - Field naming the previous year's row a row is linked to
  * @property {readonly string[]} suppliableOnLinkedRow - The columns a linked row may supply; it takes every other column from the previous year's row
- * @property {(previousYearRow: Record<string, unknown>) => PreviousYearRowCompletionAt[]} completionsOf - How the previous year's row shows its load finished, so no row can link to it; empty while it is open
+ * @property {(previousYearRow: Record<string, unknown>, previousYear: Year) => PreviousYearRowCompletionAt[]} completionsOf - How the previous year's row shows its load finished, so no row can link to it; empty while it is open. A date counts only if it is real and no later than the previous year.
  */
 
 /**

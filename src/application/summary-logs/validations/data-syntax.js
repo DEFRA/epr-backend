@@ -7,7 +7,7 @@ import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
   isEprMarker,
-  SKIP_HEADER_ROW_TEXT
+  isHeaderDescriptionRow
 } from '#domain/summary-logs/markers.js'
 import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/exporter/validators/tonnage-export-validator.js'
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
@@ -321,19 +321,11 @@ export const toApplicationIssue = ({
  */
 const isTemplateRow = (rowObject, rowIdField) => {
   const rowIdValue = rowObject[rowIdField]
-
-  if (
-    typeof rowIdValue === 'string' &&
-    rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
-  ) {
-    return true
-  }
-
-  if (rowIdValue === null || rowIdValue === undefined) {
-    return true
-  }
-
-  return false
+  return (
+    isHeaderDescriptionRow(rowIdValue) ||
+    rowIdValue === null ||
+    rowIdValue === undefined
+  )
 }
 
 /**

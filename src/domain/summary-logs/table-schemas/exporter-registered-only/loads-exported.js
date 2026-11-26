@@ -15,7 +15,7 @@ import {
   DROPDOWN_PLACEHOLDER,
   MESSAGES,
   BASEL_CODES,
-  isAnswered,
+  isDateNoLaterThan,
   isNo,
   isYes
 } from '../shared/index.js'
@@ -82,6 +82,7 @@ export const LOADS_EXPORTED = {
 }
 
 /** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/previous-year-link.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 
 /**
  * Neither refused nor stopped, so received; or refused or stopped and
@@ -89,9 +90,10 @@ export const LOADS_EXPORTED = {
  * sits on its last answer, stopped.
  *
  * @param {Record<string, unknown>} row
+ * @param {Year} year
  * @returns {PreviousYearRowCompletionAt[]}
  */
-const loadExportedCompletionsOf = (row) => {
+const loadExportedCompletionsOf = (row, year) => {
   const refused = row[FIELDS.WAS_THE_WASTE_REFUSED]
   const stopped = row[FIELDS.WAS_THE_WASTE_STOPPED]
   if (isNo(refused) && isNo(stopped)) {
@@ -103,7 +105,10 @@ const loadExportedCompletionsOf = (row) => {
     ]
   }
   return (isYes(refused) || isYes(stopped)) &&
-    isAnswered(row[FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED])
+    isDateNoLaterThan(
+      row[FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED],
+      year
+    )
     ? [
         {
           completion: PREVIOUS_YEAR_ROW_COMPLETION.REPATRIATED,

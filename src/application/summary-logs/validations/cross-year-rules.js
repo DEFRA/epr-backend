@@ -5,7 +5,7 @@ import {
 } from '#common/enums/validation.js'
 import { previousYear } from '#common/helpers/dates/year.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { SKIP_HEADER_ROW_TEXT } from '#domain/summary-logs/markers.js'
+import { isHeaderDescriptionRow } from '#domain/summary-logs/markers.js'
 import {
   PREVIOUS_YEAR_LINK_STATUS,
   PREVIOUS_YEAR_ROW_COMPLETION
@@ -81,6 +81,7 @@ const coerced = (schema, value) => schema.validate(value).value
  *   errorCode: string,
  *   field: string,
  *   context: LinkedRowContext<PreviousYearLink>,
+ *   actual: unknown,
  *   previousYearRowId?: string
  * }} params
  * @returns {ValidationIssue}
@@ -89,9 +90,10 @@ const toPreviousYearLinkIssue = ({
   errorCode,
   field,
   context,
+  actual,
   previousYearRowId
 }) => {
-  const { headerToIndexMap, rowObject, tableName, rowNumber, location } =
+  const { headerToIndexMap, tableName, rowNumber, location } =
     context.issueLocation
   return {
     category: VALIDATION_CATEGORY.BUSINESS,
@@ -107,7 +109,7 @@ const toPreviousYearLinkIssue = ({
         colIndex: headerToIndexMap.get(field),
         location
       }),
-      actual: rowObject[field],
+      actual,
       expected: previousYear(context.options.summaryLogYear),
       errorCode,
       ...(previousYearRowId && { previousYearRowId })
@@ -160,7 +162,8 @@ const previousYearRowNotFound = (context) => {
         toPreviousYearLinkIssue({
           errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_NOT_FOUND,
           field,
-          context
+          context,
+          actual: context.rowObject[field]
         })
       ]
     : []
@@ -173,16 +176,28 @@ const COMPLETION_ERROR_CODES = Object.freeze({
     VALIDATION_CODE.PREVIOUS_YEAR_ROW_REPATRIATED
 })
 
+/**
+ * What the operator entered in the cell, not the previous year's value fill-in
+ * put there.
+ *
+ * @param {LinkedRowContext<FoundPreviousYearLink>} context
+ * @param {string} field
+ * @returns {unknown}
+ */
+const enteredValueOf = ({ rowObject, previousYearLink }, field) =>
+  previousYearLink.link.suppliedFields.includes(field) ? rowObject[field] : null
+
 /** @type {FoundLinkRule} */
 const previousYearRowComplete = (context) => {
   const { previousYearLink, linking } = context
   return linking
-    .completionsOf(previousYearLink.previousYear)
+    .completionsOf(previousYearLink.previousYear, previousYearLink.link.year)
     .map(({ completion, field }) =>
       toPreviousYearLinkIssue({
         errorCode: COMPLETION_ERROR_CODES[completion],
         field,
         context,
+        actual: enteredValueOf(context, field),
         previousYearRowId: previousYearLink.link.rowId
       })
     )
@@ -228,10 +243,7 @@ const checkTable = ({
       rowObject[header] = values[index]
     }
     const rowIdValue = rowObject[schema.rowIdField]
-    if (
-      typeof rowIdValue === 'string' &&
-      rowIdValue.startsWith(SKIP_HEADER_ROW_TEXT)
-    ) {
+    if (isHeaderDescriptionRow(rowIdValue)) {
       return []
     }
     const issueLocation = {

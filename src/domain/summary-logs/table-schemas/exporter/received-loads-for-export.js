@@ -18,6 +18,7 @@ import {
   toThreeDigitId,
   isYes,
   isAnswered,
+  isDateNoLaterThan,
   YES_NO_VALUES
 } from '../shared/index.js'
 import {
@@ -356,13 +357,15 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 }
 
 /** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/previous-year-link.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 
 /**
  * @param {Record<string, unknown>} row
+ * @param {Year} year
  * @returns {PreviousYearRowCompletionAt[]}
  */
-const receivedLoadCompletionsOf = (row) => [
-  ...(isAnswered(row[FIELDS.DATE_RECEIVED_BY_OSR])
+const receivedLoadCompletionsOf = (row, year) => [
+  ...(isDateNoLaterThan(row[FIELDS.DATE_RECEIVED_BY_OSR], year)
     ? [
         {
           completion: PREVIOUS_YEAR_ROW_COMPLETION.RECEIVED_BY_OSR,
@@ -370,7 +373,10 @@ const receivedLoadCompletionsOf = (row) => [
         }
       ]
     : []),
-  ...(isAnswered(row[FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]) &&
+  ...(isDateNoLaterThan(
+    row[FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED],
+    year
+  ) &&
   (isAnswered(row[FIELDS.WAS_THE_WASTE_REFUSED]) ||
     isAnswered(row[FIELDS.WAS_THE_WASTE_STOPPED]))
     ? [

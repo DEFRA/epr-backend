@@ -9,6 +9,8 @@ import {
 import { customJoi } from '#common/validation/custom-joi.js'
 import { rowValidationOptionsOf } from '../validation-pipeline.js'
 
+/** @import {Year} from '#common/helpers/dates/year.js' */
+
 /**
  * Common field schema factories for table validation
  *
@@ -182,6 +184,52 @@ export const createFirstOfMonthFieldSchema = () =>
     })
 
 /**
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
+const calendarDateTextOf = (value) => {
+  if (value instanceof Date) {
+    return utcCalendarDate(value)
+  }
+  if (typeof value === 'number') {
+    return Number.isNaN(value) ? undefined : utcCalendarDate(new Date(value))
+  }
+  return typeof value === 'string'
+    ? CALENDAR_DATE_PATTERN.exec(value)?.[1]
+    : undefined
+}
+
+/**
+ * The value as a YYYY-MM-DD calendar date from 2000-01-01 to 2100-01-01.
+ *
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
+const toCalendarDate = (value) => {
+  const dateStr = calendarDateTextOf(value)
+  if (dateStr === undefined) {
+    return undefined
+  }
+  const parsed = startOfDay(dateStr)
+  // A date that doesn't round-trip, such as "2024-13-01", rolled over
+  const isRealDate =
+    !Number.isNaN(parsed.getTime()) && utcCalendarDate(parsed) === dateStr
+  return isRealDate && parsed >= DATE_MIN && parsed <= DATE_MAX
+    ? dateStr
+    : undefined
+}
+
+/**
+ * @param {unknown} value
+ * @param {Year} year
+ * @returns {boolean}
+ */
+export const isDateNoLaterThan = (value, year) => {
+  const date = toCalendarDate(value)
+  return date !== undefined && date <= lastDayOfYear(year)
+}
+
+/**
  * Creates a calendar date field schema (2000-01-01 to 2100-01-01).
  *
  * Validates the date range but keeps the value as a YYYY-MM-DD string
@@ -195,40 +243,10 @@ export const createFirstOfMonthFieldSchema = () =>
 export const createDateFieldSchema = () =>
   Joi.any()
     .custom((value, helpers) => {
-      let dateStr
-      if (value instanceof Date) {
-        dateStr = utcCalendarDate(value)
-      } else if (typeof value === 'number') {
-        if (Number.isNaN(value)) {
-          return helpers.error(CALENDAR_DATE_ERROR)
-        }
-        dateStr = utcCalendarDate(new Date(value))
-      } else if (typeof value === 'string') {
-        const match = CALENDAR_DATE_PATTERN.exec(value)
-        if (!match) {
-          return helpers.error(CALENDAR_DATE_ERROR)
-        }
-        dateStr = match[1]
-      } else {
-        return helpers.error(CALENDAR_DATE_ERROR)
-      }
-
-      const parsed = startOfDay(dateStr)
-
-      // Reject if the parsed date doesn't round-trip to the same string
-      // (catches values like "2024-13-01" that Date silently rolls over)
-      if (
-        Number.isNaN(parsed.getTime()) ||
-        utcCalendarDate(parsed) !== dateStr
-      ) {
-        return helpers.error(CALENDAR_DATE_ERROR)
-      }
-
-      if (parsed < DATE_MIN || parsed > DATE_MAX) {
-        return helpers.error(CALENDAR_DATE_ERROR)
-      }
-
-      return checkAgainstSummaryLogYear(dateStr, helpers)
+      const dateStr = toCalendarDate(value)
+      return dateStr === undefined
+        ? helpers.error(CALENDAR_DATE_ERROR)
+        : checkAgainstSummaryLogYear(dateStr, helpers)
     })
     .optional()
     .messages({

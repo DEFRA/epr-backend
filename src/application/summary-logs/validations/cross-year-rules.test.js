@@ -10,11 +10,15 @@ import {
   PREVIOUS_YEAR_LINK_STATUS,
   PREVIOUS_YEAR_ROW_COMPLETION
 } from '#domain/summary-logs/previous-year-link.js'
-import { createDateFieldSchema } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
+import {
+  createDateFieldSchema,
+  isDateNoLaterThan
+} from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 
 import { checkCrossYearRules } from './cross-year-rules.js'
 
 /** @import {FilledInRow} from '../fill-in-linked-rows.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
 const HEADERS = [
@@ -33,8 +37,12 @@ const tableSchemas = {
       previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID',
       suppliableOnLinkedRow: ['DATE_OF_EXPORT'],
       /** @param {Record<string, unknown>} row */
-      completionsOf: (row) => [
-        ...(row.DATE_RECEIVED_BY_OSR
+      /**
+       * @param {Record<string, unknown>} row
+       * @param {Year} year
+       */
+      completionsOf: (row, year) => [
+        ...(isDateNoLaterThan(row.DATE_RECEIVED_BY_OSR, year)
           ? [
               {
                 completion: PREVIOUS_YEAR_ROW_COMPLETION.RECEIVED_BY_OSR,
@@ -73,7 +81,8 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
  *   dateOfExport: unknown,
  *   previousYearDateOfExport?: unknown,
  *   suppliedFields?: string[],
- *   previousYearCompletion?: Record<string, unknown>
+ *   previousYearCompletion?: Record<string, unknown>,
+ *   dateReceivedByOsr?: string
  * }} row
  * @returns {FilledInRow}
  */
@@ -82,7 +91,8 @@ const filledInRow = ({
   dateOfExport,
   previousYearDateOfExport = '2026-11-01',
   suppliedFields = ['DATE_OF_EXPORT'],
-  previousYearCompletion = {}
+  previousYearCompletion = {},
+  dateReceivedByOsr
 }) => {
   /** @type {Record<string, unknown>} */
   const previousYear = {
@@ -96,7 +106,7 @@ const filledInRow = ({
     1500,
     dateOfExport,
     'Overseas Ltd',
-    previousYear.DATE_RECEIVED_BY_OSR ?? null,
+    dateReceivedByOsr ?? previousYear.DATE_RECEIVED_BY_OSR ?? null,
     previousYear.DATE_REPATRIATED ?? null
   ]
   return {
@@ -342,7 +352,7 @@ describe('checkCrossYearRules', () => {
   })
 
   describe('a previous year row that is complete', () => {
-    it('rejects a link to a received load on its received date', () => {
+    it('rejects a link to a received load on its received date, left blank', () => {
       expect(
         check([
           filledInRow({
@@ -360,14 +370,38 @@ describe('checkCrossYearRules', () => {
           },
           {
             errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR,
-            actual: '2026-12-14',
+            actual: null,
             previousYearRowId: '1500'
           }
         )
       ])
     })
 
-    it('rejects a link to a repatriated load on its repatriation date', () => {
+    it('shows the received date the linked row entered itself', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' },
+            dateReceivedByOsr: '2027-01-05',
+            suppliedFields: ['DATE_OF_EXPORT', 'DATE_RECEIVED_BY_OSR']
+          })
+        ]).map(({ context }) => context?.actual)
+      ).toStrictEqual(['2027-01-05'])
+    })
+
+    it('accepts a link to a row whose received date is after its year', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2027-01-05' }
+          })
+        ])
+      ).toStrictEqual([])
+    })
+
+    it('rejects a link to a repatriated load on its repatriation date, left blank', () => {
       expect(
         check([
           filledInRow({
@@ -380,7 +414,7 @@ describe('checkCrossYearRules', () => {
           { row: 8, rowId: '1001', column: 'G', header: 'DATE_REPATRIATED' },
           {
             errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_REPATRIATED,
-            actual: '2026-12-20',
+            actual: null,
             previousYearRowId: '1500'
           }
         )

@@ -1,7 +1,7 @@
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/previous-year-link.js'
 import {
-  DROPDOWN_PLACEHOLDER,
+  isAnswered,
   toRowId
 } from '#domain/summary-logs/table-schemas/shared/index.js'
 import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -45,14 +45,6 @@ import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline
  */
 
 /**
- * A placeholder counts as blank on both rows, so an untouched dropdown neither
- * supplies a value nor hides the previous year's.
- *
- * @param {unknown} value
- */
-const isSupplied = (value) => isFilled(value, DROPDOWN_PLACEHOLDER)
-
-/**
  * How fill-in treats a column: kept as entered, or taken from the previous
  * year unless the column is suppliable and the row supplies it.
  *
@@ -93,7 +85,8 @@ const fillInRow = ({ row, columns, previousYearRowState }) => {
     if (column.kept) {
       return entered
     }
-    if (column.suppliable && isSupplied(entered)) {
+    // An untouched dropdown neither supplies a value nor hides the previous year's
+    if (column.suppliable && isAnswered(entered)) {
       suppliedFields.push(column.header)
       return entered
     }

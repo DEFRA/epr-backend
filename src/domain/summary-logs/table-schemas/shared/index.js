@@ -29,6 +29,7 @@ export {
   createYesNoFieldSchema,
   createFirstOfMonthFieldSchema,
   createDateFieldSchema,
+  isDateNoLaterThan,
   createThreeDigitIdSchema,
   toThreeDigitId,
   createPercentageFieldSchema,
