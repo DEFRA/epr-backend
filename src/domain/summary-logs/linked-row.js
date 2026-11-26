@@ -98,6 +98,13 @@ export const isFilledInColumn = (header, { rowIdField, linking }) =>
   header !== linking.previousYearRowIdField
 
 /**
+ * @param {unknown} cellValue
+ * @returns {unknown}
+ */
+const textOf = (cellValue) =>
+  typeof cellValue === 'number' ? String(cellValue) : cellValue
+
+/**
  * @param {ComparedColumn} column
  * @param {unknown} cellValue
  * @returns {unknown}
@@ -109,7 +116,7 @@ const comparableValueOf = ({ columnSchema, isRounded }, cellValue) => {
   // A column with no value rule is compared as text: a number cell matches a text cell
   const read =
     columnSchema === undefined
-      ? String(cellValue)
+      ? textOf(cellValue)
       : columnSchema.validate(cellValue).value
   if (typeof read === 'string') {
     return read.trim()
