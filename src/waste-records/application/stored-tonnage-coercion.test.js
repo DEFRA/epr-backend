@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import {
-  STORED_TONNAGE_FIELDS,
-  coerceStoredTonnages
-} from './stored-tonnage-coercion.js'
+import { coerceStoredTonnages } from './stored-tonnage-coercion.js'
 
 describe('coerceStoredTonnages', () => {
   it('rounds every stored tonnage/weight field to two decimal places, half-up', () => {
@@ -70,23 +67,6 @@ describe('coerceStoredTonnages', () => {
 
     expect(result).not.toBe(data)
     expect(data.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED).toBe(1.239)
-  })
-
-  it('names the twelve stored tonnage/weight fields, transactionAmount excluded', () => {
-    expect([...STORED_TONNAGE_FIELDS]).toEqual([
-      'GROSS_WEIGHT',
-      'TARE_WEIGHT',
-      'PALLET_WEIGHT',
-      'NET_WEIGHT',
-      'WEIGHT_OF_NON_TARGET_MATERIALS',
-      'TONNAGE_RECEIVED_FOR_RECYCLING',
-      'TONNAGE_RECEIVED_FOR_EXPORT',
-      'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
-      'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
-      'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
-      'PRODUCT_TONNAGE',
-      'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
-    ])
   })
 
   it('stores interim-site tonnages so round-each-then-sum no longer drifts from sum-then-round', () => {

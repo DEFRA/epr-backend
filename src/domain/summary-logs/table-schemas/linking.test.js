@@ -1,8 +1,9 @@
 import { everyTemplateTable } from './index.js'
 
 /**
- * What a linked row may supply, and what it always takes from the previous
- * year's row (ADR-0060). A column added to a linking table fails here until
+ * What a linked row may supply, what it always takes from the previous year's
+ * row (ADR-0060), and which columns it may give differently before the
+ * correction deadline. A column added to a linking table fails here until
  * someone decides which it is.
  */
 const EXPECTED = {
@@ -62,7 +63,16 @@ const EXPECTED = {
       'CBD',
       'CARRIER_VEHICLE_REGISTRATION_NUMBER',
       'DWT_SUPPLY_ID'
-    ]
+    ],
+    mayDifferBeforeCorrectionDeadline: [
+      'NET_WEIGHT',
+      'TONNAGE_RECEIVED_FOR_EXPORT'
+    ],
+    answeredLaterOnLinkedRow: [
+      'WAS_THE_WASTE_REFUSED',
+      'WAS_THE_WASTE_STOPPED'
+    ],
+    prefilledOnLinkedRow: { WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No' }
   },
   'EXPORTER_REGISTERED_ONLY 2027 LOADS_EXPORTED': {
     suppliable: [
@@ -81,7 +91,13 @@ const EXPECTED = {
       'CONTAINER_NUMBER',
       'EXIT_PORT',
       'DWT_EXPORT_ID'
-    ]
+    ],
+    mayDifferBeforeCorrectionDeadline: [],
+    answeredLaterOnLinkedRow: [
+      'WAS_THE_WASTE_REFUSED',
+      'WAS_THE_WASTE_STOPPED'
+    ],
+    prefilledOnLinkedRow: {}
   }
 }
 
@@ -125,6 +141,26 @@ describe('tables that link years', () => {
         expect(
           requiredHeaders.filter((header) => !decided.has(header)).sort()
         ).toEqual([...EXPECTED[table].inherited].sort())
+      })
+
+      it('lets a linked row give differently only the columns decided for it', () => {
+        expect({
+          mayDifferBeforeCorrectionDeadline: [
+            ...linking.mayDifferBeforeCorrectionDeadline
+          ].sort(),
+          answeredLaterOnLinkedRow: [
+            ...linking.answeredLaterOnLinkedRow
+          ].sort(),
+          prefilledOnLinkedRow: linking.prefilledOnLinkedRow
+        }).toStrictEqual({
+          mayDifferBeforeCorrectionDeadline: [
+            ...EXPECTED[table].mayDifferBeforeCorrectionDeadline
+          ].sort(),
+          answeredLaterOnLinkedRow: [
+            ...EXPECTED[table].answeredLaterOnLinkedRow
+          ].sort(),
+          prefilledOnLinkedRow: EXPECTED[table].prefilledOnLinkedRow
+        })
       })
     }
   )

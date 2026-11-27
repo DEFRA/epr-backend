@@ -15,6 +15,7 @@ export {
   DROPDOWN_PLACEHOLDER
 } from './joi-messages.js'
 export { isAnswered, isNo, isYes } from './answers.js'
+export { ANSWERED_LATER_ON_LINKED_ROW } from './answered-later.js'
 export {
   areNumbersEqual,
   isProductCorrect,
