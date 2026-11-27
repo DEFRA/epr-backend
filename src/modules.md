@@ -6,7 +6,7 @@ A module is a directory under `src/` that owns one responsibility. Code outside 
 
 - **`index.js`** is the public interface. It holds the module's types, including the type of each port it provides, and its pure rules. It loads no route, adapter or Hapi code.
 - **`plugin.js`** holds the module's production plugins. Only the server setup and the test servers import it.
-- **`test-support.js`** holds the module's in-memory adapters, their plugins and its test builders. Only tests import it. A test outside the module that runs against a real database builds the real adapter itself, so `test-support.js` exports that adapter's factory too.
+- **`test-support.js`** holds what only tests need: the module's in-memory adapters and their plugins, its test builders, and the factory of its real MongoDB adapter, which contract tests and other tests on a real database build from. Only tests import it.
 
 ## The index and the port
 
