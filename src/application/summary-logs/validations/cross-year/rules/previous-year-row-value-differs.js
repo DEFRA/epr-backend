@@ -1,11 +1,8 @@
 import { VALIDATION_CODE } from '#common/enums/validation.js'
-import {
-  isBeforeCorrectionDeadline,
-  lastCorrectionDay
-} from '#domain/summary-logs/correction-deadline.js'
 import { LINKED_COLUMN_CHECK } from '#domain/summary-logs/linked-row.js'
 
 import { toPreviousYearLinkIssue } from '../previous-year-link-issue.js'
+import { isStillCorrectable, lastCorrectionDayOf } from './correction-window.js'
 
 /** @import {FoundLinkedRow} from '../index.js' */
 /** @import {LinkedRowCheck} from './index.js' */
@@ -28,21 +25,16 @@ const columnsGivenDifferently = ({ columnComparisons, issueLocation }) =>
  *
  * @type {LinkedRowCheck}
  */
-export const previousYearRowValueDiffers = (linkedRow) => {
-  const { previousYearLink, options } = linkedRow
-  const previousYear = previousYearLink.link.year
-  if (!isBeforeCorrectionDeadline(previousYear, options, options.createdAt)) {
-    return []
-  }
-  const deadline = lastCorrectionDay(previousYear, options)
-  return columnsGivenDifferently(linkedRow).map(([field, index]) =>
-    toPreviousYearLinkIssue({
-      errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
-      field,
-      linkedRow,
-      // As typed: fill-in has put the previous year's value in a column the row may not supply
-      enteredValue: previousYearLink.entered[index],
-      deadline
-    })
-  )
-}
+export const previousYearRowValueDiffers = (linkedRow) =>
+  isStillCorrectable(linkedRow)
+    ? columnsGivenDifferently(linkedRow).map(([field, index]) =>
+        toPreviousYearLinkIssue({
+          deadline: lastCorrectionDayOf(linkedRow),
+          // As typed: fill-in has put the previous year's value in a column the row may not supply
+          enteredValue: linkedRow.previousYearLink.entered[index],
+          errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
+          field,
+          linkedRow
+        })
+      )
+    : []
