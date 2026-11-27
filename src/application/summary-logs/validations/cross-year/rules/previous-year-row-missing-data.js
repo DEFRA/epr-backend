@@ -6,7 +6,23 @@ import {
 
 import { toPreviousYearLinkIssue } from '../previous-year-link-issue.js'
 
+/** @import {FoundLinkedRow} from '../index.js' */
 /** @import {LinkedRowCheck} from './index.js' */
+
+/** @param {FoundLinkedRow} linkedRow */
+const isStillCorrectable = ({
+  options: { createdAt, registeredOnly },
+  previousYearLink
+}) =>
+  isBeforeCorrectionDeadline(
+    previousYearLink.link.year,
+    { registeredOnly },
+    createdAt
+  )
+
+/** @param {FoundLinkedRow} linkedRow */
+const isMissingData = ({ linking, previousYearLink }) =>
+  linking.missingFieldsOf(previousYearLink.previousYear).length > 0
 
 /**
  * Until the previous year can no longer be corrected, its row must be filled
@@ -15,22 +31,23 @@ import { toPreviousYearLinkIssue } from '../previous-year-link-issue.js'
  * @type {LinkedRowCheck}
  */
 export const previousYearRowMissingData = (linkedRow) => {
-  const { rowObject, previousYearLink, linking, options } = linkedRow
-  const { year, rowId } = previousYearLink.link
-  if (
-    !isBeforeCorrectionDeadline(year, options, options.createdAt) ||
-    linking.missingFieldsOf(previousYearLink.previousYear).length === 0
-  ) {
-    return []
-  }
-  return [
-    toPreviousYearLinkIssue({
-      errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
-      field: linking.previousYearRowIdField,
-      linkedRow,
-      enteredValue: rowObject[linking.previousYearRowIdField],
-      previousYearRowId: rowId,
-      deadline: lastCorrectionDay(year, options)
-    })
-  ]
+  const {
+    linking,
+    options: { registeredOnly },
+    previousYearLink,
+    rowObject
+  } = linkedRow
+  const { rowId, year } = previousYearLink.link
+  return isStillCorrectable(linkedRow) && isMissingData(linkedRow)
+    ? [
+        toPreviousYearLinkIssue({
+          deadline: lastCorrectionDay(year, { registeredOnly }),
+          enteredValue: rowObject[linking.previousYearRowIdField],
+          errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
+          field: linking.previousYearRowIdField,
+          linkedRow,
+          previousYearRowId: rowId
+        })
+      ]
+    : []
 }
