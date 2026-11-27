@@ -1,6 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
-import { COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME } from '#packaging-recycling-notes/repository/mongodb.js'
 import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
@@ -22,8 +21,8 @@ const formatReport = (report) =>
   ].join(' ')
 
 /**
- * `findDrifting` detects the ids behind their ledger in one indexed query; each
- * is then re-read point-wise off the raw collection and written back
+ * `findDrifting` detects the ids behind their ledger in one indexed query; the
+ * sweep then re-reads each through the PRN repository and writes it back
  * through the repository's version CAS. Catch-up events come from the
  * server's waste balance service.
  *
@@ -31,9 +30,6 @@ const formatReport = (report) =>
  */
 const buildDependencies = (server) => ({
   findDrifting: createDriftQuery(server.db),
-  prnCollection: server.db.collection(
-    PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
-  ),
   prnRepository: server.app.packagingRecyclingNotesRepository,
   service: server.app.wasteBalanceService
 })

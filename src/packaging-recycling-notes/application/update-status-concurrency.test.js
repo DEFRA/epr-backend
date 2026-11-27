@@ -7,7 +7,7 @@ import {
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
 import { ACCREDITATION_STATUS } from '#domain/organisations/model.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { LedgerSlotConflictError } from '#waste-balances/repository/ledger-port.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'

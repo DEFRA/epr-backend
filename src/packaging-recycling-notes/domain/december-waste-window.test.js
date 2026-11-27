@@ -12,7 +12,7 @@ import {
   isWithinDecemberWasteWindow
 } from './december-waste-window.js'
 
-const DEFAULT_CONFIG = { windowStart: '12-01T00:00' }
+const DEFAULT_DECEMBER_WASTE_WINDOW = { windowStart: '12-01T00:00' }
 
 const outputReprocessor = {
   accreditationNumber: toAccreditationNumber('A26ER0000000001PA'),
@@ -56,7 +56,7 @@ describe('isWithinDecemberWasteWindow', () => {
       isWithinDecemberWasteWindow(
         toYear(2026),
         new Date(isoNow),
-        DEFAULT_CONFIG
+        DEFAULT_DECEMBER_WASTE_WINDOW
       )
     ).toBe(expected)
   })
@@ -121,7 +121,7 @@ describe('assertDecemberWasteDeclarable', () => {
         accreditation: exporter,
         isDecemberWaste: false,
         now: outsideWindow,
-        decemberWaste: DEFAULT_CONFIG
+        decemberWaste: DEFAULT_DECEMBER_WASTE_WINDOW
       })
     ).not.toThrow()
   })
@@ -139,7 +139,7 @@ describe('assertDecemberWasteDeclarable', () => {
         accreditation,
         isDecemberWaste: true,
         now: inWindow,
-        decemberWaste: DEFAULT_CONFIG
+        decemberWaste: DEFAULT_DECEMBER_WASTE_WINDOW
       })
     ).not.toThrow()
   })
@@ -154,7 +154,7 @@ describe('assertDecemberWasteDeclarable', () => {
         accreditation,
         isDecemberWaste: true,
         now: outsideWindow,
-        decemberWaste: DEFAULT_CONFIG
+        decemberWaste: DEFAULT_DECEMBER_WASTE_WINDOW
       })
     ).toThrow(throwsNotDeclarable)
   })

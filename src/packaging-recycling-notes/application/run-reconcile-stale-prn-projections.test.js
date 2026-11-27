@@ -42,7 +42,7 @@ describe('runReconcileStalePrnProjections', () => {
         packagingRecyclingNotesRepository: { persistProjection: vi.fn() },
         wasteBalanceService: {}
       },
-      db: { collection: vi.fn().mockReturnValue({}) },
+      db: {},
       locker: { lock: vi.fn().mockResolvedValue(mockLock) }
     }
 
@@ -52,9 +52,6 @@ describe('runReconcileStalePrnProjections', () => {
   it('sweeps under the lock and reports the summary', async () => {
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(mockServer.db.collection).toHaveBeenCalledWith(
-      'packaging-recycling-notes'
-    )
     expect(reconcileStalePrnProjections).toHaveBeenCalledWith(
       expect.objectContaining({
         prnRepository: mockServer.app.packagingRecyclingNotesRepository,

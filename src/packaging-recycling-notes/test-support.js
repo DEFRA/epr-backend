@@ -1,7 +1,5 @@
-export {
-  createInMemoryPackagingRecyclingNotesRepository,
-  createInMemoryPackagingRecyclingNotesRepositoryPlugin
-} from './repository/inmemory.plugin.js'
+export { createInMemoryPackagingRecyclingNotesRepository } from './repository/inmemory.js'
+export { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from './repository/inmemory.plugin.js'
 export {
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME,
   createMongoPackagingRecyclingNotesRepository

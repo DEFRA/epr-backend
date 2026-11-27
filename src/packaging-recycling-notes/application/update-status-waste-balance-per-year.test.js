@@ -17,7 +17,7 @@ import {
   buildAccreditationSnapshot,
   buildDraftPrn
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { createMockLogger } from '#test/mock-logger.js'
