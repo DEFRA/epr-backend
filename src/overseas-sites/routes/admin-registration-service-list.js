@@ -152,7 +152,15 @@ const toRow = (
   coordinates: nullable(site.coordinates)
 })
 
-export const adminRegistrationServiceOverseasSitesList = {
+/**
+ * The route that lists the overseas sites on exporters' registration service
+ * applications.
+ *
+ * @param {{ regAccredApi: RegAccredApiConfig }} options - the registration service's settings
+ */
+export const adminRegistrationServiceOverseasSitesList = ({
+  regAccredApi
+}) => ({
   method: 'GET',
   path: adminRegistrationServiceOverseasSitesListPath,
   options: {
@@ -167,10 +175,7 @@ export const adminRegistrationServiceOverseasSitesList = {
    */
   handler: async (request, h) => {
     const { logger, organisationReadRepository } = request
-    const config = /** @type {RegAccredApiConfig} */ (
-      request.config.get('regAccredApi')
-    )
-    if (!config.sharedSecret) {
+    if (!regAccredApi.sharedSecret) {
       throw Boom.serverUnavailable(
         'The connection to the registration service is not configured'
       )
@@ -187,7 +192,7 @@ export const adminRegistrationServiceOverseasSitesList = {
         CONCURRENT_REQUESTS,
         ({ organisation, registrationNumber }) =>
           fetchRegistrationServiceApplications(
-            config,
+            regAccredApi,
             organisation.organisationNumber,
             registrationNumber
           )
@@ -224,4 +229,4 @@ export const adminRegistrationServiceOverseasSitesList = {
 
     return h.response({ rows }).code(StatusCodes.OK)
   }
-}
+})

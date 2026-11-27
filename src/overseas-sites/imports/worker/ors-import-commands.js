@@ -18,7 +18,7 @@ import { SYSTEM_USER } from '#root/auditing/helpers.js'
 /** @import {OverseasSitesRepository} from '../../repository/port.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {SystemLogsRepository, SystemLogHumanActor} from '#repositories/system-logs/port.js' */
-/** @import {CommandHandler} from '#server/queue-consumer/summary-log-commands.js' */
+/** @import {CommandHandler} from '#server/queue-consumer/consumer.js' */
 
 const userSchema = Joi.object({
   id: Joi.string().required(),

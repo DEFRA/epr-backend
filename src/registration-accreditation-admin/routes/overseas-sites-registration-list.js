@@ -7,11 +7,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { resolveOverseasSiteDetails } from '#overseas-sites/index.js'
 import { STRATEGY_NAME as BASIC_AUTH } from '#plugins/auth/basic-auth-plugin.js'
+import { resolveOverseasSiteDetails } from '../resolve-overseas-site-details.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { OverseasSiteDetail, OverseasSitesRepository } from '#overseas-sites/index.js' */
+/** @import { OverseasSitesRepository } from '#overseas-sites/index.js' */
+/** @import { OverseasSiteDetail } from '../resolve-overseas-site-details.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 
 export const registrationOverseasSitesPath =

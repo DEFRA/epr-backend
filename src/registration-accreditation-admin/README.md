@@ -24,3 +24,4 @@ The routes read and write organisations through the administration port, which t
 - **`routes/`** holds the routes.
 - **`repository/`** holds the checks that a registration or accreditation number is not already in use, which the routes make before they grant one.
 - **`find-accreditation-by-id.js`** finds an accreditation through the administration port.
+- **`resolve-overseas-site-details.js`** looks up a registration's overseas sites through the overseas sites port.

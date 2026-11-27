@@ -13,8 +13,13 @@ vi.mock('#common/helpers/sqs/sqs-client.js')
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#reports/application/summary-log-events.js')
 vi.mock('./consumer.js')
-vi.mock('./summary-log-commands.js')
-vi.mock('#overseas-sites/plugin.js')
+vi.mock('./summary-log-commands.js', () => ({
+  summaryLogCommandHandlers: [{ command: 'summary-log-sentinel' }]
+}))
+vi.mock('#overseas-sites/plugin.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  orsImportCommandHandlers: [{ command: 'ors-import-sentinel' }]
+}))
 
 const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
 const { createSummaryLogExtractor } =
@@ -22,8 +27,6 @@ const { createSummaryLogExtractor } =
 const { createOnSummaryLogUploaded } =
   await import('#reports/application/summary-log-events.js')
 const { createCommandQueueConsumer } = await import('./consumer.js')
-const { summaryLogCommandHandlers } = await import('./summary-log-commands.js')
-const { orsImportCommandHandlers } = await import('#overseas-sites/plugin.js')
 
 describe('commandQueueConsumerPlugin', () => {
   let server
@@ -42,13 +45,17 @@ describe('commandQueueConsumerPlugin', () => {
       },
       dependency: vi.fn(),
       app: {
-        summaryLogsRepository: {},
-        organisationAdministrationRepository: {},
-        organisationReadRepository: {},
-        wasteBalanceService: {},
-        uploadsRepository: {},
-        reportsRepository: {},
-        systemLogsRepository: {}
+        summaryLogsRepository: { name: 'summaryLogsRepository' },
+        organisationAdministrationRepository: {
+          name: 'organisationAdministrationRepository'
+        },
+        organisationReadRepository: { name: 'organisationReadRepository' },
+        wasteBalanceService: { name: 'wasteBalanceService' },
+        uploadsRepository: { name: 'uploadsRepository' },
+        reportsRepository: { name: 'reportsRepository' },
+        systemLogsRepository: { name: 'systemLogsRepository' },
+        overseasSitesRepository: { name: 'overseasSitesRepository' },
+        orsImportsRepository: { name: 'orsImportsRepository' }
       }
     }
 
@@ -84,15 +91,7 @@ describe('commandQueueConsumerPlugin', () => {
   })
 
   describe('startup', () => {
-    const providers = [
-      'summaryLogsRepository',
-      'organisationsRepository',
-      'organisationReadRepository',
-      'wasteBalanceService',
-      'uploadsRepository',
-      'reportsRepository',
-      'systemLogsRepository'
-    ]
+    const providers = commandQueueConsumerPlugin.dependencies
 
     const stubRepositoryPlugin = (name) => ({
       name,
@@ -120,14 +119,12 @@ describe('commandQueueConsumerPlugin', () => {
       await expect(hapiServer.initialize()).resolves.toBeUndefined()
     })
 
-    it('refuses to initialise without the read model', async () => {
+    it.each(providers)('refuses to initialise without %s', async (missing) => {
       const hapiServer = await serverWith(
-        providers.filter((name) => name !== 'organisationReadRepository')
+        providers.filter((name) => name !== missing)
       )
 
-      await expect(hapiServer.initialize()).rejects.toThrow(
-        /organisationReadRepository/
-      )
+      await expect(hapiServer.initialize()).rejects.toThrow(missing)
     })
   })
 
@@ -174,7 +171,7 @@ describe('commandQueueConsumerPlugin', () => {
   })
 
   describe('server start event', () => {
-    it('creates consumer with only summary log handlers when ORS is not registered', async () => {
+    it('creates the consumer with the summary log and ORS import handlers', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
 
       const startHandler = server.events.on.mock.calls.find(
@@ -195,9 +192,18 @@ describe('commandQueueConsumerPlugin', () => {
             findPeriodicReport: expect.any(Function)
           }),
           summaryLogExtractor: expect.any(Object),
-          onSummaryLogUploaded: expect.any(Function)
+          onSummaryLogUploaded: expect.any(Function),
+          orsImportsRepository: server.app.orsImportsRepository,
+          overseasSitesRepository: server.app.overseasSitesRepository,
+          organisationAdministrationRepository:
+            server.app.organisationAdministrationRepository,
+          uploadsRepository: server.app.uploadsRepository,
+          systemLogsRepository: server.app.systemLogsRepository
         },
-        [...summaryLogCommandHandlers]
+        [
+          { command: 'summary-log-sentinel' },
+          { command: 'ors-import-sentinel' }
+        ]
       )
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'Starting SQS command queue consumer for queue: test-queue',
@@ -207,30 +213,6 @@ describe('commandQueueConsumerPlugin', () => {
         }
       })
       expect(mockConsumer.start).toHaveBeenCalled()
-    })
-
-    it('includes ORS handlers and deps when ORS repositories are registered', async () => {
-      server.app.orsImportsRepository = { updateStatus: vi.fn() }
-      server.app.overseasSitesRepository = { create: vi.fn() }
-
-      await commandQueueConsumerPlugin.register(server, { config })
-
-      const startHandler = server.events.on.mock.calls.find(
-        (call) => call[0] === 'start'
-      )[1]
-      await startHandler()
-
-      expect(createCommandQueueConsumer).toHaveBeenCalledWith(
-        expect.objectContaining({
-          orsImportsRepository: server.app.orsImportsRepository,
-          overseasSitesRepository: server.app.overseasSitesRepository,
-          organisationAdministrationRepository:
-            server.app.organisationAdministrationRepository,
-          uploadsRepository: server.app.uploadsRepository,
-          systemLogsRepository: server.app.systemLogsRepository
-        }),
-        [...summaryLogCommandHandlers, ...orsImportCommandHandlers]
-      )
     })
   })
 

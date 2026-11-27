@@ -10,7 +10,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
-import { createOverseasSitesRepository } from '#overseas-sites/test-support.js'
+import { createMongoOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import { createMongoSummaryLogRowStatesRepository } from '#waste-records/repository/mongodb.js'
 import { createReportsRepository } from '#reports/repository/mongodb.js'
 import { buildSubmittedReport } from '#vite/helpers/build-submitted-report.js'
@@ -84,7 +84,7 @@ const it =
                 mongoDb
               )({
                 overseasSitesRepository: (
-                  await createOverseasSitesRepository(mongoDb)
+                  await createMongoOverseasSitesRepository(mongoDb)
                 )(),
                 logger: { warn: () => {} }
               }),

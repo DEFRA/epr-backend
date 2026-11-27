@@ -1,4 +1,4 @@
-/** @import { OverseasSiteAddress, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OverseasSiteAddress, OverseasSitesRepository } from '#overseas-sites/index.js' */
 
 /**
  * A registration's overseas-site map as stored: three-digit ORS id to the

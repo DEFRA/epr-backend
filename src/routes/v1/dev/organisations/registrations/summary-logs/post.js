@@ -43,7 +43,8 @@ import {
 /** @import { SummaryLogId } from '#domain/summary-logs/ids.js' */
 /** @import { SummaryLog } from '#domain/summary-logs/model.js' */
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
-/** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
+/** @import { CommandHandler } from '#server/queue-consumer/consumer.js' */
+/** @import { SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
 /** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
 /** @import { SummaryLogContentPayload } from './post.schema.js' */

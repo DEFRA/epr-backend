@@ -12,7 +12,7 @@ const COLLECTION_NAME = 'ors-imports'
  * @param {Db} db
  * @returns {Promise<OrsImportsRepositoryFactory>}
  */
-export const createOrsImportsRepository = async (db) => {
+export const createMongoOrsImportsRepository = async (db) => {
   /** @type {import('mongodb').Collection<OrsImport>} */
   const collection = db.collection(COLLECTION_NAME)
 

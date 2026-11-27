@@ -14,7 +14,6 @@ import {
 } from '#domain/uploads/upload-locations.js'
 import { ORS_IMPORT_STATUS } from '#overseas-sites/domain/import-status.js'
 import { STRATEGY_NAME as UPLOAD_CALLBACK } from '#plugins/auth/upload-callback-auth-plugin.js'
-import { config } from '#root/config.js'
 
 import { orsUploadCompletedPayloadSchema } from './post-upload-completed.schema.js'
 
@@ -57,12 +56,13 @@ const toFileRecord = (upload) => ({
 
 /**
  * @param {OrsUploadFile} upload
+ * @param {string} orsBucket
  * @param {string} importId
  * @returns {boolean}
  */
-const isUploadedForImport = (upload, importId) =>
+const isUploadedForImport = (upload, orsBucket, importId) =>
   isInUploadLocation(upload, {
-    bucket: config.get('cdpUploader.orsBucket'),
+    bucket: orsBucket,
     path: orsImportUploadPath(importId)
   })
 
@@ -79,7 +79,12 @@ const OUT_OF_LOCATION_MESSAGE =
 export const orsUploadCompletedPath =
   '/v1/overseas-sites/imports/{id}/upload-completed'
 
-export const orsUploadCompleted = {
+/**
+ * The route the CDP uploader calls once an ORS spreadsheet has uploaded.
+ *
+ * @param {{ orsBucket: string }} options - the bucket ORS spreadsheets upload to
+ */
+export const orsUploadCompleted = ({ orsBucket }) => ({
   method: 'POST',
   path: orsUploadCompletedPath,
   options: {
@@ -111,7 +116,7 @@ export const orsUploadCompleted = {
       const uploads = normaliseToArray(payload.form.orsUpload)
 
       const outOfLocation = uploads.filter(
-        (upload) => !isUploadedForImport(upload, id)
+        (upload) => !isUploadedForImport(upload, orsBucket, id)
       )
 
       if (outOfLocation.length > 0) {
@@ -176,4 +181,4 @@ export const orsUploadCompleted = {
       throw Boom.badImplementation(`Failure on ${orsUploadCompletedPath}`)
     }
   }
-}
+})

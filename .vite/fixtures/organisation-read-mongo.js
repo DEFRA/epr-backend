@@ -1,7 +1,7 @@
 import { MongoClient, ObjectId } from 'mongodb'
 
 import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
-import { createOverseasSitesRepository } from '#overseas-sites/test-support.js'
+import { createMongoOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import { toStoredOrganisation } from '#repositories/organisations/helpers.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
@@ -97,7 +97,7 @@ export const it = /** @type {TestAPI<MongoFixtures>} */ (
 
         return createOrganisationReadRepository(database)({
           overseasSitesRepository: (
-            await createOverseasSitesRepository(database)
+            await createMongoOverseasSitesRepository(database)
           )(),
           logger: /** @type {TypedLogger} */ (/** @type {unknown} */ (logger))
         })

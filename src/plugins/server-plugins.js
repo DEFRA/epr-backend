@@ -60,7 +60,13 @@ const moduleRoutePlugins = (config) => [
     plugin: organisationsRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
   },
-  overseasSitesRoutesPlugin,
+  {
+    plugin: overseasSitesRoutesPlugin,
+    options: {
+      orsBucket: config.get('cdpUploader.orsBucket'),
+      regAccredApi: config.get('regAccredApi')
+    }
+  },
   registrationAccreditationAdminRoutesPlugin,
   wasteRecordsExport
 ]

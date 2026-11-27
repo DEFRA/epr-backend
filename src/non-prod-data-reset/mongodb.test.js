@@ -12,7 +12,7 @@ import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-mode
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import {
   buildOverseasSite,
-  createOverseasSitesRepository
+  createMongoOverseasSitesRepository
 } from '#overseas-sites/test-support.js'
 import { buildDraftPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
@@ -128,7 +128,8 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         // @ts-expect-error -- partial S3 config sufficient for test
         mockS3Config
       )
-      const overseasSitesFactory = await createOverseasSitesRepository(database)
+      const overseasSitesFactory =
+        await createMongoOverseasSitesRepository(database)
       const systemLogsFactory = await createSystemLogsRepository(database)
       const summaryLogRowStatesFactory =
         await createMongoSummaryLogRowStatesRepository(database)

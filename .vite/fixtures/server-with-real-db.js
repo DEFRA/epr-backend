@@ -7,7 +7,7 @@ import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-m
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
-import { createOverseasSitesRepository } from '#overseas-sites/test-support.js'
+import { createMongoOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import { createRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
 
 /**
@@ -58,7 +58,7 @@ export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
             mongoDb
           )({
             overseasSitesRepository: (
-              await createOverseasSitesRepository(mongoDb)
+              await createMongoOverseasSitesRepository(mongoDb)
             )(),
             logger: { warn: () => {} }
           })

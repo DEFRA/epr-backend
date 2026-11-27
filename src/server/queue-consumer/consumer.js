@@ -13,7 +13,19 @@ import { PermanentError } from '#server/queue-consumer/permanent-error.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
 /** @typedef {import('#common/helpers/logging/logger.js').TypedLogger} TypedLogger */
-/** @typedef {import('./summary-log-commands.js').CommandHandler} CommandHandler */
+
+/**
+ * Generic command handler interface. The consumer passes its full deps bag
+ * through to execute/onFailure — each handler narrows to its own deps type
+ * via inline type annotations on the deps parameter.
+ *
+ * @typedef {object} CommandHandler
+ * @property {string} command - The command string (e.g. 'validate', 'submit')
+ * @property {import('joi').ObjectSchema} payloadSchema - Validates everything except 'command'
+ * @property {(payload: any, deps: any) => Promise<void>} execute - Runs the command
+ * @property {(payload: any, deps: any) => Promise<void>} onFailure - Marks as failed on terminal error
+ * @property {(payload: any) => string} describe - Returns logging context
+ */
 
 const ONE_MINUTE = 60_000
 const COMMAND_TIMEOUT_MINUTES = 5
