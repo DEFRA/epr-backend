@@ -54,6 +54,10 @@ describe('the forms submission data routes plugin', () => {
     )
   })
 
+  it('starts with every provider when dev endpoints are on', async () => {
+    await expect(initialiseWith(DEV_PROVIDERS, true)).resolves.toBeUndefined()
+  })
+
   it.for(DEV_PROVIDERS)(
     'refuses to start with dev endpoints on and without %s',
     async (missing) => {
