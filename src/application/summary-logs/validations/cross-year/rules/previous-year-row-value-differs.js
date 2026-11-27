@@ -14,7 +14,7 @@ import { toPreviousYearLinkIssue } from '../previous-year-link-issue.js'
  * Each column the row gives differently, with where the row has it.
  *
  * @param {FoundLinkedRow} linkedRow
- * @returns {Array<[string, number]>}
+ * @returns {[string, number][]}
  */
 const columnsGivenDifferently = ({ columnComparisons, issueLocation }) =>
   [...issueLocation.headerToIndexMap].filter(

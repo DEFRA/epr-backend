@@ -54,7 +54,7 @@ import { isFilled } from '#domain/summary-logs/table-schemas/validation-pipeline
  */
 
 /**
- * @param {Array<string | null>} headers
+ * @param {(string | null)[]} headers
  * @param {LinkingTableSchema} schema
  * @returns {FillInColumn[]}
  */

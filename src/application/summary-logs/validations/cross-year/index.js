@@ -97,7 +97,7 @@ const foundLinkedRowOf = ({ table, headers, ...linkedRow }) => {
 /**
  * @param {{
  *   tableName: string,
- *   headers: Array<string | null>,
+ *   headers: (string | null)[],
  *   rows: readonly FilledInRow[],
  *   location: CellLocation,
  *   schema: CrossYearTableSchema,
