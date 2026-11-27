@@ -363,7 +363,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 /**
  * @param {Record<string, unknown>} row
  * @param {Year} year
- * @returns {PreviousYearRowCompletionAt[]}
+ * @returns {readonly PreviousYearRowCompletionAt[]}
  */
 const receivedLoadCompletionsOf = (row, year) => [
   ...(isDateNoLaterThan(row[FIELDS.DATE_RECEIVED_BY_OSR], year)
@@ -395,7 +395,7 @@ const receivedLoadCompletionsOf = (row, year) => [
  * once the date of export is.
  *
  * @param {Record<string, unknown>} row
- * @returns {ReceivedLoadsField[]}
+ * @returns {readonly ReceivedLoadsField[]}
  */
 const receivedLoadMissingFieldsOf = (row) =>
   [

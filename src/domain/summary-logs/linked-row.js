@@ -120,9 +120,9 @@ const comparisonOf = ({ entered, previousYear }) => {
  *
  * @param {{
  *   table: LinkingTable,
- *   headers: Array<string | null>,
- *   columnSchemas: Map<string, Schema>,
- *   enteredRow: unknown[],
+ *   headers: ReadonlyArray<string | null>,
+ *   columnSchemas: ReadonlyMap<string, Schema>,
+ *   enteredRow: readonly unknown[],
  *   previousYearRow: Record<string, unknown>
  * }} params
  * @returns {ReadonlyMap<string, ColumnComparison>}

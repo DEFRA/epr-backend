@@ -19,7 +19,7 @@ const DIFFERS_FROM_PREVIOUS_YEAR = new Set([
 
 /**
  * @param {FoundLinkedRow} linkedRow
- * @returns {string[]}
+ * @returns {readonly string[]}
  */
 const suppliedColumnsDifferingFromPreviousYear = ({
   columnComparisons,

@@ -93,7 +93,7 @@ export const LOADS_EXPORTED = {
  *
  * @param {Record<string, unknown>} row
  * @param {Year} year
- * @returns {PreviousYearRowCompletionAt[]}
+ * @returns {readonly PreviousYearRowCompletionAt[]}
  */
 const loadExportedCompletionsOf = (row, year) => {
   const refused = row[FIELDS.WAS_THE_WASTE_REFUSED]
@@ -126,7 +126,7 @@ const loadExportedCompletionsOf = (row, year) => {
  * overseas reprocessor once the date of export is.
  *
  * @param {Record<string, unknown>} row
- * @returns {LoadsExportedField[]}
+ * @returns {readonly LoadsExportedField[]}
  */
 const loadExportedMissingFieldsOf = (row) => {
   const exportedOn = isAnswered(row[FIELDS.DATE_OF_EXPORT])
