@@ -1266,14 +1266,24 @@ describe('JOI_MESSAGE_TO_ERROR_CODE coverage', () => {
     }
   ]
 
+  /** @type {string[]} */
+  const CARRYING_A_CELL_MESSAGE = [
+    MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR,
+    MESSAGES.MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR
+  ]
+
   it.each(allMessageSources)(
     'maps every $name value to an errorCode',
     ({ messages }) => {
       const mappedMessages = Object.keys(JOI_MESSAGE_TO_ERROR_CODE)
 
-      for (const message of Object.values(messages)) {
-        expect(mappedMessages).toContain(message)
-      }
+      const unmapped = Object.values(messages).filter(
+        (message) =>
+          !CARRYING_A_CELL_MESSAGE.includes(message) &&
+          !mappedMessages.includes(message)
+      )
+
+      expect(unmapped).toStrictEqual([])
     }
   )
 

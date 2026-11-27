@@ -30,7 +30,7 @@ import {
 
 /** @import {ValidatedSummaryLog, ValidatedTableSection} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationCode} from '#common/enums/validation.js' */
-/** @import {TableCellLocation} from '#common/validation/validation-issue-kinds.js' */
+/** @import {CellMessageCode, TableCellLocation} from '#common/validation/validation-issue-kinds.js' */
 /** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
@@ -105,15 +105,16 @@ const mapJoiTypeToErrorCode = (joiType) => {
   return code
 }
 
-/** @type {Readonly<Record<string, ValidationCode>>} */
+/**
+ * Error codes for the messages that fill in no cell message. The ones that do
+ * carry their own, with the fields they fill in.
+ *
+ * @type {Readonly<Record<string, Exclude<ValidationCode, CellMessageCode>>>}
+ */
 export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
   [MESSAGES.MUST_BE_A_NUMBER]: VALIDATION_CODE.MUST_BE_A_NUMBER,
   [MESSAGES.MUST_BE_A_STRING]: VALIDATION_CODE.MUST_BE_A_STRING,
   [MESSAGES.MUST_BE_A_VALID_DATE]: VALIDATION_CODE.MUST_BE_A_VALID_DATE,
-  [MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR]:
-    VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
-  [MESSAGES.MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR]:
-    VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR,
   [MESSAGES.MUST_BE_GREATER_THAN_ZERO]:
     VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO,
   [MESSAGES.MUST_BE_AT_LEAST_ZERO]: VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO,
@@ -148,7 +149,7 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
  * undefined if the message isn't recognised.
  *
  * @param {string} message
- * @returns {ValidationCode | undefined}
+ * @returns {Exclude<ValidationCode, CellMessageCode> | undefined}
  */
 const mapMessageToErrorCode = (message) => JOI_MESSAGE_TO_ERROR_CODE[message]
 
@@ -309,11 +310,8 @@ export const toApplicationIssue = ({
           code,
           location: cellLocation,
           actual: rowObject[fieldName],
-          ...(isValidationError &&
-            issue.expected !== undefined && { expected: issue.expected }),
-          ...(isValidationError &&
-            issue.deadline !== undefined && { deadline: issue.deadline }),
-          ...(errorCode && { errorCode })
+          ...((isValidationError && issue.cellMessage) ||
+            (errorCode && { errorCode }))
         })
       ]
     : []

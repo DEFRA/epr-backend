@@ -1,6 +1,8 @@
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
 /** @import {ValidationCategory, ValidationCode, ValidationSeverity} from '#common/enums/validation.js' */
+/** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
+/** @import {Year} from '#common/helpers/dates/year.js' */
 
 /**
  * What a summary log issue is about, which decides where it is and what else
@@ -34,6 +36,38 @@ export const ISSUE_KIND = Object.freeze({
  */
 
 /**
+ * The fields each cell message fills in, by its error code.
+ *
+ * @typedef {{
+ *   DATE_AFTER_SUMMARY_LOG_YEAR: { expected: Year },
+ *   DATE_BEFORE_SUMMARY_LOG_YEAR: { deadline: CalendarDate, expected: Year },
+ *   PREVIOUS_YEAR_ROW_NOT_FOUND: { expected: Year },
+ *   PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR: { expected: Year, previousYearRowId: string },
+ *   PREVIOUS_YEAR_ROW_REPATRIATED: { expected: Year, previousYearRowId: string },
+ *   PREVIOUS_YEAR_ROW_VALUE_DIFFERS: { deadline: CalendarDate, expected: Year, previousYearRowId: string }
+ * }} CellMessageFields
+ */
+
+/** @typedef {keyof CellMessageFields} CellMessageCode */
+
+/**
+ * A cell message and the fields it fills in.
+ *
+ * @typedef {{ [Code in CellMessageCode]: { errorCode: Code } & CellMessageFields[Code] }[CellMessageCode]} CellMessage
+ */
+
+/**
+ * Any other cell issue, which may name a specific error code but fills in
+ * none of a cell message's fields.
+ *
+ * @typedef {{
+ *   deadline?: never,
+ *   errorCode?: Exclude<ValidationCode, CellMessageCode>,
+ *   previousYearRowId?: never
+ * }} OtherCellMessage
+ */
+
+/**
  * @typedef {{
  *   category: ValidationCategory,
  *   code: ValidationCode,
@@ -61,7 +95,7 @@ export const ISSUE_KIND = Object.freeze({
  * @typedef {IssueBasics & { kind: 'meta', severity: 'fatal', context: ContextAt<MetaLocation> }} MetaIssue
  * @typedef {IssueBasics & { kind: 'table', severity: 'fatal', context: ContextAt<TableLocation> }} TableIssue
  * @typedef {IssueBasics & { kind: 'removedRow', severity: 'fatal', context: ContextAt<RemovedRowLocation> }} RemovedRowIssue
- * @typedef {IssueBasics & { kind: 'cell', severity: ValidationSeverity, context: ContextAt<TableCellLocation> }} CellIssue
+ * @typedef {IssueBasics & { kind: 'cell', severity: ValidationSeverity, context: ContextAt<TableCellLocation> & (CellMessage | OtherCellMessage) }} CellIssue
  */
 
 /**
@@ -129,7 +163,7 @@ export const removedRowIssue = ({ category, code, message, ...context }) => ({
 })
 
 /**
- * @param {LocatedIssueParams<TableCellLocation> & { severity: ValidationSeverity }} params
+ * @param {LocatedIssueParams<TableCellLocation> & { severity: ValidationSeverity } & (CellMessage | OtherCellMessage)} params
  * @returns {CellIssue}
  */
 export const cellIssue = ({

@@ -7,9 +7,11 @@ import {
   lastCorrectionDay
 } from '#domain/summary-logs/correction-deadline.js'
 import { customJoi } from '#common/validation/custom-joi.js'
+import { VALIDATION_CODE } from '#common/enums/validation.js'
 import { rowValidationOptionsOf } from '../validation-pipeline.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {CellMessage} from '#common/validation/validation-issue-kinds.js' */
 
 /**
  * Common field schema factories for table validation
@@ -36,6 +38,17 @@ export const AFTER_SUMMARY_LOG_YEAR_ERROR = 'date.afterSummaryLogYear'
 export const BEFORE_SUMMARY_LOG_YEAR_ERROR = 'date.beforeSummaryLogYear'
 
 /**
+ * A Joi error that carries the cell message it fills in.
+ *
+ * @param {import('joi').CustomHelpers} helpers
+ * @param {string} type
+ * @param {CellMessage} cellMessage
+ * @returns {import('joi').ErrorReport}
+ */
+const cellMessageError = (helpers, type, cellMessage) =>
+  helpers.error(type, { cellMessage })
+
+/**
  * Rejects a YYYY-MM-DD date in a later year than the `summaryLogYear` in the
  * Joi validation context. Without one, the date is not checked.
  *
@@ -46,7 +59,10 @@ export const BEFORE_SUMMARY_LOG_YEAR_ERROR = 'date.beforeSummaryLogYear'
 const rejectAfterSummaryLogYear = (dateStr, helpers) => {
   const { summaryLogYear } = rowValidationOptionsOf(helpers)
   return summaryLogYear !== undefined && dateStr > lastDayOfYear(summaryLogYear)
-    ? helpers.error(AFTER_SUMMARY_LOG_YEAR_ERROR, { expected: summaryLogYear })
+    ? cellMessageError(helpers, AFTER_SUMMARY_LOG_YEAR_ERROR, {
+        errorCode: VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
+        expected: summaryLogYear
+      })
     : dateStr
 }
 
@@ -70,7 +86,8 @@ const rejectOpenEarlierYear = (dateStr, helpers) => {
   const registration = { registeredOnly: options.registeredOnly }
   return dateYear < options.summaryLogYear &&
     isBeforeCorrectionDeadline(dateYear, registration, options.createdAt)
-    ? helpers.error(BEFORE_SUMMARY_LOG_YEAR_ERROR, {
+    ? cellMessageError(helpers, BEFORE_SUMMARY_LOG_YEAR_ERROR, {
+        errorCode: VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR,
         expected: options.summaryLogYear,
         deadline: lastCorrectionDay(dateYear, registration)
       })

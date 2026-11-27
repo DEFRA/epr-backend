@@ -6,6 +6,9 @@ import {
   tableIssue
 } from './validation-issue-kinds.js'
 
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
+
 /** @import {ValidationSeverity} from '#common/enums/validation.js' */
 
 describe('validation issue kinds', () => {
@@ -163,6 +166,58 @@ describe('validation issue kinds', () => {
 
     /** @type {ValidationSeverity[]} */
     const SEVERITIES = ['fatal', 'error', 'warning']
+
+    it('should carry the fields its cell message fills in', () => {
+      expect(
+        cellIssue({
+          severity: 'error',
+          category: 'technical',
+          message: 'Date is in an earlier year still open',
+          code: 'INVALID_DATE',
+          location,
+          errorCode: 'DATE_BEFORE_SUMMARY_LOG_YEAR',
+          expected: toYear(2027),
+          deadline: toCalendarDate('2027-02-27')
+        }).context
+      ).toStrictEqual({
+        location,
+        errorCode: 'DATE_BEFORE_SUMMARY_LOG_YEAR',
+        expected: 2027,
+        deadline: '2027-02-27'
+      })
+    })
+
+    it('should not be built without the fields its cell message fills in', () => {
+      const withoutDeadline = () =>
+        // @ts-expect-error -- this message needs the deadline
+        cellIssue({
+          severity: 'error',
+          category: 'technical',
+          message: 'Date is in an earlier year still open',
+          code: 'INVALID_DATE',
+          location,
+          errorCode: 'DATE_BEFORE_SUMMARY_LOG_YEAR',
+          expected: toYear(2027)
+        })
+
+      expect(withoutDeadline).toBeTypeOf('function')
+    })
+
+    it('should not carry a cell message field its code does not fill in', () => {
+      const withStrayDeadline = () =>
+        // @ts-expect-error -- only some cell messages give a deadline
+        cellIssue({
+          severity: 'error',
+          category: 'technical',
+          message: 'Must be a number',
+          code: 'INVALID_TYPE',
+          location,
+          errorCode: 'MUST_BE_A_NUMBER',
+          deadline: toCalendarDate('2027-02-27')
+        })
+
+      expect(withStrayDeadline).toBeTypeOf('function')
+    })
 
     it.for(SEVERITIES)('should be a %s issue at a cell', (severity) => {
       expect(

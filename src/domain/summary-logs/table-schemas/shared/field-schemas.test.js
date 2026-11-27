@@ -190,7 +190,12 @@ describe('field-schemas', () => {
         expect(error?.details[0]).toMatchObject({
           type: 'date.afterSummaryLogYear',
           message: 'must not be in a later year than the summary log',
-          context: { expected: 2026 }
+          context: {
+            cellMessage: {
+              errorCode: 'DATE_AFTER_SUMMARY_LOG_YEAR',
+              expected: 2026
+            }
+          }
         })
       })
 
@@ -234,7 +239,13 @@ describe('field-schemas', () => {
             type: 'date.beforeSummaryLogYear',
             message:
               'must not be in an earlier year whose summary log is still open',
-            context: { expected: 2027, deadline }
+            context: {
+              cellMessage: {
+                errorCode: 'DATE_BEFORE_SUMMARY_LOG_YEAR',
+                expected: 2027,
+                deadline
+              }
+            }
           })
         }
       )
@@ -301,7 +312,12 @@ describe('field-schemas', () => {
       const { error } = schema.validate('2027-01-01', { context })
       expect(error?.details[0]).toMatchObject({
         type: 'date.afterSummaryLogYear',
-        context: { expected: 2026 }
+        context: {
+          cellMessage: {
+            errorCode: 'DATE_AFTER_SUMMARY_LOG_YEAR',
+            expected: 2026
+          }
+        }
       })
     })
 

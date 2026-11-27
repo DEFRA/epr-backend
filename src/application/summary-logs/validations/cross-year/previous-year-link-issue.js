@@ -9,29 +9,32 @@ import { cellIssue } from '#common/validation/validation-issue-kinds.js'
 
 import { buildCellLocation } from '../data-syntax.js'
 
-/** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
+/** @import {CellMessageCode, CellMessageFields} from '#common/validation/validation-issue-kinds.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {LinkedRow} from './index.js' */
 /** @import {PreviousYearLink} from '../../fill-in-linked-rows.js' */
 
+/** @typedef {Extract<CellMessageCode, `PREVIOUS_YEAR_ROW_${string}`>} PreviousYearLinkCode */
+
+/**
+ * What a link error fills in besides the previous year, which every one gives.
+ *
+ * @typedef {{ [Code in PreviousYearLinkCode]: { errorCode: Code } & Omit<CellMessageFields[Code], 'expected'> }[PreviousYearLinkCode]} PreviousYearLinkMessage
+ */
+
 /**
  * @param {{
- *   errorCode: string,
  *   field: string,
  *   linkedRow: Pick<LinkedRow<PreviousYearLink>, 'rowId' | 'options' | 'issueLocation'>,
- *   enteredValue: unknown,
- *   previousYearRowId?: string,
- *   deadline?: CalendarDate
- * }} params
+ *   enteredValue: unknown
+ * } & PreviousYearLinkMessage} params
  * @returns {ValidationIssue[]} the issue, or none where the table has no column for the field
  */
 export const toPreviousYearLinkIssue = ({
-  errorCode,
   field,
   linkedRow,
   enteredValue,
-  previousYearRowId,
-  deadline
+  ...linkMessage
 }) => {
   const { headerToIndexMap, tableName, rowNumber, location } =
     linkedRow.issueLocation
@@ -48,14 +51,12 @@ export const toPreviousYearLinkIssue = ({
         cellIssue({
           severity: VALIDATION_SEVERITY.FATAL,
           category: VALIDATION_CATEGORY.BUSINESS,
-          message: `Previous year link ${errorCode} in column '${field}'`,
+          message: `Previous year link ${linkMessage.errorCode} in column '${field}'`,
           code: VALIDATION_CODE.PREVIOUS_YEAR_LINK,
           location: cellLocation,
           actual: enteredValue,
           expected: previousYear(linkedRow.options.summaryLogYear),
-          errorCode,
-          ...(previousYearRowId && { previousYearRowId }),
-          ...(deadline && { deadline })
+          ...linkMessage
         })
       ]
     : []

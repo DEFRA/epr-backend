@@ -1,5 +1,5 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
+/** @import {CellMessage} from '#common/validation/validation-issue-kinds.js' */
 import {
   CLASSIFICATION_REASON,
   ORS_VALIDATION_DISABLED
@@ -168,7 +168,7 @@ export const rowValidationOptionsOf = (helpers) =>
 
 /**
  * Issue from validation pipeline when a field fails schema validation (VAL010)
- * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string, expected?: unknown, deadline?: CalendarDate }} ValidationErrorIssue
+ * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message: string, type: string, cellMessage?: CellMessage }} ValidationErrorIssue
  */
 
 /**
@@ -196,11 +196,8 @@ export const toValidationErrorIssue = (
   field,
   message: detail.message,
   type: detail.type,
-  ...(detail.context?.expected !== undefined && {
-    expected: detail.context.expected
-  }),
-  ...(detail.context?.deadline !== undefined && {
-    deadline: detail.context.deadline
+  ...(detail.context?.cellMessage !== undefined && {
+    cellMessage: detail.context.cellMessage
   })
 })
 

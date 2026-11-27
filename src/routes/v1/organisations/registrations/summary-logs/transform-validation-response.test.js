@@ -1,4 +1,6 @@
 import { transformValidationResponse } from './transform-validation-response.js'
+import { toCalendarDate } from '#common/helpers/date-formatter.js'
+import { toYear } from '#common/helpers/dates/year.js'
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 import {
   cellIssue,
@@ -105,7 +107,7 @@ describe('transformValidationResponse', () => {
               header: 'DATE_RECEIVED_BY_OSR'
             },
             actual: '2026-12-14',
-            expected: 2026,
+            expected: toYear(2026),
             errorCode: 'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
             previousYearRowId: '1000'
           })
@@ -422,8 +424,8 @@ describe('transformValidationResponse', () => {
               header: 'DATE_OF_EXPORT'
             },
             actual: '2026-12-30',
-            expected: 2027,
-            deadline: '2027-02-28',
+            expected: toYear(2027),
+            deadline: toCalendarDate('2027-02-28'),
             errorCode: 'DATE_BEFORE_SUMMARY_LOG_YEAR'
           })
         ]
@@ -456,7 +458,7 @@ describe('transformValidationResponse', () => {
               header: 'DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED'
             },
             actual: '2026-12-20',
-            expected: 2026,
+            expected: toYear(2026),
             errorCode: 'PREVIOUS_YEAR_ROW_REPATRIATED',
             previousYearRowId: '1000'
           })
