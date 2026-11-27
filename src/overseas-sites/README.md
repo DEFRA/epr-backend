@@ -6,7 +6,7 @@ Code outside the module imports from three entry points, and each lists its expo
 
 - **`index.js`** is the public interface: the overseas site types, the types of the overseas sites and ORS imports repository ports, the type of the executor that sends ORS import commands, the commands themselves and the approval rule. It loads no route, adapter or Hapi code.
 - **`plugin.js`** holds the module's production plugins: the overseas sites routes and the MongoDB adapters of both repositories. It also exports the ORS import command handlers that the queue consumer runs. Only code in `src/server`, `src/plugins` and `src/test` may import it.
-- **`test-support.js`** holds what tests need: the in-memory overseas sites repository, the plugins of both in-memory repositories, the MongoDB overseas sites repository and the overseas site builder. Only a test may import it. The test server registers those plugins.
+- **`test-support.js`** holds what tests need: the in-memory overseas sites repository, the plugins of both in-memory repositories and the overseas site builder. Only a test may import it. The test server registers those plugins. It also still exports the MongoDB overseas sites repository for the tests that build a server on a real database, and that export is to go.
 
 [`src/modules.md`](../modules.md) describes the shape every module takes.
 
