@@ -13,6 +13,10 @@ const registersSwagger = (isSwaggerEnabled) =>
     (entry) => entry.plugin === HapiSwagger
   )
 
+/** @param {{ modules?: boolean }} [options] */
+const registersModuleRoutes = (options) =>
+  serverPlugins(getConfig(), [], options).includes(wasteRecordsExport)
+
 /**
  * @param {object} [configOverrides]
  * @param {{ modules?: boolean }} [options]
@@ -31,8 +35,8 @@ describe('serverPlugins', () => {
     expect(registersSwagger(false)).toBe(false)
   })
 
-  it("registers the waste records export's routes", () => {
-    expect(serverPlugins(getConfig(), [])).toContain(wasteRecordsExport)
+  it("registers the modules' route plugins", () => {
+    expect(registersModuleRoutes()).toBe(true)
   })
 
   it('registers the PRN routes without admin cancellation when its flag is off', () => {
@@ -46,9 +50,7 @@ describe('serverPlugins', () => {
   })
 
   it("leaves the modules' route plugins out when asked for none", () => {
-    expect(serverPlugins(getConfig(), [], { modules: false })).not.toContain(
-      wasteRecordsExport
-    )
+    expect(registersModuleRoutes({ modules: false })).toBe(false)
     expect(prnRoutesEntry({}, { modules: false })).toBeUndefined()
   })
 })
