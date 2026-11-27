@@ -28,7 +28,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { prnTonnagePath } from './get.js'
+import { prnTonnagePath } from './prn-tonnage.js'
 
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
 

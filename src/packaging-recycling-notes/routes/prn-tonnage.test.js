@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { getPrnTonnage, prnTonnagePath } from './get.js'
+import { getPrnTonnage, prnTonnagePath } from './prn-tonnage.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES

@@ -8,7 +8,7 @@ import {
   prnRoutesByNaturalKey
 } from './routes/by-natural-key.js'
 import { packagingRecyclingNotesList } from './routes/list.js'
-import { getPrnTonnage } from './routes/prn-tonnage/get.js'
+import { getPrnTonnage } from './routes/prn-tonnage.js'
 import { packagingRecyclingNotesReject } from './routes/reject.js'
 
 export { prnEventsPlugin } from './application/prn-events.plugin.js'
