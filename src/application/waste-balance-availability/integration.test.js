@@ -22,7 +22,7 @@ import {
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import {
-  createOrganisationReadRepository,
+  createMongoOrganisationReadRepository,
   buildExternalAccreditation
 } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -142,7 +142,7 @@ describe('aggregateAvailableBalance - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationReadRepository = createOrganisationReadRepository(db)({
+      organisationReadRepository = createMongoOrganisationReadRepository(db)({
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         logger: { warn: () => {} }
       })

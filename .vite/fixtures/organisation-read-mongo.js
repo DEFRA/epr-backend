@@ -6,7 +6,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import {
   createMongoExternalAccreditationsRepository,
-  createOrganisationReadRepository
+  createMongoOrganisationReadRepository
 } from '#organisation-read-model/test-support.js'
 
 /** @import { TestAPI } from 'vitest' */
@@ -97,7 +97,7 @@ export const it = /** @type {TestAPI<MongoFixtures>} */ (
           await externalAccreditationsRepository.upsert(externalAccreditation)
         }
 
-        return createOrganisationReadRepository(database)({
+        return createMongoOrganisationReadRepository(database)({
           overseasSitesRepository: (
             await createOverseasSitesRepository(database)
           )(),

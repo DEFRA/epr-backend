@@ -60,10 +60,9 @@ const moduleRoutePlugins = (config) => [
     plugin: organisationsRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
   },
-  {
-    plugin: organisationReadModelDevRoutesPlugin,
-    options: { devEndpoints: config.get('featureFlags.devEndpoints') }
-  },
+  ...(config.get('featureFlags.devEndpoints')
+    ? [organisationReadModelDevRoutesPlugin]
+    : []),
   registrationAccreditationAdminRoutesPlugin,
   wasteRecordsExport
 ]

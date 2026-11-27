@@ -10,7 +10,7 @@ import { externalAccreditationPayloadSchema } from './put.schema.js'
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
-/** @import { ExternalAccreditationsRepository } from '#organisation-read-model/external-accreditations/port.js' */
+/** @import { ExternalAccreditationsRepository } from '#organisation-read-model/external-accreditations/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
 /** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
 

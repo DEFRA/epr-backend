@@ -1,6 +1,6 @@
 import { portAdapter } from '#plugins/port-adapter.js'
-import { createMongoExternalAccreditationsRepository } from './external-accreditations/mongodb.js'
-import { createOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
+import { createMongoExternalAccreditationsRepository } from './external-accreditations/repository/mongodb.js'
+import { createMongoOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
 import { devExternalAccreditationPut } from './routes/external-accreditations/put.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
@@ -17,7 +17,7 @@ export const organisationReadRepositoryPlugin = portAdapter({
 
   /** @param {{ regAccredApi?: RegAccredApiConfig }} options */
   build: ({ regAccredApi }, { mongodb, overseasSitesRepository }) => {
-    const createRepository = createOrganisationReadRepository(mongodb, {
+    const createRepository = createMongoOrganisationReadRepository(mongodb, {
       regAccredApi
     })
     return ({ logger }) => createRepository({ overseasSitesRepository, logger })
@@ -38,23 +38,18 @@ export const externalAccreditationsRepositoryPlugin = portAdapter({
 })
 
 /**
- * The read model's dev routes, which store external accreditations. Without
- * `devEndpoints` it adds no route.
+ * The read model's dev routes, which store external accreditations. Only a
+ * server with dev endpoints registers it.
  */
 export const organisationReadModelDevRoutesPlugin = {
   name: 'organisation-read-model-dev-routes',
+  dependencies: [
+    'organisationReadRepository',
+    'externalAccreditationsRepository'
+  ],
 
-  /**
-   * @param {HapiServer} server
-   * @param {{ devEndpoints: boolean }} options
-   */
-  register: (server, { devEndpoints }) => {
-    if (devEndpoints) {
-      server.dependency([
-        'organisationReadRepository',
-        'externalAccreditationsRepository'
-      ])
-      server.route([devExternalAccreditationPut])
-    }
+  /** @param {HapiServer} server */
+  register: (server) => {
+    server.route([devExternalAccreditationPut])
   }
 }

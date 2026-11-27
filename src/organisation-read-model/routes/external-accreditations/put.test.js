@@ -9,13 +9,13 @@ import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
   buildExternalAccreditation,
+  createInMemoryExternalAccreditationsRepository,
   createInMemoryOrganisationReadRepository,
   buildReadExporterRegistration,
   buildReadOrganisation,
   buildReadReprocessorRegistration
 } from '#organisation-read-model/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createMockExternalAccreditationsRepository } from '#test/mock-repositories.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const {
@@ -33,16 +33,22 @@ const urlFor = (number) => `/v1/dev/external-accreditations/${number}/${year}`
 /** A registration only another organisation holds. */
 const OTHER_ORGANISATIONS_NUMBER = toRegistrationNumber('R26ER5009990001PL')
 
-/** @param {{ devEndpoints: boolean }} featureFlags */
+/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+
+/**
+ * A server whose external accreditations repository holds what it stores in
+ * `held`.
+ *
+ * @param {{ devEndpoints: boolean }} featureFlags
+ */
 const serverWith = async (featureFlags) => {
-  const externalAccreditationsRepository =
-    createMockExternalAccreditationsRepository({
-      upsert: vi.fn(async (accreditation) => accreditation)
-    })
+  /** @type {ExternalAccreditation[]} */
+  const held = []
   const server = await createTestServer({
     config: { featureFlags },
     repositories: {
-      externalAccreditationsRepository,
+      externalAccreditationsRepository:
+        createInMemoryExternalAccreditationsRepository(held),
       organisationReadRepository: createInMemoryOrganisationReadRepository([
         buildReadOrganisation({
           organisationNumber: fields.organisationNumber,
@@ -60,7 +66,7 @@ const serverWith = async (featureFlags) => {
       ])
     }
   })
-  return { server, externalAccreditationsRepository }
+  return { server, held }
 }
 
 describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () => {
@@ -75,7 +81,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
   })
 
   it('stores the accreditation for the registration and year', async () => {
-    const { server, externalAccreditationsRepository } = await serverWith({
+    const { server, held } = await serverWith({
       devEndpoints: true
     })
 
@@ -83,13 +89,11 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(response.result).toStrictEqual(buildExternalAccreditation())
-    expect(externalAccreditationsRepository.upsert).toHaveBeenCalledWith(
-      buildExternalAccreditation()
-    )
+    expect(held).toStrictEqual([buildExternalAccreditation()])
   })
 
   it('stores the timeline oldest first, with the latest change as the current status', async () => {
-    const { server, externalAccreditationsRepository } = await serverWith({
+    const { server, held } = await serverWith({
       devEndpoints: true
     })
     const approved = {
@@ -111,7 +115,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       }
     })
 
-    expect(externalAccreditationsRepository.upsert).toHaveBeenCalledWith(
+    expect(held).toStrictEqual([
       buildExternalAccreditation({
         status: {
           current: 'suspended',
@@ -119,11 +123,11 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
           timeline: [approved, suspended]
         }
       })
-    )
+    ])
   })
 
   it("stores an exporter's accreditation without overseas sites, as they are lifted from the registration", async () => {
-    const { server, externalAccreditationsRepository } = await serverWith({
+    const { server, held } = await serverWith({
       devEndpoints: true
     })
     const exporterAccreditation = buildExternalAccreditation({
@@ -138,13 +142,11 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     expect(response.result).toStrictEqual(exporterAccreditation)
-    expect(externalAccreditationsRepository.upsert).toHaveBeenCalledWith(
-      exporterAccreditation
-    )
+    expect(held).toStrictEqual([exporterAccreditation])
   })
 
   it('refuses an accreditation with overseas sites', async () => {
-    const { server, externalAccreditationsRepository } = await serverWith({
+    const { server, held } = await serverWith({
       devEndpoints: true
     })
 
@@ -163,7 +165,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     expect(JSON.parse(response.payload).message).toBe(
       '"overseasSites" is not allowed'
     )
-    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+    expect(held).toStrictEqual([])
   })
 
   it.for([
@@ -185,7 +187,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
   ])(
     'refuses an accreditation for $description',
     async ({ number, organisationNumber }) => {
-      const { server, externalAccreditationsRepository } = await serverWith({
+      const { server, held } = await serverWith({
         devEndpoints: true
       })
 
@@ -199,7 +201,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       expect(JSON.parse(response.payload).message).toBe(
         `Organisation ${organisationNumber} holds no registration ${number}`
       )
-      expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+      expect(held).toStrictEqual([])
     }
   )
 
@@ -230,7 +232,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       }
     }
   ])('refuses $description', async ({ status }) => {
-    const { server, externalAccreditationsRepository } = await serverWith({
+    const { server, held } = await serverWith({
       devEndpoints: true
     })
 
@@ -241,7 +243,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+    expect(held).toStrictEqual([])
   })
 
   it.for([
@@ -254,7 +256,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       organisationNumber: 'ABC123'
     }
   ])('refuses $description', async ({ organisationNumber }) => {
-    const { server, externalAccreditationsRepository } = await serverWith({
+    const { server, held } = await serverWith({
       devEndpoints: true
     })
 
@@ -265,7 +267,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+    expect(held).toStrictEqual([])
   })
 
   it('refuses a year that is not a number', async () => {
@@ -283,7 +285,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
   it.for([2026, 2028])(
     'refuses %i, as the read model loads external accreditations for 2027 only',
     async (otherYear) => {
-      const { server, externalAccreditationsRepository } = await serverWith({
+      const { server, held } = await serverWith({
         devEndpoints: true
       })
 
@@ -294,7 +296,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+      expect(held).toStrictEqual([])
     }
   )
 
@@ -319,7 +321,7 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
   })
 
   it('refuses a status change not timed as a UTC date-time', async () => {
-    const { server, externalAccreditationsRepository } = await serverWith({
+    const { server, held } = await serverWith({
       devEndpoints: true
     })
 
@@ -336,6 +338,6 @@ describe('PUT /v1/dev/external-accreditations/{registrationNumber}/{year}', () =
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(externalAccreditationsRepository.upsert).not.toHaveBeenCalled()
+    expect(held).toStrictEqual([])
   })
 })

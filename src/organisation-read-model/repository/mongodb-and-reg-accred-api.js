@@ -99,7 +99,7 @@ const createMongoExternalAccreditationsLoader =
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
  */
-export const createOrganisationReadRepository =
+export const createMongoOrganisationReadRepository =
   (db, { regAccredApi } = {}) =>
   (dependencies) => {
     const loadExternalAccreditations = whileYearIsOpen(

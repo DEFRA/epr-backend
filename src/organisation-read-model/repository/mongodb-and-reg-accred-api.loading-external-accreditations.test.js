@@ -21,7 +21,7 @@ import {
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './external-accreditation-sources.js'
-import { createOrganisationReadRepository } from './mongodb-and-reg-accred-api.js'
+import { createMongoOrganisationReadRepository } from './mongodb-and-reg-accred-api.js'
 
 /** @import { MongoClient } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -114,7 +114,7 @@ const repositoryWith = async (
   logger = { warn: () => {} }
 ) => {
   const database = mongoClient.db('epr-backend')
-  return createOrganisationReadRepository(
+  return createMongoOrganisationReadRepository(
     database,
     options
   )({
