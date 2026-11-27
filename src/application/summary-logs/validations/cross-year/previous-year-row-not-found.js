@@ -10,7 +10,7 @@ import { toPreviousYearLinkIssue } from './previous-year-link-issue.js'
  * A previous year row ID the data syntax check rejects gets only that error.
  *
  * @param {LinkedRow<NotFoundPreviousYearLink>} linkedRow
- * @returns {ValidationIssue[]}
+ * @returns {readonly ValidationIssue[]}
  */
 export const previousYearRowNotFound = (linkedRow) => {
   const field = linkedRow.linking.previousYearRowIdField

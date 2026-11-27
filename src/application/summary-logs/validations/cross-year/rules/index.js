@@ -5,7 +5,7 @@ import { previousYearRowMissingData } from './previous-year-row-missing-data.js'
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {FoundLinkedRow} from '../index.js' */
 
-/** @typedef {(linkedRow: FoundLinkedRow) => ValidationIssue[]} LinkedRowCheck */
+/** @typedef {(linkedRow: FoundLinkedRow) => readonly ValidationIssue[]} LinkedRowCheck */
 
 /**
  * The rules on a row linked to a previous year's row, in the order their
