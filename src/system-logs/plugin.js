@@ -1,5 +1,5 @@
 import { portAdapter } from '#plugins/port-adapter.js'
-import { createSystemLogsRepository } from './repository/mongodb.js'
+import { createMongoSystemLogsRepository } from './repository/mongodb.js'
 import { systemLogsGetSearch } from './routes/get-search.js'
 
 /**
@@ -13,7 +13,7 @@ export const systemLogsRepositoryPlugin = portAdapter({
   provides: 'systemLogsRepository',
   needs: ['mongodb'],
   build: async (_options, { mongodb }) => {
-    const createRepository = await createSystemLogsRepository(mongodb)
+    const createRepository = await createMongoSystemLogsRepository(mongodb)
     return ({ logger }) => createRepository(logger)
   }
 })

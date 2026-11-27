@@ -3,7 +3,7 @@
 import {
   SUMMARY_LOG_SUB_CATEGORY,
   SUMMARY_LOG_SUBMIT_ACTION
-} from '#root/auditing/summary-logs.js'
+} from '../index.js'
 import { buildPage } from './pagination.js'
 
 /** Encode a numeric ID as a 24-char hex string (matching ObjectId format) */

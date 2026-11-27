@@ -15,4 +15,6 @@
 /** @typedef {import('./repository/port.js').SystemLogHumanActor} SystemLogHumanActor */
 /** @typedef {import('./repository/port.js').SystemLogsRepository} SystemLogsRepository */
 
-export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc typedefs
+/** The sub-category and action of the system log that a summary log submission records. */
+export const SUMMARY_LOG_SUB_CATEGORY = 'summary-log'
+export const SUMMARY_LOG_SUBMIT_ACTION = 'submit'

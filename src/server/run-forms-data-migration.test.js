@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runFormsDataMigration } from './run-forms-data-migration.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { partialMock } from '#test/type-helpers.js'
 
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
@@ -18,12 +16,6 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 vi.mock('#formsubmission/migration/migration-orchestrator.js', () => ({
   createFormDataMigrator: vi.fn()
-}))
-vi.mock('#repositories/form-submissions/mongodb.js', () => ({
-  createFormSubmissionsRepository: vi.fn()
-}))
-vi.mock('#repositories/organisations/mongodb.js', () => ({
-  createOrganisationsRepository: vi.fn()
 }))
 
 describe('runFormsDataMigration', () => {
@@ -54,19 +46,17 @@ describe('runFormsDataMigration', () => {
     }
 
     mockServer = {
-      app: { systemLogsRepository: mockSystemLogsRepository },
+      app: {
+        formSubmissionsRepository: mockFormSubmissionsRepository,
+        organisationAdministrationRepository: mockOrganisationsRepository,
+        systemLogsRepository: mockSystemLogsRepository
+      },
       db: {},
       locker: {
         lock: vi.fn().mockResolvedValue(mockLock)
       }
     }
 
-    vi.mocked(createFormSubmissionsRepository).mockResolvedValue(
-      () => mockFormSubmissionsRepository
-    )
-    vi.mocked(createOrganisationsRepository).mockResolvedValue(
-      () => mockOrganisationsRepository
-    )
     vi.mocked(createFormDataMigrator).mockReturnValue(mockFormsDataMigration)
 
     logger.info = vi.fn()
@@ -106,15 +96,17 @@ describe('runFormsDataMigration', () => {
     expect(mockLock.free).toHaveBeenCalled()
   })
 
-  it('should migrate nothing when the server has no system logs repository', async () => {
-    mockServer.app = {}
+  it('should migrate nothing when the server lacks a repository it needs', async () => {
+    mockServer.app = {
+      formSubmissionsRepository: mockFormSubmissionsRepository
+    }
 
     await runFormsDataMigration(mockServer)
 
     expect(logger.error).toHaveBeenCalledWith({
       message: 'Failed to run form data migration',
       err: new Error(
-        'The system logs repository is not registered on the server'
+        'The server has not registered organisationAdministrationRepository, systemLogsRepository'
       )
     })
     expect(mockServer.locker.lock).not.toHaveBeenCalled()

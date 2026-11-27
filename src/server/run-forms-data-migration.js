@@ -1,7 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createFormsFileUploadsRepository } from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
 import { config } from '../config.js'
@@ -17,11 +15,20 @@ export const runFormsDataMigration = async (server) => {
       message: 'Starting form data migration'
     })
 
-    const { systemLogsRepository } = server.app
-    if (!systemLogsRepository) {
-      throw new Error(
-        'The system logs repository is not registered on the server'
-      )
+    const {
+      formSubmissionsRepository,
+      organisationAdministrationRepository,
+      systemLogsRepository
+    } = server.app
+    const missing = Object.entries({
+      formSubmissionsRepository,
+      organisationAdministrationRepository,
+      systemLogsRepository
+    })
+      .filter(([, repository]) => !repository)
+      .map(([name]) => name)
+    if (missing.length > 0) {
+      throw new Error(`The server has not registered ${missing.join(', ')}`)
     }
 
     const lock = await server.locker.lock('forms-data-migration')
@@ -32,16 +39,6 @@ export const runFormsDataMigration = async (server) => {
       return
     }
     try {
-      const organisationAdministrationRepository = (
-        await createOrganisationsRepository(server.db)
-      )()
-      const formSubmissionsRepository = (
-        await createFormSubmissionsRepository(
-          server.db,
-          logger,
-          organisationAdministrationRepository
-        )
-      )()
       const s3Client = createS3Client({
         region: config.get('awsRegion'),
         endpoint: config.get('s3Endpoint'),

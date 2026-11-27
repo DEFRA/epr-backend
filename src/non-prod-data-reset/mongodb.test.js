@@ -29,7 +29,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { buildSystemLog } from '#system-logs/test-support.js'
-import { createSystemLogsRepository } from '#system-logs/test-support.js'
+import { createMongoSystemLogsRepository } from '#system-logs/test-support.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildSummaryLogRowStateEntry,
@@ -127,7 +127,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
         mockS3Config
       )
       const overseasSitesFactory = await createOverseasSitesRepository(database)
-      const systemLogsFactory = await createSystemLogsRepository(database)
+      const systemLogsFactory = await createMongoSystemLogsRepository(database)
       const summaryLogRowStatesFactory =
         await createMongoSummaryLogRowStatesRepository(database)
       const externalAccreditationsFactory =

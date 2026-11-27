@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import {
   SUMMARY_LOG_SUB_CATEGORY,
   SUMMARY_LOG_SUBMIT_ACTION
-} from '#root/auditing/summary-logs.js'
+} from '../index.js'
 import { buildPage } from './pagination.js'
 
 /** @import { Collection, Db } from 'mongodb' */
@@ -172,7 +172,7 @@ const performFindSummaryLogSubmitActors = (db) => async (summaryLogIds) => {
  * @param {Db} db - MongoDB database instance
  * @returns {Promise<SystemLogsRepositoryFactory>}
  */
-export const createSystemLogsRepository = async (db) => {
+export const createMongoSystemLogsRepository = async (db) => {
   await ensureCollection(db)
 
   return (logger) => ({

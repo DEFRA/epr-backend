@@ -4,7 +4,7 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { SUMMARY_LOG_SUB_CATEGORY } from '#root/auditing/summary-logs.js'
+import { SUMMARY_LOG_SUB_CATEGORY } from '#system-logs/index.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createAndSubmitReport } from '#reports/repository/contract/test-data.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
