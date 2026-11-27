@@ -705,6 +705,11 @@ export const openNextYear = () => {
   onTestFinished(() => config.reset('openNextYear'))
 }
 
+export const rejectFutureDates = () => {
+  config.set('featureFlags.rejectFutureDates', true)
+  onTestFinished(() => config.reset('featureFlags.rejectFutureDates'))
+}
+
 /**
  * Fakes only `Date`, so the summary log's upload date is `uploadedAt` while
  * timers still run.
