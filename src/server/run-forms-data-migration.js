@@ -17,6 +17,13 @@ export const runFormsDataMigration = async (server) => {
       message: 'Starting form data migration'
     })
 
+    const { systemLogsRepository } = server.app
+    if (!systemLogsRepository) {
+      throw new Error(
+        'The system logs repository is not registered on the server'
+      )
+    }
+
     const lock = await server.locker.lock('forms-data-migration')
     if (!lock) {
       logger.info({
@@ -47,7 +54,7 @@ export const runFormsDataMigration = async (server) => {
       const formsDataMigration = createFormDataMigrator(
         formSubmissionsRepository,
         organisationAdministrationRepository,
-        server.app.systemLogsRepository,
+        systemLogsRepository,
         formsFileUploadsRepository
       )
 

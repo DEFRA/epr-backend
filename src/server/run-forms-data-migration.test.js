@@ -106,6 +106,21 @@ describe('runFormsDataMigration', () => {
     expect(mockLock.free).toHaveBeenCalled()
   })
 
+  it('should migrate nothing when the server has no system logs repository', async () => {
+    mockServer.app = {}
+
+    await runFormsDataMigration(mockServer)
+
+    expect(logger.error).toHaveBeenCalledWith({
+      message: 'Failed to run form data migration',
+      err: new Error(
+        'The system logs repository is not registered on the server'
+      )
+    })
+    expect(mockServer.locker.lock).not.toHaveBeenCalled()
+    expect(createFormDataMigrator).not.toHaveBeenCalled()
+  })
+
   it('should skip migration when unable to obtain lock', async () => {
     mockServer.locker.lock.mockResolvedValue(null)
 

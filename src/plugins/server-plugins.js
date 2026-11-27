@@ -55,7 +55,7 @@ function getSwaggerPlugins() {
  *
  * @param {ReturnType<typeof import('#root/config.js').getConfig>} config
  */
-const moduleRoutePlugins = (config) => [
+export const moduleRoutePlugins = (config) => [
   {
     plugin: organisationsRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
