@@ -1,24 +1,38 @@
 import { createFormSubmissionsRepository } from './mongodb.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 
+/** @import { Server } from '@hapi/hapi' */
+/** @import { Db } from 'mongodb' */
 /** @import { ServerApp } from '#common/hapi-types.js' */
 
-export const mongoFormSubmissionsRepositoryPlugin = {
+/**
+ * The MongoDB adapter for the form submissions port. It is not made with
+ * `portAdapter`, because the organisations repository's plugin is not named
+ * after the port this adapter needs.
+ */
+export const formSubmissionsRepositoryPlugin = {
   name: 'formSubmissionsRepository',
   version: '1.0.0',
-  dependencies: ['mongodb', 'organisationsRepository'],
 
-  register: async (server) => {
-    const { organisationAdministrationRepository } = /** @type {ServerApp} */ (
-      server.app
-    )
-    const factory = await createFormSubmissionsRepository(
-      server.db,
-      server.logger,
-      organisationAdministrationRepository
-    )
-    const repository = factory()
+  /** @param {Server} server */
+  register: (server) => {
+    server.dependency(
+      ['mongodb', 'organisationsRepository'],
+      async (started) => {
+        const app = /** @type {ServerApp} */ (started.app)
+        const factory = await createFormSubmissionsRepository(
+          /** @type {Server & { db: Db }} */ (started).db,
+          started.logger,
+          app.organisationAdministrationRepository
+        )
+        const repository = factory()
 
-    registerDependency(server, 'formSubmissionsRepository', () => repository)
+        registerDependency(
+          started,
+          'formSubmissionsRepository',
+          () => repository
+        )
+      }
+    )
   }
 }

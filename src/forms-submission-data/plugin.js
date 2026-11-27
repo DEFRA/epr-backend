@@ -6,7 +6,7 @@ export { createFormCollections } from './apply/collections/create-update.js'
 export { createFormsFileUploadsRepository } from './file-uploads/forms-file-uploads.js'
 export { createFormDataMigrator } from './migration/migration-orchestrator.js'
 export { createFormSubmissionsRepository } from './repository/mongodb.js'
-export { mongoFormSubmissionsRepositoryPlugin } from './repository/mongodb.plugin.js'
+export { formSubmissionsRepositoryPlugin } from './repository/mongodb.plugin.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 
