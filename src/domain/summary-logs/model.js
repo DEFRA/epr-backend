@@ -1,4 +1,5 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
+/** @import {VALIDATION_CODE} from '#common/enums/validation.js' */
 /** @import {SummaryLogFileId, SummaryLogId} from './ids.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
@@ -22,9 +23,23 @@
  */
 
 /**
+ * Why the uploader rejected a file.
+ *
+ * @typedef {typeof VALIDATION_CODE[
+ *   | 'FILE_DOWNLOAD_FAILED'
+ *   | 'FILE_EMPTY'
+ *   | 'FILE_REJECTED'
+ *   | 'FILE_TOO_LARGE'
+ *   | 'FILE_UPLOAD_FAILED'
+ *   | 'FILE_VIRUS_DETECTED'
+ *   | 'FILE_WRONG_TYPE'
+ * ]} UploadRejectionCode
+ */
+
+/**
  * An upload the uploader rejected before the file could be read.
  *
- * @typedef {{ kind: 'file', code: string }} UploadRejection
+ * @typedef {{ kind: 'file', code: UploadRejectionCode }} UploadRejection
  */
 
 /**

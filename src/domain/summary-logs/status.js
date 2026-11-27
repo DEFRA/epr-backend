@@ -2,7 +2,7 @@ import { UPLOAD_FILE_STATUS } from '#domain/uploads/upload-locations.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import { ISSUE_KIND } from '#common/validation/validation-issue-kinds.js'
 
-/** @import {UploadRejection} from './model.js' */
+/** @import {UploadRejection, UploadRejectionCode} from './model.js' */
 
 export const SUMMARY_LOG_STATUS = Object.freeze({
   PREPROCESSING: 'preprocessing',
@@ -238,7 +238,7 @@ const UPLOADER_ERROR_MAPPINGS = [
 /**
  * Maps a CDP Uploader error message to a validation code
  * @param {string} [errorMessage] - Error message from CDP Uploader
- * @returns {string} Validation code for i18n lookup
+ * @returns {UploadRejectionCode} Validation code for i18n lookup
  */
 export const mapUploaderErrorToCode = (errorMessage) => {
   if (!errorMessage) {

@@ -8,7 +8,7 @@ import {
   VALIDATION_CATEGORY
 } from '#common/enums/validation.js'
 
-/** @import {ValidationSeverity} from '#common/enums/validation.js' */
+/** @import {ValidationCategory, ValidationCode, ValidationSeverity} from '#common/enums/validation.js' */
 /** @import {TableCellLocation} from './validation-issue-kinds.js' */
 /** @import {ValidationIssue} from './validation-issues.js' */
 
@@ -26,7 +26,7 @@ const TEST_CELL = {
  *
  * @param {ValidationSeverity} severity
  * @param {string} message
- * @param {{ category?: string, code?: string, location?: TableCellLocation, [extra: string]: unknown }} [details]
+ * @param {{ category?: ValidationCategory, code?: ValidationCode, location?: TableCellLocation, [extra: string]: unknown }} [details]
  * @returns {ValidationIssue}
  */
 const anIssue = (
@@ -34,7 +34,7 @@ const anIssue = (
   message,
   {
     category = VALIDATION_CATEGORY.TECHNICAL,
-    code = 'TEST_CODE',
+    code = 'MUST_BE_A_NUMBER',
     location = TEST_CELL,
     ...extras
   } = {}
@@ -45,11 +45,11 @@ describe('Validation Issues', () => {
     /** @type {ValidationIssue[]} */
     const seed = [
       anIssue(VALIDATION_SEVERITY.FATAL, 'Seeded fatal', {
-        code: 'ERR_SEED_FATAL'
+        code: 'MUST_BE_A_VALID_DATE'
       }),
       anIssue(VALIDATION_SEVERITY.WARNING, 'Seeded warning', {
         category: VALIDATION_CATEGORY.BUSINESS,
-        code: 'ERR_SEED_WARNING'
+        code: 'VALUE_OUT_OF_RANGE'
       })
     ]
 
@@ -71,7 +71,7 @@ describe('Validation Issues', () => {
 
       initial.push(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Added after construction', {
-          code: 'ERR_LATE'
+          code: 'FIELD_REQUIRED'
         })
       )
 
@@ -84,7 +84,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Added later', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'ERR_ADDED'
+          code: 'MUST_BE_GREATER_THAN_ZERO'
         })
       )
 
@@ -104,7 +104,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -116,13 +116,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -134,19 +134,19 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -158,13 +158,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -190,13 +190,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -208,7 +208,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -220,7 +220,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -232,13 +232,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -250,19 +250,19 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -282,7 +282,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -293,19 +293,19 @@ describe('Validation Issues', () => {
       const resultFatal = createValidationIssues().add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       const resultError = createValidationIssues().add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       const resultWarning = createValidationIssues().add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -321,25 +321,25 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -355,25 +355,25 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -389,25 +389,25 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -423,7 +423,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -439,19 +439,19 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Technical 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -469,19 +469,19 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business 2', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -497,7 +497,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -513,31 +513,31 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -553,7 +553,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -571,19 +571,19 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -597,7 +597,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -624,37 +624,37 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 3', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -694,13 +694,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -712,7 +712,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -724,13 +724,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -742,7 +742,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -754,13 +754,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -772,25 +772,25 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -804,13 +804,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -824,13 +824,13 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -847,7 +847,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Complex error',
-          code: 'TEST_CODE',
+          code: 'MUST_BE_A_NUMBER',
           row: 42,
           field: 'TONNAGE',
           section: 'Section 1',
@@ -880,7 +880,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Missing required field', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE',
+          code: 'MUST_BE_A_NUMBER',
           location: {
             sheet: 'Received',
             table: 'RECEIVED_LOADS',
@@ -915,14 +915,14 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Missing reference', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE',
+          code: 'MUST_BE_A_NUMBER',
           location: { ...TEST_CELL, row: 5, header: 'ROW_ID' }
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Below threshold', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE',
+          code: 'MUST_BE_A_NUMBER',
           location: { ...TEST_CELL, row: 10, header: 'TONNAGE' },
           actual: 0.001
         })
@@ -931,7 +931,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Could not parse file',
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -949,7 +949,7 @@ describe('Validation Issues', () => {
         metaIssue({
           category: VALIDATION_CATEGORY.BUSINESS,
           message: 'Processing type does not match',
-          code: 'TEST_CODE',
+          code: 'MUST_BE_A_NUMBER',
           location: { field: 'PROCESSING_TYPE' },
           expected: 'REPROCESSOR_INPUT',
           actual: 'EXPORTER'
@@ -973,7 +973,7 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Value mismatch', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE',
+          code: 'MUST_BE_A_NUMBER',
           location: {
             sheet: 'Sheet1',
             table: 'RECEIVED_LOADS',
@@ -1009,19 +1009,19 @@ describe('Validation Issues', () => {
       result.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal technical', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Technical error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1038,7 +1038,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Generic error',
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1073,7 +1073,7 @@ describe('Validation Issues', () => {
           fileIssue({
             category: VALIDATION_CATEGORY.TECHNICAL,
             message: 'Cannot parse',
-            code: 'TEST_CODE'
+            code: 'MUST_BE_A_NUMBER'
           })
         )
       ).toEqual({
@@ -1108,7 +1108,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Invalid',
-          code: 'TEST_CODE',
+          code: 'MUST_BE_A_NUMBER',
           field: undefined,
           value: undefined
         })
@@ -1127,7 +1127,7 @@ describe('Validation Issues', () => {
       result1.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1135,7 +1135,7 @@ describe('Validation Issues', () => {
       result2.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1154,19 +1154,19 @@ describe('Validation Issues', () => {
       result1.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result2.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result3.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 3', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1181,7 +1181,7 @@ describe('Validation Issues', () => {
       result1.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1199,7 +1199,7 @@ describe('Validation Issues', () => {
       result2.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1216,19 +1216,19 @@ describe('Validation Issues', () => {
       result2.add(
         anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result2.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
       result2.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1260,7 +1260,7 @@ describe('Validation Issues', () => {
       result2.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 
@@ -1272,7 +1272,7 @@ describe('Validation Issues', () => {
       result1.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
           category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE'
+          code: 'MUST_BE_A_NUMBER'
         })
       )
 

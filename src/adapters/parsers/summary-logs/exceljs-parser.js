@@ -15,6 +15,8 @@ import {
 } from '#domain/summary-logs/markers.js'
 import { extractCellValue, isCellEmpty } from './cell-extractor.js'
 
+/** @import {ValidationCode} from '#common/enums/validation.js' */
+
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
 
@@ -25,7 +27,7 @@ import { extractCellValue, isCellEmpty } from './cell-extractor.js'
 export class SpreadsheetValidationError extends Error {
   /**
    * @param {string} message - Error message
-   * @param {string} [code] - Validation code for i18n/translation on the client side
+   * @param {ValidationCode} [code] - Validation code for i18n/translation on the client side
    * @param {ErrorOptions} [options] - Standard Error options (e.g. `{ cause }`)
    */
   constructor(
@@ -35,7 +37,7 @@ export class SpreadsheetValidationError extends Error {
   ) {
     super(message, options)
     this.name = 'SpreadsheetValidationError'
-    /** @type {string} */
+    /** @type {ValidationCode} */
     this.code = code
   }
 }

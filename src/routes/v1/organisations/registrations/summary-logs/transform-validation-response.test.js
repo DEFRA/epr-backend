@@ -236,14 +236,14 @@ describe('transformValidationResponse', () => {
           metaIssue({
             category: 'technical',
             message: 'Fatal error',
-            code: 'FATAL_ERROR',
+            code: 'TEMPLATE_VERSION_INVALID',
             location: { field: 'TEMPLATE_VERSION' }
           }),
           cellIssue({
             severity: VALIDATION_SEVERITY.ERROR,
             category: 'technical',
             message: 'Data error',
-            code: 'DATA_ERROR',
+            code: 'FIELD_REQUIRED',
             location: {
               sheet: 'Received',
               table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -258,7 +258,9 @@ describe('transformValidationResponse', () => {
       const result = transformValidationResponse(validation)
 
       expect(result.validation.failures).toHaveLength(1)
-      expect(result.validation.failures[0].code).toBe('FATAL_ERROR')
+      expect(result.validation.failures[0].code).toBe(
+        'TEMPLATE_VERSION_INVALID'
+      )
       expect(result.validation.concerns).toEqual({})
     })
   })
@@ -344,7 +346,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.WARNING,
             category: 'business',
             message: 'Suspicious value',
-            code: 'SUSPICIOUS_VALUE',
+            code: 'VALUE_OUT_OF_RANGE',
             location: {
               sheet: 'Received',
               table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -364,7 +366,7 @@ describe('transformValidationResponse', () => {
           .issues[0]
       ).toMatchObject({
         type: 'warning',
-        code: 'SUSPICIOUS_VALUE'
+        code: 'VALUE_OUT_OF_RANGE'
       })
     })
 
@@ -375,7 +377,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.ERROR,
             category: 'technical',
             message: 'Value mismatch',
-            code: 'VALUE_MISMATCH',
+            code: 'CALCULATED_VALUE_MISMATCH',
             location: {
               sheet: 'Received',
               table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -396,7 +398,7 @@ describe('transformValidationResponse', () => {
           .issues[0]
       ).toMatchObject({
         type: 'error',
-        code: 'VALUE_MISMATCH',
+        code: 'CALCULATED_VALUE_MISMATCH',
         header: 'MATERIAL',
         column: 'B',
         actual: 'Paper',
@@ -475,7 +477,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.ERROR,
             category: 'technical',
             message: 'Error in row 10',
-            code: 'ERROR_1',
+            code: 'FIELD_REQUIRED',
             location: {
               sheet: 'Received',
               table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -488,7 +490,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.ERROR,
             category: 'technical',
             message: 'Error in row 8',
-            code: 'ERROR_2',
+            code: 'MUST_BE_A_VALID_DATE',
             location: {
               sheet: 'Received',
               table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -501,7 +503,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.ERROR,
             category: 'technical',
             message: 'Error in row 9',
-            code: 'ERROR_3',
+            code: 'MUST_BE_GREATER_THAN_ZERO',
             location: {
               sheet: 'Received',
               table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -530,7 +532,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.ERROR,
             category: 'technical',
             message: 'Error in table 1',
-            code: 'ERROR_1',
+            code: 'FIELD_REQUIRED',
             location: {
               sheet: 'Received',
               table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -543,7 +545,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.ERROR,
             category: 'technical',
             message: 'Error in table 2',
-            code: 'ERROR_2',
+            code: 'MUST_BE_A_VALID_DATE',
             location: {
               sheet: 'Dispatched',
               table: 'DISPATCHED_RECORDS',

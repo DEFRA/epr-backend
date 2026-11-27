@@ -2,6 +2,7 @@ import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 import { ISSUE_KIND } from '#common/validation/validation-issue-kinds.js'
 import { locationOf } from '#common/validation/validation-issues.js'
 
+/** @import {ValidationSeverity} from '#common/enums/validation.js' */
 /** @import {CellIssue} from '#common/validation/validation-issue-kinds.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {Validation} from '#domain/summary-logs/model.js' */
@@ -53,8 +54,8 @@ const transformFatalIssue = (issue) => {
 /**
  * Determines the issue type (error or warning) from severity
  *
- * @param {string} severity - The severity level (fatal, error, warning)
- * @returns {string} The issue type for HTTP response
+ * @param {ValidationSeverity} severity
+ * @returns {'error' | 'warning'} The issue type for HTTP response
  */
 const getIssueType = (severity) => {
   return severity === VALIDATION_SEVERITY.WARNING ? 'warning' : 'error'

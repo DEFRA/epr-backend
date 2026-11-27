@@ -7,6 +7,7 @@ import {
 import { createMetaSchema } from './meta-syntax.schema.js'
 import { buildMetaFieldLocation } from './helpers.js'
 
+/** @import {ValidationCode} from '#common/enums/validation.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 
@@ -14,7 +15,7 @@ import { buildMetaFieldLocation } from './helpers.js'
  * Maps Joi error types to validation codes based on field name
  * @param {string} fieldName - The meta field name
  * @param {string} joiType - The Joi error type (e.g., 'any.required', 'string.pattern.base')
- * @returns {string} The appropriate validation code
+ * @returns {ValidationCode} The appropriate validation code
  */
 const mapJoiErrorToCode = (fieldName, joiType) => {
   const codeMap = {

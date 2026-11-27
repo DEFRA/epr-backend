@@ -1,6 +1,6 @@
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
-/** @import {ValidationSeverity} from '#common/enums/validation.js' */
+/** @import {ValidationCategory, ValidationCode, ValidationSeverity} from '#common/enums/validation.js' */
 
 /**
  * What a summary log issue is about, which decides where it is and what else
@@ -35,8 +35,8 @@ export const ISSUE_KIND = Object.freeze({
 
 /**
  * @typedef {{
- *   category: string,
- *   code: string,
+ *   category: ValidationCategory,
+ *   code: ValidationCode,
  *   message: string,
  *   [extra: string]: unknown
  * }} IssueParams
@@ -54,7 +54,7 @@ export const ISSUE_KIND = Object.freeze({
  * @typedef {{ location: Location, [extra: string]: unknown }} ContextAt
  */
 
-/** @typedef {{ category: string, code: string, message: string }} IssueBasics */
+/** @typedef {{ category: ValidationCategory, code: ValidationCode, message: string }} IssueBasics */
 
 /**
  * @typedef {IssueBasics & { kind: 'file', severity: 'fatal', context?: { location?: never, [extra: string]: unknown } }} FileIssue
