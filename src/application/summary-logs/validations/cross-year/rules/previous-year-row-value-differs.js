@@ -3,7 +3,7 @@ import {
   isBeforeCorrectionDeadline,
   lastCorrectionDay
 } from '#domain/summary-logs/correction-deadline.js'
-import { PREVIOUS_YEAR_COMPARISON } from '#domain/summary-logs/linked-row.js'
+import { LINKED_COLUMN_CHECK } from '#domain/summary-logs/linked-row.js'
 
 import { toPreviousYearLinkIssue } from '../previous-year-link-issue.js'
 
@@ -16,21 +16,11 @@ import { toPreviousYearLinkIssue } from '../previous-year-link-issue.js'
  * @param {FoundLinkedRow} linkedRow
  * @returns {Array<[string, number]>}
  */
-const columnsGivenDifferently = ({
-  columnComparisons,
-  linking,
-  issueLocation
-}) => {
-  const mayDiffer = new Set(linking.mayDifferBeforeCorrectionDeadline)
-  return [...issueLocation.headerToIndexMap].filter(([column]) => {
-    const columnComparison = columnComparisons.get(column)
-    return (
-      columnComparison?.comparison === PREVIOUS_YEAR_COMPARISON.CHANGED &&
-      !mayDiffer.has(column) &&
-      columnComparison.previousYear !== linking.answeredLaterOnLinkedRow[column]
-    )
-  })
-}
+const columnsGivenDifferently = ({ columnComparisons, issueLocation }) =>
+  [...issueLocation.headerToIndexMap].filter(
+    ([column]) =>
+      columnComparisons.get(column)?.check === LINKED_COLUMN_CHECK.VALUE_DIFFERS
+  )
 
 /**
  * While the previous year can still be corrected, a change to its row is made

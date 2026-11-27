@@ -39,7 +39,7 @@ const tableSchemas = {
       previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID',
       suppliableOnLinkedRow: ['DATE_OF_EXPORT'],
       mayDifferBeforeCorrectionDeadline: ['NET_WEIGHT'],
-      answeredLaterOnLinkedRow: { WAS_THE_WASTE_REFUSED: 'No' },
+      answeredLaterOnLinkedRow: ['WAS_THE_WASTE_REFUSED'],
       prefilledOnLinkedRow: {},
       /**
        * @param {Record<string, unknown>} row
@@ -87,6 +87,14 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
   registeredOnly: false
 }
 
+const KEPT_AS_ENTERED = new Set(['ROW_ID', 'PREVIOUS_YEAR_ROW_ID'])
+
+/**
+ * @param {Record<string, unknown>} cells
+ * @returns {unknown[]}
+ */
+const rowOf = (cells) => HEADERS.map((header) => cells[header] ?? null)
+
 /**
  * @param {{
  *   rowId?: number | null,
@@ -120,21 +128,27 @@ const filledInRow = ({
     NET_WEIGHT: 850,
     ...previousYearCompletion
   }
-  const entered = [
-    rowId,
-    1500,
-    dateOfExport,
-    osrName,
-    dateReceivedByOsr ?? previousYear.DATE_RECEIVED_BY_OSR ?? null,
-    previousYear.DATE_REPATRIATED ?? null,
-    netWeight,
-    wasteRefused
-  ]
-  // OSR_NAME and NET_WEIGHT are not suppliable, so fill-in takes them from the previous year row
-  const values = entered
-    .with(3, previousYear.OSR_NAME)
-    .with(6, previousYear.NET_WEIGHT)
-    .with(7, wasteRefused ?? previousYear.WAS_THE_WASTE_REFUSED ?? null)
+  /** @type {Record<string, unknown>} */
+  const enteredCells = {
+    ROW_ID: rowId,
+    PREVIOUS_YEAR_ROW_ID: 1500,
+    DATE_OF_EXPORT: dateOfExport,
+    OSR_NAME: osrName,
+    DATE_RECEIVED_BY_OSR: dateReceivedByOsr,
+    NET_WEIGHT: netWeight,
+    WAS_THE_WASTE_REFUSED: wasteRefused
+  }
+  const entered = rowOf(enteredCells)
+  const values = rowOf(
+    Object.fromEntries(
+      HEADERS.map((header) => [
+        header,
+        KEPT_AS_ENTERED.has(header) || suppliedFields.includes(header)
+          ? enteredCells[header]
+          : previousYear[header]
+      ])
+    )
+  )
   return {
     rowNumber: 8,
     values,
@@ -158,16 +172,12 @@ const filledInRow = ({
  */
 const unmatchedRow = ({ rowNumber = 8, rowId = 1001, previousYearRowId }) => ({
   rowNumber,
-  values: [
-    rowId,
-    previousYearRowId,
-    '2027-01-04',
-    'Overseas Ltd',
-    null,
-    null,
-    null,
-    null
-  ],
+  values: rowOf({
+    ROW_ID: rowId,
+    PREVIOUS_YEAR_ROW_ID: previousYearRowId,
+    DATE_OF_EXPORT: '2027-01-04',
+    OSR_NAME: 'Overseas Ltd'
+  }),
   previousYearLink: {
     status: PREVIOUS_YEAR_LINK_STATUS.NOT_FOUND,
     previousYearRowId: String(previousYearRowId)
@@ -544,6 +554,34 @@ describe('checkCrossYearRules', () => {
       ])
     })
 
+    it.for([
+      {
+        description: 'the values the row gives differently',
+        row: {
+          dateOfExport: '2026-11-01',
+          osrName: 'Overseas Ltd',
+          previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+        },
+        errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR
+      },
+      {
+        description: 'a date the row supplies in an earlier year',
+        row: {
+          dateOfExport: '2026-12-28',
+          previousYearDateOfExport: null,
+          previousYearCompletion: { DATE_REPATRIATED: '2026-12-20' }
+        },
+        errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_REPATRIATED
+      }
+    ])(
+      'reports only that the row cannot be linked, not $description',
+      ({ row, errorCode }) => {
+        expect(
+          check([filledInRow(row)]).map(({ context }) => context?.errorCode)
+        ).toStrictEqual([errorCode])
+      }
+    )
+
     it('does not depend on the correction deadline', () => {
       expect(
         check(
@@ -633,16 +671,46 @@ describe('checkCrossYearRules', () => {
       ).toStrictEqual([])
     })
 
-    it('accepts a previous year answer that means not yet, given as another answer', () => {
+    it.for([
+      {
+        description:
+          'a previous year answer that means not yet, given as another answer',
+        previousYear: 'No',
+        entered: 'Yes'
+      },
+      {
+        description:
+          'a previous year answer that means not yet in lower case, given as another answer',
+        previousYear: 'no',
+        entered: 'Yes'
+      },
+      {
+        description: 'an answer that repeats the previous year in another case',
+        previousYear: 'Yes',
+        entered: ' yes '
+      }
+    ])('accepts $description', ({ previousYear, entered }) => {
       expect(
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            wasteRefused: 'Yes',
-            previousYearCompletion: { WAS_THE_WASTE_REFUSED: 'No' }
+            wasteRefused: entered,
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: previousYear }
           })
         ])
       ).toStrictEqual([])
+    })
+
+    it('rejects a previous year answer given as the answer that means not yet, in any case', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            wasteRefused: 'no',
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: 'YES' }
+          })
+        ]).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS])
     })
 
     it('rejects a previous year answer given as the answer that means not yet', () => {
@@ -745,21 +813,6 @@ describe('checkCrossYearRules', () => {
           }
         )
       ).toStrictEqual([])
-    })
-
-    it('rejects a link to a complete row that gives a different value with both errors', () => {
-      expect(
-        check([
-          filledInRow({
-            dateOfExport: '2026-11-01',
-            osrName: 'Overseas Ltd',
-            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
-          })
-        ]).map(({ context }) => context?.errorCode)
-      ).toStrictEqual([
-        VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR,
-        VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS
-      ])
     })
   })
 

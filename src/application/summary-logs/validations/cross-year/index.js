@@ -11,8 +11,6 @@ import {
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
-import { STORED_TONNAGE_FIELDS } from '#waste-records/application/stored-tonnage-coercion.js'
-
 import { buildHeaderToIndexMap, toApplicationIssue } from '../data-syntax.js'
 import { linkedRowIssuesOf } from './rules/index.js'
 import { previousYearRowNotFound } from './previous-year-row-not-found.js'
@@ -26,8 +24,6 @@ import { previousYearRowNotFound } from './previous-year-row-not-found.js'
 /** @import {FilledInRow, FoundPreviousYearLink, PreviousYearLink} from '../../fill-in-linked-rows.js' */
 
 /** @typedef {Pick<TableSchema, 'rowIdField' | 'validationSchema' | 'linking'>} CrossYearTableSchema */
-
-const STORED_TONNAGE_COLUMNS = new Set(STORED_TONNAGE_FIELDS)
 
 /**
  * @typedef {{
@@ -88,7 +84,6 @@ const foundLinkedRowOf = ({ table, headers, ...linkedRow }) => {
       table,
       headers,
       columnSchemas,
-      roundedColumns: STORED_TONNAGE_COLUMNS,
       enteredRow: previousYearLink.entered,
       previousYearRow: previousYearLink.previousYear
     }),

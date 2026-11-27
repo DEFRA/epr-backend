@@ -19,7 +19,8 @@ import {
   isYes,
   isAnswered,
   isDateNoLaterThan,
-  YES_NO_VALUES
+  YES_NO_VALUES,
+  ANSWERED_LATER_ON_LINKED_ROW
 } from '../shared/index.js'
 import {
   RECEIVED_LOADS_FIELDS as FIELDS,
@@ -392,12 +393,6 @@ const CALCULATED_COLUMNS = Object.freeze([
   FIELDS.NET_WEIGHT,
   FIELDS.TONNAGE_RECEIVED_FOR_EXPORT
 ])
-
-// A previous year's "No" means not yet: the load can be refused or stopped later
-const ANSWERED_LATER_ON_LINKED_ROW = Object.freeze({
-  [FIELDS.WAS_THE_WASTE_REFUSED]: YES_NO_VALUES.NO,
-  [FIELDS.WAS_THE_WASTE_STOPPED]: YES_NO_VALUES.NO
-})
 
 export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
   ...RECEIVED_LOADS_FOR_EXPORT,

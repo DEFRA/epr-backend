@@ -183,6 +183,10 @@ const submitted = async (env, year, summaryLogId, parsed) => {
   )
 }
 
+const beforeThe2026CorrectionDeadline = () => {
+  uploadOn('2027-01-10T09:00:00.000Z')
+}
+
 /** Until then, a 2027 row may not carry a 2026 date it was not linked to. */
 const afterThe2026CorrectionDeadline = () => {
   vi.useFakeTimers({
@@ -703,6 +707,7 @@ describe('2027 rows linked to a 2026 row', () => {
     })
 
     it('rejects a receipt value the 2027 row gives differently from the 2026 row, on its cell, while 2026 can still be corrected', async () => {
+      beforeThe2026CorrectionDeadline()
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
 
@@ -729,6 +734,7 @@ describe('2027 rows linked to a 2026 row', () => {
     })
 
     it('accepts a linked row whose export tonnage repeats the 2026 value to two decimal places', async () => {
+      beforeThe2026CorrectionDeadline()
       const env = await setup()
       await submitted(
         env,
@@ -753,6 +759,7 @@ describe('2027 rows linked to a 2026 row', () => {
     })
 
     it('accepts a linked row that records a 2026 load as refused in 2027', async () => {
+      beforeThe2026CorrectionDeadline()
       const env = await setup()
       await submitted(
         env,
@@ -778,6 +785,7 @@ describe('2027 rows linked to a 2026 row', () => {
     })
 
     it('rejects a 2026 refused load given as not refused on the linked row, on that cell, while 2026 can still be corrected', async () => {
+      beforeThe2026CorrectionDeadline()
       const env = await setup()
       await submitted(
         env,
@@ -813,7 +821,7 @@ describe('2027 rows linked to a 2026 row', () => {
     })
 
     it('rejects a 2026 export date supplied on a linked row while 2026 can still be corrected', async () => {
-      uploadOn('2027-01-10T09:00:00.000Z')
+      beforeThe2026CorrectionDeadline()
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
 
@@ -843,7 +851,7 @@ describe('2027 rows linked to a 2026 row', () => {
     ])(
       'accepts a 2026 export date supplied on a linked row that repeats the 2026 row, stored %s',
       async (_, exportDate) => {
-        uploadOn('2027-01-10T09:00:00.000Z')
+        beforeThe2026CorrectionDeadline()
         const env = await setup()
         await submitted(
           env,
@@ -1306,6 +1314,7 @@ describe('2027 rows linked to a 2026 row', () => {
     }
 
     it('rejects an export value the 2027 row gives differently from the 2026 row, while 2026 can still be corrected', async () => {
+      beforeThe2026CorrectionDeadline()
       const env = await setupWith2026Row()
 
       const validated = await upload(

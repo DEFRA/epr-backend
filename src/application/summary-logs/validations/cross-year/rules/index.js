@@ -8,18 +8,25 @@ import { previousYearRowValueDiffers } from './previous-year-row-value-differs.j
 /** @typedef {(linkedRow: FoundLinkedRow) => ValidationIssue[]} LinkedRowCheck */
 
 /**
- * The rules on a row linked to a previous year's row, in the order their
- * issues are reported. Every rule runs; one that applies only on some dates
- * checks them itself.
+ * The rules on a row linked to a previous year's row, in tiers. A tier runs
+ * only when every earlier tier finds nothing: a link that cannot be used is
+ * fixed first, so the values it gives are not checked. Every rule in a tier
+ * runs; one that applies only on some dates checks them itself.
  *
- * @type {readonly LinkedRowCheck[]}
+ * @type {readonly (readonly LinkedRowCheck[])[]}
  */
-const LINKED_ROW_RULES = Object.freeze([
-  earlierYearDates,
-  previousYearRowComplete,
-  previousYearRowValueDiffers
+const LINKED_ROW_RULE_TIERS = Object.freeze([
+  Object.freeze([previousYearRowComplete]),
+  Object.freeze([earlierYearDates, previousYearRowValueDiffers])
 ])
 
 /** @type {LinkedRowCheck} */
-export const linkedRowIssuesOf = (linkedRow) =>
-  LINKED_ROW_RULES.flatMap((rule) => rule(linkedRow))
+export const linkedRowIssuesOf = (linkedRow) => {
+  for (const tier of LINKED_ROW_RULE_TIERS) {
+    const issues = tier.flatMap((rule) => rule(linkedRow))
+    if (issues.length > 0) {
+      return issues
+    }
+  }
+  return []
+}

@@ -18,7 +18,7 @@ import {
   isDateNoLaterThan,
   isNo,
   isYes,
-  YES_NO_VALUES
+  ANSWERED_LATER_ON_LINKED_ROW
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
@@ -118,12 +118,6 @@ const loadExportedCompletionsOf = (row, year) => {
       ]
     : []
 }
-
-// A previous year's "No" means not yet: the load can be refused or stopped later
-const ANSWERED_LATER_ON_LINKED_ROW = Object.freeze({
-  [FIELDS.WAS_THE_WASTE_REFUSED]: YES_NO_VALUES.NO,
-  [FIELDS.WAS_THE_WASTE_STOPPED]: YES_NO_VALUES.NO
-})
 
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
