@@ -9,7 +9,6 @@ import { MATERIAL } from '#domain/organisations/model.js'
 import { toAccreditationNumber } from '#domain/organisations/numbers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import { aggregateWasteBalanceTable } from '#market-insights/application/waste-balance-table.js'
 import { asOperator, asServiceMaintainer } from '#test/inject-auth.js'
 import { DATABASE_NAME, it as mongoIt } from '#vite/fixtures/mongo-client.js'
@@ -463,9 +462,7 @@ describe('2027 rows linked to a 2026 row', () => {
         'log-2027',
         accredited2027Log([
           linkedRow({
-            exportTonnage: null,
-            exportDate: null,
-            dateReceivedByOsr: null,
+            ...RECEIVED_OVERSEAS_IN_2027,
             wasteRefused: 'Yes',
             wasteStopped: 'No'
           })
@@ -474,8 +471,13 @@ describe('2027 rows linked to a 2026 row', () => {
 
       expect(
         (await storedRow(env, ledgerIdOf(env), 'log-2027', '1001'))
-          ?.classification.outcome
-      ).toBe(ROW_OUTCOME.EXCLUDED)
+          ?.classification
+      ).toEqual(
+        expect.objectContaining({
+          outcome: 'EXCLUDED',
+          reasons: [{ code: 'WASTE_REFUSED' }]
+        })
+      )
       expect((await getWasteBalance(env)).amount).toBe(0)
     })
 
