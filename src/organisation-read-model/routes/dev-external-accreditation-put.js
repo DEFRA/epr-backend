@@ -3,7 +3,7 @@ import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import { yearSchema } from '#common/validation/year-schema.js'
-import { REG_ACCRED_ACCREDITATION_YEAR } from '#organisation-read-model/repository/reg-accred-accreditations.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from '#organisation-read-model/domain/model.js'
 import { registrationParams } from '#routes/organisations/natural-keys.js'
 import { externalAccreditationPayloadSchema } from './dev-external-accreditation-put.schema.js'
 

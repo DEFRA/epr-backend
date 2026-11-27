@@ -157,6 +157,9 @@ export const ORGANISATION_STATUSES = Object.freeze([
 /** @type {readonly RegistrationStatus[]} */
 export const REGISTRATION_STATUSES = Object.freeze(['approved', 'cancelled'])
 
+/** The only year Reg Accred holds accreditations for. */
+export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
+
 /** @type {readonly AccreditationStatus[]} */
 export const ACCREDITATION_STATUSES = Object.freeze([
   'approved',
