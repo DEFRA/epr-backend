@@ -1,6 +1,8 @@
 import HapiSwagger from 'hapi-swagger'
 import { describe, it, expect } from 'vitest'
 
+import { organisationsRoutesPlugin } from '#organisations/plugin.js'
+import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
 import { getConfig } from '#root/config.js'
 import { systemLogsRoutesPlugin } from '#system-logs/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
@@ -13,12 +15,19 @@ const registersSwagger = (isSwaggerEnabled) =>
     (entry) => entry.plugin === HapiSwagger
   )
 
-const MODULE_ROUTE_PLUGINS = [wasteRecordsExport, systemLogsRoutesPlugin]
+const MODULE_ROUTE_PLUGINS = [
+  organisationsRoutesPlugin,
+  registrationAccreditationAdminRoutesPlugin,
+  systemLogsRoutesPlugin,
+  wasteRecordsExport
+]
 
 /** @param {{ modules?: boolean }} [options] */
 const registeredModuleRoutes = (options) => {
   const plugins = serverPlugins(getConfig(), [], options)
-  return MODULE_ROUTE_PLUGINS.filter((plugin) => plugins.includes(plugin))
+  return MODULE_ROUTE_PLUGINS.filter((plugin) =>
+    plugins.some((entry) => entry === plugin || entry.plugin === plugin)
+  )
 }
 
 describe('serverPlugins', () => {
