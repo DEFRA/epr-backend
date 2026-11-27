@@ -98,6 +98,27 @@ describe('2027 summary logs', () => {
       })
     })
 
+    it("accepts 'Aluminium - unlisted' as a Basel export code", async () => {
+      openNextYear()
+      const env = await setup()
+
+      const validated = await uploadAndValidate(
+        env,
+        {
+          summaryLogId: 'summary-2027-aluminium-unlisted',
+          fileId: 'file-2027-aluminium-unlisted'
+        },
+        {
+          meta: withTemplateYear(createWasteBalanceMeta('EXPORTER'), YEAR),
+          data: exporter2027Loads([
+            { rowId: 1001, baselCode: 'Aluminium - unlisted' }
+          ])
+        }
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+    })
+
     it.each([
       [999, 'VALUE_OUT_OF_RANGE'],
       [1000.5, 'INVALID_TYPE'],
