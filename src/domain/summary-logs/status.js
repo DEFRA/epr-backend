@@ -2,7 +2,7 @@ import { UPLOAD_FILE_STATUS } from '#domain/uploads/upload-locations.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import { ISSUE_KIND } from '#common/validation/validation-issue-kinds.js'
 
-/** @import {UploadRejection, UploadRejectionCode} from './model.js' */
+/** @import {UploadRejection} from './model.js' */
 
 export const SUMMARY_LOG_STATUS = Object.freeze({
   PREPROCESSING: 'preprocessing',
@@ -204,6 +204,19 @@ export const transitionStatus = (summaryLog, newStatus) => {
   }
 }
 
+/** Why the uploader rejected a file. */
+export const UPLOAD_REJECTION_CODE = Object.freeze({
+  FILE_DOWNLOAD_FAILED: VALIDATION_CODE.FILE_DOWNLOAD_FAILED,
+  FILE_EMPTY: VALIDATION_CODE.FILE_EMPTY,
+  FILE_REJECTED: VALIDATION_CODE.FILE_REJECTED,
+  FILE_TOO_LARGE: VALIDATION_CODE.FILE_TOO_LARGE,
+  FILE_UPLOAD_FAILED: VALIDATION_CODE.FILE_UPLOAD_FAILED,
+  FILE_VIRUS_DETECTED: VALIDATION_CODE.FILE_VIRUS_DETECTED,
+  FILE_WRONG_TYPE: VALIDATION_CODE.FILE_WRONG_TYPE
+})
+
+/** @typedef {typeof UPLOAD_REJECTION_CODE[keyof typeof UPLOAD_REJECTION_CODE]} UploadRejectionCode */
+
 /**
  * Known error messages from CDP Uploader mapped to validation codes
  * @see https://github.com/DEFRA/cdp-uploader/blob/main/src/server/common/constants/file-error-messages.js
@@ -211,27 +224,30 @@ export const transitionStatus = (summaryLog, newStatus) => {
 const UPLOADER_ERROR_MAPPINGS = [
   {
     message: 'The selected file contains a virus',
-    code: VALIDATION_CODE.FILE_VIRUS_DETECTED
+    code: UPLOAD_REJECTION_CODE.FILE_VIRUS_DETECTED
   },
-  { message: 'The selected file is empty', code: VALIDATION_CODE.FILE_EMPTY },
+  {
+    message: 'The selected file is empty',
+    code: UPLOAD_REJECTION_CODE.FILE_EMPTY
+  },
   {
     message: 'The selected file must be smaller than',
-    code: VALIDATION_CODE.FILE_TOO_LARGE,
+    code: UPLOAD_REJECTION_CODE.FILE_TOO_LARGE,
     startsWith: true
   },
   {
     message: 'The selected file must be a',
-    code: VALIDATION_CODE.FILE_WRONG_TYPE,
+    code: UPLOAD_REJECTION_CODE.FILE_WRONG_TYPE,
     startsWith: true
   },
   {
     message: 'The selected file could not be uploaded',
-    code: VALIDATION_CODE.FILE_UPLOAD_FAILED,
+    code: UPLOAD_REJECTION_CODE.FILE_UPLOAD_FAILED,
     startsWith: true
   },
   {
     message: 'The selected file could not be downloaded',
-    code: VALIDATION_CODE.FILE_DOWNLOAD_FAILED
+    code: UPLOAD_REJECTION_CODE.FILE_DOWNLOAD_FAILED
   }
 ]
 
@@ -242,7 +258,7 @@ const UPLOADER_ERROR_MAPPINGS = [
  */
 export const mapUploaderErrorToCode = (errorMessage) => {
   if (!errorMessage) {
-    return VALIDATION_CODE.FILE_REJECTED
+    return UPLOAD_REJECTION_CODE.FILE_REJECTED
   }
 
   for (const mapping of UPLOADER_ERROR_MAPPINGS) {
@@ -255,7 +271,7 @@ export const mapUploaderErrorToCode = (errorMessage) => {
     }
   }
 
-  return VALIDATION_CODE.FILE_REJECTED
+  return UPLOAD_REJECTION_CODE.FILE_REJECTED
 }
 
 /**

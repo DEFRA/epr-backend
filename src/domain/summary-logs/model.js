@@ -1,5 +1,5 @@
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import {VALIDATION_CODE} from '#common/enums/validation.js' */
+/** @import {UploadRejectionCode} from './status.js' */
 /** @import {SummaryLogFileId, SummaryLogId} from './ids.js' */
 /** @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
@@ -20,20 +20,6 @@
 
 /**
  * @typedef {FileUpload | StoredFile} SummaryLogFile
- */
-
-/**
- * Why the uploader rejected a file.
- *
- * @typedef {typeof VALIDATION_CODE[
- *   | 'FILE_DOWNLOAD_FAILED'
- *   | 'FILE_EMPTY'
- *   | 'FILE_REJECTED'
- *   | 'FILE_TOO_LARGE'
- *   | 'FILE_UPLOAD_FAILED'
- *   | 'FILE_VIRUS_DETECTED'
- *   | 'FILE_WRONG_TYPE'
- * ]} UploadRejectionCode
  */
 
 /**
