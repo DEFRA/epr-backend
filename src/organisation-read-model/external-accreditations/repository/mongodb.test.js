@@ -1,7 +1,7 @@
 import { MongoClient } from 'mongodb'
 import { describe, expect } from 'vitest'
 
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../external-accreditation-sources.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../collection.js'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createMongoExternalAccreditationsRepository } from './mongodb.js'
 import { testExternalAccreditationsRepositoryContract } from './port.contract.js'

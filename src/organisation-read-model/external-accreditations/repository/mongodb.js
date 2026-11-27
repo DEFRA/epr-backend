@@ -1,5 +1,5 @@
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../external-accreditation-sources.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../collection.js'
 import { validateExternalAccreditation } from './validation.js'
 
 /** @import { Collection, Db } from 'mongodb' */

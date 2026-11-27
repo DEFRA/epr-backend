@@ -20,7 +20,7 @@ import {
   overseasSites,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../external-accreditations/external-accreditation-sources.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../external-accreditations/collection.js'
 import { createMongoOrganisationReadRepository } from './mongodb-and-reg-accred-api.js'
 
 /** @import { MongoClient } from 'mongodb' */

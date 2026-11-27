@@ -6,7 +6,7 @@ Code outside the module imports from three entry points, and each lists its expo
 
 - **`index.js`** is the public interface: the read model's types, its pure rules and what a caller needs to know about the stores it reads. It loads no route, adapter or Hapi code.
 - **`plugin.js`** holds the MongoDB adapters' plugins, which provide the read repository and the external accreditations repository, and the plugin for the dev routes. Only code in `src/server`, `src/plugins` and `src/test` may import it.
-- **`test-support.js`** holds the in-memory repositories, their plugins and the test builders. Only a test may import it. It also exports the MongoDB factories, until the tests outside the module that build a repository over a real database register the module's plugins instead. The test server registers the in-memory plugins. The in-memory read repository does not serve the external accreditations the in-memory store holds, so a test that needs that round trip uses the MongoDB adapters.
+- **`test-support.js`** holds the in-memory repositories, their plugins and the test builders. Only a test may import it. It also exports the MongoDB factories, until the tests outside the module that build a repository over a real database register the module's plugins instead. The test server registers the in-memory plugins, the external accreditations one only with dev endpoints on.
 
 [`src/modules.md`](../modules.md) describes the shape every module takes.
 
@@ -16,5 +16,5 @@ Lint refuses any other import into the module, but it cannot see a JSDoc `@impor
 
 - **`domain/`** holds the read model's types and the rules over them. Its production code imports nothing else from the module.
 - **`repository/`** reads re-ex's own store and the accreditations held outside re-ex, from Reg Accred or the external accreditations collection, and merges them into the read model.
-- **`external-accreditations/`** owns the external accreditations collection, which stands in for Reg Accred where it is not called. It names the collection and the year it holds, and stores accreditations in it.
+- **`external-accreditations/`** names the external accreditations collection, which stands in for Reg Accred where it is not called, and stores accreditations in it. The reader in `repository/` reads the collection by that name.
 - **`routes/`** holds the dev route that stores an external accreditation.
