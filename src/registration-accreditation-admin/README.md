@@ -13,11 +13,9 @@ The module takes the shape [`src/modules.md`](../modules.md) describes, and lint
 
 - **`index.js`** holds the repository's type.
 - **`plugin.js`** holds the route plugin and the repository's MongoDB adapter.
-- **`test-support.js`** holds the repository's in-memory adapter, and only a test may import it.
+- **`test-support.js`** holds the repository's in-memory adapter and its MongoDB factory, and only a test may import it.
 
 Lint cannot see a JSDoc `@import`, so it lets one through.
-
-[`src/modules.md`](../modules.md) describes the shape every module takes. This module's plugin has not moved to it yet.
 
 ## Shape
 

@@ -7,6 +7,13 @@ import { registrationStatusHistory } from './routes/registration-status-history.
 
 export const registrationAccreditationAdminRoutesPlugin = {
   name: 'registration-accreditation-admin-routes',
+  dependencies: [
+    'organisationsRepository',
+    'registrationAccreditationAdminRepository',
+    'overseasSitesRepository',
+    'systemLogsRepository'
+  ],
+
   /** @param {import('#common/hapi-types.js').HapiServer} server */
   register: (server) => {
     server.route([
