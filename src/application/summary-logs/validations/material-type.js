@@ -1,4 +1,5 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { metaIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
@@ -48,28 +49,28 @@ export const validateMaterialType = ({
   const expectedMaterial = materialFromSpreadsheet(spreadsheetMaterial)
 
   if (!expectedMaterial) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Material is required and must be a recognised material type',
-      VALIDATION_CODE.MATERIAL_REQUIRED,
-      {
+    issues.add(
+      metaIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message: 'Material is required and must be a recognised material type',
+        code: VALIDATION_CODE.MATERIAL_REQUIRED,
         location,
         actual: spreadsheetMaterial
-      }
+      })
     )
     return issues
   }
 
   if (expectedMaterial !== registeredMaterial) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Material does not match registration material',
-      VALIDATION_CODE.MATERIAL_MISMATCH,
-      {
+    issues.add(
+      metaIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message: 'Material does not match registration material',
+        code: VALIDATION_CODE.MATERIAL_MISMATCH,
         location,
         expected: expectedMaterial,
         actual: registeredMaterial
-      }
+      })
     )
     return issues
   }

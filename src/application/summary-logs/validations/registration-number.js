@@ -1,6 +1,9 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { fileIssue } from '#common/validation/validation-issue-kinds.js'
+import {
+  fileIssue,
+  metaIssue
+} from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
@@ -58,15 +61,16 @@ export const validateRegistrationNumber = ({
   }
 
   if (spreadsheetRegistrationNumber !== registrationNumber) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      "Summary log's registration number does not match this registration",
-      VALIDATION_CODE.REGISTRATION_MISMATCH,
-      {
+    issues.add(
+      metaIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message:
+          "Summary log's registration number does not match this registration",
+        code: VALIDATION_CODE.REGISTRATION_MISMATCH,
         location,
         expected: registrationNumber,
         actual: spreadsheetRegistrationNumber
-      }
+      })
     )
     return issues
   }

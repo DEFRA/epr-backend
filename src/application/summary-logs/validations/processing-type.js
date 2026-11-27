@@ -1,5 +1,8 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { fileIssue } from '#common/validation/validation-issue-kinds.js'
+import {
+  fileIssue,
+  metaIssue
+} from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
@@ -84,15 +87,16 @@ export const validateProcessingType = ({
     PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE[spreadsheetProcessingType]
 
   if (expectedWasteProcessingType !== wasteProcessingType) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Summary log processing type does not match registration waste processing type',
-      VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
-      {
+    issues.add(
+      metaIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message:
+          'Summary log processing type does not match registration waste processing type',
+        code: VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
         location,
         expected: wasteProcessingType,
         actual: spreadsheetProcessingType
-      }
+      })
     )
     return issues
   }
@@ -103,25 +107,30 @@ export const validateProcessingType = ({
       registration
     })
   ) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Summary log template type does not match registration accreditation status',
-      VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
-      { location, actual: spreadsheetProcessingType }
+    issues.add(
+      metaIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message:
+          'Summary log template type does not match registration accreditation status',
+        code: VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
+        location,
+        actual: spreadsheetProcessingType
+      })
     )
     return issues
   }
 
   if (isReprocessingTypeMismatch(spreadsheetProcessingType, registration)) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Summary log processing type does not match registration reprocessing type',
-      VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
-      {
+    issues.add(
+      metaIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message:
+          'Summary log processing type does not match registration reprocessing type',
+        code: VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
         location,
         expected: registration.registration.reprocessingType,
         actual: spreadsheetProcessingType
-      }
+      })
     )
     return issues
   }

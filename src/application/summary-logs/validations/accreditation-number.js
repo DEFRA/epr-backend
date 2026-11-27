@@ -1,5 +1,6 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { metaIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
@@ -57,27 +58,28 @@ export const validateAccreditationNumber = ({
   // Case 1: Registration has accreditation → spreadsheet MUST match
   if (accreditationNumber) {
     if (!spreadsheetAccreditationNumber) {
-      issues.addFatal(
-        VALIDATION_CATEGORY.BUSINESS,
-        'Invalid summary log: missing accreditation number',
-        VALIDATION_CODE.ACCREDITATION_MISSING,
-        {
+      issues.add(
+        metaIssue({
+          category: VALIDATION_CATEGORY.BUSINESS,
+          message: 'Invalid summary log: missing accreditation number',
+          code: VALIDATION_CODE.ACCREDITATION_MISSING,
           location
-        }
+        })
       )
       return issues
     }
 
     if (spreadsheetAccreditationNumber !== accreditationNumber) {
-      issues.addFatal(
-        VALIDATION_CATEGORY.BUSINESS,
-        "Summary log's accreditation number does not match this registration",
-        VALIDATION_CODE.ACCREDITATION_MISMATCH,
-        {
+      issues.add(
+        metaIssue({
+          category: VALIDATION_CATEGORY.BUSINESS,
+          message:
+            "Summary log's accreditation number does not match this registration",
+          code: VALIDATION_CODE.ACCREDITATION_MISMATCH,
           location,
           expected: accreditationNumber,
           actual: spreadsheetAccreditationNumber
-        }
+        })
       )
       return issues
     }
@@ -85,14 +87,15 @@ export const validateAccreditationNumber = ({
 
   // Case 2: Registration has NO accreditation → spreadsheet MUST be blank
   if (!accreditationNumber && spreadsheetAccreditationNumber) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: accreditation number provided but registration has no accreditation',
-      VALIDATION_CODE.ACCREDITATION_UNEXPECTED,
-      {
+    issues.add(
+      metaIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message:
+          'Invalid summary log: accreditation number provided but registration has no accreditation',
+        code: VALIDATION_CODE.ACCREDITATION_UNEXPECTED,
         location,
         actual: spreadsheetAccreditationNumber
-      }
+      })
     )
     return issues
   }

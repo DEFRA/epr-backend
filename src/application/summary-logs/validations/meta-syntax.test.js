@@ -582,6 +582,7 @@ describe('validateMetaSyntax', () => {
 
         expect(fatals).toHaveLength(1)
         expect(fatals[0].code).toBe('PROCESSING_TYPE_INVALID')
+        expect(fatals[0].kind).toBe('meta')
       }
     )
   })

@@ -1,9 +1,11 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { metaIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
 import { createMetaSchema } from './meta-syntax.schema.js'
+import { buildMetaFieldLocation } from './helpers.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
@@ -64,11 +66,9 @@ export const validateMetaSyntax = ({ parsed, year }) => {
   const issues = createValidationIssues()
 
   const metaValues = {}
-  const metaLocations = {}
 
   for (const [fieldName, fieldData] of Object.entries(parsed?.meta || {})) {
     metaValues[fieldName] = fieldData?.value
-    metaLocations[fieldName] = fieldData?.location
   }
 
   const schema = createMetaSchema({ year })
@@ -78,10 +78,10 @@ export const validateMetaSyntax = ({ parsed, year }) => {
   if (error) {
     for (const detail of error.details) {
       const fieldName = String(detail.path[0])
-      const location = {
-        ...metaLocations[fieldName],
-        field: fieldName
-      }
+      const location = buildMetaFieldLocation(
+        parsed?.meta?.[fieldName],
+        fieldName
+      )
 
       const code = mapJoiErrorToCode(fieldName, detail.type)
       const yearMismatch =
@@ -89,15 +89,15 @@ export const validateMetaSyntax = ({ parsed, year }) => {
           ? { expected: year, actual: detail.context?.actualYear }
           : {}
 
-      issues.addFatal(
-        VALIDATION_CATEGORY.TECHNICAL,
-        `Invalid meta field '${fieldName}': ${detail.message}`,
-        code,
-        {
+      issues.add(
+        metaIssue({
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          message: `Invalid meta field '${fieldName}': ${detail.message}`,
+          code,
           location,
           actual: metaValues[fieldName],
           ...yearMismatch
-        }
+        })
       )
     }
   }

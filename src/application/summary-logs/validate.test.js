@@ -994,6 +994,7 @@ describe('SummaryLogsValidator', () => {
         validation: expect.objectContaining({
           issues: [
             {
+              kind: 'meta',
               severity: 'fatal',
               category: 'business',
               message:

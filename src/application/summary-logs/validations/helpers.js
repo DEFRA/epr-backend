@@ -4,6 +4,9 @@ import {
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
+/** @import {MetaLocation} from '#common/validation/validation-issue-kinds.js' */
+/** @import {MetadataEntry} from '#domain/summary-logs/extractor/port.js' */
+
 /**
  * Logs successful validation with consistent structure
  *
@@ -20,16 +23,16 @@ export const logValidationSuccess = (message) => {
 }
 
 /**
- * Builds a location object for meta field validation errors
+ * Where a meta field is: at its cell when the file has one, else by name alone.
  *
- * @param {Object} field - The meta field object from parsed structure
+ * @param {MetadataEntry | undefined} field - The meta field from the parsed structure
  * @param {string} fieldName - The meta field name constant
- * @returns {Object} Location object with field name
+ * @returns {MetaLocation}
  */
-export const buildMetaFieldLocation = (field, fieldName) => ({
-  ...field?.location,
-  field: fieldName
-})
+export const buildMetaFieldLocation = (field, fieldName) =>
+  field?.location
+    ? { ...field.location, field: fieldName }
+    : { field: fieldName }
 
 /**
  * Extracts a meta field from parsed summary log structure

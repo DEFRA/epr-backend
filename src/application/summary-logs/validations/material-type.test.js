@@ -225,6 +225,7 @@ describe('validateMaterialType', () => {
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
       expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+      expect(fatals[0].kind).toBe('meta')
       expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
       expect(fatals[0].context?.actual).toBe('Choose material')
       expect(fatals[0].context?.location).toEqual({
@@ -254,6 +255,7 @@ describe('validateMaterialType', () => {
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
       expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+      expect(fatals[0].kind).toBe('meta')
     })
 
     it('returns fatal business error when material field is missing from meta', () => {
@@ -273,6 +275,7 @@ describe('validateMaterialType', () => {
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
       expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+      expect(fatals[0].kind).toBe('meta')
     })
 
     it('returns fatal business error for any unrecognised material string', () => {
@@ -294,6 +297,7 @@ describe('validateMaterialType', () => {
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
       expect(fatals[0].code).toBe('MATERIAL_REQUIRED')
+      expect(fatals[0].kind).toBe('meta')
       expect(fatals[0].context?.actual).toBe('NotARealMaterial')
     })
   })
