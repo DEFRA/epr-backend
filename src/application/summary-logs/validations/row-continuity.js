@@ -1,4 +1,5 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { removedRowIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
@@ -64,11 +65,11 @@ export const validateRowContinuity = ({
   for (const { wasteRecordType, rowId } of removedRowStates) {
     const match = findSchemaByWasteRecordType(wasteRecordType, tableSchemas)
 
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      `Row '${rowId}' from a previous summary log submission cannot be removed. All previously submitted rows must be included in subsequent uploads.`,
-      VALIDATION_CODE.SEQUENTIAL_ROW_REMOVED,
-      {
+    issues.add(
+      removedRowIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message: `Row '${rowId}' from a previous summary log submission cannot be removed. All previously submitted rows must be included in subsequent uploads.`,
+        code: VALIDATION_CODE.SEQUENTIAL_ROW_REMOVED,
         location: {
           sheet: match?.schema.sheetName ?? 'Unknown',
           table: match?.tableName ?? 'Unknown',
@@ -78,7 +79,7 @@ export const validateRowContinuity = ({
           id: summaryLog.summaryLogId,
           submittedAt: summaryLog.submittedAt.toISOString()
         }
-      }
+      })
     )
   }
 

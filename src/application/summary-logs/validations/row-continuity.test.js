@@ -188,6 +188,7 @@ describe('validateRowContinuity', () => {
       expect(fatals).toHaveLength(1)
       expect(fatals[0]?.category).toBe(VALIDATION_CATEGORY.BUSINESS)
       expect(fatals[0]?.code).toBe('SEQUENTIAL_ROW_REMOVED')
+      expect(fatals[0]?.kind).toBe('removedRow')
       expect(fatals[0]?.message).toContain('row-1')
       expect(fatals[0]?.message).toContain('cannot be removed')
       expect(fatals[0]?.context?.location?.rowId).toBe('row-1')
