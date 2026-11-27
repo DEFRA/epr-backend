@@ -95,30 +95,15 @@ describe('Validation Issues', () => {
   describe('isFatal', () => {
     it('returns true when there is a fatal issue', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error'))
 
       expect(result.isFatal()).toBe(true)
     })
 
     it('returns true when there are multiple fatal issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 2'))
 
       expect(result.isFatal()).toBe(true)
     })
@@ -127,38 +112,21 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
 
       expect(result.isFatal()).toBe(true)
     })
 
     it('returns false when there are no fatal issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -183,14 +151,12 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -199,40 +165,24 @@ describe('Validation Issues', () => {
 
     it('returns false when there is a fatal issue', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error'))
 
       expect(result.isValid()).toBe(false)
     })
 
     it('returns false when there is an error issue', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
 
       expect(result.isValid()).toBe(false)
     })
 
     it('returns false when there are errors and warnings', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -241,22 +191,11 @@ describe('Validation Issues', () => {
 
     it('returns false when there are fatal, error, and warning issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -275,8 +214,7 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -285,21 +223,14 @@ describe('Validation Issues', () => {
 
     it('returns true for any type of issue', () => {
       const resultFatal = createValidationIssues().add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
+        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal')
       )
       const resultError = createValidationIssues().add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
+        anIssue(VALIDATION_SEVERITY.ERROR, 'Error')
       )
       const resultWarning = createValidationIssues().add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -312,28 +243,12 @@ describe('Validation Issues', () => {
   describe('getIssuesBySeverity', () => {
     it('returns only fatal issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -346,28 +261,12 @@ describe('Validation Issues', () => {
 
     it('returns only error issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -380,28 +279,16 @@ describe('Validation Issues', () => {
 
     it('returns only warning issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -414,12 +301,7 @@ describe('Validation Issues', () => {
 
     it('returns empty array when no issues of that severity', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
 
@@ -430,24 +312,13 @@ describe('Validation Issues', () => {
   describe('getIssuesByCategory', () => {
     it('returns only technical issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Technical 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Technical 1'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 2'))
 
       const technical = result.getIssuesByCategory(
         VALIDATION_CATEGORY.TECHNICAL
@@ -460,22 +331,15 @@ describe('Validation Issues', () => {
 
     it('returns only business issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business 2', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -488,12 +352,7 @@ describe('Validation Issues', () => {
 
     it('returns empty array when no issues of that category', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1'))
 
       const business = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
 
@@ -504,34 +363,17 @@ describe('Validation Issues', () => {
   describe('groupBySeverity', () => {
     it('groups all issues by severity', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -544,12 +386,7 @@ describe('Validation Issues', () => {
 
     it('returns empty arrays for severities with no issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
 
       const grouped = result.groupBySeverity()
 
@@ -562,22 +399,11 @@ describe('Validation Issues', () => {
   describe('getAllIssues', () => {
     it('returns all issues', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -588,12 +414,7 @@ describe('Validation Issues', () => {
 
     it('returns a copy of the issues array', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
 
       const all = result.getAllIssues()
       all.push(
@@ -615,40 +436,14 @@ describe('Validation Issues', () => {
   describe('getCounts', () => {
     it('returns counts for all severity levels', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 3', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 3'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -685,48 +480,23 @@ describe('Validation Issues', () => {
 
     it('returns summary with fatal count', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2'))
 
       expect(result.getSummary()).toBe('Validation completed with 2 fatal')
     })
 
     it('returns summary with single error', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
 
       expect(result.getSummary()).toBe('Validation completed with 1 error')
     })
 
     it('returns summary with multiple errors', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
 
       expect(result.getSummary()).toBe('Validation completed with 2 errors')
     })
@@ -735,8 +505,7 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -747,14 +516,12 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -763,28 +530,12 @@ describe('Validation Issues', () => {
 
     it('returns summary with all severity types', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -795,18 +546,8 @@ describe('Validation Issues', () => {
 
     it('returns summary with only fatal and errors', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
 
       expect(result.getSummary()).toBe(
         'Validation completed with 1 fatal, 1 error'
@@ -815,16 +556,10 @@ describe('Validation Issues', () => {
 
     it('returns summary with only errors and warnings', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -841,7 +576,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Complex error',
-          code: 'MUST_BE_A_NUMBER',
+          code: 'SPREADSHEET_INVALID_ERROR',
           row: 42,
           field: 'TONNAGE',
           section: 'Section 1',
@@ -873,8 +608,6 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Missing required field', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER',
           location: {
             sheet: 'Received',
             table: 'RECEIVED_LOADS',
@@ -908,15 +641,12 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Missing reference', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER',
           location: { ...TEST_CELL, row: 5, header: 'ROW_ID' }
         })
       )
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Below threshold', {
           category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER',
           location: { ...TEST_CELL, row: 10, header: 'TONNAGE' },
           actual: 0.001
         })
@@ -925,7 +655,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Could not parse file',
-          code: 'MUST_BE_A_NUMBER'
+          code: 'SPREADSHEET_INVALID_ERROR'
         })
       )
 
@@ -943,7 +673,7 @@ describe('Validation Issues', () => {
         metaIssue({
           category: VALIDATION_CATEGORY.BUSINESS,
           message: 'Processing type does not match',
-          code: 'MUST_BE_A_NUMBER',
+          code: 'PROCESSING_TYPE_MISMATCH',
           location: { field: 'PROCESSING_TYPE' },
           expected: 'REPROCESSOR_INPUT',
           actual: 'EXPORTER'
@@ -966,8 +696,6 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Value mismatch', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER',
           location: {
             sheet: 'Sheet1',
             table: 'RECEIVED_LOADS',
@@ -1000,22 +728,11 @@ describe('Validation Issues', () => {
 
     it('generates correct types for all severity/category combinations', () => {
       const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal technical', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Technical error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal technical'))
+      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Technical error'))
       result.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Business warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -1032,7 +749,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Generic error',
-          code: 'MUST_BE_A_NUMBER'
+          code: 'VALIDATION_SYSTEM_ERROR'
         })
       )
 
@@ -1067,7 +784,7 @@ describe('Validation Issues', () => {
           fileIssue({
             category: VALIDATION_CATEGORY.TECHNICAL,
             message: 'Cannot parse',
-            code: 'MUST_BE_A_NUMBER'
+            code: 'SPREADSHEET_INVALID_ERROR'
           })
         )
       ).toEqual({
@@ -1102,7 +819,7 @@ describe('Validation Issues', () => {
         fileIssue({
           category: VALIDATION_CATEGORY.TECHNICAL,
           message: 'Invalid',
-          code: 'MUST_BE_A_NUMBER',
+          code: 'SPREADSHEET_INVALID_ERROR',
           field: undefined,
           value: undefined
         })
@@ -1118,20 +835,10 @@ describe('Validation Issues', () => {
   describe('merge', () => {
     it('merges issues from another ValidationResult', () => {
       const result1 = createValidationIssues()
-      result1.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result1.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
 
       const result2 = createValidationIssues()
-      result2.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result2.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
 
       result1.merge(result2)
 
@@ -1145,24 +852,9 @@ describe('Validation Issues', () => {
       const result2 = createValidationIssues()
       const result3 = createValidationIssues()
 
-      result1.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result2.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result3.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 3', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result1.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
+      result2.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
+      result3.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 3'))
 
       const returned = result1.merge(result2).merge(result3)
 
@@ -1172,12 +864,7 @@ describe('Validation Issues', () => {
 
     it('merges empty result without errors', () => {
       const result1 = createValidationIssues()
-      result1.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result1.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
 
       const result2 = createValidationIssues()
 
@@ -1190,12 +877,7 @@ describe('Validation Issues', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
-      result2.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result2.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
 
       result1.merge(result2)
 
@@ -1207,22 +889,11 @@ describe('Validation Issues', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
-      result2.add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
-      result2.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result2.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
+      result2.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
       result2.add(
         anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_A_NUMBER'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
@@ -1251,24 +922,14 @@ describe('Validation Issues', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
-      result2.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result2.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
 
       result1.merge(result2)
 
       expect(result2.getAllIssues()).toHaveLength(1)
       expect(result1.getAllIssues()).toHaveLength(1)
 
-      result1.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'MUST_BE_A_NUMBER'
-        })
-      )
+      result1.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
 
       expect(result2.getAllIssues()).toHaveLength(1)
       expect(result1.getAllIssues()).toHaveLength(2)
