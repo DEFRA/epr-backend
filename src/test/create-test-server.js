@@ -22,7 +22,7 @@ import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-even
 import {
   createInMemoryFormsFileUploadsRepositoryPlugin,
   createInMemoryFormSubmissionsRepositoryPlugin
-} from '#formsubmission/test-support.js'
+} from '#forms-submission-data/test-support.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'

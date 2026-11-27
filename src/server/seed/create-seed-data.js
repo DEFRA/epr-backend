@@ -6,7 +6,7 @@ import {
   extractOrgName,
   organisationFactory,
   registrationFactory
-} from '#formsubmission/index.js'
+} from '#forms-submission-data/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createEprOrganisationScenarios } from './seed-scenarios.js'

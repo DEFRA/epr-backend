@@ -2,7 +2,7 @@ import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 import { getCognitoToken } from '#common/helpers/cognito-token.js'
 import { fetchJson } from '#common/helpers/fetch-json.js'
-import { getRetrievalKeyForRegulator } from '#formsubmission/file-uploads/get-retrieval-key.js'
+import { getRetrievalKeyForRegulator } from '#forms-submission-data/file-uploads/get-retrieval-key.js'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 /** @import { FormsFileUploadsRepository } from './port.js' */

@@ -1,7 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
-import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
-import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
+import { parseAccreditationSubmission } from '#forms-submission-data/accreditation/transform-accreditation.js'
+import { parseOrgSubmission } from '#forms-submission-data/organisation/transform-organisation.js'
+import { parseRegistrationSubmission } from '#forms-submission-data/registration/transform-registration.js'
 import { ObjectId } from 'mongodb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { transformAll } from './submission-transformer.js'
@@ -12,38 +12,47 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
     error: vi.fn()
   }
 }))
-vi.mock('#formsubmission/organisation/transform-organisation.js', () => ({
-  parseOrgSubmission: vi.fn((id, orgId, _) => [
-    {
-      id,
-      orgId,
-      companyDetails: { name: `Company ${orgId}` },
-      users: [],
-      registrations: [],
-      accreditations: []
-    }
-  ])
-}))
-vi.mock('#formsubmission/registration/transform-registration.js', () => ({
-  parseRegistrationSubmission: vi.fn((id, _) => [
-    {
-      id,
-      systemReference: new ObjectId().toString(),
-      orgId: 500001,
-      material: 'plastic'
-    }
-  ])
-}))
-vi.mock('#formsubmission/accreditation/transform-accreditation.js', () => ({
-  parseAccreditationSubmission: vi.fn((id, _) => [
-    {
-      id,
-      systemReference: new ObjectId().toString(),
-      orgId: 500001,
-      material: 'plastic'
-    }
-  ])
-}))
+vi.mock(
+  '#forms-submission-data/organisation/transform-organisation.js',
+  () => ({
+    parseOrgSubmission: vi.fn((id, orgId, _) => [
+      {
+        id,
+        orgId,
+        companyDetails: { name: `Company ${orgId}` },
+        users: [],
+        registrations: [],
+        accreditations: []
+      }
+    ])
+  })
+)
+vi.mock(
+  '#forms-submission-data/registration/transform-registration.js',
+  () => ({
+    parseRegistrationSubmission: vi.fn((id, _) => [
+      {
+        id,
+        systemReference: new ObjectId().toString(),
+        orgId: 500001,
+        material: 'plastic'
+      }
+    ])
+  })
+)
+vi.mock(
+  '#forms-submission-data/accreditation/transform-accreditation.js',
+  () => ({
+    parseAccreditationSubmission: vi.fn((id, _) => [
+      {
+        id,
+        systemReference: new ObjectId().toString(),
+        orgId: 500001,
+        material: 'plastic'
+      }
+    ])
+  })
+)
 
 describe('transformAll', () => {
   let formsSubmissionRepository

@@ -4,7 +4,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { siteInfoToLog } from './parsing-common/site.js'
-import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
+import { isAccreditationForRegistration } from '#forms-submission-data/submission-keys.js'
 
 /** @import {Organisation, OrganisationWithRegistrations} from './types.js' */
 

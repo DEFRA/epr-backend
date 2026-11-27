@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryFormSubmissionsRepository } from '#formsubmission/repository/inmemory.js'
+import { createInMemoryFormSubmissionsRepository } from '#forms-submission-data/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'

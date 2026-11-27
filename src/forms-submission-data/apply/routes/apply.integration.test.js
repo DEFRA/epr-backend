@@ -2,8 +2,8 @@ import { describe, expect } from 'vitest'
 /** @import { Collection } from 'mongodb' */
 import { StatusCodes } from 'http-status-codes'
 
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#formsubmission/apply/form-fields.js'
-import { createFormCollections } from '#formsubmission/apply/collections/create-update.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#forms-submission-data/apply/form-fields.js'
+import { createFormCollections } from '#forms-submission-data/apply/collections/create-update.js'
 import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 import registrationFixture from '#data/fixtures/registration.json' with { type: 'json' }

@@ -1,6 +1,6 @@
-import { registrationAndAccreditationPayload } from '#formsubmission/apply/payload.js'
-import { registrationAndAccreditationHandler } from '#formsubmission/apply/handler.js'
-import { accreditationFactory } from '#formsubmission/apply/collections/factories/index.js'
+import { registrationAndAccreditationPayload } from '#forms-submission-data/apply/payload.js'
+import { registrationAndAccreditationHandler } from '#forms-submission-data/apply/handler.js'
+import { accreditationFactory } from '#forms-submission-data/apply/collections/factories/index.js'
 
 export const accreditationPath = '/v1/apply/accreditation'
 

@@ -5,7 +5,7 @@ import {
   extractTimestamp,
   findFirstValue,
   flattenAnswersByShortDesc
-} from '#formsubmission/parsing-common/parse-forms-data.js'
+} from '#forms-submission-data/parsing-common/parse-forms-data.js'
 import { ORGANISATION } from './form-field-constants.js'
 import {
   mapBusinessType,
@@ -13,9 +13,9 @@ import {
   mapPartnershipType,
   mapPartnerType,
   mapWasteProcessingType
-} from '#formsubmission/parsing-common/form-data-mapper.js'
-import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
-import { applyOrganisationOverrides } from '#formsubmission/overrides/override.js'
+} from '#forms-submission-data/parsing-common/form-data-mapper.js'
+import { parseUkAddress } from '#forms-submission-data/parsing-common/parse-address.js'
+import { applyOrganisationOverrides } from '#forms-submission-data/overrides/override.js'
 
 function extractWasteProcessingTypes(answersByShortDescription) {
   const value =

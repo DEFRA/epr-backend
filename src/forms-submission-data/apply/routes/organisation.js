@@ -10,14 +10,14 @@ import {
 import {
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
-} from '#formsubmission/apply/gov-notify.js'
+} from '#forms-submission-data/apply/gov-notify.js'
 import {
   extractAnswers,
   extractEmail,
   extractOrgName,
   getRegulatorEmail
-} from '#formsubmission/apply/extract-answers.js'
-import { organisationFactory } from '#formsubmission/apply/collections/factories/index.js'
+} from '#forms-submission-data/apply/extract-answers.js'
+import { organisationFactory } from '#forms-submission-data/apply/collections/factories/index.js'
 import { sendEmail } from '#common/helpers/notify.js'
 
 export const organisationPath = '/v1/apply/organisation'

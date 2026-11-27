@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
 /** @import { HapiRequest } from '#common/hapi-types.js' */
-/** @import { FormSubmissionsRepository } from '#formsubmission/repository/port.js' */
+/** @import { FormSubmissionsRepository } from '#forms-submission-data/repository/port.js' */
 
 export const formSubmissionsDataGet = {
   method: 'GET',

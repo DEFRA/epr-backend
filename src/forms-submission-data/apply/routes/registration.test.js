@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#formsubmission/apply/form-fields.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#forms-submission-data/apply/form-fields.js'
 import registrationFixture from '#data/fixtures/registration.json' with { type: 'json' }
 import { registrationPath } from './registration.js'
 import { it } from '#vite/fixtures/server-with-mock-db.js'

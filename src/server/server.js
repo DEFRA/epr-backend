@@ -20,7 +20,7 @@ import {
   createFormCollections,
   formsFileUploadsRepositoryPlugin,
   formSubmissionsRepositoryPlugin
-} from '#formsubmission/plugin.js'
+} from '#forms-submission-data/plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'

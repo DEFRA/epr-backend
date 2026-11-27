@@ -12,13 +12,13 @@ import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 import {
   linkItemsToOrganisations,
   linkRegistrationToAccreditations
-} from '#formsubmission/link-form-submissions.js'
+} from '#forms-submission-data/link-form-submissions.js'
 
 /**
- * @import { FormSubmissionsRepository } from '#formsubmission/repository/port.js'
+ * @import { FormSubmissionsRepository } from '#forms-submission-data/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
- * @import { Organisation, Registration, Accreditation } from '#formsubmission/types.js'
+ * @import { Organisation, Registration, Accreditation } from '#forms-submission-data/types.js'
  */
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -45,12 +45,12 @@ vi.mock('./copy-operator-uploaded-files.js', () => ({
   copyOperatorUploadedFiles: vi.fn().mockResolvedValue(undefined)
 }))
 
-vi.mock('#formsubmission/link-form-submissions.js', () => ({
+vi.mock('#forms-submission-data/link-form-submissions.js', () => ({
   linkItemsToOrganisations: vi.fn(),
   linkRegistrationToAccreditations: vi.fn()
 }))
 
-vi.mock('#formsubmission/data-migration-config.js', () => ({
+vi.mock('#forms-submission-data/data-migration-config.js', () => ({
   systemReferencesRequiringOrgIdMatch: vi.fn(() => new Set())
 }))
 

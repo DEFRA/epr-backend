@@ -1,9 +1,9 @@
 import { REGISTRATION } from './form-field-constants.js'
-import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
+import { parseUkAddress } from '#forms-submission-data/parsing-common/parse-address.js'
 import {
   mapTimeScale,
   convertToNumber
-} from '#formsubmission/parsing-common/form-data-mapper.js'
+} from '#forms-submission-data/parsing-common/form-data-mapper.js'
 import { MATERIAL } from '#domain/organisations/model.js'
 
 const SITE_CAPACITY_BY_MATERIALS = [

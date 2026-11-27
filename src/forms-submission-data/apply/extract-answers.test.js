@@ -1,5 +1,5 @@
 import { getConfig } from '#root/config.js'
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#formsubmission/apply/form-fields.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#forms-submission-data/apply/form-fields.js'
 import {
   extractAnswers,
   extractEmail,

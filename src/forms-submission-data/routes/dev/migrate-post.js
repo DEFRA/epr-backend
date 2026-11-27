@@ -2,11 +2,11 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
-import { MigrationOrchestrator } from '#formsubmission/migration/migration-orchestrator.js'
+import { MigrationOrchestrator } from '#forms-submission-data/migration/migration-orchestrator.js'
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
-/** @import {FormsFileUploadsRepository} from '#formsubmission/file-uploads/port.js' */
-/** @import {FormSubmissionsRepository} from '#formsubmission/repository/port.js' */
+/** @import {FormsFileUploadsRepository} from '#forms-submission-data/file-uploads/port.js' */
+/** @import {FormSubmissionsRepository} from '#forms-submission-data/repository/port.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
 

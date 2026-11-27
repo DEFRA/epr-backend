@@ -1,4 +1,4 @@
-import { createInMemoryFormSubmissionsRepository } from '#formsubmission/repository/inmemory.js'
+import { createInMemoryFormSubmissionsRepository } from '#forms-submission-data/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'

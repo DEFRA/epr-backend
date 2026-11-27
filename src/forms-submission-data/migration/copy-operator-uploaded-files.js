@@ -1,7 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
 
 /**
- * @import { FormsFileUploadsRepository } from '#formsubmission/file-uploads/port.js'
+ * @import { FormsFileUploadsRepository } from '#forms-submission-data/file-uploads/port.js'
  */
 
 function extractFilesFromSubmission(submission) {

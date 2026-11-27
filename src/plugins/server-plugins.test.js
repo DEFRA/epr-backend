@@ -1,7 +1,7 @@
 import HapiSwagger from 'hapi-swagger'
 import { describe, it, expect } from 'vitest'
 
-import { applyRoutesPlugin } from '#formsubmission/plugin.js'
+import { applyRoutesPlugin } from '#forms-submission-data/plugin.js'
 import { getConfig } from '#root/config.js'
 
 import { moduleRoutePlugins, serverPlugins } from './server-plugins.js'

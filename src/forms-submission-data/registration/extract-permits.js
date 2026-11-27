@@ -1,11 +1,11 @@
-import { extractRepeaters } from '#formsubmission/parsing-common/parse-forms-data.js'
+import { extractRepeaters } from '#forms-submission-data/parsing-common/parse-forms-data.js'
 import { REGISTRATION } from './form-field-constants.js'
 import {
   mapMaterial,
   mapTimeScale,
   convertToNumber,
   mapWastePermitType
-} from '#formsubmission/parsing-common/form-data-mapper.js'
+} from '#forms-submission-data/parsing-common/form-data-mapper.js'
 import {
   MATERIAL,
   WASTE_PERMIT_TYPE,

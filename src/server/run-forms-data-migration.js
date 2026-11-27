@@ -1,5 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { createFormDataMigrator } from '#formsubmission/plugin.js'
+import { createFormDataMigrator } from '#forms-submission-data/plugin.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
 

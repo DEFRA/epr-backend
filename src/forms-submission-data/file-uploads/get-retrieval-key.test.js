@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getRetrievalKeyForRegulator } from '#formsubmission/file-uploads/get-retrieval-key.js'
+import { getRetrievalKeyForRegulator } from '#forms-submission-data/file-uploads/get-retrieval-key.js'
 
 const regulators = {
   NIEA: {

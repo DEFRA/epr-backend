@@ -21,7 +21,7 @@ import { router } from '#plugins/router.js'
 import {
   applyRoutesPlugin,
   formsSubmissionDataRoutesPlugin
-} from '#formsubmission/plugin.js'
+} from '#forms-submission-data/plugin.js'
 import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 

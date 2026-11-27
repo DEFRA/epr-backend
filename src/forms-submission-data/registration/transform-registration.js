@@ -5,26 +5,26 @@ import {
   extractWasteProcessingType,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
-} from '#formsubmission/parsing-common/parse-forms-data.js'
+} from '#forms-submission-data/parsing-common/parse-forms-data.js'
 import { REGISTRATION } from './form-field-constants.js'
-import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
+import { parseUkAddress } from '#forms-submission-data/parsing-common/parse-address.js'
 import {
   mapMaterial,
   mapGlassRecyclingProcess,
   convertToNumber,
   normalizeObjectId
-} from '#formsubmission/parsing-common/form-data-mapper.js'
+} from '#forms-submission-data/parsing-common/form-data-mapper.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { getWasteManagementPermits } from '#formsubmission/registration/extract-permits.js'
-import { getSiteDetails } from '#formsubmission/registration/extract-site.js'
+import { getWasteManagementPermits } from '#forms-submission-data/registration/extract-permits.js'
+import { getSiteDetails } from '#forms-submission-data/registration/extract-site.js'
 import {
   getSubmitterDetails,
   getApprovedPersons,
   getApplicationContactDetails
-} from '#formsubmission/registration/extract-contacts.js'
-import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-metrics.js'
-import { applyRegistrationOverrides } from '#formsubmission/overrides/override.js'
-import { splitGlassSubmissions } from '#formsubmission/parsing-common/split-glass-submissions.js'
+} from '#forms-submission-data/registration/extract-contacts.js'
+import { getYearlyMetrics } from '#forms-submission-data/registration/extract-yearly-metrics.js'
+import { applyRegistrationOverrides } from '#forms-submission-data/overrides/override.js'
+import { splitGlassSubmissions } from '#forms-submission-data/parsing-common/split-glass-submissions.js'
 
 function getNoticeAddress(answersByShortDescription) {
   const noticeAddress =

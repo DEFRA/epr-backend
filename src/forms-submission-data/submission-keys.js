@@ -1,5 +1,5 @@
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { siteKey } from '#formsubmission/parsing-common/site.js'
+import { siteKey } from '#forms-submission-data/parsing-common/site.js'
 
 /**
  * Structural subset of Registration/Accreditation fields used to build the

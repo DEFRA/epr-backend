@@ -23,7 +23,7 @@
       "#data/*": ["./src/data/*"],
       "#domain/*": ["./src/domain/*"],
       "#feature-flags/*": ["./src/feature-flags/*"],
-      "#formsubmission/*": ["./src/forms-submission-data/*"],
+      "#forms-submission-data/*": ["./src/forms-submission-data/*"],
       "#plugins/*": ["./src/plugins/*"],
       "#repositories/*": ["./src/repositories/*"],
       "#root/*": ["./src/*"],

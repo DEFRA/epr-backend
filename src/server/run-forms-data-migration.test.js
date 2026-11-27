@@ -6,7 +6,7 @@ import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import {
   createInMemoryFormsFileUploadsRepository,
   createInMemoryFormSubmissionsRepository
-} from '#formsubmission/test-support.js'
+} from '#forms-submission-data/test-support.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 

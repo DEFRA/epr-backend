@@ -1,4 +1,4 @@
-import { overrideConfig } from '#formsubmission/data-migration-config.js'
+import { overrideConfig } from '#forms-submission-data/data-migration-config.js'
 
 /**
  * Applies field overrides to a submission based on its ID

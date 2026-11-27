@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
-import { createInMemoryFormsFileUploadsRepository } from '#formsubmission/file-uploads/inmemory.js'
+import { createInMemoryFormsFileUploadsRepository } from '#forms-submission-data/file-uploads/inmemory.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
