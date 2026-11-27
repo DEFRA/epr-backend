@@ -1,5 +1,5 @@
 import { describe, beforeEach, expect, it as base } from 'vitest'
-import { createFormSubmissionsRepository } from './inmemory.js'
+import { createInMemoryFormSubmissionsRepository } from './inmemory.js'
 import { testFormSubmissionsRepositoryContract } from './port.contract.js'
 import {
   buildAccreditation,
@@ -51,7 +51,7 @@ const it = /** @type {TestAPI<Fixtures>} */ (
     ) => {
       // Return a factory-like function that creates a fresh repository with current state
       const factory = () =>
-        createFormSubmissionsRepository(
+        createInMemoryFormSubmissionsRepository(
           accreditations,
           registrations,
           organisations

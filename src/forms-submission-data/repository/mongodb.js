@@ -202,7 +202,7 @@ const findAllFormSubmissionIds = (db) => async () => {
  * @param {Pick<OrganisationAdministrationRepository, 'findHighestOrganisationNumber'>} organisationAdministrationRepository
  * @returns {Promise<import('./port.js').FormSubmissionsRepositoryFactory>}
  */
-export const createFormSubmissionsRepository = async (
+export const createMongoFormSubmissionsRepository = async (
   db,
   logger,
   organisationAdministrationRepository

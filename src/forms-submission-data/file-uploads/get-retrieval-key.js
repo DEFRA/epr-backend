@@ -1,13 +1,25 @@
-import { config } from '#root/config.js'
+/**
+ * Each regulator's email addresses, keyed by the regulator's code in capitals.
+ * `defraFormsSubmissionEmail` is the address a regulator's Defra form is set
+ * up with, where it differs from the regulator's own.
+ *
+ * @typedef {Record<string, { email: string, defraFormsSubmissionEmail?: string }>} RegulatorEmails
+ */
 
-export const getRetrievalKeyForRegulator = (regulator) => {
+/**
+ * The key the Forms Submission API takes for a regulator's files: the email
+ * address the regulator's form is set up with, in lower case.
+ *
+ * @param {RegulatorEmails} regulators
+ * @param {string} regulator
+ */
+export const getRetrievalKeyForRegulator = (regulators, regulator) => {
   const regulatorKey = regulator.toUpperCase()
-  const defraEmailPath = `regulator.${regulatorKey}.defraFormsSubmissionEmail`
-  const standardEmailPath = `regulator.${regulatorKey}.email`
+  const emails = regulators[regulatorKey]
 
-  const email = config.has(defraEmailPath)
-    ? config.get(defraEmailPath)
-    : config.get(standardEmailPath)
+  if (!emails) {
+    throw new Error(`No email address is configured for ${regulatorKey}`)
+  }
 
-  return email.toLowerCase()
+  return (emails.defraFormsSubmissionEmail ?? emails.email).toLowerCase()
 }

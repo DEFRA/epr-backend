@@ -6,11 +6,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#formsubmission/apply/form-fields.js'
 import {
-  FORM_FIELDS_SHORT_DESCRIPTIONS,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
-} from '#common/enums/index.js'
+} from '#formsubmission/apply/gov-notify.js'
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }

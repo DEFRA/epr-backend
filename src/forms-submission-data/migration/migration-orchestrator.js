@@ -12,7 +12,7 @@ import { upsertOrganisations } from './organisation-persistence.js'
 import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 
 /**
- * @import {createFormsFileUploadsRepository} from '#formsubmission/file-uploads/forms-file-uploads.js'
+ * @import {FormsFileUploadsRepository} from '#formsubmission/file-uploads/port.js'
  * @import {FormSubmissionsRepository} from '#formsubmission/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -24,7 +24,7 @@ export class MigrationOrchestrator {
    * @param {FormSubmissionsRepository} formsSubmissionRepository
    * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {SystemLogsRepository} systemLogsRepository
-   * @param {ReturnType<typeof createFormsFileUploadsRepository>} formsFileUploadsRepository
+   * @param {FormsFileUploadsRepository} formsFileUploadsRepository
    */
   constructor(
     formsSubmissionRepository,
@@ -252,7 +252,7 @@ export class MigrationOrchestrator {
  * @param {FormSubmissionsRepository} formsSubmissionRepository
  * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SystemLogsRepository} systemLogsRepository
- * @param {object} formsFileUploadsRepository
+ * @param {FormsFileUploadsRepository} formsFileUploadsRepository
  * @returns {FormDataMigrator}
  */
 export function createFormDataMigrator(

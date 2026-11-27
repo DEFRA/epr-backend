@@ -18,7 +18,7 @@ export const mongoDbPlugin = {
      *   mongoUrl: string,
      *   mongoOptions: object,
      *   databaseName: string,
-     *   createFormCollections: (db: Db) => Promise<void>,
+     *   createCollections: (db: Db) => Promise<void>,
      *   seedDatabase: (db: Db) => Promise<void>
      * }} options
      */
@@ -41,7 +41,7 @@ export const mongoDbPlugin = {
       const locks = db.collection('mongo-locks')
       const locker = new LockManager(locks)
 
-      await options.createFormCollections(db)
+      await options.createCollections(db)
       await locks.createIndex({ id: 1 })
       await options.seedDatabase(db)
 

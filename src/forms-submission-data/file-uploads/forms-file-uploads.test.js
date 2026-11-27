@@ -38,7 +38,18 @@ describe('createFormsFileUploadsRepository', () => {
     }
 
     repository = createFormsFileUploadsRepository({
-      s3Client: partialMock(mockS3Client)
+      s3Client: partialMock(mockS3Client),
+      formsSubmissionApi: {
+        url: 'https://forms-api.test',
+        s3Bucket: 'test-forms-bucket',
+        cognitoClientId: 'test-client-id',
+        cognitoClientSecret: 'test-client-secret',
+        cognitoTokenUrl: 'https://cognito.test/oauth2/token'
+      },
+      regulators: {
+        EA: { email: 'ea-retrieval@example.com' },
+        SEPA: { email: 'sepa-retrieval@example.com' }
+      }
     })
   })
 
@@ -67,13 +78,13 @@ describe('createFormsFileUploadsRepository', () => {
       await repository.copyFormFileToS3({ fileId, regulator })
 
       expect(mockGetCognitoToken).toHaveBeenCalledWith(
-        'client-id',
-        'client-secret',
-        'https://forms-submission-api.auth.eu-west-2.amazoncognito.com/oauth2/token'
+        'test-client-id',
+        'test-client-secret',
+        'https://cognito.test/oauth2/token'
       )
 
       expect(mockFetchJson).toHaveBeenCalledWith(
-        'https://forms-submission-api.local.cdp-int.defra.cloud/file/link',
+        'https://forms-api.test/file/link',
         {
           method: 'POST',
           headers: {
@@ -82,7 +93,7 @@ describe('createFormsFileUploadsRepository', () => {
           },
           body: JSON.stringify({
             fileId: 'test-file-123',
-            retrievalKey: 'test@ea.gov.uk'
+            retrievalKey: 'ea-retrieval@example.com'
           })
         }
       )
@@ -90,7 +101,7 @@ describe('createFormsFileUploadsRepository', () => {
       expect(Upload).toHaveBeenCalledWith({
         client: mockS3Client,
         params: {
-          Bucket: 're-ex-form-uploads',
+          Bucket: 'test-forms-bucket',
           Key: fileId,
           Body: mockBody
         }
@@ -208,7 +219,7 @@ describe('createFormsFileUploadsRepository', () => {
 
       const s3Command = mockS3Client.send.mock.calls[0][0]
       expect(s3Command.input).toEqual({
-        Bucket: 're-ex-form-uploads',
+        Bucket: 'test-forms-bucket',
         Key: 'test-file-123'
       })
 

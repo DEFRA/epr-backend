@@ -4,7 +4,7 @@
  * @param {Object[]} [initialOrganisations=[]]
  * @returns {import('./port.js').FormSubmissionsRepositoryFactory}
  */
-export const createFormSubmissionsRepository = (
+export const createInMemoryFormSubmissionsRepository = (
   initialAccreditations = [],
   initialRegistrations = [],
   initialOrganisations = []

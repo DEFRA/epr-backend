@@ -1,5 +1,4 @@
 import { health } from '#routes/health.js'
-import { apply } from '#formsubmission/plugin.js'
 import * as organisationViewRoutes from '#routes/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
 import * as devRoutes from '#routes/v1/dev/index.js'
@@ -48,7 +47,6 @@ const router = {
 
       server.route([
         health,
-        ...apply,
         ...Object.values(meRoutes),
         ...summaryLogRoutesByNaturalKey,
         ...devRoutesBehindFeatureFlag,

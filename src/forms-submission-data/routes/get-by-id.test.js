@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { createFormSubmissionsRepository } from '#formsubmission/repository/inmemory.js'
+import { createInMemoryFormSubmissionsRepository } from '#formsubmission/repository/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -22,11 +22,12 @@ describe('GET /v1/form-submissions/{documentId}', () => {
   let server
 
   beforeEach(async () => {
-    const formSubmissionsRepositoryFactory = createFormSubmissionsRepository(
-      [ACC_A, ACC_B, ACC_C],
-      [REG_A, REG_B, REG_C],
-      [ORG_A, ORG_B]
-    )
+    const formSubmissionsRepositoryFactory =
+      createInMemoryFormSubmissionsRepository(
+        [ACC_A, ACC_B, ACC_C],
+        [REG_A, REG_B, REG_C],
+        [ORG_A, ORG_B]
+      )
 
     server = await createTestServer({
       repositories: {

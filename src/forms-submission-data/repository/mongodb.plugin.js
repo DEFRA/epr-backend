@@ -1,4 +1,4 @@
-import { createFormSubmissionsRepository } from './mongodb.js'
+import { createMongoFormSubmissionsRepository } from './mongodb.js'
 import { registerDependency } from '#plugins/register-dependency.js'
 
 /** @import { Server } from '@hapi/hapi' */
@@ -20,7 +20,7 @@ export const formSubmissionsRepositoryPlugin = {
       ['mongodb', 'organisationsRepository'],
       async (started) => {
         const app = /** @type {ServerApp} */ (started.app)
-        const factory = await createFormSubmissionsRepository(
+        const factory = await createMongoFormSubmissionsRepository(
           /** @type {Server & { db: Db }} */ (started).db,
           started.logger,
           app.organisationAdministrationRepository

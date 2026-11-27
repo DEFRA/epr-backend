@@ -1,4 +1,4 @@
-import { createFormSubmissionsRepository } from '#formsubmission/repository/inmemory.js'
+import { createInMemoryFormSubmissionsRepository } from '#formsubmission/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -55,7 +55,7 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
       rawSubmissionData: fixture.rawSubmissionData
     }))
 
-    return createFormSubmissionsRepository(
+    return createInMemoryFormSubmissionsRepository(
       accFormSubmissions,
       regFormSubmissions,
       orgFormSubmissions

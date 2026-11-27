@@ -5,10 +5,12 @@ import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
+import {
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
-} from '#common/enums/index.js'
+} from '#formsubmission/apply/gov-notify.js'
 import {
   extractAnswers,
   extractEmail,

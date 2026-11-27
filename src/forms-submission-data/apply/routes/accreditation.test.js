@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#formsubmission/apply/form-fields.js'
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 import { accreditationPath } from './accreditation.js'
 import { it } from '#vite/fixtures/server-with-mock-db.js'

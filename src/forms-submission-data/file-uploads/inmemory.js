@@ -1,5 +1,7 @@
 import { Readable } from 'node:stream'
 
+/** @import { FormsFileUploadsRepository } from './port.js' */
+
 /**
  * @typedef {Object} InMemoryFormsFileUploadsRepositoryConfig
  * @property {Map<string, Buffer>} [initialFiles] - Map of fileId to file content for initial load
@@ -9,7 +11,7 @@ import { Readable } from 'node:stream'
  * Creates an in-memory Forms File Uploads Repository for testing
  *
  * @param {InMemoryFormsFileUploadsRepositoryConfig} [config={}]
- * @returns {Object} Repository with file operations
+ * @returns {FormsFileUploadsRepository}
  */
 export const createInMemoryFormsFileUploadsRepository = (config = {}) => {
   // Initialize storage with provided files or empty Map

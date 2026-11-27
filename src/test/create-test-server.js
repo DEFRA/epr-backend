@@ -19,7 +19,10 @@ import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packagin
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'
 import { createInMemoryRegistrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/test-support.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
-import { createInMemoryFormSubmissionsRepositoryPlugin } from '#formsubmission/test-support.js'
+import {
+  createInMemoryFormsFileUploadsRepositoryPlugin,
+  createInMemoryFormSubmissionsRepositoryPlugin
+} from '#formsubmission/test-support.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
@@ -148,6 +151,10 @@ const repositoryConfigs = [
   {
     name: 'formSubmissionsRepository',
     createDefault: createInMemoryFormSubmissionsRepositoryPlugin
+  },
+  {
+    name: 'formsFileUploadsRepository',
+    createDefault: createInMemoryFormsFileUploadsRepositoryPlugin
   },
   {
     name: 'summaryLogRowStatesRepository',

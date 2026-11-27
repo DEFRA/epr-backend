@@ -1,5 +1,5 @@
 import { portAdapter } from '#plugins/port-adapter.js'
-import { createFormSubmissionsRepository } from './inmemory.js'
+import { createInMemoryFormSubmissionsRepository } from './inmemory.js'
 
 /**
  * @typedef {Object} FormSubmissionsInitialData
@@ -14,7 +14,7 @@ import { createFormSubmissionsRepository } from './inmemory.js'
 export function createInMemoryFormSubmissionsRepositoryPlugin(
   initialData = {}
 ) {
-  const factory = createFormSubmissionsRepository(
+  const factory = createInMemoryFormSubmissionsRepository(
     initialData.accreditations,
     initialData.registrations,
     initialData.organisations

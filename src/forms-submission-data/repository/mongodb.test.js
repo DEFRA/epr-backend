@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
-import { createFormSubmissionsRepository } from './mongodb.js'
+import { createMongoFormSubmissionsRepository } from './mongodb.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
@@ -52,7 +52,7 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
 
     formSubmissionsRepository: async ({ mongoClient }, use) => {
       const database = mongoClient.db(DATABASE_NAME)
-      const factory = await createFormSubmissionsRepository(
+      const factory = await createMongoFormSubmissionsRepository(
         database,
         testLogger,
         noOrganisations
@@ -161,7 +161,11 @@ describe('MongoDB form submissions repository', () => {
       mongoClient
     }) => {
       const db = mongoClient.db(DATABASE_NAME)
-      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
+      await createMongoFormSubmissionsRepository(
+        db,
+        testLogger,
+        noOrganisations
+      )
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(500000)
@@ -174,7 +178,11 @@ describe('MongoDB form submissions repository', () => {
       const orgs = await seedOrganisations()
       const maxOrgId = Math.max(...orgs.map((o) => o.orgId))
       const db = mongoClient.db(DATABASE_NAME)
-      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
+      await createMongoFormSubmissionsRepository(
+        db,
+        testLogger,
+        noOrganisations
+      )
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(maxOrgId)
@@ -190,7 +198,7 @@ describe('MongoDB form submissions repository', () => {
         })
       ])()
 
-      await createFormSubmissionsRepository(db, testLogger, organisations)
+      await createMongoFormSubmissionsRepository(db, testLogger, organisations)
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(500999)
@@ -200,14 +208,22 @@ describe('MongoDB form submissions repository', () => {
       mongoClient
     }) => {
       const db = mongoClient.db(DATABASE_NAME)
-      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
+      await createMongoFormSubmissionsRepository(
+        db,
+        testLogger,
+        noOrganisations
+      )
 
       await countersCollection(db).updateOne(
         { _id: 'orgId' },
         { $set: { seq: 600000 } }
       )
 
-      await createFormSubmissionsRepository(db, testLogger, noOrganisations)
+      await createMongoFormSubmissionsRepository(
+        db,
+        testLogger,
+        noOrganisations
+      )
 
       const counter = await countersCollection(db).findOne({ _id: 'orgId' })
       expect(counter?.seq).toBe(600000)

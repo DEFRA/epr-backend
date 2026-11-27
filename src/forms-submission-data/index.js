@@ -23,4 +23,5 @@ export {
   isAccreditationForRegistration
 } from './submission-keys.js'
 
+/** @typedef {import('./file-uploads/port.js').FormsFileUploadsRepository} FormsFileUploadsRepository */
 /** @typedef {import('./repository/port.js').FormSubmissionsRepository} FormSubmissionsRepository */

@@ -509,7 +509,6 @@ const baseConfig = {
     cognitoTokenUrl: {
       doc: 'Override Cognito token URL (for local testing with cognito-stub)',
       format: String,
-      nullable: true,
       default:
         'https://forms-submission-api.auth.eu-west-2.amazoncognito.com/oauth2/token',
       env: 'FORMS_SUBMISSION_EXTERNAL_API_COGNITO_TOKEN_URL'

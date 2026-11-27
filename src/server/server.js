@@ -18,6 +18,7 @@ import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-no
 import { serverPlugins } from '#plugins/server-plugins.js'
 import {
   createFormCollections,
+  formsFileUploadsRepositoryPlugin,
   formSubmissionsRepositoryPlugin
 } from '#formsubmission/plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
@@ -87,10 +88,14 @@ function regAccredApiOf(config) {
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
-  const plugins = [
+  return [
     {
       plugin: mongoDbPlugin,
-      options: { ...config.get('mongo'), createFormCollections, seedDatabase }
+      options: {
+        ...config.get('mongo'),
+        createCollections: createFormCollections,
+        seedDatabase
+      }
     },
     {
       plugin: mongoOrganisationsRepositoryPlugin,
@@ -99,6 +104,18 @@ function getProductionPlugins(config) {
     registrationAccreditationAdminRepositoryPlugin,
     mongoSummaryLogsRepositoryPlugin,
     formSubmissionsRepositoryPlugin,
+    {
+      plugin: formsFileUploadsRepositoryPlugin,
+      options: {
+        s3: {
+          region: config.get('awsRegion'),
+          endpoint: config.get('s3Endpoint'),
+          forcePathStyle: config.get('isDevelopment')
+        },
+        formsSubmissionApi: config.get('formsSubmissionApi'),
+        regulators: config.get('regulator')
+      }
+    },
     mongoLedgerRepositoryPlugin,
     mongoWasteBalanceServicePlugin,
     mongoSystemLogsRepositoryPlugin,
@@ -118,15 +135,10 @@ function getProductionPlugins(config) {
     /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
     ...(config.get('featureFlags.devEndpoints')
       ? [nonProdDataResetPlugin, mongoExternalAccreditationsRepositoryPlugin]
-      : [])
+      : []),
+    packagingRecyclingNotesRepositoryPlugin,
+    { plugin: commandQueueConsumerPlugin, options: { config } }
   ]
-
-  plugins.push(packagingRecyclingNotesRepositoryPlugin, {
-    plugin: commandQueueConsumerPlugin,
-    options: { config }
-  })
-
-  return plugins
 }
 
 async function createServer(options = {}) {

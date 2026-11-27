@@ -1,7 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
 
 /**
- * @import { RegulatorValue } from '#domain/organisations/model.js'
+ * @import { FormsFileUploadsRepository } from '#formsubmission/file-uploads/port.js'
  */
 
 function extractFilesFromSubmission(submission) {
@@ -19,7 +19,7 @@ function extractFilesFromSubmission(submission) {
  *
  * @param {Array} registrations - Transformed registration objects
  * @param {Array} accreditations - Transformed accreditation objects
- * @param {{ copyFormFileToS3: (params: { fileId: string, regulator: RegulatorValue }) => Promise<void> }} formsFileUploadsRepository
+ * @param {Pick<FormsFileUploadsRepository, 'copyFormFileToS3'>} formsFileUploadsRepository
  */
 export async function copyOperatorUploadedFiles(
   registrations,

@@ -18,7 +18,10 @@ import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
-import { formsSubmissionDataRoutesPlugin } from '#formsubmission/plugin.js'
+import {
+  applyRoutesPlugin,
+  formsSubmissionDataRoutesPlugin
+} from '#formsubmission/plugin.js'
 import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
@@ -55,7 +58,7 @@ function getSwaggerPlugins() {
  *
  * @param {ReturnType<typeof import('#root/config.js').getConfig>} config
  */
-const moduleRoutePlugins = (config) => [
+export const moduleRoutePlugins = (config) => [
   {
     plugin: formsSubmissionDataRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
@@ -112,6 +115,7 @@ export function serverPlugins(config, infrastructure, { modules = true } = {}) {
     ...plugins,
     ...infrastructure,
     { plugin: router, options: { config } },
+    applyRoutesPlugin,
     ...(modules ? moduleRoutePlugins(config) : [])
   ]
 }

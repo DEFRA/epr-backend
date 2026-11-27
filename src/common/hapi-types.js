@@ -14,7 +14,7 @@
  * @import {PackagingRecyclingNotesRepository} from '#packaging-recycling-notes/repository/port.js'
  * @import {RegistrationAccreditationAdminRepository} from '#registration-accreditation-admin/index.js'
  * @import {ReportsRepository} from '#reports/repository/port.js'
- * @import {FormSubmissionsRepository} from '#formsubmission/index.js'
+ * @import {FormSubmissionsRepository, FormsFileUploadsRepository} from '#formsubmission/index.js'
  * @import {OrganisationAdministrationRepository} from '#repositories/organisations/administration-port.js'
  * @import {OrganisationLinkingRepository} from '#repositories/organisations/linking-port.js'
  * @import {SummaryLogsRepository} from '#repositories/summary-logs/port.js'
@@ -139,6 +139,7 @@
  * @typedef {{
  *   externalAccreditationsRepository: ExternalAccreditationsRepository,
  *   formSubmissionsRepository: FormSubmissionsRepository,
+ *   formsFileUploadsRepository: FormsFileUploadsRepository,
  *   ledgerRepository: WasteBalanceLedgerRepository,
  *   nonProdDataReset: NonProdDataReset,
  *   organisationAdministrationRepository: OrganisationAdministrationRepository,

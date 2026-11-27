@@ -3,11 +3,9 @@ import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
 import { MigrationOrchestrator } from '#formsubmission/migration/migration-orchestrator.js'
-import { createS3Client } from '#common/helpers/s3/s3-client.js'
-import { createFormsFileUploadsRepository } from '#formsubmission/file-uploads/forms-file-uploads.js'
-import { config } from '#root/config.js'
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
+/** @import {FormsFileUploadsRepository} from '#formsubmission/file-uploads/port.js' */
 /** @import {FormSubmissionsRepository} from '#formsubmission/repository/port.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
@@ -15,6 +13,7 @@ import { config } from '#root/config.js'
 /**
  * @typedef {HapiRequest & {
  *   formSubmissionsRepository: FormSubmissionsRepository
+ *   formsFileUploadsRepository: FormsFileUploadsRepository
  *   organisationAdministrationRepository: OrganisationAdministrationRepository
  *   systemLogsRepository: SystemLogsRepository
  *   params: { id: string }
@@ -41,19 +40,11 @@ const params = Joi.object({
 async function handler(request, h) {
   const {
     formSubmissionsRepository,
+    formsFileUploadsRepository,
     organisationAdministrationRepository,
     systemLogsRepository
   } = request
   const { id } = request.params
-
-  const s3Client = createS3Client({
-    region: config.get('awsRegion'),
-    endpoint: config.get('s3Endpoint'),
-    forcePathStyle: config.get('isDevelopment')
-  })
-  const formsFileUploadsRepository = createFormsFileUploadsRepository({
-    s3Client
-  })
 
   const orchestrator = new MigrationOrchestrator(
     formSubmissionsRepository,

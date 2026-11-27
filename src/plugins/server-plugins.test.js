@@ -1,11 +1,10 @@
 import HapiSwagger from 'hapi-swagger'
 import { describe, it, expect } from 'vitest'
 
-import { formsSubmissionDataRoutesPlugin } from '#formsubmission/plugin.js'
+import { applyRoutesPlugin } from '#formsubmission/plugin.js'
 import { getConfig } from '#root/config.js'
-import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
-import { serverPlugins } from './server-plugins.js'
+import { moduleRoutePlugins, serverPlugins } from './server-plugins.js'
 
 /** @param {boolean} isSwaggerEnabled */
 const registersSwagger = (isSwaggerEnabled) =>
@@ -13,15 +12,15 @@ const registersSwagger = (isSwaggerEnabled) =>
     (entry) => entry.plugin === HapiSwagger
   )
 
+/** @param {any} entry - a bare plugin, or one wrapped with its options */
+const pluginOf = (entry) => entry.plugin ?? entry
+
+const MODULE_ROUTE_PLUGINS = moduleRoutePlugins(getConfig()).map(pluginOf)
+
 /** @param {{ modules?: boolean }} [options] */
-const moduleRoutePluginsRegistered = (options) => {
-  const plugins = serverPlugins(getConfig(), [], options)
-  return {
-    formsSubmissionData: plugins.some(
-      (entry) => entry.plugin === formsSubmissionDataRoutesPlugin
-    ),
-    wasteRecordsExport: plugins.includes(wasteRecordsExport)
-  }
+const registeredModuleRoutes = (options) => {
+  const registered = serverPlugins(getConfig(), [], options).map(pluginOf)
+  return MODULE_ROUTE_PLUGINS.filter((plugin) => registered.includes(plugin))
 }
 
 describe('serverPlugins', () => {
@@ -34,16 +33,20 @@ describe('serverPlugins', () => {
   })
 
   it("registers the modules' route plugins", () => {
-    expect(moduleRoutePluginsRegistered()).toEqual({
-      formsSubmissionData: true,
-      wasteRecordsExport: true
-    })
+    expect(MODULE_ROUTE_PLUGINS).not.toHaveLength(0)
+    expect(registeredModuleRoutes()).toEqual(MODULE_ROUTE_PLUGINS)
   })
 
   it("leaves the modules' route plugins out when asked for none", () => {
-    expect(moduleRoutePluginsRegistered({ modules: false })).toEqual({
-      formsSubmissionData: false,
-      wasteRecordsExport: false
-    })
+    expect(registeredModuleRoutes({ modules: false })).toEqual([])
   })
+
+  it.each([true, false])(
+    'registers the apply routes when modules is %s',
+    (modules) => {
+      expect(serverPlugins(getConfig(), [], { modules })).toContain(
+        applyRoutesPlugin
+      )
+    }
+  )
 })
