@@ -1,6 +1,6 @@
 import { validateExternalAccreditation } from './validation.js'
 
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 /** @import { ExternalAccreditationsRepositoryFactory } from './port.js' */
 
 /**

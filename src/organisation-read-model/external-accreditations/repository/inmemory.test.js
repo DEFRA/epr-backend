@@ -3,7 +3,7 @@ import { describe, it as baseIt } from 'vitest'
 import { createInMemoryExternalAccreditationsRepository } from './inmemory.js'
 import { testExternalAccreditationsRepositoryContract } from './port.contract.js'
 
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 /** @import { TestAPI } from 'vitest' */
 /** @import { ExternalAccreditationsRepository } from './port.js' */
 

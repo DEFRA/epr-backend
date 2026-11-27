@@ -35,4 +35,4 @@ export {
   pendingOverseasSite,
   reprocessor
 } from './repository/contract/organisation-read-test-helpers.js'
-export { buildExternalAccreditation } from './repository/contract/test-data.js'
+export { buildExternalAccreditation } from '#organisation-read-model/domain/test-data.js'

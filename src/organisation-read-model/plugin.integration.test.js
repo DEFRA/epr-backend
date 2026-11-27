@@ -13,7 +13,7 @@ import {
   findOrganisation,
   reprocessor
 } from './repository/contract/organisation-read-test-helpers.js'
-import { buildExternalAccreditation } from './repository/contract/test-data.js'
+import { buildExternalAccreditation } from '#organisation-read-model/domain/test-data.js'
 
 /** @import { ServerApp, StartedServer } from '#common/hapi-types.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */

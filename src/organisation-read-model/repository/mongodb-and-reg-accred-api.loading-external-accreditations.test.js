@@ -11,7 +11,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 import { setupMsw } from '#vite/setup-msw.js'
-import { buildExternalAccreditationFor } from './contract/test-data.js'
+import { buildExternalAccreditationFor } from '#organisation-read-model/domain/test-data.js'
 import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,

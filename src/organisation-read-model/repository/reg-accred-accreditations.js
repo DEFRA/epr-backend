@@ -10,7 +10,8 @@ import { ACCREDITATION_STATUSES } from '#organisation-read-model/domain/model.js
 
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
-/** @import { ExternalAccreditation, OnDrop } from './to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
+/** @import { OnDrop } from './to-read-model.js' */
 /** @import { ExternalAccreditationsLoader } from './mongodb-and-reg-accred-api.js' */
 
 /**

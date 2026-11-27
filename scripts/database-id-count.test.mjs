@@ -50,7 +50,6 @@ describe('isCounted', () => {
     'src/organisations/routes/dev-put-by-id.js',
     'src/organisation-read-model/routes/dev-external-accreditation-put.js',
     'src/organisation-read-model/routes/dev-external-accreditation-put.schema.js',
-    'src/example-module/nested/routes/dev-example.js',
     'src/non-prod-data-reset/mongodb.js',
     'scripts/database-id-count.mjs'
   ])('leaves out %s', (path) => {

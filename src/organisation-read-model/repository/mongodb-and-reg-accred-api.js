@@ -13,7 +13,7 @@ import { toReadModelOrganisations } from './to-read-model.js'
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
-/** @import { ExternalAccreditation } from './to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 /**

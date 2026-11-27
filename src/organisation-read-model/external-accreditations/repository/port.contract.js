@@ -6,7 +6,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
+import { buildExternalAccreditation } from '#organisation-read-model/domain/test-data.js'
 
 /** @import { TestAPI } from 'vitest' */
 /** @import { ExternalAccreditationsRepository } from './port.js' */

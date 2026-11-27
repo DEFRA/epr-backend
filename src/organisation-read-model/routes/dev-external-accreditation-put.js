@@ -12,7 +12,7 @@ import { externalAccreditationPayloadSchema } from './dev-external-accreditation
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { ExternalAccreditationsRepository } from '#organisation-read-model/external-accreditations/repository/port.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/repository/port.js' */
-/** @import { ExternalAccreditation } from '#organisation-read-model/repository/to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 
 /**
  * @typedef {{ registrationNumber: RegistrationNumber, year: Year }} ExternalAccreditationParams
