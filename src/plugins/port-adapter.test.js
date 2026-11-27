@@ -44,6 +44,43 @@ describe('portAdapter', () => {
     ).toEqual({ label: 'read model', overseasSitesRepository: overseasSites })
   })
 
+  it('provides the port once a build that returns a promise resolves', async () => {
+    const server = Hapi.server()
+    await server.register(
+      portAdapter({
+        provides: 'overseasSitesRepository',
+        needs: [],
+        build: async () => () =>
+          /** @type {ServerApp['overseasSitesRepository']} */ (
+            /** @type {unknown} */ (overseasSites)
+          )
+      })
+    )
+
+    await server.initialize()
+
+    expect(
+      /** @type {ServerApp} */ (server.app).overseasSitesRepository
+    ).toEqual(overseasSites)
+  })
+
+  it('refuses to start when its build rejects', async () => {
+    const server = Hapi.server()
+    await server.register(
+      portAdapter({
+        provides: 'overseasSitesRepository',
+        needs: [],
+        build: async () => {
+          throw new Error('indexes could not be created')
+        }
+      })
+    )
+
+    await expect(server.initialize()).rejects.toThrow(
+      'indexes could not be created'
+    )
+  })
+
   it('refuses to start without a provider it needs', async () => {
     const server = Hapi.server()
     await server.register({

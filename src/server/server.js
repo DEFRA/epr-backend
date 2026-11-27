@@ -19,7 +19,7 @@ import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
-import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
+import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
@@ -141,11 +141,12 @@ async function createServer(options = {}) {
   // These routes reach their collections directly and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
   // See: src/routes/v1/apply/*.js
-  const infrastructure = options._testOnlyLegacyApplyRoutes
-    ? []
-    : getProductionPlugins(config)
+  const legacyApplyRoutes = Boolean(options._testOnlyLegacyApplyRoutes)
+  const infrastructure = legacyApplyRoutes ? [] : getProductionPlugins(config)
 
-  await server.register(serverPlugins(config, infrastructure))
+  await server.register(
+    serverPlugins(config, infrastructure, { modules: !legacyApplyRoutes })
+  )
 
   server.ext('onPostStart', () => {
     const startedServer = /** @type {StartedServer} */ (
