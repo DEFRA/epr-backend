@@ -32,7 +32,7 @@ import { getRetrievalKeyForRegulator } from '#forms-submission-data/file-uploads
  * @param {FormsFileUploadsRepositoryOptions} options
  * @returns {FormsFileUploadsRepository}
  */
-export const createFormsFileUploadsRepository = ({
+export const createS3FormsFileUploadsRepository = ({
   s3Client,
   formsSubmissionApi,
   regulators

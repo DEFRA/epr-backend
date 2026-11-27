@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createFormsFileUploadsRepository } from './forms-file-uploads.js'
+import { createS3FormsFileUploadsRepository } from './s3.js'
 import { partialMock } from '#test/type-helpers.js'
 
 const mockGetCognitoToken = vi.fn()
@@ -23,7 +23,7 @@ vi.mock('@aws-sdk/lib-storage', () => ({
   )
 }))
 
-describe('createFormsFileUploadsRepository', () => {
+describe('createS3FormsFileUploadsRepository', () => {
   let mockS3Client
   let repository
   let originalFetch
@@ -37,7 +37,7 @@ describe('createFormsFileUploadsRepository', () => {
       send: vi.fn()
     }
 
-    repository = createFormsFileUploadsRepository({
+    repository = createS3FormsFileUploadsRepository({
       s3Client: partialMock(mockS3Client),
       formsSubmissionApi: {
         url: 'https://forms-api.test',
