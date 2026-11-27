@@ -307,7 +307,12 @@ describe('createDataSyntaxValidator', () => {
       meta: {
         PROCESSING_TYPE: { value: 'TEST', location: DEFAULT_TEST_LOCATION }
       },
-      data: dataSections
+      data: Object.fromEntries(
+        Object.entries(dataSections).map(([tableName, section]) => [
+          tableName,
+          { location: DEFAULT_TEST_LOCATION, ...section }
+        ])
+      )
     })
 
   const validateDataSyntax = createDataSyntaxValidator(
@@ -426,12 +431,20 @@ describe('createDataSyntaxValidator', () => {
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
 
-      const fatal = expectOne(
-        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-      )
-      expect(fatal.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-      expect(fatal.message).toContain('Missing required header')
-      expect(fatal.message).toContain('NUMBER_FIELD')
+      expect(
+        expectOne(result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL))
+      ).toStrictEqual({
+        kind: 'table',
+        severity: 'fatal',
+        category: 'technical',
+        message: "Missing required header 'NUMBER_FIELD' in table 'TEST_TABLE'",
+        code: 'HEADER_REQUIRED',
+        context: {
+          location: { sheet: 'TestSheet', table: 'TEST_TABLE' },
+          expected: 'NUMBER_FIELD',
+          actual: ['ROW_ID', 'TEXT_FIELD']
+        }
+      })
     })
 
     it('returns multiple fatal errors when multiple headers are missing', () => {
@@ -796,6 +809,7 @@ describe('createDataSyntaxValidator', () => {
       const fatal = expectOne(
         result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
+      expect(fatal.kind).toBe('table')
       expect(fatal.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
       expect(fatal.code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
       expect(fatal.message).toContain('UNKNOWN_TABLE')
@@ -870,23 +884,6 @@ describe('createDataSyntaxValidator', () => {
       )
       expect(fatal.context?.location).toEqual({
         sheet: 'DataSheet',
-        table: 'UNKNOWN_TABLE'
-      })
-    })
-
-    it('handles missing location gracefully', () => {
-      const result = validateSections({
-        UNKNOWN_TABLE: {
-          headers: ['ANYTHING'],
-          rows: [{ rowNumber: 2, values: ['goes'] }]
-          // No location
-        }
-      })
-
-      const fatal = expectOne(
-        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-      )
-      expect(fatal.context?.location).toEqual({
         table: 'UNKNOWN_TABLE'
       })
     })

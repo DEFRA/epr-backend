@@ -5,6 +5,7 @@ import {
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { tableIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   isEprMarker,
   isHeaderDescriptionRow
@@ -195,13 +196,16 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
 
   return requiredHeaders
     .filter((requiredHeader) => !actualHeaders.includes(requiredHeader))
-    .map((requiredHeader) => ({
-      severity: VALIDATION_SEVERITY.FATAL,
-      category: VALIDATION_CATEGORY.TECHNICAL,
-      message: `Missing required header '${requiredHeader}' in table '${tableName}'`,
-      code: VALIDATION_CODE.HEADER_REQUIRED,
-      context: { location, expected: requiredHeader, actual: actualHeaders }
-    }))
+    .map((requiredHeader) =>
+      tableIssue({
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: `Missing required header '${requiredHeader}' in table '${tableName}'`,
+        code: VALIDATION_CODE.HEADER_REQUIRED,
+        location: { sheet: location.sheet, table: tableName },
+        expected: requiredHeader,
+        actual: actualHeaders
+      })
+    )
 }
 
 /**
@@ -486,18 +490,12 @@ const validateDataSyntax = (tableSchemas, options, parsed) => {
     const domainSchema = tableSchemas[tableName]
 
     if (!domainSchema) {
-      const location = tableData.location
-        ? { sheet: tableData.location.sheet, table: tableName }
-        : { table: tableName }
-
-      /** @type {ValidationIssue} */
-      const unrecognisedTableIssue = {
-        severity: VALIDATION_SEVERITY.FATAL,
+      const unrecognisedTableIssue = tableIssue({
         category: VALIDATION_CATEGORY.TECHNICAL,
         message: `Unrecognised table '${tableName}' has no schema for this processing type`,
         code: VALIDATION_CODE.TABLE_UNRECOGNISED,
-        context: { location }
-      }
+        location: { sheet: tableData.location.sheet, table: tableName }
+      })
 
       return {
         tableName,
