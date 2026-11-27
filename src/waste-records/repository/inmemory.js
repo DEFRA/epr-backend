@@ -39,7 +39,9 @@ const isInPeriod = (filter) => {
   const { from, before } = monthPrefixBounds(filter)
   const { dateFields, undated } = filter
   const isWithin = (value) =>
-    typeof value === 'string' && value >= from && value < before
+    typeof value === 'string' &&
+    value.localeCompare(from) >= 0 &&
+    value.localeCompare(before) < 0
 
   return (doc) =>
     dateFields.some((field) => isWithin(doc.data[field])) ||

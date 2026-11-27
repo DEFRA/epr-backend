@@ -1,5 +1,6 @@
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { WasteRecordType } from '#domain/waste-records/model.js' */
+import { toYearMonth } from '#common/helpers/dates/year-month.js'
 
 /**
  * Which rows place themselves in a reporting period: those whose value in any
@@ -23,7 +24,7 @@
 export const monthPrefixBounds = ({ startDate, endDate }) => {
   const [year, month] = endDate.split('-').map(Number)
   return {
-    from: startDate.slice(0, 7),
-    before: new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 7)
+    from: toYearMonth(startDate),
+    before: toYearMonth(new Date(Date.UTC(year, month, 1)).toISOString())
   }
 }
