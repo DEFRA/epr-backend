@@ -44,12 +44,9 @@ describe('Validation Issues', () => {
   describe('createValidationIssues seeding', () => {
     /** @type {ValidationIssue[]} */
     const seed = [
-      anIssue(VALIDATION_SEVERITY.FATAL, 'Seeded fatal', {
-        code: 'MUST_BE_A_VALID_DATE'
-      }),
+      anIssue(VALIDATION_SEVERITY.FATAL, 'Seeded fatal'),
       anIssue(VALIDATION_SEVERITY.WARNING, 'Seeded warning', {
-        category: VALIDATION_CATEGORY.BUSINESS,
-        code: 'VALUE_OUT_OF_RANGE'
+        category: VALIDATION_CATEGORY.BUSINESS
       })
     ]
 
@@ -70,9 +67,7 @@ describe('Validation Issues', () => {
       const result = createValidationIssues(initial)
 
       initial.push(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Added after construction', {
-          code: 'FIELD_REQUIRED'
-        })
+        anIssue(VALIDATION_SEVERITY.ERROR, 'Added after construction')
       )
 
       expect(result.getAllIssues()).toHaveLength(2)
@@ -83,8 +78,7 @@ describe('Validation Issues', () => {
 
       result.add(
         anIssue(VALIDATION_SEVERITY.ERROR, 'Added later', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'MUST_BE_GREATER_THAN_ZERO'
+          category: VALIDATION_CATEGORY.BUSINESS
         })
       )
 
