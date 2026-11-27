@@ -40,6 +40,20 @@ const anIssue = (
   } = {}
 ) => cellIssue({ severity, category, message, code, location, ...extras })
 
+/**
+ * A collector holding one issue of each severity given, in order.
+ *
+ * @param {...ValidationSeverity} severities
+ */
+const collectorOf = (...severities) =>
+  severities.reduce(
+    (issues, severity, index) =>
+      issues.add(anIssue(severity, `${severity} ${index + 1}`)),
+    createValidationIssues()
+  )
+
+const { FATAL, ERROR, WARNING } = VALIDATION_SEVERITY
+
 describe('Validation Issues', () => {
   describe('createValidationIssues seeding', () => {
     /** @type {ValidationIssue[]} */
@@ -92,271 +106,122 @@ describe('Validation Issues', () => {
     })
   })
 
-  describe('isFatal', () => {
-    it('returns true when there is a fatal issue', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error'))
-
-      expect(result.isFatal()).toBe(true)
-    })
-
-    it('returns true when there are multiple fatal issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error 2'))
-
-      expect(result.isFatal()).toBe(true)
-    })
-
-    it('returns true when there are fatal and non-fatal issues', () => {
-      const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
-
-      expect(result.isFatal()).toBe(true)
-    })
-
-    it('returns false when there are no fatal issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.isFatal()).toBe(false)
-    })
-
-    it('returns false when there are no issues', () => {
-      const result = createValidationIssues()
-
-      expect(result.isFatal()).toBe(false)
-    })
-  })
-
-  describe('isValid', () => {
-    it('returns true when there are no issues', () => {
-      const result = createValidationIssues()
-
-      expect(result.isValid()).toBe(true)
-    })
-
-    it('returns true when there are only warnings', () => {
-      const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.isValid()).toBe(true)
-    })
-
-    it('returns false when there is a fatal issue', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal error'))
-
-      expect(result.isValid()).toBe(false)
-    })
-
-    it('returns false when there is an error issue', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
-
-      expect(result.isValid()).toBe(false)
-    })
-
-    it('returns false when there are errors and warnings', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.isValid()).toBe(false)
-    })
-
-    it('returns false when there are fatal, error, and warning issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.isValid()).toBe(false)
-    })
-  })
-
-  describe('hasIssues', () => {
-    it('returns false when there are no issues', () => {
-      const result = createValidationIssues()
-
-      expect(result.hasIssues()).toBe(false)
-    })
-
-    it('returns true when there is at least one issue', () => {
-      const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.hasIssues()).toBe(true)
-    })
-
-    it('returns true for any type of issue', () => {
-      const resultFatal = createValidationIssues().add(
-        anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal')
-      )
-      const resultError = createValidationIssues().add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error')
-      )
-      const resultWarning = createValidationIssues().add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(resultFatal.hasIssues()).toBe(true)
-      expect(resultError.hasIssues()).toBe(true)
-      expect(resultWarning.hasIssues()).toBe(true)
-    })
+  describe.for([
+    {
+      method: 'isFatal',
+      cases: [
+        { description: 'one fatal', severities: [FATAL], expected: true },
+        {
+          description: 'two fatals',
+          severities: [FATAL, FATAL],
+          expected: true
+        },
+        {
+          description: 'fatal among others',
+          severities: [WARNING, FATAL, ERROR],
+          expected: true
+        },
+        {
+          description: 'no fatal',
+          severities: [ERROR, WARNING],
+          expected: false
+        },
+        { description: 'no issues', severities: [], expected: false }
+      ]
+    },
+    {
+      method: 'isValid',
+      cases: [
+        { description: 'no issues', severities: [], expected: true },
+        {
+          description: 'only warnings',
+          severities: [WARNING, WARNING],
+          expected: true
+        },
+        { description: 'a fatal', severities: [FATAL], expected: false },
+        { description: 'an error', severities: [ERROR], expected: false },
+        {
+          description: 'errors and warnings',
+          severities: [ERROR, WARNING],
+          expected: false
+        },
+        {
+          description: 'every severity',
+          severities: [FATAL, ERROR, WARNING],
+          expected: false
+        }
+      ]
+    },
+    {
+      method: 'hasIssues',
+      cases: [
+        { description: 'no issues', severities: [], expected: false },
+        { description: 'a fatal', severities: [FATAL], expected: true },
+        { description: 'an error', severities: [ERROR], expected: true },
+        { description: 'a warning', severities: [WARNING], expected: true }
+      ]
+    }
+  ])('$method', ({ method, cases }) => {
+    it.for(cases)(
+      'should be $expected with $description',
+      ({ severities, expected }) => {
+        expect(collectorOf(...severities)[method]()).toBe(expected)
+      }
+    )
   })
 
   describe('getIssuesBySeverity', () => {
-    it('returns only fatal issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
+    const issues = collectorOf(FATAL, ERROR, FATAL, WARNING, ERROR, WARNING)
 
-      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-
-      expect(fatals).toHaveLength(2)
-      expect(fatals[0].message).toBe('Fatal 1')
-      expect(fatals[1].message).toBe('Fatal 2')
+    it.for([
+      { severity: FATAL, messages: ['fatal 1', 'fatal 3'] },
+      { severity: ERROR, messages: ['error 2', 'error 5'] },
+      { severity: WARNING, messages: ['warning 4', 'warning 6'] }
+    ])('should return only the $severity issues', ({ severity, messages }) => {
+      expect(
+        issues.getIssuesBySeverity(severity).map(({ message }) => message)
+      ).toStrictEqual(messages)
     })
 
-    it('returns only error issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
-
-      expect(errors).toHaveLength(2)
-      expect(errors[0].message).toBe('Error 1')
-      expect(errors[1].message).toBe('Error 2')
-    })
-
-    it('returns only warning issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      const warnings = result.getIssuesBySeverity(VALIDATION_SEVERITY.WARNING)
-
-      expect(warnings).toHaveLength(2)
-      expect(warnings[0].message).toBe('Warning 1')
-      expect(warnings[1].message).toBe('Warning 2')
-    })
-
-    it('returns empty array when no issues of that severity', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-
-      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-
-      expect(fatals).toHaveLength(0)
+    it('should return none when no issue has that severity', () => {
+      expect(collectorOf(ERROR).getIssuesBySeverity(FATAL)).toStrictEqual([])
     })
   })
 
   describe('getIssuesByCategory', () => {
-    it('returns only technical issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Technical 1'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Business 1', {
+    const issues = createValidationIssues()
+      .add(anIssue(FATAL, 'Technical 1'))
+      .add(
+        anIssue(WARNING, 'Business 1', {
           category: VALIDATION_CATEGORY.BUSINESS
         })
       )
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 2'))
-
-      const technical = result.getIssuesByCategory(
-        VALIDATION_CATEGORY.TECHNICAL
+      .add(anIssue(ERROR, 'Technical 2'))
+      .add(
+        anIssue(WARNING, 'Business 2', {
+          category: VALIDATION_CATEGORY.BUSINESS
+        })
       )
 
-      expect(technical).toHaveLength(2)
-      expect(technical[0].message).toBe('Technical 1')
-      expect(technical[1].message).toBe('Technical 2')
+    it.for([
+      {
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        messages: ['Technical 1', 'Technical 2']
+      },
+      {
+        category: VALIDATION_CATEGORY.BUSINESS,
+        messages: ['Business 1', 'Business 2']
+      }
+    ])('should return only the $category issues', ({ category, messages }) => {
+      expect(
+        issues.getIssuesByCategory(category).map(({ message }) => message)
+      ).toStrictEqual(messages)
     })
 
-    it('returns only business issues', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Business 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Business 2', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      const business = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
-
-      expect(business).toHaveLength(2)
-      expect(business[0].message).toBe('Business 1')
-      expect(business[1].message).toBe('Business 2')
-    })
-
-    it('returns empty array when no issues of that category', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Technical 1'))
-
-      const business = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
-
-      expect(business).toHaveLength(0)
+    it('should return none when no issue has that category', () => {
+      expect(
+        collectorOf(ERROR).getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
+      ).toStrictEqual([])
     })
   })
 
@@ -472,100 +337,36 @@ describe('Validation Issues', () => {
   })
 
   describe('getSummary', () => {
-    it('returns success message when there are no issues', () => {
-      const result = createValidationIssues()
-
-      expect(result.getSummary()).toBe('Validation passed with no issues')
-    })
-
-    it('returns summary with fatal count', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal 2'))
-
-      expect(result.getSummary()).toBe('Validation completed with 2 fatal')
-    })
-
-    it('returns summary with single error', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-
-      expect(result.getSummary()).toBe('Validation completed with 1 error')
-    })
-
-    it('returns summary with multiple errors', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
-
-      expect(result.getSummary()).toBe('Validation completed with 2 errors')
-    })
-
-    it('returns summary with single warning', () => {
-      const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.getSummary()).toBe('Validation completed with 1 warning')
-    })
-
-    it('returns summary with multiple warnings', () => {
-      const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 2', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.getSummary()).toBe('Validation completed with 2 warnings')
-    })
-
-    it('returns summary with all severity types', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 2'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.getSummary()).toBe(
-        'Validation completed with 1 fatal, 2 errors, 1 warning'
-      )
-    })
-
-    it('returns summary with only fatal and errors', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.FATAL, 'Fatal'))
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error'))
-
-      expect(result.getSummary()).toBe(
-        'Validation completed with 1 fatal, 1 error'
-      )
-    })
-
-    it('returns summary with only errors and warnings', () => {
-      const result = createValidationIssues()
-      result.add(anIssue(VALIDATION_SEVERITY.ERROR, 'Error 1'))
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning 1', {
-          category: VALIDATION_CATEGORY.BUSINESS
-        })
-      )
-
-      expect(result.getSummary()).toBe(
-        'Validation completed with 1 error, 1 warning'
-      )
+    it.for([
+      { severities: [], summary: 'Validation passed with no issues' },
+      {
+        severities: [FATAL, FATAL],
+        summary: 'Validation completed with 2 fatal'
+      },
+      { severities: [ERROR], summary: 'Validation completed with 1 error' },
+      {
+        severities: [ERROR, ERROR],
+        summary: 'Validation completed with 2 errors'
+      },
+      { severities: [WARNING], summary: 'Validation completed with 1 warning' },
+      {
+        severities: [WARNING, WARNING],
+        summary: 'Validation completed with 2 warnings'
+      },
+      {
+        severities: [FATAL, ERROR, ERROR, WARNING],
+        summary: 'Validation completed with 1 fatal, 2 errors, 1 warning'
+      },
+      {
+        severities: [FATAL, ERROR],
+        summary: 'Validation completed with 1 fatal, 1 error'
+      },
+      {
+        severities: [ERROR, WARNING],
+        summary: 'Validation completed with 1 error, 1 warning'
+      }
+    ])("should read '$summary'", ({ severities, summary }) => {
+      expect(collectorOf(...severities).getSummary()).toBe(summary)
     })
   })
 
@@ -905,18 +706,18 @@ describe('Validation Issues', () => {
       expect(result1.getAllIssues()).toHaveLength(3)
     })
 
-    it('throws TypeError when merging non-ValidationResult', () => {
-      const result = createValidationIssues()
+    /** @type {unknown[]} */
+    const NOT_COLLECTORS = [{}, null, [], 'string']
 
-      // @ts-expect-error -- {} is not a collector; testing the runtime guard
-      expect(() => result.merge({})).toThrow(TypeError)
-      // @ts-expect-error -- null is not a collector; testing the runtime guard
-      expect(() => result.merge(null)).toThrow(TypeError)
-      // @ts-expect-error -- [] is not a collector; testing the runtime guard
-      expect(() => result.merge([])).toThrow(TypeError)
-      // @ts-expect-error -- string is not a collector; testing the runtime guard
-      expect(() => result.merge('string')).toThrow(TypeError)
-    })
+    it.for(NOT_COLLECTORS)(
+      'throws TypeError when merging %j',
+      (notCollector) => {
+        const result = createValidationIssues()
+
+        // @ts-expect-error -- not a collector; testing the runtime guard
+        expect(() => result.merge(notCollector)).toThrow(TypeError)
+      }
+    )
 
     it('does not modify the source result being merged', () => {
       const result1 = createValidationIssues()
