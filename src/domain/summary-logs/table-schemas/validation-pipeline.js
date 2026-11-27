@@ -146,7 +146,7 @@ export const coerceRowData = (
 }
 
 /**
- * @typedef {{ summaryLogYear: Year, createdAt: Date, registeredOnly: boolean }} SummaryLogValidationOptions
+ * @typedef {{ summaryLogYear: Year, createdAt: Date, registeredOnly: boolean, rejectsFutureDates: boolean }} SummaryLogValidationOptions
  */
 
 /**

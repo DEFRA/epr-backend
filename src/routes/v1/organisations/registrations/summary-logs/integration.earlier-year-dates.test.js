@@ -73,7 +73,8 @@ describe('summary logs with a date in an earlier year', () => {
             {
               rowId: 1001,
               dateReceived: '2027-01-04',
-              exportDate: '2026-12-30'
+              exportDate: '2026-12-30',
+              dateReceivedByOsr: '2027-01-05'
             }
           ])
         }

@@ -1,17 +1,32 @@
 import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
-import { startOfDay, utcCalendarDate } from '#common/helpers/date-formatter.js'
+import {
+  calendarDate,
+  startOfDay,
+  utcCalendarDate
+} from '#common/helpers/date-formatter.js'
 import { lastDayOfYear, utcYearOf } from '#common/helpers/dates/year.js'
 import {
   isBeforeCorrectionDeadline,
   lastCorrectionDay
 } from '#domain/summary-logs/correction-deadline.js'
+import {
+  isFutureDate,
+  isFutureMonth
+} from '#domain/summary-logs/future-dates.js'
 import { customJoi } from '#common/validation/custom-joi.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
 import { rowValidationOptionsOf } from '../validation-pipeline.js'
 
 /** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {CellMessage} from '#common/validation/validation-issue-kinds.js' */
+/** @import {UploadedSummaryLog} from '#domain/summary-logs/future-dates.js' */
+
+/**
+ * @typedef {(date: CalendarDate, helpers: import('joi').CustomHelpers) => CalendarDate | import('joi').ErrorReport} DateCheck
+ * @typedef {(date: CalendarDate, summaryLog: UploadedSummaryLog) => boolean} IsFuture
+ */
 
 /**
  * Common field schema factories for table validation
@@ -36,6 +51,24 @@ const CALENDAR_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})/
 const FIRST_OF_MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-01$/
 export const AFTER_SUMMARY_LOG_YEAR_ERROR = 'date.afterSummaryLogYear'
 export const BEFORE_SUMMARY_LOG_YEAR_ERROR = 'date.beforeSummaryLogYear'
+export const FUTURE_DATE_ERROR = 'date.future'
+
+/**
+ * Rejects a date that `isFuture` judges to be after the summary log was
+ * uploaded. Without a summary log, or with the rule switched off, the date is
+ * not checked.
+ *
+ * @param {IsFuture} isFuture
+ * @returns {DateCheck}
+ */
+const rejectFuture = (isFuture) => (dateStr, helpers) => {
+  const options = rowValidationOptionsOf(helpers)
+  return options.summaryLogYear !== undefined &&
+    options.rejectsFutureDates &&
+    isFuture(dateStr, options)
+    ? helpers.error(FUTURE_DATE_ERROR)
+    : dateStr
+}
 
 /**
  * A Joi error that carries the cell message it fills in.
@@ -52,13 +85,14 @@ const cellMessageError = (helpers, type, cellMessage) =>
  * Rejects a YYYY-MM-DD date in a later year than the `summaryLogYear` in the
  * Joi validation context. Without one, the date is not checked.
  *
- * @param {string} dateStr
+ * @param {CalendarDate} dateStr
  * @param {import('joi').CustomHelpers} helpers
- * @returns {string | import('joi').ErrorReport}
+ * @returns {CalendarDate | import('joi').ErrorReport}
  */
 const rejectAfterSummaryLogYear = (dateStr, helpers) => {
   const { summaryLogYear } = rowValidationOptionsOf(helpers)
-  return summaryLogYear !== undefined && dateStr > lastDayOfYear(summaryLogYear)
+  return summaryLogYear !== undefined &&
+    dateStr.localeCompare(lastDayOfYear(summaryLogYear)) > 0
     ? cellMessageError(helpers, AFTER_SUMMARY_LOG_YEAR_ERROR, {
         errorCode: VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
         expected: summaryLogYear
@@ -71,9 +105,9 @@ const rejectAfterSummaryLogYear = (dateStr, helpers) => {
  * the Joi validation context while that year's correction deadline had not
  * passed at `createdAt`. Without a `summaryLogYear`, the date is not checked.
  *
- * @param {string} dateStr
+ * @param {CalendarDate} dateStr
  * @param {import('joi').CustomHelpers} helpers
- * @returns {string | import('joi').ErrorReport}
+ * @returns {CalendarDate | import('joi').ErrorReport}
  */
 const rejectOpenEarlierYear = (dateStr, helpers) => {
   const options = rowValidationOptionsOf(helpers)
@@ -95,16 +129,33 @@ const rejectOpenEarlierYear = (dateStr, helpers) => {
 }
 
 /**
- * @param {string} dateStr
- * @param {import('joi').CustomHelpers} helpers
- * @returns {string | import('joi').ErrorReport}
+ * Runs the checks in order and reports the first error, so a future date is
+ * reported as future before any year rule.
+ *
+ * @param {DateCheck[]} checks
+ * @returns {DateCheck}
  */
-const checkAgainstSummaryLogYear = (dateStr, helpers) => {
-  const after = rejectAfterSummaryLogYear(dateStr, helpers)
-  return after === dateStr ? rejectOpenEarlierYear(dateStr, helpers) : after
-}
+const firstErrorOf = (checks) => (dateStr, helpers) =>
+  checks.reduce(
+    (result, check) => (result === dateStr ? check(dateStr, helpers) : result),
+    /** @type {CalendarDate | import('joi').ErrorReport} */ (dateStr)
+  )
 
-const SUMMARY_LOG_YEAR_MESSAGES = {
+/**
+ * @param {IsFuture} isFuture
+ * @returns {DateCheck}
+ */
+const checkDateRules = (isFuture) =>
+  firstErrorOf([
+    rejectFuture(isFuture),
+    rejectAfterSummaryLogYear,
+    rejectOpenEarlierYear
+  ])
+
+const checkMonthRules = checkDateRules(isFutureMonth)
+
+const DATE_RULE_MESSAGES = {
+  [FUTURE_DATE_ERROR]: MESSAGES.MUST_NOT_BE_A_FUTURE_DATE,
   [AFTER_SUMMARY_LOG_YEAR_ERROR]: MESSAGES.MUST_NOT_BE_AFTER_SUMMARY_LOG_YEAR,
   [BEFORE_SUMMARY_LOG_YEAR_ERROR]:
     MESSAGES.MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR
@@ -190,14 +241,14 @@ export const createFirstOfMonthFieldSchema = () =>
     .pattern(FIRST_OF_MONTH_PATTERN)
     .custom((value, helpers) =>
       FIRST_OF_MONTH_PATTERN.test(value)
-        ? checkAgainstSummaryLogYear(value, helpers)
+        ? checkMonthRules(calendarDate(value), helpers)
         : value
     )
     .optional()
     .messages({
       'string.base': MESSAGES.MUST_BE_A_STRING,
       'string.pattern.base': 'must be a first-of-month date (YYYY-MM-01)',
-      ...SUMMARY_LOG_YEAR_MESSAGES
+      ...DATE_RULE_MESSAGES
     })
 
 /**
@@ -220,7 +271,7 @@ const calendarDateTextOf = (value) => {
  * The value as a YYYY-MM-DD calendar date from 2000-01-01 to 2100-01-01.
  *
  * @param {unknown} value
- * @returns {string | undefined}
+ * @returns {CalendarDate | undefined}
  */
 const toCalendarDate = (value) => {
   const dateStr = calendarDateTextOf(value)
@@ -232,7 +283,7 @@ const toCalendarDate = (value) => {
   const isRealDate =
     !Number.isNaN(parsed.getTime()) && utcCalendarDate(parsed) === dateStr
   return isRealDate && parsed >= DATE_MIN && parsed <= DATE_MAX
-    ? dateStr
+    ? calendarDate(dateStr)
     : undefined
 }
 
@@ -243,7 +294,7 @@ const toCalendarDate = (value) => {
  */
 export const isDateNoLaterThan = (value, year) => {
   const date = toCalendarDate(value)
-  return date !== undefined && date <= lastDayOfYear(year)
+  return date !== undefined && date.localeCompare(lastDayOfYear(year)) <= 0
 }
 
 /**
@@ -255,21 +306,24 @@ export const isDateNoLaterThan = (value, year) => {
  *
  * Accepts YYYY-MM-DD strings and Date objects (coerced to YYYY-MM-DD).
  *
+ * @param {IsFuture} [isFuture]
  * @returns {Joi.AnySchema} Joi schema that outputs YYYY-MM-DD strings
  */
-export const createDateFieldSchema = () =>
-  Joi.any()
+export const createDateFieldSchema = (isFuture = isFutureDate) => {
+  const checkRules = checkDateRules(isFuture)
+  return Joi.any()
     .custom((value, helpers) => {
       const dateStr = toCalendarDate(value)
       return dateStr === undefined
         ? helpers.error(CALENDAR_DATE_ERROR)
-        : checkAgainstSummaryLogYear(dateStr, helpers)
+        : checkRules(dateStr, helpers)
     })
     .optional()
     .messages({
       [CALENDAR_DATE_ERROR]: MESSAGES.MUST_BE_A_VALID_DATE,
-      ...SUMMARY_LOG_YEAR_MESSAGES
+      ...DATE_RULE_MESSAGES
     })
+}
 
 /**
  * Creates a 3-digit ID field schema that coerces numbers to zero-padded

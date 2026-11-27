@@ -85,7 +85,8 @@ const tableSchemas = {
 const BEFORE_2026_CORRECTION_DEADLINE = {
   summaryLogYear: toYear(2027),
   createdAt: new Date('2027-01-10T09:00:00.000Z'),
-  registeredOnly: false
+  registeredOnly: false,
+  rejectsFutureDates: true
 }
 
 const KEPT_AS_ENTERED = new Set(['ROW_ID', 'PREVIOUS_YEAR_ROW_ID'])
