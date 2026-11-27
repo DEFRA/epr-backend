@@ -2,12 +2,6 @@ import { portAdapter } from '#plugins/port-adapter.js'
 import { createMongoSystemLogsRepository } from './repository/mongodb.js'
 import { systemLogsGetSearch } from './routes/get-search.js'
 
-/**
- * The system logs module's production plugins.
- *
- * @module system-logs/plugin
- */
-
 /** The MongoDB adapter for the system logs repository. */
 export const systemLogsRepositoryPlugin = portAdapter({
   provides: 'systemLogsRepository',

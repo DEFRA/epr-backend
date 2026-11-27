@@ -28,8 +28,10 @@ import { storedOrgId } from '#repositories/organisations/helpers.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { buildSystemLog } from '#system-logs/test-support.js'
-import { createMongoSystemLogsRepository } from '#system-logs/test-support.js'
+import {
+  buildSystemLog,
+  createMongoSystemLogsRepository
+} from '#system-logs/test-support.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
   buildSummaryLogRowStateEntry,

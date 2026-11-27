@@ -136,7 +136,7 @@ export default [
               'the registration and accreditation admin module',
               ['./index.js', './plugin.js', './test-support.js']
             ),
-            ...moduleFence('system-logs', 'system logs', [
+            ...moduleFence('system-logs', 'the system logs module', [
               './index.js',
               './plugin.js',
               './test-support.js'

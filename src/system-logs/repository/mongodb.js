@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import {
   SUMMARY_LOG_SUB_CATEGORY,
   SUMMARY_LOG_SUBMIT_ACTION
-} from '../index.js'
+} from '../domain/summary-log-submission.js'
 import { buildPage } from './pagination.js'
 
 /** @import { Collection, Db } from 'mongodb' */

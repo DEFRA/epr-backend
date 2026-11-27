@@ -51,7 +51,6 @@ describe('runFormsDataMigration', () => {
         organisationAdministrationRepository: mockOrganisationsRepository,
         systemLogsRepository: mockSystemLogsRepository
       },
-      db: {},
       locker: {
         lock: vi.fn().mockResolvedValue(mockLock)
       }
