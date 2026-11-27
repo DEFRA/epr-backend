@@ -12,6 +12,16 @@ import {
 import { expectValidationError } from '#common/validation/validation-test-helpers.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { validationOptionsIn } from '../validation-options-test-helpers.js'
+import { isFutureOverseasReceipt } from '#domain/summary-logs/future-dates.js'
+
+/**
+ * A 2026 summary log's context with only the year rules on, so a later-year
+ * date is not reported as a future date first.
+ */
+const yearRulesIn2026 = {
+  ...validationOptionsIn(toYear(2026)),
+  rejectsFutureDates: false
+}
 
 const DATE_SCHEMAS_WITH_EARLIER_YEAR_DATE = /** @type {const} */ ([
   ['createDateFieldSchema', createDateFieldSchema, '2026-12-30'],
@@ -163,7 +173,7 @@ describe('field-schemas', () => {
     })
 
     describe('when the validation context has a summary log year', () => {
-      const context = validationOptionsIn(toYear(2026))
+      const context = yearRulesIn2026
 
       it.each([
         { description: 'the last day of that year', input: '2026-12-31' },
@@ -218,7 +228,8 @@ describe('field-schemas', () => {
       const contextOn = (createdAt, registeredOnly = false) => ({
         summaryLogYear: toYear(2027),
         createdAt: new Date(createdAt),
-        registeredOnly
+        registeredOnly,
+        rejectsFutureDates: false
       })
 
       it.each([
@@ -287,7 +298,7 @@ describe('field-schemas', () => {
   )
 
   describe('createFirstOfMonthFieldSchema', () => {
-    const context = validationOptionsIn(toYear(2026))
+    const context = yearRulesIn2026
 
     it('accepts December of the latest year', () => {
       const schema = createFirstOfMonthFieldSchema()
@@ -319,6 +330,76 @@ describe('field-schemas', () => {
     it('accepts a later year when the context has no summary log year', () => {
       const schema = createFirstOfMonthFieldSchema()
       expect(schema.validate('2099-01-01').error).toBeUndefined()
+    })
+  })
+
+  describe('rejecting a future date', () => {
+    const context = {
+      ...validationOptionsIn(toYear(2026)),
+      createdAt: new Date('2026-11-27T10:00:00.000Z')
+    }
+
+    it('rejects a future date', () => {
+      const { error } = createDateFieldSchema().validate('2026-11-28', {
+        context
+      })
+      expect(error?.details[0]).toMatchObject({
+        type: 'date.future',
+        message: 'must not be a future date'
+      })
+    })
+
+    it('reports a 2027 date in a 2026 log as a future date, not as a later year', () => {
+      const { error } = createDateFieldSchema().validate('2027-01-05', {
+        context
+      })
+      expect(error?.details[0].type).toBe('date.future')
+    })
+
+    it('still reports a later year when the date is not a future date', () => {
+      const { error } = createDateFieldSchema().validate('2027-01-05', {
+        context: { ...context, createdAt: new Date('2027-01-10T10:00:00.000Z') }
+      })
+      expect(error?.details[0].type).toBe('date.afterSummaryLogYear')
+    })
+
+    it('accepts a future date when rejecting future dates is switched off', () => {
+      expect(
+        createDateFieldSchema().validate('2026-12-15', {
+          context: { ...context, rejectsFutureDates: false }
+        }).error
+      ).toBeUndefined()
+    })
+
+    it('accepts a future date when the context has no summary log year', () => {
+      expect(
+        createDateFieldSchema().validate('2099-01-01').error
+      ).toBeUndefined()
+    })
+
+    it('rejects a future date on a row filled in from a previous-year row', () => {
+      const { error } = createDateFieldSchema().validate('2026-11-28', {
+        context: { ...context, filledIn: true }
+      })
+      expect(error?.details[0].type).toBe('date.future')
+    })
+
+    it('judges a column by the future-date rule it is given', () => {
+      expect(
+        createDateFieldSchema(isFutureOverseasReceipt).validate('2026-11-28', {
+          context
+        }).error
+      ).toBeUndefined()
+    })
+
+    it('createFirstOfMonthFieldSchema rejects a future month', () => {
+      const { error } = createFirstOfMonthFieldSchema().validate('2026-12-01', {
+        context
+      })
+      expect(error?.details[0]).toMatchObject({
+        type: 'date.future',
+        message: 'must not be a future date'
+      })
     })
   })
 

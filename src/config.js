@@ -407,6 +407,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_PRN_ADMIN_CANCELLATION'
+    },
+    rejectFutureDates: {
+      doc: "Feature Flag: Reject a summary log that contains a future date. Off in the journey-test stack and the lower environments, which upload next year's logs ahead of time",
+      format: Boolean,
+      default: true,
+      env: 'FEATURE_FLAG_REJECT_FUTURE_DATES'
     }
   },
   formSubmissionOverrides: {

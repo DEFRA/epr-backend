@@ -1477,7 +1477,10 @@ describe('dates in a later year than the summary log', () => {
     )
 
   it('reports a later-year date as fatal with the summary log year expected', () => {
-    const result = validateDate('2027-01-01', validationOptionsIn(toYear(2026)))
+    const result = validateDate('2027-01-01', {
+      ...validationOptionsIn(toYear(2026)),
+      rejectsFutureDates: false
+    })
 
     const fatal = expectOne(
       result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
@@ -1498,6 +1501,26 @@ describe('dates in a later year than the summary log', () => {
     const result = validateDate('2026-12-31', validationOptionsIn(toYear(2026)))
 
     expect(result.issues.getAllIssues()).toStrictEqual([])
+  })
+
+  it('maps a future date to FUTURE_DATE, fatal', () => {
+    const result = validateDate('2026-11-28', {
+      ...validationOptionsIn(toYear(2026)),
+      createdAt: new Date('2026-11-27T10:00:00.000Z')
+    })
+
+    const fatal = expectOne(
+      result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    )
+    expect(fatal).toMatchObject({
+      code: VALIDATION_CODE.INVALID_DATE,
+      context: {
+        errorCode: VALIDATION_CODE.FUTURE_DATE,
+        actual: '2026-11-28',
+        location: { header: 'DATE_FIELD', rowId: '1000', column: 'B' }
+      }
+    })
+    expect(result.validatedData.data.DATE_TABLE?.rows).toStrictEqual([])
   })
 
   it('does not add an expected value to other cell errors', () => {

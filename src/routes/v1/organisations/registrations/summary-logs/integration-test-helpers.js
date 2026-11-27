@@ -706,6 +706,15 @@ export const openNextYear = () => {
 }
 
 /**
+ * Lets a summary log carry dates after the day it was uploaded, as the
+ * journey-test stack does, for a test that uploads ahead of its rows' dates.
+ */
+export const allowFutureDates = () => {
+  config.set('featureFlags.rejectFutureDates', false)
+  onTestFinished(() => config.reset('featureFlags.rejectFutureDates'))
+}
+
+/**
  * Fakes only `Date`, so the summary log's upload date is `uploadedAt` while
  * timers still run.
  * @param {string} uploadedAt

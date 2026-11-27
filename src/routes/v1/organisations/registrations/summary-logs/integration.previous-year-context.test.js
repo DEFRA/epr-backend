@@ -6,6 +6,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
+  allowFutureDates,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createReprocessorReceivedRowValues,
@@ -208,6 +209,7 @@ describe('2027 summary logs and the previous year', () => {
 
     it('has the 2027 log uploaded again when 2026 is resubmitted between its upload and its submission', async () => {
       openNextYear()
+      allowFutureDates()
       const env = await setup()
       await submitted(
         env,
@@ -231,6 +233,7 @@ describe('2027 summary logs and the previous year', () => {
 
     it('has the 2027 log uploaded again when 2026 is first submitted between its upload and its submission', async () => {
       openNextYear()
+      allowFutureDates()
       const env = await setup()
 
       expect(
@@ -248,6 +251,7 @@ describe('2027 summary logs and the previous year', () => {
 
     it('has the 2027 log uploaded again when the 2026 accreditation changes between its upload and its submission', async () => {
       openNextYear()
+      allowFutureDates()
       const env = await setup()
 
       expect(
@@ -260,6 +264,7 @@ describe('2027 summary logs and the previous year', () => {
 
     it('submits the 2027 log when 2026 is unchanged since its upload', async () => {
       openNextYear()
+      allowFutureDates()
       const env = await setup()
       await submitted(
         env,
@@ -279,6 +284,7 @@ describe('2027 summary logs and the previous year', () => {
 
   it('submits an accredited exporter 2027 log whatever 2026 registered-only submissions happen meanwhile', async () => {
     openNextYear()
+    allowFutureDates()
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       year: YEAR
@@ -301,6 +307,7 @@ describe('2027 summary logs and the previous year', () => {
 
   it('has a registered-only exporter upload 2027 again when 2026 is resubmitted between its upload and its submission', async () => {
     openNextYear()
+    allowFutureDates()
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'exporter',
       accredited: false,
@@ -328,6 +335,7 @@ describe('2027 summary logs and the previous year', () => {
 
   it('submits a 2027 log whose template does not link years after a 2026 resubmission', async () => {
     openNextYear()
+    allowFutureDates()
     const env = await setupWasteBalanceIntegrationEnvironment({
       processingType: 'reprocessor',
       year: YEAR,

@@ -13,7 +13,8 @@ import { TONNAGE_EXPORT_MESSAGES } from '#domain/summary-logs/table-schemas/expo
 import { UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES } from '#domain/summary-logs/table-schemas/reprocessor-output/validators/uk-packaging-weight-proportion-validator.js'
 import {
   AFTER_SUMMARY_LOG_YEAR_ERROR,
-  BEFORE_SUMMARY_LOG_YEAR_ERROR
+  BEFORE_SUMMARY_LOG_YEAR_ERROR,
+  FUTURE_DATE_ERROR
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/linked-row.js'
 import { MESSAGES } from '#domain/summary-logs/table-schemas/shared/joi-messages.js'
@@ -74,6 +75,7 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'any.calendarDate': VALIDATION_CODE.INVALID_DATE,
   [AFTER_SUMMARY_LOG_YEAR_ERROR]: VALIDATION_CODE.INVALID_DATE,
   [BEFORE_SUMMARY_LOG_YEAR_ERROR]: VALIDATION_CODE.INVALID_DATE, // NOSONAR: javascript:S1874 - code stays the generic category; the specific one is errorCode
+  [FUTURE_DATE_ERROR]: VALIDATION_CODE.INVALID_DATE, // NOSONAR: javascript:S1874 - code stays the generic category; the specific one is errorCode
   'string.threeDigitId': VALIDATION_CODE.INVALID_TYPE,
   'custom.netWeightCalculationMismatch':
     VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
@@ -109,6 +111,7 @@ export const JOI_MESSAGE_TO_ERROR_CODE = Object.freeze({
     VALIDATION_CODE.DATE_AFTER_SUMMARY_LOG_YEAR,
   [MESSAGES.MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR]:
     VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR,
+  [MESSAGES.MUST_NOT_BE_A_FUTURE_DATE]: VALIDATION_CODE.FUTURE_DATE,
   [MESSAGES.MUST_BE_GREATER_THAN_ZERO]:
     VALIDATION_CODE.MUST_BE_GREATER_THAN_ZERO,
   [MESSAGES.MUST_BE_AT_LEAST_ZERO]: VALIDATION_CODE.MUST_BE_AT_LEAST_ZERO,
