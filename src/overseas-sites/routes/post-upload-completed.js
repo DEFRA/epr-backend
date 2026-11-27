@@ -76,6 +76,33 @@ const hasCompletedFiles = (uploads) =>
 const OUT_OF_LOCATION_MESSAGE =
   'Upload is not in the upload location for this import'
 
+/**
+ * Marks the import failed and refuses the callback, because an upload is not
+ * where this import's uploads go.
+ *
+ * @param {HapiRequest & {
+ *   orsImportsRepository: OrsImportsRepository,
+ *   params: { id: string }
+ * }} request
+ * @param {OrsUploadFile[]} outOfLocation
+ * @returns {Promise<never>}
+ */
+const failOutOfLocation = async (request, outOfLocation) => {
+  const { orsImportsRepository, logger } = request
+  const { id } = request.params
+
+  logger.error({
+    message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}${outOfLocation.map(formatS3Info).join('')}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
+      reference: id
+    }
+  })
+  await orsImportsRepository.updateStatus(id, ORS_IMPORT_STATUS.FAILED)
+  throw Boom.badData(OUT_OF_LOCATION_MESSAGE)
+}
+
 export const orsUploadCompletedPath =
   '/v1/overseas-sites/imports/{id}/upload-completed'
 
@@ -120,16 +147,7 @@ export const orsUploadCompleted = ({ orsBucket }) => ({
       )
 
       if (outOfLocation.length > 0) {
-        logger.error({
-          message: `${OUT_OF_LOCATION_MESSAGE}: importId=${id}${outOfLocation.map(formatS3Info).join('')}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
-            reference: id
-          }
-        })
-        await orsImportsRepository.updateStatus(id, ORS_IMPORT_STATUS.FAILED)
-        throw Boom.badData(OUT_OF_LOCATION_MESSAGE)
+        await failOutOfLocation(request, outOfLocation)
       }
 
       const completedFiles = uploads
