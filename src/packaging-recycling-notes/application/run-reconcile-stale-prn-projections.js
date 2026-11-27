@@ -1,4 +1,3 @@
-import { logger } from '#common/helpers/logging/logger.js'
 import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
 import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 
@@ -51,16 +50,16 @@ const runReconcile = async (server) => {
   } = await reconcileStalePrnProjections(deps)
 
   for (const report of reports) {
-    logger.info({ message: formatReport(report) })
+    server.logger.info({ message: formatReport(report) })
   }
 
   for (const failure of failures) {
-    logger.error({
+    server.logger.error({
       message: `Reconcile failed for PRN ${failure.prnId}: ${failure.error}`
     })
   }
 
-  logger.info({
+  server.logger.info({
     message: `Reconcile stale PRN projections: total=${total} drifting=${drifting} repaired=${repaired} folded=${folded} stamped=${stamped} stillDrifting=${stillDrifting} failed=${failed}`
   })
 }
@@ -80,7 +79,7 @@ export const runReconcileStalePrnProjections = async (server) => {
   try {
     const lock = await server.locker.lock(LOCK_NAME)
     if (!lock) {
-      logger.info({
+      server.logger.info({
         message:
           'Unable to obtain lock, skipping reconcile stale PRN projections'
       })
@@ -92,7 +91,7 @@ export const runReconcileStalePrnProjections = async (server) => {
       await lock.free()
     }
   } catch (error) {
-    logger.error({
+    server.logger.error({
       err: error,
       message: 'Failed to run reconcile stale PRN projections'
     })

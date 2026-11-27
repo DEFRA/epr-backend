@@ -13,8 +13,7 @@ const ALL_PROVIDERS = [
 ]
 
 describe('reconcileStalePrnProjectionsPlugin', () => {
-  // Untyped, because Hapi's own server type does not satisfy the HapiServer
-  // that the module's plugins are written against.
+  /** @type {*} */
   let server
 
   afterEach(async () => {

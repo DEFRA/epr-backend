@@ -1,13 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import { logger } from '#common/helpers/logging/logger.js'
-
 import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 import { runReconcileStalePrnProjections } from './run-reconcile-stale-prn-projections.js'
 
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
-}))
 vi.mock('#packaging-recycling-notes/repository/drift-query.mongodb.js', () => ({
   createDriftQuery: vi.fn()
 }))
@@ -39,10 +34,11 @@ describe('runReconcileStalePrnProjections', () => {
     mockLock = { free: vi.fn().mockResolvedValue(undefined) }
     mockServer = {
       app: {
-        packagingRecyclingNotesRepository: { persistProjection: vi.fn() },
+        packagingRecyclingNotesRepository: {},
         wasteBalanceService: {}
       },
       db: {},
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
       locker: { lock: vi.fn().mockResolvedValue(mockLock) }
     }
 
@@ -62,7 +58,7 @@ describe('runReconcileStalePrnProjections', () => {
       'reconcile-stale-prn-projections'
     )
     expect(mockLock.free).toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message:
         'Reconcile stale PRN projections: total=2 drifting=0 repaired=0 folded=0 stamped=0 stillDrifting=0 failed=0'
     })
@@ -93,14 +89,14 @@ describe('runReconcileStalePrnProjections', () => {
 
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message:
         'Stale PRN projection: prnId=prn-1 prnNumber=TT2600001 currentStatus=awaiting_acceptance lastAppliedEventNumber=2 unapplied=1 minUnappliedNumber=3 wouldBecomeStatus=awaiting_cancellation'
     })
-    expect(logger.error).toHaveBeenCalledWith({
+    expect(mockServer.logger.error).toHaveBeenCalledWith({
       message: 'Reconcile failed for PRN prn-2: Error: connection reset'
     })
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message:
         'Reconcile stale PRN projections: total=2 drifting=1 repaired=1 folded=1 stamped=0 stillDrifting=0 failed=1'
     })
@@ -112,7 +108,7 @@ describe('runReconcileStalePrnProjections', () => {
     await runReconcileStalePrnProjections(mockServer)
 
     expect(reconcileStalePrnProjections).not.toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message: 'Unable to obtain lock, skipping reconcile stale PRN projections'
     })
   })
@@ -123,7 +119,7 @@ describe('runReconcileStalePrnProjections', () => {
 
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(logger.error).toHaveBeenCalledWith({
+    expect(mockServer.logger.error).toHaveBeenCalledWith({
       err: error,
       message: 'Failed to run reconcile stale PRN projections'
     })
@@ -136,7 +132,7 @@ describe('runReconcileStalePrnProjections', () => {
 
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(logger.error).toHaveBeenCalledWith({
+    expect(mockServer.logger.error).toHaveBeenCalledWith({
       err: error,
       message: 'Failed to run reconcile stale PRN projections'
     })
