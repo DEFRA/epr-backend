@@ -37,7 +37,7 @@ export const previousYearRowMissingData = (linkedRow) => {
     previousYearLink,
     rowObject
   } = linkedRow
-  const { rowId, year } = previousYearLink.link
+  const { year } = previousYearLink.link
   return isStillCorrectable(linkedRow) && isMissingData(linkedRow)
     ? [
         toPreviousYearLinkIssue({
@@ -45,8 +45,7 @@ export const previousYearRowMissingData = (linkedRow) => {
           enteredValue: rowObject[linking.previousYearRowIdField],
           errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
           field: linking.previousYearRowIdField,
-          linkedRow,
-          previousYearRowId: rowId
+          linkedRow
         })
       ]
     : []

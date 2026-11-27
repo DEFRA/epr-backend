@@ -4,6 +4,7 @@ import {
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 import { previousYear } from '#common/helpers/dates/year.js'
+import { PREVIOUS_YEAR_LINK_STATUS } from '#domain/summary-logs/linked-row.js'
 
 import { buildCellLocation } from '../data-syntax.js'
 
@@ -14,25 +15,24 @@ import { buildCellLocation } from '../data-syntax.js'
 
 /**
  * @param {{
+ *   deadline?: CalendarDate,
+ *   enteredValue: unknown,
  *   errorCode: string,
  *   field: string,
- *   linkedRow: Pick<LinkedRow<PreviousYearLink>, 'rowId' | 'options' | 'issueLocation'>,
- *   enteredValue: unknown,
- *   previousYearRowId?: string,
- *   deadline?: CalendarDate
+ *   linkedRow: Pick<LinkedRow<PreviousYearLink>, 'issueLocation' | 'options' | 'previousYearLink' | 'rowId'>
  * }} params
  * @returns {ValidationIssue}
  */
 export const toPreviousYearLinkIssue = ({
+  deadline,
+  enteredValue,
   errorCode,
   field,
-  linkedRow,
-  enteredValue,
-  previousYearRowId,
-  deadline
+  linkedRow
 }) => {
-  const { headerToIndexMap, tableName, rowNumber, location } =
+  const { headerToIndexMap, location, rowNumber, tableName } =
     linkedRow.issueLocation
+  const { previousYearLink } = linkedRow
   return {
     category: VALIDATION_CATEGORY.BUSINESS,
     severity: VALIDATION_SEVERITY.FATAL,
@@ -50,7 +50,9 @@ export const toPreviousYearLinkIssue = ({
       actual: enteredValue,
       expected: previousYear(linkedRow.options.summaryLogYear),
       errorCode,
-      ...(previousYearRowId && { previousYearRowId }),
+      ...(previousYearLink.status === PREVIOUS_YEAR_LINK_STATUS.FOUND && {
+        previousYearRowId: previousYearLink.link.rowId
+      }),
       ...(deadline && { deadline })
     }
   }

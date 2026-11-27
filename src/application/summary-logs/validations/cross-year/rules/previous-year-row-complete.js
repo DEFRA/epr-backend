@@ -31,10 +31,9 @@ const enteredValueOf = ({ rowObject, previousYearLink, linking }, field) =>
 export const previousYearRowComplete = (linkedRow) =>
   linkedRow.completions.map(({ completion, field }) =>
     toPreviousYearLinkIssue({
+      enteredValue: enteredValueOf(linkedRow, field),
       errorCode: COMPLETION_ERROR_CODES[completion],
       field,
-      linkedRow,
-      enteredValue: enteredValueOf(linkedRow, field),
-      previousYearRowId: linkedRow.previousYearLink.link.rowId
+      linkedRow
     })
   )

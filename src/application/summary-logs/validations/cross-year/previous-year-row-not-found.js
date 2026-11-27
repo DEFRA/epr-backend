@@ -22,10 +22,10 @@ export const previousYearRowNotFound = (linkedRow) => {
   return isWellFormed
     ? [
         toPreviousYearLinkIssue({
+          enteredValue: linkedRow.rowObject[field],
           errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_NOT_FOUND,
           field,
-          linkedRow,
-          enteredValue: linkedRow.rowObject[field]
+          linkedRow
         })
       ]
     : []
