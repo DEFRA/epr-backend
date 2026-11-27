@@ -48,6 +48,7 @@ import { createStatusesValidator } from './validation.js'
  * @import { AccreditationSnapshot, BusinessOperation, PackagingRecyclingNote, PrnStatus } from '#packaging-recycling-notes/domain/model.js'
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { NaturalKeyRoute } from '#routes/organisations/at-natural-keys.js'
+ * @import { DecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
  * @import { PrnKeyedRequest } from './at-prn-keys.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { Year } from '#common/helpers/dates/year.js'
@@ -446,11 +447,16 @@ const servingPrnFor =
     toPrnResource(prn, params, new Date())
 
 /**
- * @param {Parameters<ReturnType<typeof createPrn>>[0] & { params: RegistrationParams }} request
- * @param {HapiResponseToolkit} h
+ * @param {DecemberWasteWindow} decemberWaste
  */
-const createServingPrn = (request, h) =>
-  createPrn(servingPrnFor(request))(request, h)
+const createServingPrn =
+  (decemberWaste) =>
+  /**
+   * @param {Parameters<ReturnType<typeof createPrn>>[0] & { params: RegistrationParams }} request
+   * @param {HapiResponseToolkit} h
+   */
+  (request, h) =>
+    createPrn(decemberWaste, servingPrnFor(request))(request, h)
 
 /**
  * @param {Parameters<ReturnType<typeof updatePrnStatusHandler>>[0] & { params: RegistrationParams }} request
@@ -493,11 +499,19 @@ const decemberEligibilitySchema = Joi.object({
   windowOpen: Joi.boolean().required()
 })
 
-export const prnRoutesByNaturalKey = [
+/**
+ * The PRN routes addressed by organisation, registration and accreditation.
+ *
+ * @param {{ decemberWaste: DecemberWasteWindow }} options
+ */
+export const prnRoutesByNaturalKey = ({ decemberWaste }) => [
   atPrnKeys(prnsList, prnsPath, accreditationParams),
   atPrnKeys(
     declaringResponse(
-      { ...packagingRecyclingNotesCreate, handler: createServingPrn },
+      {
+        ...packagingRecyclingNotesCreate,
+        handler: createServingPrn(decemberWaste)
+      },
       prnSchema
     ),
     prnsPath,
@@ -505,7 +519,7 @@ export const prnRoutesByNaturalKey = [
   ),
   atPrnKeys(
     declaringResponse(
-      packagingRecyclingNotesDecemberEligibility,
+      packagingRecyclingNotesDecemberEligibility({ decemberWaste }),
       decemberEligibilitySchema
     ),
     `${prnsPath}/december-prn-eligibility`,

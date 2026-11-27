@@ -1,29 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  createPackagingRecyclingNotesRepository,
-  reconcileStalePrnProjections
-} from '#packaging-recycling-notes/plugin.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
-import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 
+import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 import { runReconcileStalePrnProjections } from './run-reconcile-stale-prn-projections.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }))
-vi.mock('#packaging-recycling-notes/plugin.js', () => ({
-  createDriftQuery: vi.fn(),
-  createPackagingRecyclingNotesRepository: vi.fn(),
-  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME: 'packaging-recycling-notes',
+vi.mock('#packaging-recycling-notes/repository/drift-query.mongodb.js', () => ({
+  createDriftQuery: vi.fn()
+}))
+vi.mock('./reconcile-stale-prn-projections.js', () => ({
   reconcileStalePrnProjections: vi.fn()
-}))
-vi.mock('#waste-balances/repository/ledger-mongodb.js', () => ({
-  createMongoLedgerRepository: vi.fn()
-}))
-vi.mock('#waste-balances/application/waste-balance-service.js', () => ({
-  createWasteBalanceService: vi.fn()
 }))
 
 const cleanResult = {
@@ -49,17 +38,14 @@ describe('runReconcileStalePrnProjections', () => {
 
     mockLock = { free: vi.fn().mockResolvedValue(undefined) }
     mockServer = {
+      app: {
+        packagingRecyclingNotesRepository: { persistProjection: vi.fn() },
+        wasteBalanceService: {}
+      },
       db: { collection: vi.fn().mockReturnValue({}) },
       locker: { lock: vi.fn().mockResolvedValue(mockLock) }
     }
 
-    vi.mocked(createPackagingRecyclingNotesRepository).mockResolvedValue(
-      () => /** @type {*} */ ({ persistProjection: vi.fn() })
-    )
-    vi.mocked(createMongoLedgerRepository).mockResolvedValue(
-      () => /** @type {*} */ ({})
-    )
-    vi.mocked(createWasteBalanceService).mockReturnValue(/** @type {*} */ ({}))
     vi.mocked(reconcileStalePrnProjections).mockResolvedValue(cleanResult)
   })
 
@@ -69,7 +55,12 @@ describe('runReconcileStalePrnProjections', () => {
     expect(mockServer.db.collection).toHaveBeenCalledWith(
       'packaging-recycling-notes'
     )
-    expect(reconcileStalePrnProjections).toHaveBeenCalled()
+    expect(reconcileStalePrnProjections).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prnRepository: mockServer.app.packagingRecyclingNotesRepository,
+        service: mockServer.app.wasteBalanceService
+      })
+    )
     expect(mockServer.locker.lock).toHaveBeenCalledWith(
       'reconcile-stale-prn-projections'
     )

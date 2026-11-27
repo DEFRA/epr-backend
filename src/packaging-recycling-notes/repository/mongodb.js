@@ -593,7 +593,7 @@ const performPersistProjection = async (
  * @param {Iterable<OrganisationNumber>} excludeOrganisationNumbers
  * @returns {Promise<PackagingRecyclingNotesRepositoryFactory>}
  */
-export const createPackagingRecyclingNotesRepository = async (
+export const createMongoPackagingRecyclingNotesRepository = async (
   db,
   excludeOrganisationNumbers
 ) => {

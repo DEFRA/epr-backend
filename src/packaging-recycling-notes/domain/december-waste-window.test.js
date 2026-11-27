@@ -121,7 +121,7 @@ describe('assertDecemberWasteDeclarable', () => {
         accreditation: exporter,
         isDecemberWaste: false,
         now: outsideWindow,
-        config: DEFAULT_CONFIG
+        decemberWaste: DEFAULT_CONFIG
       })
     ).not.toThrow()
   })
@@ -139,7 +139,7 @@ describe('assertDecemberWasteDeclarable', () => {
         accreditation,
         isDecemberWaste: true,
         now: inWindow,
-        config: DEFAULT_CONFIG
+        decemberWaste: DEFAULT_CONFIG
       })
     ).not.toThrow()
   })
@@ -154,7 +154,7 @@ describe('assertDecemberWasteDeclarable', () => {
         accreditation,
         isDecemberWaste: true,
         now: outsideWindow,
-        config: DEFAULT_CONFIG
+        decemberWaste: DEFAULT_CONFIG
       })
     ).toThrow(throwsNotDeclarable)
   })

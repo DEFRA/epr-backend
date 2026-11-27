@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { StatusCodes } from 'http-status-codes'
 
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-import { createPackagingRecyclingNotesRepository } from './mongodb.js'
+import { createMongoPackagingRecyclingNotesRepository } from './mongodb.js'
 import { buildAwaitingAcceptancePrn } from './contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMockLogger } from '#test/mock-logger.js'
@@ -55,10 +55,11 @@ describe('Test organisation exclusion - integration with real MongoDB', () => {
 
   /** @param {OrganisationNumber[]} excludeOrganisationNumbers */
   async function createServerWithExclusion(excludeOrganisationNumbers) {
-    const repositoryFactory = await createPackagingRecyclingNotesRepository(
-      db,
-      excludeOrganisationNumbers
-    )
+    const repositoryFactory =
+      await createMongoPackagingRecyclingNotesRepository(
+        db,
+        excludeOrganisationNumbers
+      )
     const repository = repositoryFactory(createMockLogger())
 
     await repository.create(

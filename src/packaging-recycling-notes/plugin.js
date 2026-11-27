@@ -1,5 +1,5 @@
 import { portAdapter } from '#plugins/port-adapter.js'
-import { createPackagingRecyclingNotesRepository } from './repository/mongodb.js'
+import { createMongoPackagingRecyclingNotesRepository } from './repository/mongodb.js'
 import { packagingRecyclingNotesAccept } from './routes/accept.js'
 import { adminPackagingRecyclingNotesCancel } from './routes/admin-cancel.js'
 import { adminPackagingRecyclingNotesList } from './routes/admin-list.js'
@@ -12,15 +12,11 @@ import { getPrnTonnage } from './routes/prn-tonnage/get.js'
 import { packagingRecyclingNotesReject } from './routes/reject.js'
 
 export { prnEventsPlugin } from './application/prn-events.plugin.js'
-export { reconcileStalePrnProjections } from './application/reconcile-stale-prn-projections.js'
-export { createDriftQuery } from './repository/drift-query.mongodb.js'
-export {
-  COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME,
-  createPackagingRecyclingNotesRepository
-} from './repository/mongodb.js'
+export { reconcileStalePrnProjectionsPlugin } from './application/reconcile-stale-prn-projections.plugin.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
+/** @import { DecemberWasteWindow } from './domain/december-waste-window.js' */
 
 /**
  * The MongoDB adapter for the PRN repository. Its `findByStatus` leaves out
@@ -32,7 +28,7 @@ export const packagingRecyclingNotesRepositoryPlugin = portAdapter({
 
   /** @param {{ excludeOrganisationNumbers: Iterable<OrganisationNumber> }} options */
   build: async ({ excludeOrganisationNumbers }, { mongodb }) => {
-    const createRepository = await createPackagingRecyclingNotesRepository(
+    const createRepository = await createMongoPackagingRecyclingNotesRepository(
       mongodb,
       excludeOrganisationNumbers
     )
@@ -42,27 +38,29 @@ export const packagingRecyclingNotesRepositoryPlugin = portAdapter({
 
 /**
  * The PRN routes. With `adminCancellation`, it adds the routes that let the
- * service team cancel a PRN.
+ * service team cancel a PRN. `decemberWaste` sets when the December Waste
+ * declaration window opens.
  */
 export const packagingRecyclingNotesRoutesPlugin = {
-  name: 'packaging-recycling-notes',
+  name: 'packaging-recycling-notes-routes',
   dependencies: [
     'packagingRecyclingNotesRepository',
     'ledgerRepository',
     'organisationReadRepository',
-    'prnEvents'
+    'prnEvents',
+    'systemLogsRepository'
   ],
 
   /**
    * @param {HapiServer} server
-   * @param {{ adminCancellation: boolean }} options
+   * @param {{ adminCancellation: boolean, decemberWaste: DecemberWasteWindow }} options
    */
-  register: (server, { adminCancellation }) => {
+  register: (server, { adminCancellation, decemberWaste }) => {
     server.route([
       packagingRecyclingNotesAccept,
       packagingRecyclingNotesList,
       packagingRecyclingNotesReject,
-      ...prnRoutesByNaturalKey,
+      ...prnRoutesByNaturalKey({ decemberWaste }),
       adminPackagingRecyclingNotesList,
       ...(adminCancellation
         ? [adminPackagingRecyclingNotesCancel, prnCancelByNaturalKey]

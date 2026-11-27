@@ -8,6 +8,13 @@ import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/rel
 /** @import { AccreditationNumber } from '#domain/organisations/numbers.js' */
 
 /**
+ * When the December Waste declaration window opens each year, as
+ * `MM-DDTHH:mm` in UK local time.
+ *
+ * @typedef {{ windowStart: string }} DecemberWasteWindow
+ */
+
+/**
  * The December Waste declaration window (PAE-1913): a reprocessor on output
  * may mark a PRN as December Waste from `windowStart` of the accreditation's
  * relevant year through 31 January the year after - the same relevant-year
@@ -28,7 +35,7 @@ import { isBeforeEndOfRelevantYear } from '#packaging-recycling-notes/domain/rel
  *
  * @param {Year} relevantYear
  * @param {Date} now
- * @param {{ windowStart: string }} config - `windowStart` as `MM-DDTHH:mm`
+ * @param {DecemberWasteWindow} decemberWaste
  * @returns {boolean}
  */
 export function isWithinDecemberWasteWindow(
@@ -63,20 +70,24 @@ export const DECEMBER_WASTE_NOT_DECLARABLE_CODE =
  * @param {{ accreditationNumber: AccreditationNumber, accreditationYear: Year }} params.accreditation
  * @param {boolean} params.isDecemberWaste
  * @param {Date} params.now
- * @param {{ windowStart: string }} params.config
+ * @param {DecemberWasteWindow} params.decemberWaste
  */
 export function assertDecemberWasteDeclarable({
   accreditation,
   isDecemberWaste,
   now,
-  config
+  decemberWaste
 }) {
   if (!isDecemberWaste) {
     return
   }
 
   if (
-    isWithinDecemberWasteWindow(accreditation.accreditationYear, now, config)
+    isWithinDecemberWasteWindow(
+      accreditation.accreditationYear,
+      now,
+      decemberWaste
+    )
   ) {
     return
   }

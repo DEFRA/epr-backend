@@ -8,7 +8,7 @@ import {
 } from './contract/test-data.js'
 import {
   COLLECTION_NAME,
-  createPackagingRecyclingNotesRepository
+  createMongoPackagingRecyclingNotesRepository
 } from './mongodb.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 import { PrnNumberConflictError } from './port.js'
@@ -46,7 +46,10 @@ const it = mongoIt.extend({
 
   prnRepositoryFactory: async (/** @type {*} */ { mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = await createPackagingRecyclingNotesRepository(database, [])
+    const factory = await createMongoPackagingRecyclingNotesRepository(
+      database,
+      []
+    )
     await use(factory)
   },
 
@@ -85,7 +88,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(
+      const factory = await createMongoPackagingRecyclingNotesRepository(
         asDb(mockDb),
         []
       )
@@ -126,7 +129,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(
+      const factory = await createMongoPackagingRecyclingNotesRepository(
         asDb(mockDb),
         []
       )
@@ -177,7 +180,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(
+      const factory = await createMongoPackagingRecyclingNotesRepository(
         asDb(mockDb),
         []
       )
@@ -200,7 +203,7 @@ describe('MongoDB packaging recycling notes repository', () => {
     mongoClient
   }) => {
     const db = mongoClient.db(DATABASE_NAME)
-    await createPackagingRecyclingNotesRepository(db, [])
+    await createMongoPackagingRecyclingNotesRepository(db, [])
 
     const indexes = await db.collection(COLLECTION_NAME).indexes()
 
@@ -223,7 +226,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       { name: 'organisationId_status' }
     )
 
-    await createPackagingRecyclingNotesRepository(db, [])
+    await createMongoPackagingRecyclingNotesRepository(db, [])
 
     const names = (await collection.indexes()).map(({ name }) => name)
     expect(names).not.toContain('organisationId_status')
@@ -260,7 +263,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       }
 
       await expect(
-        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+        createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
       ).rejects.toThrow('Connection lost')
     })
   })
@@ -287,7 +290,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+      await createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const statusDateIndex = createdIndexes.find(
         (idx) => idx.options.name === 'status_currentStatusAt'
@@ -329,7 +332,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      const factory = await createPackagingRecyclingNotesRepository(
+      const factory = await createMongoPackagingRecyclingNotesRepository(
         asDb(mockDb),
         []
       )
@@ -366,7 +369,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       }
 
       await expect(
-        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+        createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
       ).rejects.toThrow('Connection lost')
     })
   })
@@ -393,7 +396,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+      await createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const prnNumberIndex = createdIndexes.find(
         (idx) => idx.options.name === 'prnNumber'
@@ -429,7 +432,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+      await createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       expect(droppedIndex).toBe('prnNumber')
 
@@ -469,7 +472,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+      await createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       expect(droppedIndexes).toStrictEqual(['organisationId_status'])
     })
@@ -502,7 +505,7 @@ describe('MongoDB packaging recycling notes repository', () => {
         }
       }
 
-      await createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+      await createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
 
       const prnNumberIndex = createdIndexes.find(
         (idx) => idx.options.name === 'prnNumber'
@@ -536,7 +539,7 @@ describe('MongoDB packaging recycling notes repository', () => {
       }
 
       await expect(
-        createPackagingRecyclingNotesRepository(asDb(mockDb), [])
+        createMongoPackagingRecyclingNotesRepository(asDb(mockDb), [])
       ).rejects.toThrow('Connection refused')
     })
   })

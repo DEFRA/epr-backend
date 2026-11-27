@@ -14,7 +14,7 @@ import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import {
   buildDraftPrn,
-  createPackagingRecyclingNotesRepository
+  createMongoPackagingRecyclingNotesRepository
 } from '#packaging-recycling-notes/test-support.js'
 import {
   buildCreateReportParams,
@@ -118,7 +118,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
     repositories: async ({ database }, use) => {
       const organisationsFactory = await createOrganisationsRepository(database)
       const organisations = organisationsFactory()
-      const prnsFactory = await createPackagingRecyclingNotesRepository(
+      const prnsFactory = await createMongoPackagingRecyclingNotesRepository(
         database,
         []
       )

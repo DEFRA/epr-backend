@@ -3,7 +3,7 @@ import { MongoClient } from 'mongodb'
 import { describe, beforeEach, expect, vi } from 'vitest'
 
 import {
-  createPackagingRecyclingNotesRepository,
+  createMongoPackagingRecyclingNotesRepository,
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
 } from './mongodb.js'
 import {
@@ -50,12 +50,15 @@ const it = mongoIt.extend({
 
   prnCollection: async (/** @type {*} */ { database }, use) => {
     // Constructing the repository ensures the collection and its indexes.
-    await createPackagingRecyclingNotesRepository(database, [])
+    await createMongoPackagingRecyclingNotesRepository(database, [])
     await use(database.collection(PACKAGING_RECYCLING_NOTES_COLLECTION_NAME))
   },
 
   prnRepository: async (/** @type {*} */ { database }, use) => {
-    const factory = await createPackagingRecyclingNotesRepository(database, [])
+    const factory = await createMongoPackagingRecyclingNotesRepository(
+      database,
+      []
+    )
     await use(factory(stubLogger()))
   },
 

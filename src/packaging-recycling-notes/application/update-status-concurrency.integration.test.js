@@ -8,7 +8,7 @@ import {
   PRN_ACTOR,
   StatusConflictError
 } from '#packaging-recycling-notes/domain/model.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { createMongoPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
@@ -165,7 +165,7 @@ describe('PRN status concurrency against real MongoDB', () => {
       .deleteMany({})
     await ensureLedgerCollection(database)
 
-    prnRepositoryFactory = await createPackagingRecyclingNotesRepository(
+    prnRepositoryFactory = await createMongoPackagingRecyclingNotesRepository(
       database,
       []
     )
@@ -226,7 +226,10 @@ describe('PRN status concurrency against real MongoDB', () => {
       database,
       release.promise
     )
-    const heldFactory = await createPackagingRecyclingNotesRepository(view, [])
+    const heldFactory = await createMongoPackagingRecyclingNotesRepository(
+      view,
+      []
+    )
 
     // The first cancellation commits its ledger event and is held before it can
     // write the document that projects it.

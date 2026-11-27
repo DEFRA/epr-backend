@@ -64,7 +64,8 @@ const moduleRoutePlugins = (config) => [
   {
     plugin: packagingRecyclingNotesRoutesPlugin,
     options: {
-      adminCancellation: config.get('featureFlags.prnAdminCancellation')
+      adminCancellation: config.get('featureFlags.prnAdminCancellation'),
+      decemberWaste: config.get('decemberWaste')
     }
   },
   wasteRecordsExport

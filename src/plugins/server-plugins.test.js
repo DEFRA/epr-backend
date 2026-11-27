@@ -40,13 +40,21 @@ describe('serverPlugins', () => {
   })
 
   it('registers the PRN routes without admin cancellation when its flag is off', () => {
-    expect(prnRoutesEntry()?.options).toEqual({ adminCancellation: false })
+    expect(prnRoutesEntry()?.options.adminCancellation).toBe(false)
   })
 
   it('registers the PRN routes with admin cancellation when its flag is on', () => {
     expect(
       prnRoutesEntry({ featureFlags: { prnAdminCancellation: true } })?.options
-    ).toEqual({ adminCancellation: true })
+        .adminCancellation
+    ).toBe(true)
+  })
+
+  it('gives the PRN routes the December Waste window from the config', () => {
+    expect(
+      prnRoutesEntry({ decemberWaste: { windowStart: '11-15T09:30' } })?.options
+        .decemberWaste
+    ).toEqual({ windowStart: '11-15T09:30' })
   })
 
   it("leaves the modules' route plugins out when asked for none", () => {

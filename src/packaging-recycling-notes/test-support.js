@@ -4,10 +4,9 @@ export {
 } from './repository/inmemory.plugin.js'
 export {
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME,
-  createPackagingRecyclingNotesRepository
+  createMongoPackagingRecyclingNotesRepository
 } from './repository/mongodb.js'
 export {
-  buildAccreditationKeys,
   buildAccreditationSnapshot,
   buildAwaitingAcceptancePrn,
   buildAwaitingAuthorisationPrn,

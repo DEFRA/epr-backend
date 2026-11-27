@@ -5,7 +5,7 @@ import Boom from '@hapi/boom'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
-  createPackagingRecyclingNotesRepository,
+  createMongoPackagingRecyclingNotesRepository,
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
 } from '#packaging-recycling-notes/repository/mongodb.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
@@ -66,12 +66,15 @@ const it = mongoIt.extend({
 
   prnCollection: async (/** @type {*} */ { database }, use) => {
     // Constructing the repository ensures the collection and its indexes.
-    await createPackagingRecyclingNotesRepository(database, [])
+    await createMongoPackagingRecyclingNotesRepository(database, [])
     await use(database.collection(PACKAGING_RECYCLING_NOTES_COLLECTION_NAME))
   },
 
   prnRepository: async (/** @type {*} */ { database }, use) => {
-    const factory = await createPackagingRecyclingNotesRepository(database, [])
+    const factory = await createMongoPackagingRecyclingNotesRepository(
+      database,
+      []
+    )
     await use(factory(stubLogger()))
   },
 

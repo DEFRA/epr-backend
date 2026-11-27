@@ -16,7 +16,8 @@ import {
 } from '#overseas-sites/index.js'
 import {
   packagingRecyclingNotesRepositoryPlugin,
-  prnEventsPlugin
+  prnEventsPlugin,
+  reconcileStalePrnProjectionsPlugin
 } from '#packaging-recycling-notes/plugin.js'
 import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
@@ -32,7 +33,6 @@ import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
-import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -116,7 +116,8 @@ function getProductionPlugins(config) {
     {
       plugin: packagingRecyclingNotesRepositoryPlugin,
       options: { excludeOrganisationNumbers: TEST_ORGANISATION_NUMBERS }
-    }
+    },
+    reconcileStalePrnProjectionsPlugin
   ]
 
   plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
@@ -160,7 +161,6 @@ async function createServer(options = {}) {
       /** @type {unknown} */ (server)
     )
     void runFormsDataMigration(startedServer)
-    void runReconcileStalePrnProjections(startedServer)
   })
 
   return server

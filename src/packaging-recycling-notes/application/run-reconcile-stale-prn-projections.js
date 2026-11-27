@@ -1,15 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  createDriftQuery,
-  createPackagingRecyclingNotesRepository,
-  PACKAGING_RECYCLING_NOTES_COLLECTION_NAME,
-  reconcileStalePrnProjections
-} from '#packaging-recycling-notes/plugin.js'
-import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
+import { COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME } from '#packaging-recycling-notes/repository/mongodb.js'
+import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
-/** @import { DriftReport } from '#packaging-recycling-notes/index.js' */
+/** @import { DriftReport } from './reconcile-stale-prn-projections.js' */
 
 const LOCK_NAME = 'reconcile-stale-prn-projections'
 
@@ -30,30 +25,22 @@ const formatReport = (report) =>
  * `findDrifting` detects the ids behind their ledger in one indexed query; each
  * is then re-read point-wise off the raw collection and written back
  * through the repository's version CAS. Catch-up events come from the
- * waste-balance service over the shared ledger.
+ * server's waste balance service.
  *
  * @param {StartedServer} server
  */
-const buildDependencies = async (server) => {
-  const prnFactory = await createPackagingRecyclingNotesRepository(
-    server.db,
-    []
-  )
-  const ledgerFactory = await createMongoLedgerRepository(server.db)
-
-  return {
-    findDrifting: createDriftQuery(server.db),
-    prnCollection: server.db.collection(
-      PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
-    ),
-    prnRepository: prnFactory(logger),
-    service: createWasteBalanceService(ledgerFactory())
-  }
-}
+const buildDependencies = (server) => ({
+  findDrifting: createDriftQuery(server.db),
+  prnCollection: server.db.collection(
+    PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
+  ),
+  prnRepository: server.app.packagingRecyclingNotesRepository,
+  service: server.app.wasteBalanceService
+})
 
 /** @param {StartedServer} server */
 const runReconcile = async (server) => {
-  const deps = await buildDependencies(server)
+  const deps = buildDependencies(server)
 
   const {
     total,
