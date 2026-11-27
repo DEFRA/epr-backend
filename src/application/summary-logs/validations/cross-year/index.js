@@ -42,7 +42,7 @@ import { previousYearRowNotFound } from './previous-year-row-not-found.js'
  *   rowId: string,
  *   previousYearLink: Link,
  *   linking: YearLinking,
- *   columnSchemas: Map<string, Schema>,
+ *   columnSchemas: ReadonlyMap<string, Schema>,
  *   options: SummaryLogValidationOptions,
  *   issueLocation: RowIssueLocation
  * }} LinkedRow
@@ -53,7 +53,7 @@ import { previousYearRowNotFound } from './previous-year-row-not-found.js'
  *
  * @typedef {LinkedRow<FoundPreviousYearLink> & {
  *   columnComparisons: ReadonlyMap<string, ColumnComparison>,
- *   completions: PreviousYearRowCompletionAt[]
+ *   completions: readonly PreviousYearRowCompletionAt[]
  * }} FoundLinkedRow
  */
 
@@ -72,7 +72,7 @@ const columnSchemasOf = (validationSchema) =>
 /**
  * @param {LinkedRow<FoundPreviousYearLink> & {
  *   table: ComparedTable,
- *   headers: Array<string | null>
+ *   headers: readonly (string | null)[]
  * }} params
  * @returns {FoundLinkedRow}
  */
@@ -98,7 +98,7 @@ const foundLinkedRowOf = ({ table, headers, ...linkedRow }) => {
  * @param {{
  *   tableName: string,
  *   headers: Array<string | null>,
- *   rows: FilledInRow[],
+ *   rows: readonly FilledInRow[],
  *   location: CellLocation,
  *   schema: CrossYearTableSchema,
  *   linking: YearLinking,

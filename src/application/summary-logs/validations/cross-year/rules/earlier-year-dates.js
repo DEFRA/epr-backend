@@ -12,7 +12,7 @@ import { toApplicationIssue } from '../../data-syntax.js'
 
 /**
  * @param {FoundLinkedRow} linkedRow
- * @returns {string[]}
+ * @returns {readonly string[]}
  */
 const suppliedColumnsCheckedAsDates = ({
   columnComparisons,
