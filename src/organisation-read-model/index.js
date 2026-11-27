@@ -20,7 +20,7 @@ export { organisationYears } from './domain/organisation-years.js'
 export { standingByYear } from './domain/registration-standing.js'
 export { registrationStatusWindows } from './domain/registration-status-windows.js'
 export { approvedYears, firstApprovedAt } from './domain/status-timeline.js'
-export { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './repository/external-accreditation-sources.js'
+export { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './external-accreditations/external-accreditation-sources.js'
 export {
   servesOrganisationOn,
   toLinkedDefraOrganisation

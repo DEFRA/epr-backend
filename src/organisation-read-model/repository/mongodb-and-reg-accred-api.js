@@ -4,7 +4,7 @@ import { findAll, findOne, findPage } from './mongodb-find.js'
 import {
   EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
   REG_ACCRED_ACCREDITATION_YEAR
-} from './external-accreditation-sources.js'
+} from '../external-accreditations/external-accreditation-sources.js'
 import { createRegAccredAccreditationsLoader } from './reg-accred-accreditations.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
