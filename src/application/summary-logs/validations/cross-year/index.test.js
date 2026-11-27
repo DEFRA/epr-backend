@@ -28,7 +28,9 @@ const HEADERS = [
   'DATE_OF_EXPORT',
   'OSR_NAME',
   'DATE_RECEIVED_BY_OSR',
-  'DATE_REPATRIATED'
+  'DATE_REPATRIATED',
+  'NET_WEIGHT',
+  'WAS_THE_WASTE_REFUSED'
 ]
 
 const tableSchemas = {
@@ -37,7 +39,9 @@ const tableSchemas = {
     linking: {
       previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID',
       suppliableOnLinkedRow: ['DATE_OF_EXPORT'],
-      /** @param {Record<string, unknown>} row */
+      mayDifferBeforeCorrectionDeadline: ['NET_WEIGHT'],
+      answeredLaterOnLinkedRow: ['WAS_THE_WASTE_REFUSED'],
+      prefilledOnLinkedRow: {},
       /**
        * @param {Record<string, unknown>} row
        * @param {Year} year
@@ -69,7 +73,8 @@ const tableSchemas = {
           : [])
       ],
       /** @param {Record<string, unknown>} row */
-      missingFieldsOf: (row) => (isAnswered(row.OSR_NAME) ? [] : ['OSR_NAME'])
+      missingFieldsOf: (row) =>
+        isAnswered(row.NET_WEIGHT) ? [] : ['NET_WEIGHT']
     },
     validationSchema: Joi.object({
       ROW_ID: Joi.number(),
@@ -86,14 +91,25 @@ const BEFORE_2026_CORRECTION_DEADLINE = {
   registeredOnly: false
 }
 
+const KEPT_AS_ENTERED = new Set(['ROW_ID', 'PREVIOUS_YEAR_ROW_ID'])
+
+/**
+ * @param {Record<string, unknown>} cells
+ * @returns {unknown[]}
+ */
+const rowOf = (cells) => HEADERS.map((header) => cells[header] ?? null)
+
 /**
  * @param {{
  *   rowId?: number | null,
  *   dateOfExport: unknown,
  *   previousYearDateOfExport?: unknown,
  *   suppliedFields?: string[],
- *   previousYearValues?: Record<string, unknown>,
- *   dateReceivedByOsr?: string
+ *   previousYearCompletion?: Record<string, unknown>,
+ *   dateReceivedByOsr?: string,
+ *   osrName?: string | null,
+ *   netWeight?: number | null,
+ *   wasteRefused?: string | null
  * }} row
  * @returns {FilledInRow}
  */
@@ -102,24 +118,41 @@ const filledInRow = ({
   dateOfExport,
   previousYearDateOfExport = '2026-11-01',
   suppliedFields = ['DATE_OF_EXPORT'],
-  previousYearValues = {},
-  dateReceivedByOsr
+  previousYearCompletion = {},
+  dateReceivedByOsr,
+  osrName = null,
+  netWeight = null,
+  wasteRefused = null
 }) => {
   /** @type {Record<string, unknown>} */
   const previousYear = {
     ROW_ID: 1500,
     DATE_OF_EXPORT: previousYearDateOfExport,
     OSR_NAME: 'Overseas 2026 Ltd',
-    ...previousYearValues
+    NET_WEIGHT: 850,
+    ...previousYearCompletion
   }
-  const values = [
-    rowId,
-    1500,
-    dateOfExport,
-    'Overseas Ltd',
-    dateReceivedByOsr ?? previousYear.DATE_RECEIVED_BY_OSR ?? null,
-    previousYear.DATE_REPATRIATED ?? null
-  ]
+  /** @type {Record<string, unknown>} */
+  const enteredCells = {
+    ROW_ID: rowId,
+    PREVIOUS_YEAR_ROW_ID: 1500,
+    DATE_OF_EXPORT: dateOfExport,
+    OSR_NAME: osrName,
+    DATE_RECEIVED_BY_OSR: dateReceivedByOsr,
+    NET_WEIGHT: netWeight,
+    WAS_THE_WASTE_REFUSED: wasteRefused
+  }
+  const entered = rowOf(enteredCells)
+  const values = rowOf(
+    Object.fromEntries(
+      HEADERS.map((header) => [
+        header,
+        KEPT_AS_ENTERED.has(header) || suppliedFields.includes(header)
+          ? enteredCells[header]
+          : previousYear[header]
+      ])
+    )
+  )
   return {
     rowNumber: 8,
     values,
@@ -131,7 +164,7 @@ const filledInRow = ({
         rowStateId: 'row-state-1500',
         suppliedFields
       },
-      entered: values,
+      entered,
       previousYear
     }
   }
@@ -143,7 +176,12 @@ const filledInRow = ({
  */
 const unmatchedRow = ({ rowNumber = 8, rowId = 1001, previousYearRowId }) => ({
   rowNumber,
-  values: [rowId, previousYearRowId, '2027-01-04', 'Overseas Ltd', null, null],
+  values: rowOf({
+    ROW_ID: rowId,
+    PREVIOUS_YEAR_ROW_ID: previousYearRowId,
+    DATE_OF_EXPORT: '2027-01-04',
+    OSR_NAME: 'Overseas Ltd'
+  }),
   previousYearLink: {
     status: PREVIOUS_YEAR_LINK_STATUS.NOT_FOUND,
     previousYearRowId: String(previousYearRowId)
@@ -172,8 +210,16 @@ const previousYearLinkIssue = (
   }
 })
 
-/** @param {FilledInRow[]} rows */
-const check = (rows, options = BEFORE_2026_CORRECTION_DEADLINE) =>
+/**
+ * @param {FilledInRow[]} rows
+ * @param {SummaryLogValidationOptions} [options]
+ * @param {typeof tableSchemas} [schemas]
+ */
+const check = (
+  rows,
+  options = BEFORE_2026_CORRECTION_DEADLINE,
+  schemas = tableSchemas
+) =>
   checkCrossYearRules({
     parsed: {
       meta: {},
@@ -185,13 +231,20 @@ const check = (rows, options = BEFORE_2026_CORRECTION_DEADLINE) =>
         }
       }
     },
-    tableSchemas,
+    tableSchemas: schemas,
     options
   }).getAllIssues()
 
 describe('checkCrossYearRules', () => {
   it('rejects a date a linked row supplies in an earlier year that can still be corrected', () => {
-    expect(check([filledInRow({ dateOfExport: '2026-12-28' })])).toStrictEqual([
+    expect(
+      check([
+        filledInRow({
+          dateOfExport: '2026-12-28',
+          previousYearDateOfExport: null
+        })
+      ])
+    ).toStrictEqual([
       {
         category: VALIDATION_CATEGORY.TECHNICAL,
         severity: VALIDATION_SEVERITY.FATAL,
@@ -253,6 +306,26 @@ describe('checkCrossYearRules', () => {
     }
   )
 
+  it('rejects a supplied date in an earlier year that can still be corrected, in a column that may differ from the previous year row', () => {
+    const dateOfExportMayDiffer = {
+      LOADS: {
+        ...tableSchemas.LOADS,
+        linking: {
+          ...tableSchemas.LOADS.linking,
+          mayDifferBeforeCorrectionDeadline: ['DATE_OF_EXPORT']
+        }
+      }
+    }
+
+    expect(
+      check(
+        [filledInRow({ dateOfExport: '2026-12-28' })],
+        BEFORE_2026_CORRECTION_DEADLINE,
+        dateOfExportMayDiffer
+      ).map(({ context }) => context?.errorCode)
+    ).toStrictEqual([VALIDATION_CODE.DATE_BEFORE_SUMMARY_LOG_YEAR])
+  })
+
   it('accepts a supplied date once the earlier year can no longer be corrected', () => {
     expect(
       check([filledInRow({ dateOfExport: '2026-12-28' })], {
@@ -278,7 +351,9 @@ describe('checkCrossYearRules', () => {
     ['a date in a later year', '2028-01-05'],
     ['an invalid date', 'not a date']
   ])('leaves %s to the data syntax check', (_, dateOfExport) => {
-    expect(check([filledInRow({ dateOfExport })])).toStrictEqual([])
+    expect(
+      check([filledInRow({ dateOfExport, previousYearDateOfExport: null })])
+    ).toStrictEqual([])
   })
 
   it('ignores a supplied column with no value rule', () => {
@@ -286,7 +361,9 @@ describe('checkCrossYearRules', () => {
       check([
         filledInRow({
           dateOfExport: '2026-11-01',
-          suppliedFields: ['DATE_OF_EXPORT', 'OSR_NAME']
+          suppliedFields: ['DATE_OF_EXPORT', 'OSR_NAME'],
+          osrName: 'Overseas Ltd',
+          previousYearCompletion: { OSR_NAME: null }
         })
       ])
     ).toStrictEqual([])
@@ -369,7 +446,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearValues: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
           })
         ])
       ).toStrictEqual([
@@ -394,11 +471,17 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearValues: { DATE_RECEIVED_BY_OSR: '2026-12-14' },
+            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' },
             dateReceivedByOsr: '2027-01-05',
             suppliedFields: ['DATE_OF_EXPORT', 'DATE_RECEIVED_BY_OSR']
           })
-        ]).map(({ context }) => context?.actual)
+        ])
+          .filter(
+            ({ context }) =>
+              context?.errorCode ===
+              VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR
+          )
+          .map(({ context }) => context?.actual)
       ).toStrictEqual(['2027-01-05'])
     })
 
@@ -407,7 +490,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearValues: { WAS_THE_WASTE_STOPPED: 'No' }
+            previousYearCompletion: { WAS_THE_WASTE_STOPPED: 'No' }
           })
         ])
       ).toStrictEqual([
@@ -432,7 +515,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearValues: { DATE_RECEIVED_BY_OSR: '2027-01-05' }
+            previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2027-01-05' }
           })
         ])
       ).toStrictEqual([])
@@ -443,7 +526,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearValues: { DATE_REPATRIATED: '2026-12-20' }
+            previousYearCompletion: { DATE_REPATRIATED: '2026-12-20' }
           })
         ])
       ).toStrictEqual([
@@ -463,7 +546,7 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearValues: {
+            previousYearCompletion: {
               DATE_RECEIVED_BY_OSR: '2026-12-14',
               DATE_REPATRIATED: '2026-12-20'
             }
@@ -475,13 +558,41 @@ describe('checkCrossYearRules', () => {
       ])
     })
 
+    it.for([
+      {
+        description: 'the values the row gives differently',
+        row: {
+          dateOfExport: '2026-11-01',
+          osrName: 'Overseas Ltd',
+          previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+        },
+        errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR
+      },
+      {
+        description: 'a date the row supplies in an earlier year',
+        row: {
+          dateOfExport: '2026-12-28',
+          previousYearDateOfExport: null,
+          previousYearCompletion: { DATE_REPATRIATED: '2026-12-20' }
+        },
+        errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_REPATRIATED
+      }
+    ])(
+      'reports only that the row cannot be linked, not $description',
+      ({ row, errorCode }) => {
+        expect(
+          check([filledInRow(row)]).map(({ context }) => context?.errorCode)
+        ).toStrictEqual([errorCode])
+      }
+    )
+
     it('does not depend on the correction deadline', () => {
       expect(
         check(
           [
             filledInRow({
               dateOfExport: '2026-11-01',
-              previousYearValues: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+              previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
             })
           ],
           {
@@ -493,15 +604,231 @@ describe('checkCrossYearRules', () => {
     })
   })
 
+  describe('a linked row that gives a value different from the previous year row', () => {
+    const OSR_NAME_CELL = {
+      row: 8,
+      rowId: '1001',
+      column: 'E',
+      header: 'OSR_NAME'
+    }
+
+    it('rejects the column on its cell while the previous year can still be corrected', () => {
+      expect(
+        check([
+          filledInRow({ dateOfExport: '2026-11-01', osrName: 'Overseas Ltd' })
+        ])
+      ).toStrictEqual([
+        previousYearLinkIssue(OSR_NAME_CELL, {
+          errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
+          actual: 'Overseas Ltd',
+          previousYearRowId: '1500',
+          deadline: '2027-02-27'
+        })
+      ])
+    })
+
+    it('rejects a 2026 date the row supplies differently as a different value, not an earlier-year date', () => {
+      expect(
+        check([filledInRow({ dateOfExport: '2026-12-28' })])
+      ).toStrictEqual([
+        previousYearLinkIssue(
+          { row: 8, rowId: '1001', column: 'D', header: 'DATE_OF_EXPORT' },
+          {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
+            actual: '2026-12-28',
+            previousYearRowId: '1500',
+            deadline: '2027-02-27'
+          }
+        )
+      ])
+    })
+
+    it('rejects each column it gives differently, in column order', () => {
+      expect(
+        check([
+          filledInRow({ dateOfExport: '2027-01-20', osrName: 'Overseas Ltd' })
+        ]).map(({ context }) => context?.location?.header)
+      ).toStrictEqual(['DATE_OF_EXPORT', 'OSR_NAME'])
+    })
+
+    it.for([
+      {
+        description: 'repeats the previous year row',
+        osrName: 'Overseas 2026 Ltd'
+      },
+      { description: 'leaves the column blank', osrName: null }
+    ])('accepts a row that $description', ({ osrName }) => {
+      expect(
+        check([filledInRow({ dateOfExport: '2026-11-01', osrName })])
+      ).toStrictEqual([])
+    })
+
+    it('accepts a column only the linked row fills', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            osrName: 'Overseas Ltd',
+            previousYearCompletion: { OSR_NAME: null }
+          })
+        ])
+      ).toStrictEqual([])
+    })
+
+    it.for([
+      {
+        description:
+          'a previous year answer that means not yet, given as another answer',
+        previousYear: 'No',
+        entered: 'Yes'
+      },
+      {
+        description:
+          'a previous year answer that means not yet in lower case, given as another answer',
+        previousYear: 'no',
+        entered: 'Yes'
+      },
+      {
+        description: 'an answer that repeats the previous year in another case',
+        previousYear: 'Yes',
+        entered: ' yes '
+      }
+    ])('accepts $description', ({ previousYear, entered }) => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            wasteRefused: entered,
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: previousYear }
+          })
+        ])
+      ).toStrictEqual([])
+    })
+
+    it('rejects a previous year answer given as the answer that means not yet, in any case', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            wasteRefused: 'no',
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: 'YES' }
+          })
+        ]).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS])
+    })
+
+    it('rejects a previous year answer given as the answer that means not yet', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            wasteRefused: 'No',
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: 'Yes' }
+          })
+        ])
+      ).toStrictEqual([
+        previousYearLinkIssue(
+          {
+            row: 8,
+            rowId: '1001',
+            column: 'I',
+            header: 'WAS_THE_WASTE_REFUSED'
+          },
+          {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
+            actual: 'No',
+            previousYearRowId: '1500',
+            deadline: '2027-02-27'
+          }
+        )
+      ])
+    })
+
+    it('accepts a column that may differ before the correction deadline', () => {
+      expect(
+        check([filledInRow({ dateOfExport: '2026-11-01', netWeight: 0 })])
+      ).toStrictEqual([])
+    })
+
+    it.for([
+      {
+        description: 'an accredited operator on the last correction day',
+        registeredOnly: false,
+        createdAt: '2027-02-27T23:59:59.000Z',
+        deadline: '2027-02-27'
+      },
+      {
+        description: 'a registered-only operator on the last correction day',
+        registeredOnly: true,
+        createdAt: '2027-03-20T23:59:59.000Z',
+        deadline: '2027-03-20'
+      }
+    ])(
+      'rejects it for $description',
+      ({ registeredOnly, createdAt, deadline }) => {
+        expect(
+          check(
+            [
+              filledInRow({
+                dateOfExport: '2026-11-01',
+                osrName: 'Overseas Ltd'
+              })
+            ],
+            {
+              ...BEFORE_2026_CORRECTION_DEADLINE,
+              registeredOnly,
+              createdAt: new Date(createdAt)
+            }
+          )
+        ).toStrictEqual([
+          previousYearLinkIssue(OSR_NAME_CELL, {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
+            actual: 'Overseas Ltd',
+            previousYearRowId: '1500',
+            deadline
+          })
+        ])
+      }
+    )
+
+    it.for([
+      {
+        description:
+          'an accredited operator the day after the correction deadline',
+        registeredOnly: false,
+        createdAt: '2027-02-28T00:00:00.000Z'
+      },
+      {
+        description:
+          'a registered-only operator the day after the correction deadline',
+        registeredOnly: true,
+        createdAt: '2027-03-21T00:00:00.000Z'
+      }
+    ])('accepts it for $description', ({ registeredOnly, createdAt }) => {
+      expect(
+        check(
+          [
+            filledInRow({ dateOfExport: '2026-11-01', osrName: 'Overseas Ltd' })
+          ],
+          {
+            ...BEFORE_2026_CORRECTION_DEADLINE,
+            registeredOnly,
+            createdAt: new Date(createdAt)
+          }
+        )
+      ).toStrictEqual([])
+    })
+  })
+
   describe('a previous year row missing data', () => {
-    const missingOsrName = () =>
+    const missingNetWeight = () =>
       filledInRow({
         dateOfExport: '2026-11-01',
-        previousYearValues: { OSR_NAME: null }
+        previousYearCompletion: { NET_WEIGHT: null }
       })
 
     it('rejects the row on its previous year Row ID, with the last day it can be added', () => {
-      expect(check([missingOsrName()])).toStrictEqual([
+      expect(check([missingNetWeight()])).toStrictEqual([
         previousYearLinkIssue(
           {
             row: 8,
@@ -557,7 +884,7 @@ describe('checkCrossYearRules', () => {
       'applies until the correction deadline: $description',
       ({ registeredOnly, createdAt, deadlines }) => {
         expect(
-          check([missingOsrName()], {
+          check([missingNetWeight()], {
             ...BEFORE_2026_CORRECTION_DEADLINE,
             registeredOnly,
             createdAt: new Date(createdAt)
@@ -571,8 +898,8 @@ describe('checkCrossYearRules', () => {
         check([
           filledInRow({
             dateOfExport: '2026-11-01',
-            previousYearValues: {
-              OSR_NAME: null,
+            previousYearCompletion: {
+              NET_WEIGHT: null,
               DATE_RECEIVED_BY_OSR: '2026-12-14'
             }
           })

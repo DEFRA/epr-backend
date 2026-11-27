@@ -1,4 +1,4 @@
-import { PREVIOUS_YEAR_COMPARISON } from '#domain/summary-logs/linked-row.js'
+import { LINKED_COLUMN_CHECK } from '#domain/summary-logs/linked-row.js'
 import { BEFORE_SUMMARY_LOG_YEAR_ERROR } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import {
   ROW_OUTCOME,
@@ -7,36 +7,29 @@ import {
 
 import { toApplicationIssue } from '../../data-syntax.js'
 
-/** @import {PreviousYearComparison} from '#domain/summary-logs/linked-row.js' */
 /** @import {FoundLinkedRow} from '../index.js' */
 /** @import {LinkedRowCheck} from './index.js' */
-
-/** @type {ReadonlySet<PreviousYearComparison>} */
-const DIFFERS_FROM_PREVIOUS_YEAR = new Set([
-  PREVIOUS_YEAR_COMPARISON.ADDED,
-  PREVIOUS_YEAR_COMPARISON.CHANGED
-])
 
 /**
  * @param {FoundLinkedRow} linkedRow
  * @returns {readonly string[]}
  */
-const suppliedColumnsDifferingFromPreviousYear = ({
+const suppliedColumnsCheckedAsDates = ({
   columnComparisons,
   previousYearLink
 }) => {
   const supplied = new Set(previousYearLink.link.suppliedFields)
   return [...columnComparisons]
     .filter(
-      ([column, { comparison }]) =>
-        supplied.has(column) && DIFFERS_FROM_PREVIOUS_YEAR.has(comparison)
+      ([column, { check }]) =>
+        supplied.has(column) && check === LINKED_COLUMN_CHECK.EARLIER_YEAR_DATE
     )
     .map(([column]) => column)
 }
 
 /** @type {LinkedRowCheck} */
 export const earlierYearDates = (linkedRow) =>
-  suppliedColumnsDifferingFromPreviousYear(linkedRow).flatMap((field) => {
+  suppliedColumnsCheckedAsDates(linkedRow).flatMap((field) => {
     const columnSchema = linkedRow.columnSchemas.get(field)
     if (columnSchema === undefined) {
       return []

@@ -18,7 +18,8 @@ import {
   isAnswered,
   isDateNoLaterThan,
   isNo,
-  isYes
+  isYes,
+  ANSWERED_LATER_ON_LINKED_ROW
 } from '../shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
@@ -148,6 +149,9 @@ export const LOADS_EXPORTED_2027 = {
       FIELDS.WAS_THE_WASTE_STOPPED,
       FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED
     ],
+    mayDifferBeforeCorrectionDeadline: [],
+    answeredLaterOnLinkedRow: ANSWERED_LATER_ON_LINKED_ROW,
+    prefilledOnLinkedRow: {},
     completionsOf: loadExportedCompletionsOf,
     missingFieldsOf: loadExportedMissingFieldsOf
   },

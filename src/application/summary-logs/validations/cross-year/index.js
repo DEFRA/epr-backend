@@ -18,7 +18,7 @@ import { previousYearRowNotFound } from './previous-year-row-not-found.js'
 /** @import {Schema} from 'joi' */
 /** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
-/** @import {ColumnComparison, LinkingTable, PreviousYearRowCompletionAt} from '#domain/summary-logs/linked-row.js' */
+/** @import {ColumnComparison, ComparedTable, PreviousYearRowCompletionAt} from '#domain/summary-logs/linked-row.js' */
 /** @import {TableSchema, YearLinking} from '#domain/summary-logs/table-schemas/index.js' */
 /** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 /** @import {FilledInRow, FoundPreviousYearLink, PreviousYearLink} from '../../fill-in-linked-rows.js' */
@@ -71,7 +71,7 @@ const columnSchemasOf = (validationSchema) =>
 
 /**
  * @param {LinkedRow<FoundPreviousYearLink> & {
- *   table: LinkingTable,
+ *   table: ComparedTable,
  *   headers: readonly (string | null)[]
  * }} params
  * @returns {FoundLinkedRow}
