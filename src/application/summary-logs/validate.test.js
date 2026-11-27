@@ -744,6 +744,7 @@ describe('SummaryLogsValidator', () => {
         validation: expect.objectContaining({
           issues: [
             {
+              kind: 'file',
               severity: 'fatal',
               category: 'technical',
               message: 'Something went wrong while retrieving your file upload',
@@ -819,6 +820,7 @@ describe('SummaryLogsValidator', () => {
           validation: expect.objectContaining({
             issues: [
               {
+                kind: 'file',
                 severity: 'fatal',
                 category: 'technical',
                 message,
@@ -855,6 +857,7 @@ describe('SummaryLogsValidator', () => {
         validation: expect.objectContaining({
           issues: [
             {
+              kind: 'file',
               severity: 'fatal',
               category: 'technical',
               message: 'Summary log has no registration number',
@@ -1021,6 +1024,7 @@ describe('SummaryLogsValidator', () => {
         validation: expect.objectContaining({
           issues: [
             {
+              kind: 'file',
               severity: 'fatal',
               category: 'technical',
               message: 'S3 access denied',
@@ -1049,6 +1053,7 @@ describe('SummaryLogsValidator', () => {
         validation: expect.objectContaining({
           issues: [
             {
+              kind: 'file',
               severity: 'fatal',
               category: 'technical',
               message: "Missing required 'Cover' worksheet",
@@ -1081,6 +1086,7 @@ describe('SummaryLogsValidator', () => {
         validation: expect.objectContaining({
           issues: [
             {
+              kind: 'file',
               severity: 'fatal',
               category: 'technical',
               message: 'Duplicate metadata name: MATERIAL',

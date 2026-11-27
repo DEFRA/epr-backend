@@ -44,6 +44,7 @@ describe('validateRegistrationNumber', () => {
       'Invalid summary log: registration has no registration number'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
+    expect(fatals[0].kind).toBe('file')
   })
 
   it('returns fatal business error when registration numbers do not match', () => {

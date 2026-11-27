@@ -1,5 +1,6 @@
 import { isNil } from '#common/helpers/is-nil.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { fileIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
@@ -46,10 +47,12 @@ export const validateRegistrationNumber = ({
   )
 
   if (!registrationNumber) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has no registration number',
-      VALIDATION_CODE.REGISTRATION_DATA_INVALID
+    issues.add(
+      fileIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message: 'Invalid summary log: registration has no registration number',
+        code: VALIDATION_CODE.REGISTRATION_DATA_INVALID
+      })
     )
     return issues
   }

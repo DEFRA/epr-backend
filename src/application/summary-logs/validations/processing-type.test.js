@@ -54,6 +54,7 @@ describe('validateProcessingType', () => {
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     expect(fatals[0].context?.actual).toBe('invalid-type')
+    expect(fatals[0].kind).toBe('file')
   })
 
   it('returns fatal business error when types do not match', () => {

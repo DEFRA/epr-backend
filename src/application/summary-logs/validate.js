@@ -7,6 +7,7 @@ import {
   VALIDATION_CODE
 } from '#common/enums/index.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { fileIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
@@ -166,7 +167,13 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
-    issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
+    issues.add(
+      fileIssue({
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: error.message,
+        code: error.code
+      })
+    )
   } else {
     logger.error({
       err: error,
@@ -176,10 +183,12 @@ const handleValidationFailure = (error, issues, loggingContext, logger) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
-    issues.addFatal(
-      VALIDATION_CATEGORY.TECHNICAL,
-      error.message,
-      VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
+    issues.add(
+      fileIssue({
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: error.message,
+        code: VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
+      })
     )
   }
 }

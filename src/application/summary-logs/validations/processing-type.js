@@ -1,4 +1,5 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { fileIssue } from '#common/validation/validation-issue-kinds.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
@@ -66,11 +67,15 @@ export const validateProcessingType = ({
   )
 
   if (!VALID_WASTE_PROCESSING_TYPES.includes(wasteProcessingType)) {
-    issues.addFatal(
-      VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has invalid waste processing type',
-      VALIDATION_CODE.PROCESSING_TYPE_DATA_INVALID,
-      { expected: VALID_WASTE_PROCESSING_TYPES, actual: wasteProcessingType }
+    issues.add(
+      fileIssue({
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message:
+          'Invalid summary log: registration has invalid waste processing type',
+        code: VALIDATION_CODE.PROCESSING_TYPE_DATA_INVALID,
+        expected: VALID_WASTE_PROCESSING_TYPES,
+        actual: wasteProcessingType
+      })
     )
     return issues
   }
