@@ -9,10 +9,16 @@
  * - A codes: Amber list wastes (require prior informed consent)
  * - G codes: Additional green list codes
  * - Y codes: Wastes requiring special consideration
- *
- * One exception: 'Aluminium - unlisted' is not a Basel code. The 2027
- * exporter templates offer it for aluminium exports that have no listed code.
  */
 import baselCodesData from './data/basel-codes.json' with { type: 'json' }
 
-export const BASEL_CODES = Object.freeze(baselCodesData)
+/**
+ * Not a Basel code. The 2027 exporter templates offer it for aluminium
+ * exports that have no listed code.
+ */
+export const ALUMINIUM_UNLISTED = 'Aluminium - unlisted'
+
+export const BASEL_CODES = Object.freeze([
+  ...baselCodesData,
+  ALUMINIUM_UNLISTED
+])
