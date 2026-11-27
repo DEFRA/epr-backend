@@ -121,6 +121,10 @@ const loadExportedCompletionsOf = (row, year) => {
 }
 
 /**
+ * The columns an exported load must have filled in that it leaves blank: the
+ * date of export once tonnage exported is given, and tonnage exported and the
+ * overseas reprocessor once the date of export is.
+ *
  * @param {Record<string, unknown>} row
  * @returns {LoadsExportedField[]}
  */

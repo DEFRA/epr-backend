@@ -390,6 +390,10 @@ const receivedLoadCompletionsOf = (row, year) => [
 ]
 
 /**
+ * The columns a received load must have filled in that it leaves blank: the
+ * date of export once tonnage exported is given, and the overseas reprocessor
+ * once the date of export is.
+ *
  * @param {Record<string, unknown>} row
  * @returns {ReceivedLoadsField[]}
  */
