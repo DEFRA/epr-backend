@@ -21,7 +21,7 @@ import {
   externalAccreditationsRepositoryPlugin,
   organisationReadRepositoryPlugin
 } from '#organisation-read-model/plugin.js'
-import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/index.js'
+import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
 import { mongoLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-mongodb.plugin.js'
