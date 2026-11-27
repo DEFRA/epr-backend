@@ -100,14 +100,14 @@ describe('status', () => {
     it('returns validation object with failures array', () => {
       const result = createRejectedValidation('The selected file is empty')
       expect(result).toEqual({
-        failures: [{ code: 'FILE_EMPTY' }]
+        failures: [{ kind: 'file', code: 'FILE_EMPTY' }]
       })
     })
 
     it('returns FILE_REJECTED code when no error message provided', () => {
       const result = createRejectedValidation()
       expect(result).toEqual({
-        failures: [{ code: 'FILE_REJECTED' }]
+        failures: [{ kind: 'file', code: 'FILE_REJECTED' }]
       })
     })
   })

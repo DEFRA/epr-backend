@@ -1,5 +1,8 @@
 import { UPLOAD_FILE_STATUS } from '#domain/uploads/upload-locations.js'
 import { VALIDATION_CODE } from '#common/enums/validation.js'
+import { ISSUE_KIND } from '#common/validation/validation-issue-kinds.js'
+
+/** @import {UploadRejection} from './model.js' */
 
 export const SUMMARY_LOG_STATUS = Object.freeze({
   PREPROCESSING: 'preprocessing',
@@ -258,12 +261,12 @@ export const mapUploaderErrorToCode = (errorMessage) => {
 /**
  * Creates a validation object for rejected uploads
  * @param {string} [errorMessage] - Error message from CDP Uploader
- * @returns {object} Validation object with failures array
+ * @returns {{ failures: UploadRejection[] }}
  */
 export const createRejectedValidation = (errorMessage) => {
   const code = mapUploaderErrorToCode(errorMessage)
   return {
-    failures: [{ code }]
+    failures: [{ kind: ISSUE_KIND.FILE, code }]
   }
 }
 

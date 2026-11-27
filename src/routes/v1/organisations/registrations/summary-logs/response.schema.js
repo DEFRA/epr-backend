@@ -4,6 +4,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 import { LEDGER_ACCREDITATION_KIND } from '#domain/organisations/model.js'
 import { loadsByReportingPeriodSchema } from '#domain/summary-logs/loads-by-period-status-schema.js'
+import { ISSUE_KIND } from '#common/validation/validation-issue-kinds.js'
 
 const countSchema = Joi.number().integer().min(0).required()
 
@@ -27,6 +28,12 @@ const validationIssueSchema = Joi.object({
     header: Joi.string().optional(),
     column: Joi.string().optional()
   }).optional()
+})
+
+const validationFailureSchema = validationIssueSchema.keys({
+  kind: Joi.string()
+    .valid(...Object.values(ISSUE_KIND))
+    .required()
 })
 
 const validationConcernsSchema = Joi.object().pattern(
@@ -60,7 +67,7 @@ export const summaryLogResponseSchema = Joi.object({
     )
     .required(),
   validation: Joi.object({
-    failures: Joi.array().items(validationIssueSchema).required(),
+    failures: Joi.array().items(validationFailureSchema).required(),
     concerns: validationConcernsSchema.required(),
     counts: Joi.object({
       fatal: countSchema,

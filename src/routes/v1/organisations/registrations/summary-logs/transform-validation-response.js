@@ -1,40 +1,53 @@
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
+import { ISSUE_KIND } from '#common/validation/validation-issue-kinds.js'
+import { locationOf } from '#common/validation/validation-issues.js'
 
+/** @import {CellIssue} from '#common/validation/validation-issue-kinds.js' */
+/** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {Validation} from '#domain/summary-logs/model.js' */
+
+const DETAIL_KEYS = Object.freeze([
+  'actual',
+  'expected',
+  'deadline',
+  'previousYearRowId'
+])
+
+/**
+ * The details an issue carries for the reader, beyond its code and location.
+ *
+ * @param {ValidationIssue} issue
+ * @returns {Record<string, unknown>}
+ */
+const detailsOf = (issue) =>
+  Object.fromEntries(
+    DETAIL_KEYS.filter((key) => issue.context?.[key] !== undefined).map(
+      (key) => [key, issue.context?.[key]]
+    )
+  )
+
+/**
+ * @param {ValidationIssue} issue
+ * @returns {unknown}
+ */
+const errorCodeOf = (issue) => issue.context?.errorCode ?? issue.code
 
 /**
  * Transforms a fatal validation issue to HTTP response format
  *
- * @param {Object} issue - The validation issue
- * @returns {Object} Fatal error in HTTP format
+ * @param {ValidationIssue} issue
+ * @returns {Record<string, unknown>} Fatal error in HTTP format
  */
 const transformFatalIssue = (issue) => {
-  const result = {
+  const location = locationOf(issue)
+
+  return {
+    kind: issue.kind,
     code: issue.code,
-    errorCode: issue.context?.errorCode ?? issue.code
+    errorCode: errorCodeOf(issue),
+    ...(location && { location: { ...location } }),
+    ...detailsOf(issue)
   }
-
-  if (issue.context?.location) {
-    result.location = { ...issue.context.location }
-  }
-
-  if (issue.context?.actual !== undefined) {
-    result.actual = issue.context.actual
-  }
-
-  if (issue.context?.expected !== undefined) {
-    result.expected = issue.context.expected
-  }
-
-  if (issue.context?.deadline !== undefined) {
-    result.deadline = issue.context.deadline
-  }
-
-  if (issue.context?.previousYearRowId !== undefined) {
-    result.previousYearRowId = issue.context.previousYearRowId
-  }
-
-  return result
 }
 
 /**
@@ -48,54 +61,37 @@ const getIssueType = (severity) => {
 }
 
 /**
- * Transforms a data validation issue to HTTP response format
+ * Transforms a cell issue to HTTP response format
  *
- * @param {Object} issue - The validation issue
- * @returns {Object} Issue in HTTP format with type, code, header, column, etc.
+ * @param {CellIssue} issue
+ * @returns {Record<string, unknown>} Issue in HTTP format with type, code, header, column, etc.
  */
-const transformDataIssue = (issue) => {
-  const result = {
-    type: getIssueType(issue.severity),
-    code: issue.code,
-    errorCode: issue.context?.errorCode ?? issue.code,
-    header: issue.context?.location?.header,
-    column: issue.context?.location?.column
-  }
-
-  if (issue.context?.actual !== undefined) {
-    result.actual = issue.context.actual
-  }
-
-  if (issue.context?.expected !== undefined) {
-    result.expected = issue.context.expected
-  }
-
-  if (issue.context?.deadline !== undefined) {
-    result.deadline = issue.context.deadline
-  }
-
-  if (issue.context?.previousYearRowId !== undefined) {
-    result.previousYearRowId = issue.context.previousYearRowId
-  }
-
-  return result
-}
+const transformDataIssue = (issue) => ({
+  type: getIssueType(issue.severity),
+  code: issue.code,
+  errorCode: errorCodeOf(issue),
+  header: issue.context.location.header,
+  column: issue.context.location.column,
+  ...detailsOf(issue)
+})
 
 /**
- * Groups and transforms row-level validation issues by table
+ * @param {ValidationIssue} issue
+ * @returns {issue is CellIssue}
+ */
+const isCellIssue = (issue) => issue.kind === ISSUE_KIND.CELL
+
+/**
+ * Groups and transforms cell issues by table
  *
- * @param {Array} issues - Array of validation issues
+ * @param {ValidationIssue[]} issues
  * @returns {Object} Concerns object with table-keyed structure
  */
 const groupAndTransformRowIssues = (issues) => {
   const byTable = new Map()
 
-  for (const issue of issues) {
-    const location = issue.context?.location
-
-    if (!location?.sheet || !location?.table || !location?.row) {
-      continue
-    }
+  for (const issue of issues.filter(isCellIssue)) {
+    const location = issue.context.location
 
     if (!byTable.has(location.table)) {
       byTable.set(location.table, {
@@ -161,17 +157,12 @@ const resolveCounts = (validation) => {
 export const transformValidationResponse = (validation) => {
   const counts = resolveCounts(validation)
 
-  // Handle direct failures (e.g., from upload rejection)
   if (validation?.failures && validation.failures.length > 0) {
-    const failures =
-      /** @type {Array<{errorCode?: string, code?: string, [key: string]: unknown}>} */ (
-        validation.failures
-      )
     return {
       validation: {
-        failures: failures.map((f) => ({
-          ...f,
-          errorCode: f.errorCode ?? f.code
+        failures: validation.failures.map((failure) => ({
+          ...failure,
+          errorCode: failure.code
         })),
         concerns: {},
         counts

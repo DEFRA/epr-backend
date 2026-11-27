@@ -388,7 +388,7 @@ describe('POST /organisations/{organisationNumber}/registrations/{registrationNu
               name: 'test.xlsx',
               status: 'rejected'
             },
-            validation: { failures: [{ code: 'FILE_REJECTED' }] }
+            validation: { failures: [{ kind: 'file', code: 'FILE_REJECTED' }] }
           })
         )
         expect(summaryLogsWorker.validate).not.toHaveBeenCalled()

@@ -22,24 +22,21 @@
  */
 
 /**
- * @typedef {Object} ValidationIssue
- * @property {string} severity - One of: FATAL, ERROR, WARNING
- * @property {string} category - One of: parsing, technical, business
- * @property {string} message - Human-readable description
- * @property {string} [code] - Error code for i18n
- * @property {Object} [context] - Additional context
+ * An upload the uploader rejected before the file could be read.
+ *
+ * @typedef {{ kind: 'file', code: string }} UploadRejection
  */
 
 /**
  * @typedef {Object} Validation
  * @property {ValidationIssue[]} [issues] - Validation issues found during processing
- * @property {Array<{code: string, [k: string]: unknown}>} [failures] - Failure codes from upload rejection
+ * @property {UploadRejection[]} [failures] - Why the uploader rejected the file
  * @property {ValidationIssueCounts} [counts] - Issue counts by severity (computed pre-cap, so total may exceed issues.length when capped for storage)
  */
 
 /** @import {Loads} from './loads-schema.js' */
 /** @import {LoadsByReportingPeriod} from './loads-by-period-status-schema.js' */
-/** @import {ValidationIssueCounts} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssue, ValidationIssueCounts} from '#common/validation/validation-issues.js' */
 /** @import {ProcessingType} from './meta-fields.js' */
 /** @import {SummaryLogStatus} from './status.js' */
 

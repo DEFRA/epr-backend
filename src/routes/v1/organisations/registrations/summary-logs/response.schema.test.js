@@ -55,6 +55,51 @@ describe('summaryLogResponseSchema', () => {
     })
   })
 
+  describe('failures', () => {
+    const invalidWith = (failure) => ({
+      status: SUMMARY_LOG_STATUS.INVALID,
+      year: 2026,
+      ledgerAccreditation: REGISTERED_ONLY,
+      validation: {
+        failures: [failure],
+        concerns: {},
+        counts: { fatal: 1, error: 0, warning: 0, total: 1 }
+      }
+    })
+
+    it('should require each failure to say what kind it is', () => {
+      const details = expectValidationError(
+        summaryLogResponseSchema,
+        invalidWith({ code: 'FILE_EMPTY', errorCode: 'FILE_EMPTY' })
+      )
+
+      expect(details).toStrictEqual([
+        expect.objectContaining({
+          type: 'any.required',
+          path: ['validation', 'failures', 0, 'kind']
+        })
+      ])
+    })
+
+    it('should reject a kind it does not know', () => {
+      const details = expectValidationError(
+        summaryLogResponseSchema,
+        invalidWith({
+          kind: 'sheet',
+          code: 'FILE_EMPTY',
+          errorCode: 'FILE_EMPTY'
+        })
+      )
+
+      expect(details).toStrictEqual([
+        expect.objectContaining({
+          type: 'any.only',
+          path: ['validation', 'failures', 0, 'kind']
+        })
+      ])
+    })
+  })
+
   describe('processing-type', () => {
     // A validated response always pairs with loadsByReportingPeriod (required by
     // the sibling rule), so include it to isolate the processingType assertion.

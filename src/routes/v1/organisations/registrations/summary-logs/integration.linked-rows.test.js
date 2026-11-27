@@ -952,6 +952,7 @@ describe('2027 rows linked to a 2026 row', () => {
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
       expect(validated.validation.failures).toStrictEqual([
         {
+          kind: 'cell',
           code: 'PREVIOUS_YEAR_LINK',
           errorCode: 'PREVIOUS_YEAR_ROW_NOT_FOUND',
           actual: 1999,
@@ -1023,6 +1024,7 @@ describe('2027 rows linked to a 2026 row', () => {
       expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
       expect(validated.validation.failures).toStrictEqual([
         {
+          kind: 'cell',
           code: 'PREVIOUS_YEAR_LINK',
           errorCode: 'PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR',
           actual: null,
