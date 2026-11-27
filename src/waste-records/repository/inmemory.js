@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 
 import { isSameLedger } from '#waste-balances/repository/ledger-schema.js'
+import { monthPrefixBounds } from './period-filter.js'
 import { SummaryLogRowStateConflictError } from './port.js'
 import { validateSummaryLogRowStateInsert } from './validation.js'
 
@@ -28,6 +29,23 @@ import { validateSummaryLogRowStateInsert } from './validation.js'
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { PeriodFilter } from './period-filter.js' */
+
+/**
+ * @param {PeriodFilter} filter
+ * @returns {(doc: SummaryLogRowState) => boolean}
+ */
+const isInPeriod = (filter) => {
+  const { from, before } = monthPrefixBounds(filter)
+  const { dateFields, undated } = filter
+  const isWithin = (value) =>
+    typeof value === 'string' && value >= from && value < before
+
+  return (doc) =>
+    dateFields.some((field) => isWithin(doc.data[field])) ||
+    (doc.wasteRecordType === undated.wasteRecordType &&
+      (doc.data[undated.dateField] ?? null) === null)
+}
 
 /**
  * @param {SummaryLogRowStateInsert} doc
@@ -221,6 +239,16 @@ const repositoryOver = (storage) => ({
     rowStatesForSummaryLog(storage, ledgerId, summaryLogId).map(
       toWasteRecordState
     ),
+
+  /**
+   * @param {WasteBalanceLedgerId} ledgerId
+   * @param {SummaryLogFileId} summaryLogId
+   * @param {PeriodFilter} filter
+   */
+  findWasteRecordStatesInPeriod: async (ledgerId, summaryLogId, filter) =>
+    rowStatesForSummaryLog(storage, ledgerId, summaryLogId)
+      .filter(isInPeriod(filter))
+      .map(toWasteRecordState),
 
   /**
    * @param {OrganisationNumber} organisationNumber

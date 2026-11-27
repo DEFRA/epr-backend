@@ -503,6 +503,74 @@ describe('report-service', () => {
       )
     })
 
+    describe('rows from other periods', () => {
+      const generateJanuary = async (entries) => {
+        const params = defaultParams()
+        const stores = await seedState(params, entries)
+        return /** @type {import('#reports/domain/aggregation/aggregate-report-detail.js').AggregatedReportDetail} */ (
+          await fetchOrGenerateReportForPeriod({
+            reportsRepository: createInMemoryReportsRepository()(),
+            packagingRecyclingNotesRepository: createPrnRepo(),
+            ...stores,
+            ...params
+          })
+        )
+      }
+
+      /** @param {string} rowId @param {string} dateLeftSite */
+      const sentOnEntry = (rowId, dateLeftSite) =>
+        buildSummaryLogRowStateEntry({
+          rowId,
+          wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
+          data: {
+            FINAL_DESTINATION_NAME: 'Dest A',
+            FINAL_DESTINATION_FACILITY_TYPE: 'Reprocessor',
+            TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50,
+            DATE_LOAD_LEFT_SITE: dateLeftSite
+          }
+        })
+
+      it('leaves out rows dated outside the period', async () => {
+        const report = await generateJanuary([
+          buildReceivedEntry({ SUPPLIER_NAME: 'January' }),
+          {
+            ...buildReceivedEntry({
+              SUPPLIER_NAME: 'February',
+              DATE_RECEIVED_FOR_REPROCESSING: '2024-02-03'
+            }),
+            rowId: 'row-2'
+          },
+          sentOnEntry('sent-jan', '2024-01-31T09:00:00.000Z'),
+          sentOnEntry('sent-feb', '2024-02-01')
+        ])
+
+        expect(
+          report.recyclingActivity.suppliers.map(
+            ({ supplierName }) => supplierName
+          )
+        ).toEqual(['January'])
+        expect(report.wasteSent.tonnageSentToReprocessor).toBe(50)
+      })
+
+      it('counts a sent-on load by the date it left site', async () => {
+        const report = await generateJanuary([
+          buildReceivedEntry({ DATE_RECEIVED_FOR_REPROCESSING: '2023-12-20' }),
+          sentOnEntry('sent-jan', '2024-01-05')
+        ])
+
+        expect(report.recyclingActivity.suppliers).toEqual([])
+        expect(report.wasteSent.tonnageSentToReprocessor).toBe(50)
+      })
+
+      it('still counts received rows with no received date as excluded', async () => {
+        const report = await generateJanuary([
+          buildReceivedEntry({ DATE_RECEIVED_FOR_REPROCESSING: null })
+        ])
+
+        expect(report.diagnostics.wasteReceivedRecordsExcluded).toBe(1)
+      })
+    })
+
     describe('incompleteSummaryLogRows (PAE-1420)', () => {
       // A received row whose positive tonnage triggers the supplier rule but
       // carries none of the six mandatory supplier fields: six missing fields.
@@ -593,6 +661,23 @@ describe('report-service', () => {
         const report = await generate([completeReceivedEntry()], true)
 
         expect(report).not.toHaveProperty('incompleteSummaryLogRows')
+      })
+
+      it('reports incomplete rows from other periods when the flag is on', async () => {
+        const marchRow = buildSummaryLogRowStateEntry({
+          rowId: 'row-march',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          data: {
+            TONNAGE_RECEIVED_FOR_RECYCLING: 5,
+            DATE_RECEIVED_FOR_REPROCESSING: '2026-03-05'
+          }
+        })
+
+        const report = await generate([marchRow], true)
+
+        expect(report.incompleteSummaryLogRows?.issues).toContainEqual(
+          expect.objectContaining({ rowId: 'row-march' })
+        )
       })
 
       it('never attaches incompleteSummaryLogRows on the stored-report branch', async () => {
@@ -726,6 +811,35 @@ describe('report-service', () => {
       expect(report.material).toBe('plastic')
       expect(report.recyclingActivity).toBeDefined()
       expect(report.wasteSent).toBeDefined()
+    })
+
+    it('refuses creation over an incomplete row from another period when the flag is on', async () => {
+      const params = {
+        ...defaultParams(),
+        year: toYear(2026),
+        requiredPeriods: generateAllPeriodsForYear('monthly', toYear(2026))
+      }
+      const stores = await seedState(params, [
+        buildSummaryLogRowStateEntry({
+          rowId: 'row-march',
+          wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+          data: {
+            TONNAGE_RECEIVED_FOR_RECYCLING: 5,
+            DATE_RECEIVED_FOR_REPROCESSING: '2026-03-05'
+          }
+        })
+      ])
+
+      await expect(
+        createReportForPeriod({
+          reportsRepository: createInMemoryReportsRepository()(),
+          packagingRecyclingNotesRepository: createPrnRepo(),
+          ...stores,
+          ...params,
+          changedBy: { id: 'user-1', name: 'Alice', position: 'Officer' },
+          reportDataValidationEnabled: true
+        })
+      ).rejects.toMatchObject({ isBoom: true, output: { statusCode: 400 } })
     })
 
     it('throws conflict when report already exists for period', async () => {

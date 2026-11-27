@@ -30,6 +30,7 @@
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { WasteRecordType } from '#domain/waste-records/model.js' */
+/** @import { PeriodFilter } from './period-filter.js' */
 
 /**
  * A row as it was submitted, carrying no waste-balance classification.
@@ -61,6 +62,9 @@
  *   different ledger identity matches nothing. The storage id, the
  *   `summaryLogIds` membership and the ledger identity the caller supplied stay
  *   behind the port.
+ * @property {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId, filter: PeriodFilter) => Promise<WasteRecordState[]>} findWasteRecordStatesInPeriod
+ *   As `findWasteRecordStatesForSummaryLog`, narrowed to the rows `filter`
+ *   places in its period.
  * @property {(organisationNumber: OrganisationNumber, registrationNumber: RegistrationNumber, fileId: SummaryLogFileId) => Promise<SummaryLogRowState[]>} findRowStatesForSummaryLogFile
  *   Return the row states one submission committed, addressed by the *file*
  *   id the waste balance ledger records — `summaryLog.file.id`, not the

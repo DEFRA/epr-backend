@@ -1,10 +1,19 @@
 /** @import {SummaryLogFileId} from '#domain/summary-logs/ids.js' */
 /** @import {KeyedSubmittedSummaryLog, SummaryLogsRepository} from '#repositories/summary-logs/port.js' */
 import { getIssuedTonnage } from '#packaging-recycling-notes/index.js'
-import { wasteRecordStatesForHead } from '#waste-records/application/read-summary-log-row-states.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import {
+  wasteRecordStatesForHead,
+  wasteRecordStatesInPeriodForHead
+} from '#waste-records/application/read-summary-log-row-states.js'
 import { aggregateReportDetail } from '#reports/domain/aggregation/aggregate-report-detail.js'
+import {
+  SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY,
+  reportingDateFieldsFor
+} from '#reports/domain/aggregation/fields-by-operator-category.js'
 import { reportOperatorCategory } from '#reports/domain/operator-category.js'
 import { orsDetailsOf } from '#reports/domain/ors-details.js'
+import { periodBounds } from '#reports/domain/reporting-period.js'
 import { assertPeriodRequired } from './assert-period-required.js'
 import {
   assertNoExistingReport,
@@ -28,6 +37,7 @@ import {
  * @import { GeneratedPeriod } from '#reports/domain/generate-reporting-periods.js'
  * @import { ReportRegistration } from '#reports/domain/operator-category.js'
  * @import { HasReportSubmittedSinceParams, PeriodicReport, RegistrationKey } from '#reports/repository/port.js'
+ * @import { PeriodFilter } from '#waste-records/repository/period-filter.js'
  */
 
 /**
@@ -227,7 +237,14 @@ export async function fetchOrGenerateReportForPeriod({
       summaryLogRowStatesRepository,
       key: { organisationNumber, registrationNumber },
       accreditation: reportRegistration.accreditation,
-      year
+      year,
+      periodFilter: rowStatesPeriodFilter({
+        reportDataValidationEnabled,
+        reportRegistration,
+        cadence,
+        year,
+        period
+      })
     }
   )
 
@@ -287,13 +304,15 @@ function toSource(latestSubmission) {
  * @param {RegistrationKey} params.key
  * @param {ReportRegistration['accreditation']} params.accreditation
  * @param {Year} params.year
+ * @param {PeriodFilter | null} params.periodFilter - null reads every row
  */
 async function readSubmissionRowStates({
   summaryLogsRepository,
   summaryLogRowStatesRepository,
   key: { organisationNumber, registrationNumber },
   accreditation,
-  year
+  year,
+  periodFilter
 }) {
   const ledgerId = {
     organisationNumber,
@@ -304,13 +323,59 @@ async function readSubmissionRowStates({
 
   const found = await summaryLogsRepository.findLatestSubmitted(ledgerId)
   const latestSubmission = found === null ? null : found.summaryLog
-  const wasteRecordStates = await wasteRecordStatesForHead(
-    summaryLogRowStatesRepository,
-    ledgerId,
-    latestSubmission === null ? null : latestSubmission.file.id
-  )
+  const head = latestSubmission === null ? null : latestSubmission.file.id
+  const wasteRecordStates =
+    periodFilter === null
+      ? await wasteRecordStatesForHead(
+          summaryLogRowStatesRepository,
+          ledgerId,
+          head
+        )
+      : await wasteRecordStatesInPeriodForHead(
+          summaryLogRowStatesRepository,
+          ledgerId,
+          head,
+          periodFilter
+        )
 
   return { latestSubmission, wasteRecordStates }
+}
+
+/**
+ * The completeness gate checks every row, so it needs the whole year; the
+ * report itself needs only the period's rows, plus undated received rows for
+ * `wasteReceivedRecordsExcluded`.
+ *
+ * @param {object} params
+ * @param {boolean | undefined} params.reportDataValidationEnabled
+ * @param {ReportRegistration} params.reportRegistration
+ * @param {Cadence} params.cadence
+ * @param {Year} params.year
+ * @param {number} params.period
+ * @returns {PeriodFilter | null}
+ */
+function rowStatesPeriodFilter({
+  reportDataValidationEnabled,
+  reportRegistration,
+  cadence,
+  year,
+  period
+}) {
+  if (reportDataValidationEnabled) {
+    return null
+  }
+  const operatorCategory = reportOperatorCategory(reportRegistration)
+  const { startDate, endDate } = periodBounds(cadence, year, period)
+  return {
+    dateFields: reportingDateFieldsFor(operatorCategory),
+    startDate,
+    endDate,
+    undated: {
+      wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+      dateField:
+        SECTION_DATE_FIELDS_BY_OPERATOR_CATEGORY[operatorCategory].wasteReceived
+    }
+  }
 }
 
 /**
@@ -513,7 +578,14 @@ export async function createReportForPeriod({
       summaryLogRowStatesRepository,
       key: numbers,
       accreditation: reportRegistration.accreditation,
-      year
+      year,
+      periodFilter: rowStatesPeriodFilter({
+        reportDataValidationEnabled,
+        reportRegistration,
+        cadence: cadenceAccreditation.cadence,
+        year,
+        period
+      })
     }
   )
 

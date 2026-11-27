@@ -20,12 +20,14 @@ import { createHash } from 'node:crypto'
  */
 
 /** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { PeriodFilter } from './period-filter.js' */
 
 import { dropIndexIfPresent } from '#common/helpers/drop-index-if-present.js'
 import {
   LEDGER_ID_FIELDS,
   pickLedgerId
 } from '#waste-balances/repository/ledger-schema.js'
+import { monthPrefixBounds } from './period-filter.js'
 import { SummaryLogRowStateConflictError } from './port.js'
 import {
   validateSummaryLogRowStateInsert,
@@ -342,18 +344,60 @@ const toWasteRecordState = ({
  * 40% of the credited tonnage report's read time over 423 summary logs.
  *
  * @param {Collection} collection
+ * @param {import('mongodb').Filter<import('mongodb').Document>} query
+ * @returns {Promise<import('./port.js').WasteRecordState[]>}
+ */
+const findWasteRecordStates = async (collection, query) => {
+  const docs = await collection
+    .find(query, { projection: WASTE_RECORD_STATE_PROJECTION })
+    .sort({ _id: 1 })
+    .toArray()
+  return docs.map(toWasteRecordState)
+}
+
+/**
+ * @param {Collection} collection
  * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId) => Promise<import('./port.js').WasteRecordState[]>}
  */
 const performFindWasteRecordStatesForSummaryLog =
-  (collection) => async (ledgerId, summaryLogId) => {
-    const docs = await collection
-      .find(buildSummaryLogFilter(ledgerId, summaryLogId), {
-        projection: WASTE_RECORD_STATE_PROJECTION
-      })
-      .sort({ _id: 1 })
-      .toArray()
-    return docs.map(toWasteRecordState)
+  (collection) => (ledgerId, summaryLogId) =>
+    findWasteRecordStates(
+      collection,
+      buildSummaryLogFilter(ledgerId, summaryLogId)
+    )
+
+/**
+ * Dates are not indexed: the query still examines every row of the summary
+ * log, but only returns the period's.
+ *
+ * @param {PeriodFilter} filter
+ */
+const buildPeriodFilter = (filter) => {
+  const { from, before } = monthPrefixBounds(filter)
+  const { dateFields, undated } = filter
+  return {
+    $or: [
+      ...dateFields.map((field) => ({
+        [`data.${field}`]: { $gte: from, $lt: before }
+      })),
+      {
+        wasteRecordType: undated.wasteRecordType,
+        [`data.${undated.dateField}`]: null
+      }
+    ]
   }
+}
+
+/**
+ * @param {Collection} collection
+ * @returns {(ledgerId: WasteBalanceLedgerId, summaryLogId: SummaryLogFileId, filter: PeriodFilter) => Promise<import('./port.js').WasteRecordState[]>}
+ */
+const performFindWasteRecordStatesInPeriod =
+  (collection) => (ledgerId, summaryLogId, filter) =>
+    findWasteRecordStates(collection, {
+      ...buildSummaryLogFilter(ledgerId, summaryLogId),
+      ...buildPeriodFilter(filter)
+    })
 
 /**
  * Rides the multikey `summary_log_membership_by_id` index, as
@@ -462,6 +506,8 @@ export const createMongoSummaryLogRowStatesRepository = async (db) => {
     upsertSummaryLogRowStates: performUpsertSummaryLogRowStates(collection),
     findWasteRecordStatesForSummaryLog:
       performFindWasteRecordStatesForSummaryLog(collection),
+    findWasteRecordStatesInPeriod:
+      performFindWasteRecordStatesInPeriod(collection),
     findRowStatesForSummaryLogFile:
       performFindRowStatesForSummaryLogFile(collection),
     findRowStatesInSummaryLog: performFindRowStatesInSummaryLog(collection),
