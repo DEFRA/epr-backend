@@ -72,7 +72,7 @@ const columnSchemasOf = (validationSchema) =>
 /**
  * @param {LinkedRow<FoundPreviousYearLink> & {
  *   table: LinkingTable,
- *   headers: ReadonlyArray<string | null>
+ *   headers: readonly (string | null)[]
  * }} params
  * @returns {FoundLinkedRow}
  */
@@ -97,7 +97,7 @@ const foundLinkedRowOf = ({ table, headers, ...linkedRow }) => {
 /**
  * @param {{
  *   tableName: string,
- *   headers: Array<string | null>,
+ *   headers: (string | null)[],
  *   rows: readonly FilledInRow[],
  *   location: CellLocation,
  *   schema: CrossYearTableSchema,
