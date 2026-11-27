@@ -14,11 +14,11 @@ Lint refuses any other import into the module, but it cannot see a JSDoc `@impor
 
 ## Shape
 
-- **`repository/`** is the form submissions port and its MongoDB and in-memory adapters. The MongoDB adapter is not made with `portAdapter`, as `src/modules.md` asks, because it waits for the organisations plugin by its current name rather than for the port it reads.
+- **`repository/`** is the form submissions port and its MongoDB and in-memory adapters.
 - **`file-uploads/`** is the file uploads port and its S3 and in-memory adapters. The S3 adapter fetches the files operators uploaded with their forms from the Forms Submission API, and stores them in S3.
 - **`organisation/`**, **`registration/`** and **`accreditation/`** turn each kind of submission into an organisation's parts, using the parsers in **`parsing-common/`**. The fixes in **`overrides/`** correct data quality problems in particular submissions, as configured.
 - **`migration/`** works out which submissions are new and writes them into organisations.
 - **`routes/`** holds the HTTP endpoints.
-- **`apply/`** holds the `/v1/apply` routes that receive the forms' submissions, the collections they write to, and the form field and Notify template constants they use. The legacy apply-routes test server serves them and takes no module route plugins, so their plugin is one that every server registers.
+- **`apply/`** holds the `/v1/apply` routes that receive the forms' submissions, the collections they write to, and the form field and Notify template constants they use.
 - **`auditing/`** records the migration's changes in the audit log.
 - **`submission-keys.js`** holds the keys that match an accreditation to its registration, which `index.js` exports. **`link-form-submissions.js`** links registrations and accreditations to their organisations and to each other, **`data-migration-config.js`** reads the configured overrides, and **`types.js`** holds the migration's types.
