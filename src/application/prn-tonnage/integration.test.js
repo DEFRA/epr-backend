@@ -21,6 +21,7 @@ import {
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import {
+  createMongoExternalAccreditationsRepository,
   createMongoOrganisationReadRepository,
   buildExternalAccreditation
 } from '#organisation-read-model/test-support.js'
@@ -190,6 +191,8 @@ describe('aggregatePrnTonnage - Integration', () => {
   let ledgerRepository
   /** @type {import('#organisation-read-model/index.js').OrganisationReadRepository} */
   let organisationReadRepository
+  /** @type {import('#organisation-read-model/index.js').ExternalAccreditationsRepository} */
+  let externalAccreditationsRepository
   /** @type {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} */
   let prnRepository
 
@@ -201,6 +204,9 @@ describe('aggregatePrnTonnage - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
+      externalAccreditationsRepository = (
+        await createMongoExternalAccreditationsRepository(db)
+      )()
       organisationReadRepository = createMongoOrganisationReadRepository(db)({
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         logger: { warn: () => {} }
@@ -649,7 +655,7 @@ describe('aggregatePrnTonnage - Integration', () => {
       ...organisationWithRegistration(registration),
       accreditations: []
     })
-    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+    await externalAccreditationsRepository.upsert(
       buildExternalAccreditation({
         organisationNumber: externalLedgerId.organisationNumber,
         registrationNumber: externalLedgerId.registrationNumber,
@@ -700,7 +706,7 @@ describe('aggregatePrnTonnage - Integration', () => {
     await db
       .collection(ORGANISATIONS_COLLECTION)
       .insertOne(organisationWithRegistration())
-    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+    await externalAccreditationsRepository.upsert(
       buildExternalAccreditation({
         organisationNumber: ledgerId.organisationNumber,
         registrationNumber: ledgerId.registrationNumber,
