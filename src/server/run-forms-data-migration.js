@@ -2,7 +2,6 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createSystemLogsRepository } from '#system-logs/plugin.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createFormsFileUploadsRepository } from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
 import { config } from '../config.js'
@@ -36,10 +35,6 @@ export const runFormsDataMigration = async (server) => {
           organisationAdministrationRepository
         )
       )()
-      const systemLogsRepository = (
-        await createSystemLogsRepository(server.db)
-      )(logger)
-
       const s3Client = createS3Client({
         region: config.get('awsRegion'),
         endpoint: config.get('s3Endpoint'),
@@ -52,7 +47,7 @@ export const runFormsDataMigration = async (server) => {
       const formsDataMigration = createFormDataMigrator(
         formSubmissionsRepository,
         organisationAdministrationRepository,
-        systemLogsRepository,
+        server.app.systemLogsRepository,
         formsFileUploadsRepository
       )
 

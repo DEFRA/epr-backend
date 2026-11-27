@@ -27,5 +27,3 @@ export const systemLogsRoutesPlugin = {
     server.route([systemLogsGetSearch])
   }
 }
-
-export { createSystemLogsRepository }
