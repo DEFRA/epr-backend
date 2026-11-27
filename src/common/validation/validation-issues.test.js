@@ -106,7 +106,13 @@ describe('Validation Issues', () => {
     })
   })
 
-  describe.for([
+  /**
+   * @type {{
+   *   method: 'hasIssues' | 'isFatal' | 'isValid',
+   *   cases: { description: string, expected: boolean, severities: ValidationSeverity[] }[]
+   * }[]}
+   */
+  const PREDICATES = [
     {
       method: 'isFatal',
       cases: [
@@ -161,7 +167,9 @@ describe('Validation Issues', () => {
         { description: 'a warning', severities: [WARNING], expected: true }
       ]
     }
-  ])('$method', ({ method, cases }) => {
+  ]
+
+  describe.for(PREDICATES)('$method', ({ method, cases }) => {
     it.for(cases)(
       'should be $expected with $description',
       ({ severities, expected }) => {
