@@ -6,7 +6,6 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  allowFutureDates,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
@@ -74,7 +73,6 @@ describe('summary logs with a date in a later year', () => {
 
     it('is rejected for a 2028 date of export, with nothing stored', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setup()
 
       const validated = await upload(env, '2027-export-2028', {
@@ -103,7 +101,6 @@ describe('summary logs with a date in a later year', () => {
 
     it('reports every later-year date cell', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setup()
 
       const validated = await upload(env, '2027-three-rows', {
@@ -125,7 +122,6 @@ describe('summary logs with a date in a later year', () => {
 
     it('accepts dates up to 31 December 2027 and from closed earlier years', async () => {
       uploadOn('2027-03-01T09:00:00.000Z')
-      allowFutureDates()
       const env = await setup()
 
       const validated = await upload(env, '2027-in-year', {
@@ -146,7 +142,6 @@ describe('summary logs with a date in a later year', () => {
   describe('a 2027 registered-only reprocessor log', () => {
     it('is rejected for a January 2028 month received', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         accredited: false,
@@ -180,7 +175,6 @@ describe('summary logs with a date in a later year', () => {
 
   describe('a 2026 accredited exporter log', () => {
     it('is rejected for a 2027 date', async () => {
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter'
       })

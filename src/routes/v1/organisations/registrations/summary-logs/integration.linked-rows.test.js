@@ -19,7 +19,6 @@ import { createMongoSummaryLogRowStatesRepository } from '#waste-records/reposit
 import { createTonnageQuery } from '#waste-records/repository/tonnage-query.mongodb.js'
 
 import {
-  allowFutureDates,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createWasteBalanceMeta,
@@ -272,7 +271,6 @@ describe('2027 rows linked to a 2026 row', () => {
     /** @param {Parameters<typeof setupWasteBalanceIntegrationEnvironment>[0]} [repositories] */
     const setup = async (repositories = {}) => {
       openNextYear()
-      allowFutureDates()
       return setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         year: YEAR,
@@ -1176,7 +1174,6 @@ describe('2027 rows linked to a 2026 row', () => {
     it('does not credit a 2027 row, uploaded once 2026 has closed, exported in 2026', async () => {
       afterThe2026CorrectionDeadline()
       openNextYear()
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         year: YEAR
@@ -1222,7 +1219,6 @@ describe('2027 rows linked to a 2026 row', () => {
 
     it('fills in the export from the 2026 row and keeps the supplied refusal', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         accredited: false,
@@ -1301,7 +1297,6 @@ describe('2027 rows linked to a 2026 row', () => {
     /** @param {Record<string, unknown>} [previousYearRow] */
     const setupWith2026Row = async (previousYearRow = {}) => {
       openNextYear()
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         accredited: false,

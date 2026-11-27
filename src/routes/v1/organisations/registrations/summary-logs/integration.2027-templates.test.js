@@ -6,7 +6,6 @@ import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  allowFutureDates,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
@@ -53,7 +52,6 @@ describe('2027 summary logs', () => {
 
     it('validates and submits a 2027.01 log, crediting the balance and storing the new columns', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setup()
       const ids = {
         summaryLogId: 'summary-2027-exporter',
@@ -108,7 +106,6 @@ describe('2027 summary logs', () => {
       'rejects PREVIOUS_YEAR_ROW_ID %s as %s',
       async (previousYearRowId, code) => {
         openNextYear()
-        allowFutureDates()
         const env = await setup()
 
         const validated = await uploadAndValidate(
@@ -137,7 +134,6 @@ describe('2027 summary logs', () => {
 
     it('rejects a 2027 log without the 2027 columns', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setup()
 
       const validated = await uploadAndValidate(
@@ -197,7 +193,6 @@ describe('2027 summary logs', () => {
 
     it('rejects a 2026 template in a 2027 log as TEMPLATE_YEAR_MISMATCH', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setup()
 
       const validated = await uploadAndValidate(
@@ -226,7 +221,6 @@ describe('2027 summary logs', () => {
   describe('a registered-only reprocessor', () => {
     it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         accredited: false,
@@ -294,7 +288,6 @@ describe('2027 summary logs', () => {
   describe('a registered-only exporter', () => {
     it('validates and submits a 2027.01 log, storing the new LOADS_EXPORTED columns', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         accredited: false,
@@ -367,7 +360,6 @@ describe('2027 summary logs', () => {
   )('an accredited $processingType', ({ reprocessingType, processingType }) => {
     it('validates and submits a 2027.01 log, storing DWT_SUPPLY_ID as entered', async () => {
       openNextYear()
-      allowFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         reprocessingType,

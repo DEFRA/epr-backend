@@ -6,7 +6,6 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  allowFutureDates,
   createExporterRowValues,
   createRegisteredOnlyMeta,
   createRegisteredOnlyReceivedRow,
@@ -14,6 +13,7 @@ import {
   createWasteBalanceMeta,
   EXPORTER_HEADERS,
   ledgerIdOf,
+  rejectFutureDates,
   REPROCESSOR_RECEIVED_HEADERS,
   setupWasteBalanceIntegrationEnvironment,
   tableOf,
@@ -81,6 +81,7 @@ describe('summary logs with a future date', () => {
       'is rejected for a future %s, with nothing stored',
       async (header, field) => {
         uploadOn('2026-11-27T10:00:00.000Z')
+        rejectFutureDates()
         const env = await accreditedExporter()
 
         const validated = await upload(env, `future-${field}`, {
@@ -103,6 +104,7 @@ describe('summary logs with a future date', () => {
 
     it('accepts ‘Date received by overseas reprocessor’ the day after upload', async () => {
       uploadOn('2026-11-27T10:00:00.000Z')
+      rejectFutureDates()
       const env = await accreditedExporter()
 
       const validated = await upload(env, 'osr-day-after', {
@@ -115,6 +117,7 @@ describe('summary logs with a future date', () => {
 
     it('rejects ‘Date received by overseas reprocessor’ two days after upload', async () => {
       uploadOn('2026-11-27T10:00:00.000Z')
+      rejectFutureDates()
       const env = await accreditedExporter()
 
       const validated = await upload(env, 'osr-two-days-after', {
@@ -133,6 +136,7 @@ describe('summary logs with a future date', () => {
 
     it('lists every future date in one rejection', async () => {
       uploadOn('2026-11-27T10:00:00.000Z')
+      rejectFutureDates()
       const env = await accreditedExporter()
 
       const validated = await upload(env, 'every-future-date', {
@@ -162,6 +166,7 @@ describe('summary logs with a future date', () => {
 
     it('accepts dates up to 31 December when uploaded in January of the next year', async () => {
       uploadOn('2027-01-10T09:00:00.000Z')
+      rejectFutureDates()
       const env = await accreditedExporter()
 
       const validated = await upload(env, 'uploaded-in-january', {
@@ -181,7 +186,6 @@ describe('summary logs with a future date', () => {
 
     it('accepts future dates when the rejectFutureDates feature flag is off', async () => {
       uploadOn('2026-11-27T10:00:00.000Z')
-      allowFutureDates()
       const env = await accreditedExporter()
 
       const validated = await upload(env, 'flag-off', {
@@ -197,6 +201,7 @@ describe('summary logs with a future date', () => {
   describe('a registered-only exporter log', () => {
     it('is rejected for a future ‘Month received for export’', async () => {
       uploadOn('2026-11-27T10:00:00.000Z')
+      rejectFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'exporter',
         accredited: false
@@ -230,6 +235,7 @@ describe('summary logs with a future date', () => {
   describe('a registered-only reprocessor log', () => {
     it('accepts ‘Month received’ in the month of upload', async () => {
       uploadOn('2026-11-27T10:00:00.000Z')
+      rejectFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor',
         accredited: false
@@ -254,6 +260,7 @@ describe('summary logs with a future date', () => {
   describe('an accredited reprocessor input log', () => {
     it('is rejected for a future ‘Date received’', async () => {
       uploadOn('2026-11-27T10:00:00.000Z')
+      rejectFutureDates()
       const env = await setupWasteBalanceIntegrationEnvironment({
         processingType: 'reprocessor'
       })

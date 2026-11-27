@@ -705,12 +705,8 @@ export const openNextYear = () => {
   onTestFinished(() => config.reset('openNextYear'))
 }
 
-/**
- * Lets a summary log carry dates after the day it was uploaded, as the
- * journey-test stack does, for a test that uploads ahead of its rows' dates.
- */
-export const allowFutureDates = () => {
-  config.set('featureFlags.rejectFutureDates', false)
+export const rejectFutureDates = () => {
+  config.set('featureFlags.rejectFutureDates', true)
   onTestFinished(() => config.reset('featureFlags.rejectFutureDates'))
 }
 

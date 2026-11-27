@@ -30,7 +30,6 @@ import { createOnSummaryLogUploaded } from '#reports/application/summary-log-eve
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { emptyLoadsByReportingPeriod } from '#domain/summary-logs/loads-by-period-status-schema.js'
 import {
-  allowFutureDates,
   REPROCESSOR_RECEIVED_HEADERS,
   createReprocessorReceivedRowValues,
   createRegisteredOnlyMeta,
@@ -328,7 +327,6 @@ const setupSubmit = async ({
 
 describe('submitSummaryLog staleness guard (period closure)', () => {
   it('rejects when a report was submitted after the summary log was created', async () => {
-    allowFutureDates()
     const reportsRepository = createInMemoryReportsRepository()()
     const {
       deps,
@@ -365,7 +363,6 @@ describe('submitSummaryLog staleness guard (period closure)', () => {
   })
 
   it('proceeds when a report for a different year was submitted after the summary log was created', async () => {
-    allowFutureDates()
     const reportsRepository = createInMemoryReportsRepository()()
     const {
       deps,
@@ -607,7 +604,6 @@ describe('submitSummaryLog stale flagging', () => {
 
 describe('submitSummaryLog December waste metric', () => {
   it('counts rows that fall in the accreditation-year December', async () => {
-    allowFutureDates()
     const reportsRepository = createInMemoryReportsRepository()()
     const decemberData = {
       RECEIVED_LOADS_FOR_REPROCESSING: {

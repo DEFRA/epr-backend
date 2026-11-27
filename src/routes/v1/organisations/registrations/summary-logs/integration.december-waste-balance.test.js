@@ -8,7 +8,6 @@ import { asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
-  allowFutureDates,
   asOperator,
   accreditationUrl,
   buildPostUrl,
@@ -39,7 +38,6 @@ describe('December waste balance accrual', () => {
   const { getServer } = setupAuthContext()
 
   beforeEach(() => {
-    allowFutureDates()
     getServer().use(
       http.post(
         'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
