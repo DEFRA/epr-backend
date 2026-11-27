@@ -1,6 +1,7 @@
 import { VALIDATION_SEVERITY } from '#common/enums/index.js'
 
 /** @import {ValidationSeverity} from '#common/enums/validation.js' */
+/** @import {IssueKind} from './validation-issue-kinds.js' */
 
 /**
  * Ordered list of spreadsheet-location keys. Single source of truth — the
@@ -44,6 +45,7 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  * Represents a single validation issue.
  *
  * @typedef {{
+ *   kind?: IssueKind,
  *   severity: ValidationSeverity,
  *   category: string,
  *   message: string,
@@ -83,6 +85,7 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  * the collector to support chaining.
  *
  * @typedef {{
+ *   add: (issue: ValidationIssue) => ValidationIssuesCollector,
  *   addIssue: (
  *     severity: ValidationSeverity,
  *     category: string,
@@ -178,7 +181,14 @@ const createIssueAdders = (issues, result) => {
     return result
   }
 
+  /** @param {ValidationIssue} issue */
+  const add = (issue) => {
+    issues.push(issue)
+    return result
+  }
+
   return {
+    add,
     addIssue,
     addFatal: (category, message, code, context = {}) =>
       addIssue(VALIDATION_SEVERITY.FATAL, category, message, code, context),
@@ -291,17 +301,12 @@ const generateSummaryMessage = (counts) => {
  * Creates methods for transforming validation issues
  *
  * @param {ValidationIssue[]} issues - The issues array
- * @param {Function} addIssue - Function to add an issue
+ * @param {(issue: ValidationIssue) => ValidationIssuesCollector} add - Adds an issue as it was built
  * @param {Function} getIssuesBySeverity - Function to get issues by severity
  * @param {Object} result - The result object for chaining
  * @returns {Object} Methods for transforming issues
  */
-const createIssueTransformers = (
-  issues,
-  addIssue,
-  getIssuesBySeverity,
-  result
-) => {
+const createIssueTransformers = (issues, add, getIssuesBySeverity, result) => {
   const getCounts = () => calculateIssueCounts(issues, getIssuesBySeverity)
 
   const getSummary = () => {
@@ -313,15 +318,7 @@ const createIssueTransformers = (
     if (!otherIssues || typeof otherIssues.getAllIssues !== 'function') {
       throw new TypeError('Can only merge validation issues objects')
     }
-    for (const issue of otherIssues.getAllIssues()) {
-      addIssue(
-        issue.severity,
-        issue.category,
-        issue.message,
-        issue.code,
-        issue.context
-      )
-    }
+    otherIssues.getAllIssues().forEach(add)
     return result
   }
 
@@ -360,7 +357,7 @@ export const createValidationIssues = (initialIssues = []) => {
   const queries = createIssueQueries(issues)
   const transformers = createIssueTransformers(
     issues,
-    adders.addIssue,
+    adders.add,
     queries.getIssuesBySeverity,
     result
   )

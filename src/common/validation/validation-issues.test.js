@@ -2,6 +2,7 @@ import {
   createValidationIssues,
   issueToErrorObject
 } from './validation-issues.js'
+import { cellIssue, fileIssue } from './validation-issue-kinds.js'
 import {
   VALIDATION_SEVERITY,
   VALIDATION_CATEGORY
@@ -1238,6 +1239,42 @@ describe('Validation Issues', () => {
 
       expect(result2.getAllIssues()).toHaveLength(1)
       expect(result1.getAllIssues()).toHaveLength(2)
+    })
+  })
+
+  describe('add', () => {
+    const issue = fileIssue({
+      category: 'technical',
+      message: 'Spreadsheet buffer is empty',
+      code: 'SPREADSHEET_INVALID_ERROR'
+    })
+
+    it('should add the issue as it was built', () => {
+      const issues = createValidationIssues().add(issue)
+
+      expect(issues.getAllIssues()).toStrictEqual([issue])
+    })
+
+    it('should keep an issue the collector is merged into whole', () => {
+      const atCell = cellIssue({
+        severity: 'error',
+        category: 'technical',
+        message: 'Must be a valid date',
+        code: 'MUST_BE_A_VALID_DATE',
+        location: {
+          sheet: 'Exported',
+          table: 'RECEIVED_LOADS_FOR_EXPORT',
+          row: 9,
+          column: 'U',
+          header: 'DATE_OF_EXPORT'
+        }
+      })
+
+      const merged = createValidationIssues()
+        .add(issue)
+        .merge(createValidationIssues().add(atCell))
+
+      expect(merged.getAllIssues()).toStrictEqual([issue, atCell])
     })
   })
 })
