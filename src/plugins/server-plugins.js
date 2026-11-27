@@ -8,6 +8,7 @@ import { secureContext } from '@defra/hapi-secure-context'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import { organisationsRoutesPlugin } from '#organisations/plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
@@ -18,6 +19,7 @@ import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { overseasSitesRoutesPlugin } from '#overseas-sites/plugin.js'
 import { router } from '#plugins/router.js'
+import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
 function getSwaggerPlugins() {
@@ -48,8 +50,20 @@ function getSwaggerPlugins() {
   ]
 }
 
-/** The modules' route plugins, which every server but the legacy one registers. */
-const moduleRoutePlugins = () => [overseasSitesRoutesPlugin, wasteRecordsExport]
+/**
+ * The modules' route plugins, which every server but the legacy one registers.
+ *
+ * @param {ReturnType<typeof import('#root/config.js').getConfig>} config
+ */
+const moduleRoutePlugins = (config) => [
+  {
+    plugin: organisationsRoutesPlugin,
+    options: { devEndpoints: config.get('featureFlags.devEndpoints') }
+  },
+  overseasSitesRoutesPlugin,
+  registrationAccreditationAdminRoutesPlugin,
+  wasteRecordsExport
+]
 
 /**
  * The plugins every server registers, around the infrastructure plugins that
@@ -95,6 +109,6 @@ export function serverPlugins(config, infrastructure, { modules = true } = {}) {
     ...plugins,
     ...infrastructure,
     { plugin: router, options: { config } },
-    ...(modules ? moduleRoutePlugins() : [])
+    ...(modules ? moduleRoutePlugins(config) : [])
   ]
 }
