@@ -8,6 +8,7 @@ import { secureContext } from '@defra/hapi-secure-context'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import { organisationsRoutesPlugin } from '#organisations/plugin.js'
 import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { basicAuthPlugin } from '#plugins/auth/basic-auth-plugin.js'
@@ -18,6 +19,7 @@ import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
 import { formsSubmissionDataRoutesPlugin } from '#formsubmission/plugin.js'
+import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
 function getSwaggerPlugins() {
@@ -58,6 +60,11 @@ const moduleRoutePlugins = (config) => [
     plugin: formsSubmissionDataRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
   },
+  {
+    plugin: organisationsRoutesPlugin,
+    options: { devEndpoints: config.get('featureFlags.devEndpoints') }
+  },
+  registrationAccreditationAdminRoutesPlugin,
   wasteRecordsExport
 ]
 

@@ -10,10 +10,10 @@ A module is a directory under `src/` that owns one responsibility. Code outside 
 
 ## The index and the port
 
-A module's index and its port are one interface. The index says what the module offers, and the port is that offer running, provided on `server.app` and on each request.
+A module's index and its port are one interface, split by role.
 
-- **A pure rule over the module's own types goes in `index.js`,** and callers import it. It works only on the values it is given.
-- **Anything that reads data or depends on config is a method on the port.** Callers use it from the request or from `server.app`, typed by the port's type from `index.js`.
+- **The port is how a caller asks the module to do something,** whether that is fetching, saving, sending or any other application service. Callers use it from the request or from `server.app`, typed by the port's type from `index.js`.
+- **`index.js` describes what those requests take and return.** It holds the module's types, its constants, and the rules that answer questions about a value of those types. Callers import it.
 
 ## Plugins
 

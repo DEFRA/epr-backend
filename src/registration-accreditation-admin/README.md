@@ -1,22 +1,21 @@
 # Registration and accreditation admin
 
-This module holds the admin routes that serve an organisation, registration or accreditation record by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes those routes, and the repository functions only they use, and nothing else.
+This module holds the admin routes that change or serve a registration or accreditation by its database id, including one that has no number yet. They belong to the registration and accreditation context, which is leaving epr-backend. Deleting this module removes those routes, and the repository functions only they use, and nothing else.
 
 The routes keep their paths:
 
-- `GET` and `PUT /v1/organisations/{id}`, which the admin UI's JSON editor reads and writes.
 - The registration and accreditation `status-history` routes, which make status changes.
 - The overseas sites of a registration or accreditation, addressed by id.
-- `PUT /v1/dev/organisations/{id}`, the non-production seeding twin of the `PUT`.
 
-Code outside the module imports from two entry points, and each lists its exports by name:
+Organisations stay in epr-backend, so the routes that read or write an organisation as a whole are in the [organisations module](../organisations/README.md), not this one.
 
-- **`index.js`** holds the routes, the repository plugin and the repository's type.
-- **`test-support.js`** holds the repository's adapters, and only a test may import it.
+The module takes the shape [`src/modules.md`](../modules.md) describes, and lint refuses an import of anything but its entry points:
 
-Lint refuses any other import into the module, but it cannot see a JSDoc `@import`.
+- **`index.js`** holds the repository's type.
+- **`plugin.js`** holds the route plugin and the repository's MongoDB adapter.
+- **`test-support.js`** holds the repository's in-memory adapter and its MongoDB factory, and only a test may import it.
 
-[`src/modules.md`](../modules.md) describes the shape every module takes. This module's plugin has not moved to it yet.
+Lint cannot see a JSDoc `@import`, so it lets one through.
 
 ## Shape
 
