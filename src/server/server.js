@@ -87,7 +87,6 @@ function regAccredApiOf(config) {
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
-  /** @type {any[]} untyped, as `serverPlugins` takes it */
   const plugins = [
     {
       plugin: mongoDbPlugin,
@@ -113,18 +112,14 @@ function getProductionPlugins(config) {
       options: { regAccredApi: regAccredApiOf(config) }
     },
     orsImportsRepositoryPlugin,
-    mongoSummaryLogRowStatesRepositoryPlugin
+    mongoSummaryLogRowStatesRepositoryPlugin,
+    mongoReportsRepositoryPlugin,
+    prnEventsPlugin,
+    /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
+    ...(config.get('featureFlags.devEndpoints')
+      ? [nonProdDataResetPlugin, mongoExternalAccreditationsRepositoryPlugin]
+      : [])
   ]
-
-  plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
-
-  /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
-  if (config.get('featureFlags.devEndpoints')) {
-    plugins.push(
-      nonProdDataResetPlugin,
-      mongoExternalAccreditationsRepositoryPlugin
-    )
-  }
 
   plugins.push(packagingRecyclingNotesRepositoryPlugin, {
     plugin: commandQueueConsumerPlugin,
