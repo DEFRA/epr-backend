@@ -5,6 +5,8 @@ import {
 } from '#common/enums/validation.js'
 import { previousYear } from '#common/helpers/dates/year.js'
 
+import { cellIssue } from '#common/validation/validation-issue-kinds.js'
+
 import { buildCellLocation } from '../data-syntax.js'
 
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
@@ -21,7 +23,7 @@ import { buildCellLocation } from '../data-syntax.js'
  *   previousYearRowId?: string,
  *   deadline?: CalendarDate
  * }} params
- * @returns {ValidationIssue}
+ * @returns {ValidationIssue[]} the issue, or none where the table has no column for the field
  */
 export const toPreviousYearLinkIssue = ({
   errorCode,
@@ -33,25 +35,28 @@ export const toPreviousYearLinkIssue = ({
 }) => {
   const { headerToIndexMap, tableName, rowNumber, location } =
     linkedRow.issueLocation
-  return {
-    category: VALIDATION_CATEGORY.BUSINESS,
-    severity: VALIDATION_SEVERITY.FATAL,
-    message: `Previous year link ${errorCode} in column '${field}'`,
-    code: VALIDATION_CODE.PREVIOUS_YEAR_LINK,
-    context: {
-      location: buildCellLocation({
-        tableName,
-        rowNumber,
-        rowId: linkedRow.rowId,
-        fieldName: field,
-        colIndex: headerToIndexMap.get(field),
-        location
-      }),
-      actual: enteredValue,
-      expected: previousYear(linkedRow.options.summaryLogYear),
-      errorCode,
-      ...(previousYearRowId && { previousYearRowId }),
-      ...(deadline && { deadline })
-    }
-  }
+  const cellLocation = buildCellLocation({
+    tableName,
+    rowNumber,
+    rowId: linkedRow.rowId,
+    fieldName: field,
+    colIndex: headerToIndexMap.get(field),
+    location
+  })
+  return cellLocation
+    ? [
+        cellIssue({
+          severity: VALIDATION_SEVERITY.FATAL,
+          category: VALIDATION_CATEGORY.BUSINESS,
+          message: `Previous year link ${errorCode} in column '${field}'`,
+          code: VALIDATION_CODE.PREVIOUS_YEAR_LINK,
+          location: cellLocation,
+          actual: enteredValue,
+          expected: previousYear(linkedRow.options.summaryLogYear),
+          errorCode,
+          ...(previousYearRowId && { previousYearRowId }),
+          ...(deadline && { deadline })
+        })
+      ]
+    : []
 }

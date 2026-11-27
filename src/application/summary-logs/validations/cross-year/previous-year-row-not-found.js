@@ -20,13 +20,11 @@ export const previousYearRowNotFound = (linkedRow) => {
       ?.validate(linkedRow.rowObject[field], { context: linkedRow.options })
       .error === undefined
   return isWellFormed
-    ? [
-        toPreviousYearLinkIssue({
-          errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_NOT_FOUND,
-          field,
-          linkedRow,
-          enteredValue: linkedRow.rowObject[field]
-        })
-      ]
+    ? toPreviousYearLinkIssue({
+        errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_NOT_FOUND,
+        field,
+        linkedRow,
+        enteredValue: linkedRow.rowObject[field]
+      })
     : []
 }

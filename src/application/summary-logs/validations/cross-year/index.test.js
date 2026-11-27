@@ -193,6 +193,7 @@ const previousYearLinkIssue = (
   { errorCode, actual, previousYearRowId, deadline }
 ) => ({
   category: VALIDATION_CATEGORY.BUSINESS,
+  kind: 'cell',
   severity: VALIDATION_SEVERITY.FATAL,
   message: `Previous year link ${errorCode} in column '${cell.header}'`,
   code: VALIDATION_CODE.PREVIOUS_YEAR_LINK,
@@ -210,11 +211,13 @@ const previousYearLinkIssue = (
  * @param {FilledInRow[]} rows
  * @param {SummaryLogValidationOptions} [options]
  * @param {typeof tableSchemas} [schemas]
+ * @param {(string | null)[]} [headers]
  */
 const check = (
   rows,
   options = BEFORE_2026_CORRECTION_DEADLINE,
-  schemas = tableSchemas
+  schemas = tableSchemas,
+  headers = HEADERS
 ) =>
   checkCrossYearRules({
     parsed: {
@@ -222,7 +225,7 @@ const check = (
       data: {
         LOADS: {
           location: { sheet: 'Exported', row: 7, column: 'B' },
-          headers: HEADERS,
+          headers,
           rows
         }
       }
@@ -243,6 +246,7 @@ describe('checkCrossYearRules', () => {
     ).toStrictEqual([
       {
         category: VALIDATION_CATEGORY.TECHNICAL,
+        kind: 'cell',
         severity: VALIDATION_SEVERITY.FATAL,
         message:
           "Invalid value in column 'DATE_OF_EXPORT': must not be in an earlier year whose summary log is still open",
@@ -271,6 +275,7 @@ describe('checkCrossYearRules', () => {
     ).toStrictEqual([
       {
         category: VALIDATION_CATEGORY.TECHNICAL,
+        kind: 'cell',
         severity: VALIDATION_SEVERITY.FATAL,
         message: 'Missing required field: ROW_ID',
         code: VALIDATION_CODE.FIELD_REQUIRED,
@@ -460,6 +465,24 @@ describe('checkCrossYearRules', () => {
           }
         )
       ])
+    })
+
+    it('raises nothing on a received date the table has no column for', () => {
+      expect(
+        check(
+          [
+            filledInRow({
+              dateOfExport: '2026-11-01',
+              previousYearCompletion: { DATE_RECEIVED_BY_OSR: '2026-12-14' }
+            })
+          ],
+          BEFORE_2026_CORRECTION_DEADLINE,
+          tableSchemas,
+          HEADERS.map((header) =>
+            header === 'DATE_RECEIVED_BY_OSR' ? null : header
+          )
+        )
+      ).toStrictEqual([])
     })
 
     it('shows the received date the linked row entered itself', () => {

@@ -35,7 +35,7 @@ export const previousYearRowValueDiffers = (linkedRow) => {
     return []
   }
   const deadline = lastCorrectionDay(previousYear, options)
-  return columnsGivenDifferently(linkedRow).map(([field, index]) =>
+  return columnsGivenDifferently(linkedRow).flatMap(([field, index]) =>
     toPreviousYearLinkIssue({
       errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS,
       field,

@@ -39,7 +39,7 @@ export const earlierYearDates = (linkedRow) =>
     })
     return (error?.details ?? [])
       .filter(({ type }) => type === BEFORE_SUMMARY_LOG_YEAR_ERROR)
-      .map((detail) =>
+      .flatMap((detail) =>
         toApplicationIssue({
           issue: toValidationErrorIssue(detail, field),
           classification: { outcome: ROW_OUTCOME.REJECTED },

@@ -31,7 +31,7 @@ export const ISSUE_KIND = Object.freeze({
  * A cell in a table row. The row ID is the cell's text as entered, and is
  * absent when the row's ROW_ID cell is blank.
  *
- * @typedef {{ column: string, header: string, row: number, rowId?: string, sheet: string, table: string }} CellLocation
+ * @typedef {{ column: string, header: string, row: number, rowId?: string, sheet: string, table: string }} TableCellLocation
  */
 
 /**
@@ -88,6 +88,6 @@ export const tableIssue = (params) =>
 export const removedRowIssue = (params) =>
   issueOf(ISSUE_KIND.REMOVED_ROW, VALIDATION_SEVERITY.FATAL, params)
 
-/** @param {LocatedIssueParams<CellLocation> & { severity: ValidationSeverity }} params */
+/** @param {LocatedIssueParams<TableCellLocation> & { severity: ValidationSeverity }} params */
 export const cellIssue = ({ severity, ...params }) =>
   issueOf(ISSUE_KIND.CELL, severity, params)

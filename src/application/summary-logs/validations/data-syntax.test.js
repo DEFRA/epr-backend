@@ -3,7 +3,8 @@ import { toYear } from '#common/helpers/dates/year.js'
 import { validationOptionsIn } from '#domain/summary-logs/table-schemas/validation-options-test-helpers.js'
 import {
   createDataSyntaxValidator,
-  JOI_MESSAGE_TO_ERROR_CODE
+  JOI_MESSAGE_TO_ERROR_CODE,
+  toApplicationIssue
 } from './data-syntax.js'
 import {
   VALIDATION_CATEGORY,
@@ -257,7 +258,10 @@ describe('createDataSyntaxValidator', () => {
    * @param {{ location?: CellLocation }} [options]
    * @returns {ParsedSummaryLog}
    */
-  const parsedFromRows = (tables, options = {}) => {
+  const parsedFromRows = (
+    tables,
+    { location = DEFAULT_TEST_LOCATION } = {}
+  ) => {
     /** @type {Record<string, object>} */
     const data = {}
 
@@ -265,10 +269,7 @@ describe('createDataSyntaxValidator', () => {
       const rows = Array.isArray(rowData) ? rowData : [rowData]
       const headers = Object.keys(rows[0])
 
-      // Row numbers start after the header row
-      // If location.row is provided, data starts at location.row + 1
-      // Otherwise assume row 1 is header, data starts at row 2
-      const firstDataRow = options.location?.row ? options.location.row + 1 : 2
+      const firstDataRow = location.row + 1
       const rowsWithNumbers = rows.map((row, index) => ({
         rowNumber: firstDataRow + index,
         values: headers.map((h) => row[h])
@@ -277,7 +278,7 @@ describe('createDataSyntaxValidator', () => {
       data[tableName] = {
         headers,
         rows: rowsWithNumbers,
-        ...(options.location && { location: options.location })
+        location
       }
     }
 
@@ -445,6 +446,19 @@ describe('createDataSyntaxValidator', () => {
           actual: ['ROW_ID', 'TEXT_FIELD']
         }
       })
+    })
+
+    it('raises no cell issue for a column the table does not have', () => {
+      const result = validateSections({
+        TEST_TABLE: {
+          headers: ['ROW_ID', 'TEXT_FIELD'],
+          rows: [{ rowNumber: 2, values: [1000, 'hello'] }]
+        }
+      })
+
+      expect(
+        result.issues.getAllIssues().map(({ code }) => code)
+      ).toStrictEqual(['HEADER_REQUIRED'])
     })
 
     it('returns multiple fatal errors when multiple headers are missing', () => {
@@ -680,19 +694,6 @@ describe('createDataSyntaxValidator', () => {
       expect(fatal.context?.location?.column).toBe('AA') // Z + 1
     })
 
-    it('handles missing location gracefully', () => {
-      const result = validateRows({
-        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
-      })
-
-      const fatal = expectOne(
-        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-      )
-      expect(fatal.context?.location?.header).toBe('TEXT_FIELD')
-      expect(fatal.context?.location?.row).toBeUndefined()
-      expect(fatal.context?.location?.column).toBeUndefined()
-    })
-
     it('includes location in FATAL ROW_ID errors', () => {
       const result = validateRows(
         {
@@ -704,6 +705,7 @@ describe('createDataSyntaxValidator', () => {
       const fatal = expectOne(
         result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
+      expect(fatal.kind).toBe('cell')
       expect(fatal.context?.location).toEqual({
         sheet: 'Sheet1',
         table: 'TEST_TABLE',
@@ -712,18 +714,6 @@ describe('createDataSyntaxValidator', () => {
         column: 'B',
         header: 'ROW_ID'
       })
-    })
-
-    it('handles missing location gracefully for FATAL errors', () => {
-      const result = validateRows({
-        TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
-      })
-
-      const fatal = expectOne(
-        result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-      )
-      expect(fatal.context?.location?.header).toBe('ROW_ID')
-      expect(fatal.context?.location?.row).toBeUndefined()
     })
   })
 
@@ -1502,5 +1492,22 @@ describe('dates in a later year than the summary log', () => {
 
     const fatal = expectOne(result.issues.getAllIssues())
     expect(fatal.context).not.toHaveProperty('expected')
+  })
+})
+
+describe('toApplicationIssue', () => {
+  it('raises nothing on a field the table has no column for', () => {
+    expect(
+      toApplicationIssue({
+        issue: { code: 'MISSING_REQUIRED_FIELD', field: 'NUMBER_FIELD' },
+        classification: { outcome: ROW_OUTCOME.REJECTED },
+        headerToIndexMap: new Map([['ROW_ID', 0]]),
+        rowObject: { ROW_ID: 1000 },
+        rowId: '1000',
+        tableName: 'TEST_TABLE',
+        rowNumber: 2,
+        location: DEFAULT_TEST_LOCATION
+      })
+    ).toStrictEqual([])
   })
 })

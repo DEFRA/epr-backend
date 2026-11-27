@@ -5,7 +5,10 @@ import {
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { tableIssue } from '#common/validation/validation-issue-kinds.js'
+import {
+  cellIssue,
+  tableIssue
+} from '#common/validation/validation-issue-kinds.js'
 import {
   isEprMarker,
   isHeaderDescriptionRow
@@ -27,7 +30,8 @@ import {
 
 /** @import {ValidatedSummaryLog, ValidatedTableSection} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {ValidationCode} from '#common/enums/validation.js' */
-/** @import {ValidationIssue, ValidationIssueLocation, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {TableCellLocation} from '#common/validation/validation-issue-kinds.js' */
+/** @import {ValidationIssue, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {CellLocation, DataSection, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {TableSchema} from '#domain/summary-logs/table-schemas/index.js' */
 /** @typedef {Pick<TableSchema, 'rowIdField' | 'requiredHeaders' | 'unfilledValues' | 'validationSchema' | 'classifyForWasteBalance'>} DataSyntaxTableSchema */
@@ -209,7 +213,8 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
 }
 
 /**
- * Builds cell location for error reporting.
+ * Where a row's field is, or nothing when the table has no column for it: a
+ * missing column is reported once, as a missing header.
  *
  * @param {{
  *   tableName: string,
@@ -219,7 +224,7 @@ const validateHeaders = ({ tableName, headers, requiredHeaders, location }) => {
  *   colIndex: number | undefined,
  *   location: CellLocation
  * }} params
- * @returns {ValidationIssueLocation}
+ * @returns {TableCellLocation | undefined}
  */
 export const buildCellLocation = ({
   tableName,
@@ -228,19 +233,17 @@ export const buildCellLocation = ({
   fieldName,
   colIndex,
   location
-}) => {
-  const identifiedBy = rowId === undefined ? {} : { rowId }
-  return location?.column && colIndex !== undefined
-    ? {
+}) =>
+  colIndex === undefined
+    ? undefined
+    : {
         sheet: location.sheet,
         table: tableName,
         row: rowNumber,
-        ...identifiedBy,
+        ...(rowId !== undefined && { rowId }),
         column: offsetColumn(location.column, colIndex),
         header: fieldName
       }
-    : { table: tableName, ...identifiedBy, header: fieldName }
-}
 
 /**
  * Maps a row-classification issue from the validation pipeline into a
@@ -256,7 +259,7 @@ export const buildCellLocation = ({
  *   rowNumber: number,
  *   location: CellLocation
  * }} params
- * @returns {ValidationIssue}
+ * @returns {ValidationIssue[]} the issue, or none where the table has no column for its field
  */
 export const toApplicationIssue = ({
   issue,
@@ -286,30 +289,34 @@ export const toApplicationIssue = ({
 
   const isFatal = classification.outcome === ROW_OUTCOME.REJECTED
 
-  const context = {
-    location: buildCellLocation({
-      tableName,
-      rowNumber,
-      rowId,
-      fieldName,
-      colIndex,
-      location
-    }),
-    actual: rowObject[fieldName],
-    ...(isValidationError &&
-      issue.expected !== undefined && { expected: issue.expected }),
-    ...(isValidationError &&
-      issue.deadline !== undefined && { deadline: issue.deadline }),
-    ...(errorCode && { errorCode })
-  }
+  const cellLocation = buildCellLocation({
+    tableName,
+    rowNumber,
+    rowId,
+    fieldName,
+    colIndex,
+    location
+  })
 
-  return {
-    category: VALIDATION_CATEGORY.TECHNICAL,
-    severity: isFatal ? VALIDATION_SEVERITY.FATAL : VALIDATION_SEVERITY.ERROR,
-    message,
-    code,
-    context
-  }
+  return cellLocation
+    ? [
+        cellIssue({
+          severity: isFatal
+            ? VALIDATION_SEVERITY.FATAL
+            : VALIDATION_SEVERITY.ERROR,
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          message,
+          code,
+          location: cellLocation,
+          actual: rowObject[fieldName],
+          ...(isValidationError &&
+            issue.expected !== undefined && { expected: issue.expected }),
+          ...(isValidationError &&
+            issue.deadline !== undefined && { deadline: issue.deadline }),
+          ...(errorCode && { errorCode })
+        })
+      ]
+    : []
 }
 
 /**
@@ -381,7 +388,7 @@ const validateRows = ({
       )
       const rowId = toRowId(rowObject[domainSchema.rowIdField])
 
-      const rowIssues = classification.issues.map((issue) =>
+      const rowIssues = classification.issues.flatMap((issue) =>
         toApplicationIssue({
           issue,
           classification,

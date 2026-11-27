@@ -141,16 +141,14 @@ const checkTable = ({
 
     if (!isFilled(rowIdValue)) {
       return previousYearLink.status === PREVIOUS_YEAR_LINK_STATUS.FOUND
-        ? [
-            toApplicationIssue({
-              issue: {
-                code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
-                field: schema.rowIdField
-              },
-              classification: { outcome: ROW_OUTCOME.REJECTED },
-              ...issueLocation
-            })
-          ]
+        ? toApplicationIssue({
+            issue: {
+              code: CLASSIFICATION_REASON.MISSING_REQUIRED_FIELD,
+              field: schema.rowIdField
+            },
+            classification: { outcome: ROW_OUTCOME.REJECTED },
+            ...issueLocation
+          })
         : []
     }
 
