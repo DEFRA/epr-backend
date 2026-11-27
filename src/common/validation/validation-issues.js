@@ -1,7 +1,7 @@
 import { VALIDATION_SEVERITY } from '#common/enums/index.js'
 
 /** @import {ValidationSeverity} from '#common/enums/validation.js' */
-/** @import {IssueKind} from './validation-issue-kinds.js' */
+/** @import {SummaryLogIssue} from './validation-issue-kinds.js' */
 
 /**
  * Ordered list of spreadsheet-location keys. Single source of truth — the
@@ -19,8 +19,8 @@ export const LOCATION_KEYS = /** @type {const} */ ([
 ])
 
 /**
- * Spreadsheet location for a validation issue. All fields optional because
- * meta-level issues have no row/column and table-level issues have no field.
+ * Any issue's location, read without knowing its kind. Every field is
+ * optional because each kind's location has a different set of them.
  *
  * @typedef {{
  *   [K in typeof LOCATION_KEYS[number]]?: K extends 'row' ? number : string
@@ -28,35 +28,22 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  */
 
 /**
- * Additional context attached to a validation issue. Open by design — all
- * known fields are listed but the index signature permits arbitrary extras,
- * which `issueToErrorObject` copies through to the HTTP response meta. See
- * ADR 0020 for the HTTP response format mapping.
+ * Where an issue is, read without knowing its kind; a file issue has nowhere.
  *
- * @typedef {{
- *   location?: ValidationIssueLocation,
- *   expected?: unknown,
- *   actual?: unknown,
- *   [key: string]: unknown
- * }} ValidationIssueContext
+ * @param {ValidationIssue} issue
+ * @returns {ValidationIssueLocation | undefined}
  */
+export const locationOf = (issue) => issue.context?.location
 
 /**
- * Represents a single validation issue.
- *
- * @typedef {{
- *   kind: IssueKind,
- *   severity: ValidationSeverity,
- *   category: string,
- *   message: string,
- *   code: string,
- *   context?: ValidationIssueContext
- * }} ValidationIssue
+ * A single validation issue, one of the kinds in validation-issue-kinds.
  *
  * - severity: One of VALIDATION_SEVERITY (fatal, error, warning)
  * - category: One of VALIDATION_CATEGORY (technical, business, parsing)
  * - message: Human-readable description for developers/logging (not sent to clients)
  * - code: Specific error code for i18n/translation (e.g., 'HEADER_REQUIRED')
+ *
+ * @typedef {SummaryLogIssue} ValidationIssue
  */
 
 /**
@@ -91,7 +78,6 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  *   hasIssues: () => boolean,
  *   getIssuesBySeverity: (severity: ValidationSeverity) => ValidationIssue[],
  *   getIssuesByCategory: (category: string) => ValidationIssue[],
- *   getIssuesByRow: () => Map<number, ValidationIssue[]>,
  *   groupBySeverity: () => Record<ValidationSeverity, ValidationIssue[]>,
  *   getAllIssues: () => ValidationIssue[],
  *   merge: (other: ValidationIssuesCollector) => ValidationIssuesCollector,
@@ -164,24 +150,6 @@ const createIssueQueries = (issues) => {
   const getIssuesByCategory = (category) =>
     issues.filter((issue) => issue.category === category)
 
-  const getIssuesByRow = () => {
-    const byRow = new Map()
-
-    for (const issue of issues) {
-      const row = issue.context?.location?.row
-
-      if (row !== undefined) {
-        if (!byRow.has(row)) {
-          byRow.set(row, [])
-        }
-
-        byRow.get(row).push(issue)
-      }
-    }
-
-    return byRow
-  }
-
   return {
     isFatal: () =>
       issues.some((issue) => issue.severity === VALIDATION_SEVERITY.FATAL),
@@ -194,7 +162,6 @@ const createIssueQueries = (issues) => {
     hasIssues: () => issues.length > 0,
     getIssuesBySeverity,
     getIssuesByCategory,
-    getIssuesByRow,
     groupBySeverity: () => ({
       [VALIDATION_SEVERITY.FATAL]: getIssuesBySeverity(
         VALIDATION_SEVERITY.FATAL

@@ -507,89 +507,6 @@ describe('Validation Issues', () => {
     })
   })
 
-  describe('getIssuesByRow', () => {
-    it('groups issues by row number', () => {
-      const result = createValidationIssues()
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error on row 5', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE',
-          location: { ...TEST_CELL, row: 5 }
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.WARNING, 'Warning on row 5', {
-          category: VALIDATION_CATEGORY.BUSINESS,
-          code: 'TEST_CODE',
-          location: { ...TEST_CELL, row: 5 }
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error on row 10', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE',
-          location: { ...TEST_CELL, row: 10 }
-        })
-      )
-
-      const byRow = result.getIssuesByRow()
-
-      expect(byRow.size).toBe(2)
-      expect(byRow.get(5)).toHaveLength(2)
-      expect(byRow.get(10)).toHaveLength(1)
-      expect(byRow.get(5)?.[0]?.message).toBe('Error on row 5')
-      expect(byRow.get(5)?.[1]?.message).toBe('Warning on row 5')
-      expect(byRow.get(10)?.[0]?.message).toBe('Error on row 10')
-    })
-
-    it('ignores issues without row context', () => {
-      const result = createValidationIssues()
-      result.add(
-        fileIssue({
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          message: 'Global error',
-          code: 'TEST_CODE'
-        })
-      )
-      result.add(
-        anIssue(VALIDATION_SEVERITY.ERROR, 'Error on row 5', {
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          code: 'TEST_CODE',
-          location: { ...TEST_CELL, row: 5 }
-        })
-      )
-
-      const byRow = result.getIssuesByRow()
-
-      expect(byRow.size).toBe(1)
-      expect(byRow.has(5)).toBe(true)
-      expect(byRow.get(5)).toHaveLength(1)
-    })
-
-    it('returns empty map when no issues have row context', () => {
-      const result = createValidationIssues()
-      result.add(
-        fileIssue({
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          message: 'Global error',
-          code: 'TEST_CODE'
-        })
-      )
-
-      const byRow = result.getIssuesByRow()
-
-      expect(byRow.size).toBe(0)
-    })
-
-    it('returns empty map when there are no issues', () => {
-      const result = createValidationIssues()
-
-      const byRow = result.getIssuesByRow()
-
-      expect(byRow.size).toBe(0)
-    })
-  })
-
   describe('groupBySeverity', () => {
     it('groups all issues by severity', () => {
       const result = createValidationIssues()
@@ -1135,104 +1052,70 @@ describe('Validation Issues', () => {
 
   describe('issueToErrorObject', () => {
     it('transforms a domain issue to HTTP format', () => {
-      /** @type {ValidationIssue} */
-      const domainIssue = {
-        kind: 'cell',
-        severity: VALIDATION_SEVERITY.ERROR,
-        category: VALIDATION_CATEGORY.TECHNICAL,
-        message: 'Invalid value',
-        code: 'TEST_CODE',
-        context: {
-          location: {
-            sheet: 'Received',
-            row: 9,
-            column: 'B',
-            header: 'ROW_ID'
-          },
-          actual: 9999
-        }
-      }
+      const location = { ...TEST_CELL, row: 9 }
 
-      const httpIssue = issueToErrorObject(domainIssue)
+      const httpIssue = issueToErrorObject(
+        anIssue(VALIDATION_SEVERITY.ERROR, 'Invalid value', {
+          location,
+          actual: 9999
+        })
+      )
 
       expect(httpIssue).toEqual({
         type: 'TECHNICAL_ERROR',
-        meta: {
-          location: {
-            sheet: 'Received',
-            row: 9,
-            column: 'B',
-            header: 'ROW_ID'
-          },
-          actual: 9999
-        }
+        meta: { location, actual: 9999 }
       })
     })
 
     it('creates correct type from severity and category', () => {
       expect(
-        issueToErrorObject({
-          kind: 'file',
-          severity: VALIDATION_SEVERITY.FATAL,
-          category: VALIDATION_CATEGORY.TECHNICAL,
-          message: 'Cannot parse',
-          code: 'TEST_CODE'
-        })
+        issueToErrorObject(
+          fileIssue({
+            category: VALIDATION_CATEGORY.TECHNICAL,
+            message: 'Cannot parse',
+            code: 'TEST_CODE'
+          })
+        )
       ).toEqual({
         type: 'TECHNICAL_FATAL'
       })
 
       expect(
-        issueToErrorObject({
-          kind: 'cell',
-          severity: VALIDATION_SEVERITY.WARNING,
-          category: VALIDATION_CATEGORY.BUSINESS,
-          message: 'Low value',
-          code: 'TEST_CODE',
-          context: { field: 'TONNAGE' }
-        })
-      ).toEqual({
-        type: 'BUSINESS_WARNING',
-        meta: { field: 'TONNAGE' }
-      })
+        issueToErrorObject(
+          anIssue(VALIDATION_SEVERITY.WARNING, 'Low value', {
+            category: VALIDATION_CATEGORY.BUSINESS
+          })
+        )
+      ).toMatchObject({ type: 'BUSINESS_WARNING' })
     })
 
     it('includes all context fields in meta', () => {
-      const httpIssue = issueToErrorObject({
-        kind: 'cell',
-        severity: VALIDATION_SEVERITY.ERROR,
-        category: VALIDATION_CATEGORY.TECHNICAL,
-        message: 'Invalid',
-        code: 'TEST_CODE',
-        context: {
-          location: { header: 'FIELD' },
+      const httpIssue = issueToErrorObject(
+        anIssue(VALIDATION_SEVERITY.ERROR, 'Invalid', {
           actual: 'bad',
           expected: 'good'
-        }
-      })
+        })
+      )
 
       expect(httpIssue).toEqual({
         type: 'TECHNICAL_ERROR',
-        meta: {
-          location: { header: 'FIELD' },
-          actual: 'bad',
-          expected: 'good'
-        }
+        meta: { location: TEST_CELL, actual: 'bad', expected: 'good' }
       })
     })
 
     it('omits meta when context only contains undefined values', () => {
-      const httpIssue = issueToErrorObject({
-        kind: 'cell',
-        severity: VALIDATION_SEVERITY.ERROR,
-        category: VALIDATION_CATEGORY.TECHNICAL,
-        message: 'Invalid',
-        code: 'TEST_CODE',
-        context: { field: undefined, value: undefined }
-      })
+      const httpIssue = issueToErrorObject(
+        fileIssue({
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          message: 'Invalid',
+          code: 'TEST_CODE',
+          field: undefined,
+          value: undefined
+        })
+      )
 
       expect(httpIssue).toEqual({
-        type: 'TECHNICAL_ERROR'
+        type: 'TECHNICAL_FATAL'
       })
       expect(httpIssue).not.toHaveProperty('meta')
     })

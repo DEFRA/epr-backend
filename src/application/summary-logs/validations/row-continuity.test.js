@@ -10,6 +10,7 @@ import { WASTE_BALANCE_OUTCOME } from '#waste-balances/domain/waste-balance-clas
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'
 import { tableSchemasOf } from '#domain/summary-logs/table-schemas/index.js'
 import { DEFAULT_TEMPLATE_YEAR } from '#domain/summary-logs/template-year.js'
+import { locationOf } from '#common/validation/validation-issues.js'
 
 /** @import {ValidatedWasteRecord} from '#application/waste-records/transform-from-summary-log.js' */
 /** @import {WasteRecordType} from '#domain/waste-records/model.js' */
@@ -191,8 +192,8 @@ describe('validateRowContinuity', () => {
       expect(fatals[0]?.kind).toBe('removedRow')
       expect(fatals[0]?.message).toContain('row-1')
       expect(fatals[0]?.message).toContain('cannot be removed')
-      expect(fatals[0]?.context?.location?.rowId).toBe('row-1')
-      expect(fatals[0]?.context?.location?.sheet).toBe('Received')
+      expect(locationOf(fatals[0])?.rowId).toBe('row-1')
+      expect(locationOf(fatals[0])?.sheet).toBe('Received')
     })
 
     it('returns fatal errors for multiple missing rows', () => {
@@ -214,7 +215,7 @@ describe('validateRowContinuity', () => {
       expect(fatals[0]?.code).toBe('SEQUENTIAL_ROW_REMOVED')
       expect(fatals[1]?.code).toBe('SEQUENTIAL_ROW_REMOVED')
 
-      const missingRowIds = fatals.map((f) => f.context?.location?.rowId).sort()
+      const missingRowIds = fatals.map((f) => locationOf(f)?.rowId).sort()
       expect(missingRowIds).toEqual(['row-1', 'row-3'])
     })
 
@@ -304,8 +305,8 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0]?.context?.location?.rowId).toBe('row-3')
-      expect(fatals[0]?.context?.location?.sheet).toBe('Received')
+      expect(locationOf(fatals[0])?.rowId).toBe('row-3')
+      expect(locationOf(fatals[0])?.sheet).toBe('Received')
     })
 
     it('treats the same rowId under a different waste record type as a distinct row', () => {
@@ -327,8 +328,8 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0]?.context?.location?.rowId).toBe('row-1')
-      expect(fatals[0]?.context?.location?.sheet).toBe('Processed')
+      expect(locationOf(fatals[0])?.rowId).toBe('row-1')
+      expect(locationOf(fatals[0])?.sheet).toBe('Processed')
     })
 
     it('correctly maps different waste record types to sheets and tables from the upload template table schemas', () => {
@@ -378,8 +379,8 @@ describe('validateRowContinuity', () => {
         })
 
         const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-        expect(fatals[0]?.context?.location?.sheet).toBe(expectedSheet)
-        expect(fatals[0]?.context?.location?.table).toBe(expectedTable)
+        expect(locationOf(fatals[0])?.sheet).toBe(expectedSheet)
+        expect(locationOf(fatals[0])?.table).toBe(expectedTable)
       }
     })
   })
@@ -421,8 +422,8 @@ describe('validateRowContinuity', () => {
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       expect(fatals).toHaveLength(1)
-      expect(fatals[0]?.context?.location?.sheet).toBe('Unknown')
-      expect(fatals[0]?.context?.location?.table).toBe('Unknown')
+      expect(locationOf(fatals[0])?.sheet).toBe('Unknown')
+      expect(locationOf(fatals[0])?.table).toBe('Unknown')
     })
   })
 })

@@ -23,6 +23,7 @@ import {
   createThreeDigitIdSchema
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { locationOf } from '#common/validation/validation-issues.js'
 
 /** @import {CellLocation, ParsedSummaryLog} from '#domain/summary-logs/extractor/port.js' */
 /** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
@@ -669,15 +670,15 @@ describe('createDataSyntaxValidator', () => {
 
       const textError = expectFind(
         fatals,
-        (e) => e.context?.location?.header === 'TEXT_FIELD'
+        (e) => locationOf(e)?.header === 'TEXT_FIELD'
       )
       const numberError = expectFind(
         fatals,
-        (e) => e.context?.location?.header === 'NUMBER_FIELD'
+        (e) => locationOf(e)?.header === 'NUMBER_FIELD'
       )
 
-      expect(textError.context?.location?.column).toBe('C')
-      expect(numberError.context?.location?.column).toBe('D')
+      expect(locationOf(textError)?.column).toBe('C')
+      expect(locationOf(numberError)?.column).toBe('D')
     })
 
     it('handles multi-letter column offsets correctly', () => {
@@ -691,7 +692,7 @@ describe('createDataSyntaxValidator', () => {
       const fatal = expectOne(
         result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatal.context?.location?.column).toBe('AA') // Z + 1
+      expect(locationOf(fatal)?.column).toBe('AA') // Z + 1
     })
 
     it('includes location in FATAL ROW_ID errors', () => {
@@ -772,7 +773,7 @@ describe('createDataSyntaxValidator', () => {
 
         const fatalTables = result.issues
           .getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-          .map((issue) => issue.context?.location?.table)
+          .map((issue) => locationOf(issue)?.table)
 
         expect(fatalTables).toEqual(expect.arrayContaining(expectedFatalTables))
       }
@@ -803,7 +804,7 @@ describe('createDataSyntaxValidator', () => {
       expect(fatal.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
       expect(fatal.code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
       expect(fatal.message).toContain('UNKNOWN_TABLE')
-      expect(fatal.context?.location?.table).toBe('UNKNOWN_TABLE')
+      expect(locationOf(fatal)?.table).toBe('UNKNOWN_TABLE')
     })
 
     it('reports all unrecognised tables when multiple are present', () => {
@@ -827,10 +828,10 @@ describe('createDataSyntaxValidator', () => {
         VALIDATION_SEVERITY.FATAL
       )
       expect(fatals).toHaveLength(2)
-      expect(fatals.map((e) => e.context?.location?.table)).toContain(
+      expect(fatals.map((e) => locationOf(e)?.table)).toContain(
         'UNKNOWN_TABLE_1'
       )
-      expect(fatals.map((e) => e.context?.location?.table)).toContain(
+      expect(fatals.map((e) => locationOf(e)?.table)).toContain(
         'UNKNOWN_TABLE_2'
       )
     })
@@ -1051,7 +1052,7 @@ describe('createDataSyntaxValidator', () => {
       const fatal = expectOne(
         result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
       )
-      expect(fatal.context?.location?.header).toBe('TEXT_FIELD')
+      expect(locationOf(fatal)?.header).toBe('TEXT_FIELD')
     })
 
     it('returns empty rows when headers are missing', () => {

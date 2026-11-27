@@ -1,4 +1,5 @@
 import Joi from 'joi'
+import { locationOf } from '#common/validation/validation-issues.js'
 
 import {
   VALIDATION_CATEGORY,
@@ -400,7 +401,7 @@ describe('checkCrossYearRules', () => {
         check([
           unmatchedRow({ previousYearRowId: 1888 }),
           unmatchedRow({ rowNumber: 9, rowId: 1002, previousYearRowId: 1888 })
-        ]).map(({ context }) => context?.location?.rowId)
+        ]).map((issue) => locationOf(issue)?.rowId)
       ).toStrictEqual(['1001', '1002'])
     })
 
@@ -666,7 +667,7 @@ describe('checkCrossYearRules', () => {
       expect(
         check([
           filledInRow({ dateOfExport: '2027-01-20', osrName: 'Overseas Ltd' })
-        ]).map(({ context }) => context?.location?.header)
+        ]).map((issue) => locationOf(issue)?.header)
       ).toStrictEqual(['DATE_OF_EXPORT', 'OSR_NAME'])
     })
 

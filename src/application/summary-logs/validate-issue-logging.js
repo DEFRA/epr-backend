@@ -2,12 +2,15 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { LOCATION_KEYS } from '#common/validation/validation-issues.js'
+import {
+  LOCATION_KEYS,
+  locationOf
+} from '#common/validation/validation-issues.js'
 
 export const MAX_VALIDATION_ISSUES = 100
 
 /** @import {IndexedLogProperties, TypedLogger} from '#common/helpers/logging/logger.js' */
-/** @import {ValidationIssue, ValidationIssueContext, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
+/** @import {ValidationIssue, ValidationIssueCounts, ValidationIssuesCollector} from '#common/validation/validation-issues.js' */
 /** @import {StoredFile, SummaryLog} from '#domain/summary-logs/model.js' */
 /** @import {OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js' */
 
@@ -26,11 +29,11 @@ export const MAX_VALIDATION_ISSUES = 100
  */
 
 /**
- * @param {ValidationIssueContext} [context]
+ * @param {ValidationIssue} issue
  * @returns {string} Semicolon-delimited composite, empty parts omitted
  */
-const buildLocationId = (context) => {
-  const location = context?.location
+const buildLocationId = (issue) => {
+  const location = locationOf(issue)
   if (!location) {
     return ''
   }
@@ -45,7 +48,7 @@ const buildLocationId = (context) => {
  * @returns {IndexedLogProperties}
  */
 const buildIssueLogPayload = (issue, summaryLogId) => {
-  const id = buildLocationId(issue.context)
+  const id = buildLocationId(issue)
   return {
     message: `Summary log validation issue: ${issue.code}`,
     event: {
