@@ -752,8 +752,8 @@ describe('loadsByReportingPeriod population at validate time', () => {
           osrId: 100,
           exportTonnage: 25,
           dateReceived: null,
-          exportDate: '2027-01-12T00:00:00.000Z',
-          dateReceivedByOsr: '2027-02-03T00:00:00.000Z'
+          exportDate: '2027-01-05T00:00:00.000Z',
+          dateReceivedByOsr: '2027-01-08T00:00:00.000Z'
         }
       ]),
       withTemplateYear(sharedMeta, toYear(2027))

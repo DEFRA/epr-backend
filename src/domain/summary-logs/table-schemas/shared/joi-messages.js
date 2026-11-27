@@ -13,6 +13,7 @@ export const MESSAGES = Object.freeze({
     'must not be in a later year than the summary log',
   MUST_NOT_BE_IN_OPEN_EARLIER_SUMMARY_LOG_YEAR:
     'must not be in an earlier year whose summary log is still open',
+  MUST_NOT_BE_A_FUTURE_DATE: 'must not be a future date',
   MUST_BE_GREATER_THAN_ZERO: 'must be greater than 0',
   MUST_BE_AT_LEAST_ZERO: 'must be at least 0',
   MUST_BE_AT_MOST_1: 'must be at most 1',
