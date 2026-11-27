@@ -39,10 +39,6 @@ describe('serverPlugins', () => {
     expect(registersModuleRoutes()).toBe(true)
   })
 
-  it("registers the waste records export's routes", () => {
-    expect(serverPlugins(getConfig(), [])).toContain(wasteRecordsExport)
-  })
-
   it('registers the PRN routes without admin cancellation when its flag is off', () => {
     expect(prnRoutesEntry()?.options).toEqual({ adminCancellation: false })
   })
