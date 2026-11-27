@@ -37,16 +37,16 @@ describe('serverPlugins', () => {
 
 describe("serverPlugins and the organisation read model's dev routes", () => {
   /** @param {boolean} devEndpoints */
-  const registersDevRoutes = (devEndpoints) =>
-    serverPlugins(getConfig({ featureFlags: { devEndpoints } }), []).includes(
-      organisationReadModelDevRoutesPlugin
-    )
+  const devRoutesOptions = (devEndpoints) =>
+    serverPlugins(getConfig({ featureFlags: { devEndpoints } }), []).find(
+      (entry) => entry.plugin === organisationReadModelDevRoutesPlugin
+    )?.options
 
-  it('registers them when dev endpoints are on', () => {
-    expect(registersDevRoutes(true)).toBe(true)
+  it('passes them dev endpoints on', () => {
+    expect(devRoutesOptions(true)).toEqual({ devEndpoints: true })
   })
 
-  it('leaves them out when dev endpoints are off', () => {
-    expect(registersDevRoutes(false)).toBe(false)
+  it('passes them dev endpoints off', () => {
+    expect(devRoutesOptions(false)).toEqual({ devEndpoints: false })
   })
 })

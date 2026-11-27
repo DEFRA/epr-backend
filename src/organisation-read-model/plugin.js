@@ -38,18 +38,23 @@ export const externalAccreditationsRepositoryPlugin = portAdapter({
 })
 
 /**
- * The read model's dev routes, which store external accreditations. Only a
- * server with dev endpoints on registers it.
+ * The read model's dev routes, which store external accreditations. Without
+ * `devEndpoints` it adds no route.
  */
 export const organisationReadModelDevRoutesPlugin = {
   name: 'organisation-read-model-dev-routes',
-  dependencies: [
-    'organisationReadRepository',
-    'externalAccreditationsRepository'
-  ],
 
-  /** @param {HapiServer} server */
-  register: (server) => {
-    server.route([devExternalAccreditationPut])
+  /**
+   * @param {HapiServer} server
+   * @param {{ devEndpoints: boolean }} options
+   */
+  register: (server, { devEndpoints }) => {
+    if (devEndpoints) {
+      server.dependency([
+        'organisationReadRepository',
+        'externalAccreditationsRepository'
+      ])
+      server.route([devExternalAccreditationPut])
+    }
   }
 }

@@ -55,9 +55,10 @@ function getSwaggerPlugins() {
  */
 const moduleRoutePlugins = (config) => [
   wasteRecordsExport,
-  ...(config.get('featureFlags.devEndpoints')
-    ? [organisationReadModelDevRoutesPlugin]
-    : [])
+  {
+    plugin: organisationReadModelDevRoutesPlugin,
+    options: { devEndpoints: config.get('featureFlags.devEndpoints') }
+  }
 ]
 
 /**
