@@ -45,7 +45,7 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  * Represents a single validation issue.
  *
  * @typedef {{
- *   kind?: IssueKind,
+ *   kind: IssueKind,
  *   severity: ValidationSeverity,
  *   category: string,
  *   message: string,
@@ -86,31 +86,6 @@ export const LOCATION_KEYS = /** @type {const} */ ([
  *
  * @typedef {{
  *   add: (issue: ValidationIssue) => ValidationIssuesCollector,
- *   addIssue: (
- *     severity: ValidationSeverity,
- *     category: string,
- *     message: string,
- *     code: string,
- *     context?: ValidationIssueContext
- *   ) => ValidationIssuesCollector,
- *   addFatal: (
- *     category: string,
- *     message: string,
- *     code: string,
- *     context?: ValidationIssueContext
- *   ) => ValidationIssuesCollector,
- *   addError: (
- *     category: string,
- *     message: string,
- *     code: string,
- *     context?: ValidationIssueContext
- *   ) => ValidationIssuesCollector,
- *   addWarning: (
- *     category: string,
- *     message: string,
- *     code: string,
- *     context?: ValidationIssueContext
- *   ) => ValidationIssuesCollector,
  *   isFatal: () => boolean,
  *   isValid: () => boolean,
  *   hasIssues: () => boolean,
@@ -167,36 +142,13 @@ export const issueToErrorObject = (issue) => {
  * @returns {Object} Methods for adding issues
  */
 const createIssueAdders = (issues, result) => {
-  const addIssue = (severity, category, message, code, context = {}) => {
-    if (!code) {
-      throw new Error('Validation issue code is required')
-    }
-    const issue = { severity, category, message, code }
-
-    if (context && Object.keys(context).length > 0) {
-      issue.context = context
-    }
-
-    issues.push(issue)
-    return result
-  }
-
   /** @param {ValidationIssue} issue */
   const add = (issue) => {
     issues.push(issue)
     return result
   }
 
-  return {
-    add,
-    addIssue,
-    addFatal: (category, message, code, context = {}) =>
-      addIssue(VALIDATION_SEVERITY.FATAL, category, message, code, context),
-    addError: (category, message, code, context = {}) =>
-      addIssue(VALIDATION_SEVERITY.ERROR, category, message, code, context),
-    addWarning: (category, message, code, context = {}) =>
-      addIssue(VALIDATION_SEVERITY.WARNING, category, message, code, context)
-  }
+  return { add }
 }
 
 /**
@@ -343,7 +295,7 @@ const createIssueTransformers = (issues, add, getIssuesBySeverity, result) => {
  *
  * @example
  * const issues = createValidationIssues()
- * issues.addError('business', 'Invalid data')
+ * issues.add(fileIssue({ category: 'business', message: 'Invalid data', code: 'REGISTRATION_DATA_INVALID' }))
  * if (!issues.isValid()) {
  *   console.log(issues.getSummary())
  * }

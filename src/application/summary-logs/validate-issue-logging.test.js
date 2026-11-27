@@ -1,4 +1,5 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { fileIssue } from '#common/validation/validation-issue-kinds.js'
 import { VALIDATION_CATEGORY, VALIDATION_CODE } from '#common/enums/index.js'
 
 import { logValidationIssues } from './validate-issue-logging.js'
@@ -38,10 +39,12 @@ describe('logValidationIssues', () => {
     it('should cap per-issue logs at MAX_VALIDATION_ISSUES and report total + logged in the summary', () => {
       const issues = createValidationIssues()
       Array.from({ length: 150 }).forEach(() =>
-        issues.addError(
-          VALIDATION_CATEGORY.TECHNICAL,
-          'issue',
-          VALIDATION_CODE.FIELD_REQUIRED
+        issues.add(
+          fileIssue({
+            category: VALIDATION_CATEGORY.TECHNICAL,
+            message: 'issue',
+            code: VALIDATION_CODE.FIELD_REQUIRED
+          })
         )
       )
 
@@ -73,10 +76,12 @@ describe('logValidationIssues', () => {
 
     it('should report total === logged when issues fit under the cap', () => {
       const issues = createValidationIssues()
-      issues.addError(
-        VALIDATION_CATEGORY.TECHNICAL,
-        'lonely issue',
-        VALIDATION_CODE.FIELD_REQUIRED
+      issues.add(
+        fileIssue({
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          message: 'lonely issue',
+          code: VALIDATION_CODE.FIELD_REQUIRED
+        })
       )
 
       logValidationIssues({
@@ -103,10 +108,12 @@ describe('logValidationIssues', () => {
 
   it('names the organisation and registration by number in the summary', () => {
     const issues = createValidationIssues()
-    issues.addError(
-      VALIDATION_CATEGORY.TECHNICAL,
-      'issue',
-      VALIDATION_CODE.FIELD_REQUIRED
+    issues.add(
+      fileIssue({
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: 'issue',
+        code: VALIDATION_CODE.FIELD_REQUIRED
+      })
     )
 
     logValidationIssues({
