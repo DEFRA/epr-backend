@@ -1,3 +1,6 @@
+import { formatLocalDateTime } from './dates/local-datetime.js'
+import { UK_TIME_ZONE } from './dates/uk-time-zone.js'
+
 /** @import { Brand } from './brand.js' */
 
 /**
@@ -97,6 +100,15 @@ export function calendarDate(dateString) {
  * @returns {CalendarDate}
  */
 export const utcCalendarDate = (date) => calendarDate(date.toISOString())
+
+/**
+ * The calendar date an instant falls on in the UK: 00:30 on a British summer
+ * morning is that day, where `utcCalendarDate` gives the day before.
+ * @param {Date} instant
+ * @returns {CalendarDate}
+ */
+export const ukCalendarDate = (instant) =>
+  calendarDate(formatLocalDateTime(instant, UK_TIME_ZONE))
 
 /**
  * The calendar date a value falls on, whichever shape it arrives in — a `Date`

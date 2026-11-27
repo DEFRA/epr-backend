@@ -38,6 +38,7 @@ import { transformAndValidateData } from './transform-and-validate-data.js'
 import { pickLedgerId } from '#waste-balances/repository/ledger-schema.js'
 import { registrationForSummaryLog } from './registration-for-summary-log.js'
 import { recordValidationMetrics } from './validation-metrics.js'
+import { config } from '#root/config.js'
 import { stageSubmission } from './stage-submission.js'
 
 export { MAX_VALIDATION_ISSUES } from './validate-issue-logging.js'
@@ -269,7 +270,8 @@ const performValidationChecks = async (params) => {
 const validationOptionsOf = (summaryLog, meta) => ({
   summaryLogYear: summaryLog.year,
   createdAt: new Date(summaryLog.createdAt),
-  registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE)
+  registeredOnly: REGISTERED_ONLY_PROCESSING_TYPES.has(meta.PROCESSING_TYPE),
+  rejectsFutureDates: config.get('featureFlags.rejectFutureDates')
 })
 
 /**
