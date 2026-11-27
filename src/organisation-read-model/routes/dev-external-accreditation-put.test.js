@@ -18,6 +18,8 @@ import {
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
+/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+
 const {
   registrationNumber,
   year,
@@ -32,8 +34,6 @@ const urlFor = (number) => `/v1/dev/external-accreditations/${number}/${year}`
 
 /** A registration only another organisation holds. */
 const OTHER_ORGANISATIONS_NUMBER = toRegistrationNumber('R26ER5009990001PL')
-
-/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
 
 /**
  * A server whose external accreditations repository holds what it stores in

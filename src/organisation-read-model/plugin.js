@@ -1,7 +1,7 @@
 import { portAdapter } from '#plugins/port-adapter.js'
 import { createMongoExternalAccreditationsRepository } from './external-accreditations/repository/mongodb.js'
 import { createMongoOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
-import { devExternalAccreditationPut } from './routes/external-accreditations/put.js'
+import { devExternalAccreditationPut } from './routes/dev-external-accreditation-put.js'
 
 /** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */

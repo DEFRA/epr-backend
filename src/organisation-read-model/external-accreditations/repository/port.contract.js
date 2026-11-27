@@ -3,6 +3,7 @@ import { describe, expect } from 'vitest'
 import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
+  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { buildExternalAccreditation } from '#organisation-read-model/repository/contract/test-data.js'
@@ -43,7 +44,7 @@ export const testExternalAccreditationsRepositoryContract = (it) => {
         expect(stored).toStrictEqual(accreditation)
       })
 
-      it('replaces the accreditation held for the same registration and year', async ({
+      it('replaces the accreditation the organisation holds for the same registration and year', async ({
         externalAccreditationsRepository,
         held
       }) => {
@@ -57,6 +58,22 @@ export const testExternalAccreditationsRepositoryContract = (it) => {
         await externalAccreditationsRepository.upsert(replacement)
 
         expect(await held()).toStrictEqual([replacement])
+      })
+
+      it('keeps the accreditation another organisation holds for the same registration and year', async ({
+        externalAccreditationsRepository,
+        held
+      }) => {
+        const ours = buildExternalAccreditation()
+        const theirs = buildExternalAccreditation({
+          organisationNumber: toOrganisationNumber('999999')
+        })
+
+        await externalAccreditationsRepository.upsert(ours)
+        await externalAccreditationsRepository.upsert(theirs)
+
+        expect(await held()).toHaveLength(2)
+        expect(await held()).toEqual(expect.arrayContaining([ours, theirs]))
       })
 
       it('keeps the accreditations held for other years', async ({

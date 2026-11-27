@@ -15,7 +15,8 @@ const isSameAccreditation = (accreditation, other) =>
 /**
  * Holds external accreditations in `held`, one for each organisation,
  * registration and year, as the MongoDB adapter does. A test that passes
- * `held` reads from it what was stored.
+ * `held` reads from it what was stored. Unlike the MongoDB adapters, the
+ * in-memory read repository does not serve what this one stores.
  *
  * @param {ExternalAccreditation[]} [held]
  * @returns {ExternalAccreditationsRepositoryFactory}

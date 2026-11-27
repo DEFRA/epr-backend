@@ -48,7 +48,7 @@ describe('isCounted', () => {
     'src/server/seed/seed-scenarios.js',
     'src/routes/v1/dev/organisations/registrations/summary-logs/post.js',
     'src/organisations/routes/dev-put-by-id.js',
-    'src/organisation-read-model/routes/external-accreditations/put.js',
+    'src/organisation-read-model/routes/dev-external-accreditation-put.js',
     'src/non-prod-data-reset/mongodb.js',
     'scripts/database-id-count.mjs'
   ])('leaves out %s', (path) => {

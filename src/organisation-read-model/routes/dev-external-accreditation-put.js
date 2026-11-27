@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 import { yearSchema } from '#common/validation/year-schema.js'
 import { REG_ACCRED_ACCREDITATION_YEAR } from '#organisation-read-model/repository/external-accreditation-sources.js'
 import { registrationParams } from '#routes/organisations/natural-keys.js'
-import { externalAccreditationPayloadSchema } from './put.schema.js'
+import { externalAccreditationPayloadSchema } from './dev-external-accreditation-put.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */

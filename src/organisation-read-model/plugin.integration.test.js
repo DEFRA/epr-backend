@@ -33,6 +33,37 @@ const REG_ACCRED_ACCREDITATION_NUMBER = 'A27ER5000560001AL'
 const { buildOrganisation } = createOrganisationBuilders()
 
 /**
+ * Starts the production server over its own database, with `env` stubbed.
+ *
+ * @param {Record<string, string>} env
+ * @returns {Promise<StartedServer>}
+ */
+const startProductionServer = async (env) => {
+  await setupMongo({ serverOptions: {} })
+  vi.stubEnv('MONGO_URI', globalThis.__MONGO_URI__)
+  vi.stubEnv('MONGO_DATABASE', `epr-backend-test-${randomUUID()}`)
+  for (const [name, value] of Object.entries(env)) {
+    vi.stubEnv(name, value)
+  }
+
+  const { createServer } = await import('#server/server.js')
+  const server = /** @type {StartedServer} */ (
+    /** @type {unknown} */ (await createServer())
+  )
+  await server.initialize()
+  return server
+}
+
+/** @param {StartedServer} server */
+const stopProductionServer = async (server) => {
+  await server.db.dropDatabase()
+  await server.stop()
+  await teardownMongo()
+  vi.unstubAllEnvs()
+  vi.useRealTimers()
+}
+
+/**
  * @param {StartedServer} server
  * @param {StoredOrganisation} stored
  */
@@ -50,27 +81,14 @@ describe('the production server with Reg Accred external accreditations on', () 
   let server
 
   beforeAll(async () => {
-    await setupMongo({ serverOptions: {} })
-    vi.stubEnv('MONGO_URI', globalThis.__MONGO_URI__)
-    vi.stubEnv('MONGO_DATABASE', `epr-backend-test-${randomUUID()}`)
-    vi.stubEnv('FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS', 'true')
-    vi.stubEnv('REG_ACCRED_API_BASE_URL', REG_ACCRED_BASE_URL)
-    vi.stubEnv('REG_ACCRED_API_SHARED_SECRET', 'secret')
-
-    const { createServer } = await import('#server/server.js')
-    server = /** @type {StartedServer} */ (
-      /** @type {unknown} */ (await createServer())
-    )
-    await server.initialize()
+    server = await startProductionServer({
+      FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS: 'true',
+      REG_ACCRED_API_BASE_URL: REG_ACCRED_BASE_URL,
+      REG_ACCRED_API_SHARED_SECRET: 'secret'
+    })
   })
 
-  afterAll(async () => {
-    await server.db.dropDatabase()
-    await server.stop()
-    await teardownMongo()
-    vi.unstubAllEnvs()
-    vi.useRealTimers()
-  })
+  afterAll(() => stopProductionServer(server))
 
   it('reads the 2027 accreditation from Reg Accred', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
@@ -125,26 +143,13 @@ describe('the production server with dev endpoints on', () => {
   let server
 
   beforeAll(async () => {
-    await setupMongo({ serverOptions: {} })
-    vi.stubEnv('MONGO_URI', globalThis.__MONGO_URI__)
-    vi.stubEnv('MONGO_DATABASE', `epr-backend-test-${randomUUID()}`)
-    vi.stubEnv('FEATURE_FLAG_DEV_ENDPOINTS', 'true')
-    vi.stubEnv('FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS', 'false')
-
-    const { createServer } = await import('#server/server.js')
-    server = /** @type {StartedServer} */ (
-      /** @type {unknown} */ (await createServer())
-    )
-    await server.initialize()
+    server = await startProductionServer({
+      FEATURE_FLAG_DEV_ENDPOINTS: 'true',
+      FEATURE_FLAG_REG_ACCRED_EXTERNAL_ACCREDITATIONS: 'false'
+    })
   })
 
-  afterAll(async () => {
-    await server.db.dropDatabase()
-    await server.stop()
-    await teardownMongo()
-    vi.unstubAllEnvs()
-    vi.useRealTimers()
-  })
+  afterAll(() => stopProductionServer(server))
 
   it('serves the 2027 accreditation stored through the dev route', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2027-03-10') })
