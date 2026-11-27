@@ -3,15 +3,22 @@ import Joi from 'joi'
 import {
   columnComparisonsOf,
   isFilledInColumn,
+  LINKED_COLUMN_CHECK,
   PREVIOUS_YEAR_COMPARISON
 } from './linked-row.js'
 import { createDateFieldSchema } from './table-schemas/shared/field-schemas.js'
 
 const { SAME, INHERITED, ADDED, CHANGED } = PREVIOUS_YEAR_COMPARISON
+const { NONE, EARLIER_YEAR_DATE, VALUE_DIFFERS } = LINKED_COLUMN_CHECK
 
 const table = {
   rowIdField: 'ROW_ID',
-  linking: { previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID' }
+  linking: {
+    previousYearRowIdField: 'PREVIOUS_YEAR_ROW_ID',
+    prefilledOnLinkedRow: { WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No' },
+    mayDifferBeforeCorrectionDeadline: ['NET_WEIGHT'],
+    answeredLaterOnLinkedRow: ['WAS_THE_WASTE_REFUSED']
+  }
 }
 
 describe('linked-row', () => {
@@ -33,7 +40,9 @@ describe('linked-row', () => {
   describe('columnComparisonsOf', () => {
     const columnSchemas = new Map([
       ['DATE_OF_EXPORT', createDateFieldSchema()],
-      ['OSR_ID', Joi.number()]
+      ['OSR_ID', Joi.number()],
+      ['GROSS_WEIGHT', Joi.number()],
+      ['RECYCLABLE_PROPORTION_PERCENTAGE', Joi.number()]
     ])
 
     /**
@@ -113,6 +122,81 @@ describe('linked-row', () => {
         entered: '100',
         previousYear: 100,
         comparison: SAME
+      },
+      {
+        description:
+          'a column with no value rule as text, so a number cell matches a text cell',
+        header: 'WEIGHBRIDGE_TICKET',
+        entered: '12345',
+        previousYear: 12345,
+        comparison: SAME
+      },
+      {
+        description: 'a value the template fills in on a linked row as blank',
+        header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+        entered: 'No',
+        previousYear: 'Yes',
+        comparison: INHERITED
+      },
+      {
+        description:
+          'a previous year value that matches what the template fills in as answered',
+        header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+        entered: 'Yes',
+        previousYear: 'No',
+        comparison: CHANGED
+      },
+      {
+        description: 'a tonnage to two decimal places, as it is stored',
+        header: 'GROSS_WEIGHT',
+        entered: 10.004,
+        previousYear: 10,
+        comparison: SAME
+      },
+      {
+        description: 'a tonnage rounded half up',
+        header: 'GROSS_WEIGHT',
+        entered: 10.005,
+        previousYear: 10,
+        comparison: CHANGED
+      },
+      {
+        description:
+          'a number in a column not stored rounded at full precision',
+        header: 'RECYCLABLE_PROPORTION_PERCENTAGE',
+        entered: 0.375,
+        previousYear: 0.37,
+        comparison: CHANGED
+      },
+      {
+        description: 'a "No" answered later in a different case as the same',
+        header: 'WAS_THE_WASTE_REFUSED',
+        entered: 'no',
+        previousYear: 'No',
+        comparison: SAME
+      },
+      {
+        description:
+          'a "Yes" answered later with spaces and lower case as the same',
+        header: 'WAS_THE_WASTE_REFUSED',
+        entered: ' yes ',
+        previousYear: 'Yes',
+        comparison: SAME
+      },
+      {
+        description: 'a "Yes" answered later as "No", in any case, as changed',
+        header: 'WAS_THE_WASTE_REFUSED',
+        entered: 'no',
+        previousYear: 'YES',
+        comparison: CHANGED
+      },
+      {
+        description:
+          'an answer later that is neither Yes nor No as typed, keeping its case',
+        header: 'WAS_THE_WASTE_REFUSED',
+        entered: 'maybe',
+        previousYear: 'Maybe',
+        comparison: CHANGED
       }
     ])(
       'compares $description',
@@ -128,6 +212,7 @@ describe('linked-row', () => {
         columnComparisonOf('OSR_NAME', 'Overseas Ltd', 'Overseas 2026 Ltd')
       ).toStrictEqual({
         comparison: CHANGED,
+        check: VALUE_DIFFERS,
         entered: 'Overseas Ltd',
         previousYear: 'Overseas 2026 Ltd'
       })
@@ -142,9 +227,67 @@ describe('linked-row', () => {
         )
       ).toStrictEqual({
         comparison: SAME,
+        check: NONE,
         entered: '2026-11-01',
         previousYear: '2026-11-01'
       })
+    })
+
+    it.for([
+      {
+        description: 'a column that repeats the previous year row',
+        header: 'OSR_NAME',
+        entered: 'Overseas Ltd',
+        previousYear: 'Overseas Ltd',
+        check: NONE
+      },
+      {
+        description: 'a column the linked row left blank',
+        header: 'OSR_NAME',
+        entered: null,
+        previousYear: 'Overseas Ltd',
+        check: NONE
+      },
+      {
+        description: 'a column only the linked row fills as a date',
+        header: 'DATE_OF_EXPORT',
+        entered: '2026-12-28',
+        previousYear: null,
+        check: EARLIER_YEAR_DATE
+      },
+      {
+        description: 'a column given differently as a different value',
+        header: 'DATE_OF_EXPORT',
+        entered: '2026-12-28',
+        previousYear: '2026-11-01',
+        check: VALUE_DIFFERS
+      },
+      {
+        description: 'a column that may differ, given differently, as a date',
+        header: 'NET_WEIGHT',
+        entered: 0,
+        previousYear: 850,
+        check: EARLIER_YEAR_DATE
+      },
+      {
+        description: 'a previous year "no" answered later as "Yes" as a date',
+        header: 'WAS_THE_WASTE_REFUSED',
+        entered: 'Yes',
+        previousYear: 'no',
+        check: EARLIER_YEAR_DATE
+      },
+      {
+        description:
+          'a previous year "Yes" answered later as "No" as a different value',
+        header: 'WAS_THE_WASTE_REFUSED',
+        entered: 'No',
+        previousYear: 'Yes',
+        check: VALUE_DIFFERS
+      }
+    ])('checks $description', ({ header, entered, previousYear, check }) => {
+      expect(columnComparisonOf(header, entered, previousYear)?.check).toBe(
+        check
+      )
     })
 
     it('leaves out the columns a linked row keeps as entered', () => {
