@@ -820,6 +820,80 @@ describe('2027 rows linked to a 2026 row', () => {
       ])
     })
 
+    describe('a received date on a linked row whose 2026 row is refused', () => {
+      /** @param {Record<string, unknown>} [row] */
+      const uploadReceivedAfterRefusal = async (row = {}) => {
+        const env = await setup()
+        await submitted(
+          env,
+          PREVIOUS_YEAR,
+          'log-2026',
+          accredited2026Log({
+            ...EXPORTED_IN_DECEMBER_2026,
+            wasteRefused: 'Yes'
+          })
+        )
+        return upload(
+          env,
+          YEAR,
+          'log-2027',
+          accredited2027Log([
+            linkedRow({
+              ...RECEIVED_OVERSEAS_IN_2027,
+              wasteRefused: null,
+              wasteStopped: null,
+              ...row
+            })
+          ])
+        )
+      }
+
+      /** @param {string} errorCode */
+      const onTheReceivedDate = (errorCode) => [
+        expect.objectContaining({
+          errorCode,
+          actual: '2027-01-06',
+          previousYearRowId: '1500',
+          location: expect.objectContaining({
+            header: 'DATE_RECEIVED_BY_OSR',
+            rowId: '1001'
+          })
+        })
+      ]
+
+      it('rejects it on that cell while 2026 can still be corrected', async () => {
+        beforeThe2026CorrectionDeadline()
+
+        const validated = await uploadReceivedAfterRefusal()
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(validated.validation.failures).toStrictEqual(
+          onTheReceivedDate('PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED')
+        )
+      })
+
+      it('rejects it on that cell once 2026 has closed', async () => {
+        afterThe2026CorrectionDeadline()
+
+        const validated = await uploadReceivedAfterRefusal()
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(validated.validation.failures).toStrictEqual(
+          onTheReceivedDate('PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED_CLOSED')
+        )
+      })
+
+      it('accepts it once 2026 has closed, when the linked row answers No', async () => {
+        afterThe2026CorrectionDeadline()
+
+        const validated = await uploadReceivedAfterRefusal({
+          wasteRefused: 'No'
+        })
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
+    })
+
     it('rejects a 2026 export date supplied on a linked row while 2026 can still be corrected', async () => {
       beforeThe2026CorrectionDeadline()
       const env = await setup()

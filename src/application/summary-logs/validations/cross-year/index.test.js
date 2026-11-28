@@ -29,7 +29,8 @@ const HEADERS = [
   'DATE_RECEIVED_BY_OSR',
   'DATE_REPATRIATED',
   'NET_WEIGHT',
-  'WAS_THE_WASTE_REFUSED'
+  'WAS_THE_WASTE_REFUSED',
+  'WAS_THE_WASTE_STOPPED'
 ]
 
 const tableSchemas = {
@@ -106,7 +107,8 @@ const rowOf = (cells) => HEADERS.map((header) => cells[header] ?? null)
  *   dateReceivedByOsr?: string,
  *   osrName?: string | null,
  *   netWeight?: number | null,
- *   wasteRefused?: string | null
+ *   wasteRefused?: string | null,
+ *   wasteStopped?: string | null
  * }} row
  * @returns {FilledInRow}
  */
@@ -119,7 +121,8 @@ const filledInRow = ({
   dateReceivedByOsr,
   osrName = null,
   netWeight = null,
-  wasteRefused = null
+  wasteRefused = null,
+  wasteStopped = null
 }) => {
   /** @type {Record<string, unknown>} */
   const previousYear = {
@@ -137,7 +140,8 @@ const filledInRow = ({
     OSR_NAME: osrName,
     DATE_RECEIVED_BY_OSR: dateReceivedByOsr,
     NET_WEIGHT: netWeight,
-    WAS_THE_WASTE_REFUSED: wasteRefused
+    WAS_THE_WASTE_REFUSED: wasteRefused,
+    WAS_THE_WASTE_STOPPED: wasteStopped
   }
   const entered = rowOf(enteredCells)
   const values = rowOf(
@@ -813,6 +817,206 @@ describe('checkCrossYearRules', () => {
             createdAt: new Date(createdAt)
           }
         )
+      ).toStrictEqual([])
+    })
+  })
+
+  describe('a linked row with a received date whose previous year row is stopped or refused', () => {
+    const RECEIVED_DATE_CELL = {
+      row: 8,
+      rowId: '1001',
+      column: 'F',
+      header: 'DATE_RECEIVED_BY_OSR'
+    }
+
+    /** @type {SummaryLogValidationOptions} */
+    const AFTER_2026_CORRECTION_DEADLINE = {
+      ...BEFORE_2026_CORRECTION_DEADLINE,
+      createdAt: new Date('2027-02-28T00:00:00.000Z')
+    }
+
+    /**
+     * @param {{
+     *   previousYear: Record<string, unknown>,
+     *   suppliedFields?: string[],
+     *   wasteRefused?: string | null,
+     *   wasteStopped?: string | null
+     * }} row
+     */
+    const receivedRow = ({
+      previousYear,
+      suppliedFields = [],
+      wasteRefused = null,
+      wasteStopped = null
+    }) =>
+      filledInRow({
+        dateOfExport: '2026-11-01',
+        suppliedFields: [
+          'DATE_OF_EXPORT',
+          'DATE_RECEIVED_BY_OSR',
+          ...suppliedFields
+        ],
+        dateReceivedByOsr: '2027-01-06',
+        wasteRefused,
+        wasteStopped,
+        previousYearCompletion: previousYear
+      })
+
+    /**
+     * @param {string} errorCode
+     * @param {unknown} [actual]
+     */
+    const receivedDateIssue = (errorCode, actual = '2027-01-06') =>
+      previousYearLinkIssue(RECEIVED_DATE_CELL, {
+        errorCode,
+        actual,
+        previousYearRowId: '1500'
+      })
+
+    it('rejects it on the received date while the previous year can still be corrected', () => {
+      expect(
+        check([receivedRow({ previousYear: { WAS_THE_WASTE_REFUSED: 'Yes' } })])
+      ).toStrictEqual([
+        receivedDateIssue(VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED)
+      ])
+    })
+
+    it('rejects it with the closed-year code once the previous year can no longer be corrected', () => {
+      expect(
+        check(
+          [receivedRow({ previousYear: { WAS_THE_WASTE_REFUSED: 'Yes' } })],
+          AFTER_2026_CORRECTION_DEADLINE
+        )
+      ).toStrictEqual([
+        receivedDateIssue(
+          VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED_CLOSED
+        )
+      ])
+    })
+
+    it.for([
+      {
+        description: 'the open-year code on the last correction day',
+        createdAt: '2027-02-27T23:59:59.000Z',
+        errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED
+      },
+      {
+        description: 'the closed-year code the day after',
+        createdAt: '2027-02-28T00:00:00.000Z',
+        errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED_CLOSED
+      }
+    ])('uses $description', ({ createdAt, errorCode }) => {
+      expect(
+        check(
+          [receivedRow({ previousYear: { WAS_THE_WASTE_REFUSED: 'Yes' } })],
+          { ...BEFORE_2026_CORRECTION_DEADLINE, createdAt: new Date(createdAt) }
+        )
+      ).toStrictEqual([receivedDateIssue(errorCode)])
+    })
+
+    it('rejects a previous year row stopped, left blank on the linked row', () => {
+      expect(
+        check([receivedRow({ previousYear: { WAS_THE_WASTE_STOPPED: 'Yes' } })])
+      ).toStrictEqual([
+        receivedDateIssue(VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED)
+      ])
+    })
+
+    it('rejects a previous year answer the linked row repeats, in any case', () => {
+      expect(
+        check([
+          receivedRow({
+            previousYear: { WAS_THE_WASTE_REFUSED: 'YES' },
+            suppliedFields: ['WAS_THE_WASTE_REFUSED'],
+            wasteRefused: ' yes '
+          })
+        ])
+      ).toStrictEqual([
+        receivedDateIssue(VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED)
+      ])
+    })
+
+    it('raises one issue when the previous year row is both refused and stopped', () => {
+      expect(
+        check([
+          receivedRow({
+            previousYear: {
+              WAS_THE_WASTE_REFUSED: 'Yes',
+              WAS_THE_WASTE_STOPPED: 'Yes'
+            }
+          })
+        ])
+      ).toStrictEqual([
+        receivedDateIssue(VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED)
+      ])
+    })
+
+    it('rejects a received date taken from the previous year row', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearCompletion: {
+              WAS_THE_WASTE_REFUSED: 'Yes',
+              DATE_RECEIVED_BY_OSR: '2027-01-06'
+            }
+          })
+        ])
+      ).toStrictEqual([
+        receivedDateIssue(
+          VALIDATION_CODE.PREVIOUS_YEAR_ROW_STOPPED_OR_REFUSED,
+          null
+        )
+      ])
+    })
+
+    it('accepts the linked row once it answers No, after the correction deadline', () => {
+      expect(
+        check(
+          [
+            receivedRow({
+              previousYear: { WAS_THE_WASTE_REFUSED: 'Yes' },
+              suppliedFields: ['WAS_THE_WASTE_REFUSED'],
+              wasteRefused: 'No'
+            })
+          ],
+          AFTER_2026_CORRECTION_DEADLINE
+        )
+      ).toStrictEqual([])
+    })
+
+    it('leaves a linked row that answers No to the different-value rule, before the correction deadline', () => {
+      expect(
+        check([
+          receivedRow({
+            previousYear: { WAS_THE_WASTE_REFUSED: 'Yes' },
+            suppliedFields: ['WAS_THE_WASTE_REFUSED'],
+            wasteRefused: 'No'
+          })
+        ]).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([VALIDATION_CODE.PREVIOUS_YEAR_ROW_VALUE_DIFFERS])
+    })
+
+    it('accepts a refusal only the linked row records', () => {
+      expect(
+        check([
+          receivedRow({
+            previousYear: { WAS_THE_WASTE_REFUSED: 'No' },
+            suppliedFields: ['WAS_THE_WASTE_REFUSED'],
+            wasteRefused: 'Yes'
+          })
+        ])
+      ).toStrictEqual([])
+    })
+
+    it('accepts a linked row with no received date', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearCompletion: { WAS_THE_WASTE_REFUSED: 'Yes' }
+          })
+        ])
       ).toStrictEqual([])
     })
   })
