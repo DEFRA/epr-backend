@@ -296,6 +296,21 @@ describe('mapToExternalPrn', () => {
     expect(result.prnNumber).toBeUndefined()
   })
 
+  it('omits the number of a PRN that holds one but is not issued', () => {
+    const prn = buildAwaitingAcceptancePrn({
+      status: {
+        currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        currentStatusAt: authorisedDate,
+        created: { at: authorisedDate, by: creator },
+        history: []
+      }
+    })
+
+    const result = mapToExternalPrn(prn)
+
+    expect(result).not.toHaveProperty('prnNumber')
+  })
+
   it('omits issuerNotes when notes are absent', () => {
     const prn = buildAwaitingAcceptancePrn({ notes: undefined })
 

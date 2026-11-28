@@ -1,4 +1,7 @@
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  PRN_STATUS,
+  issuedPrnNumber
+} from '#packaging-recycling-notes/domain/model.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
 import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
@@ -68,7 +71,9 @@ export const getProjectedPrnById = async ({
 /**
  * Reads a PRN by its public number and catches its projection up to the
  * stream. The caller decides the next transition from the returned status, so
- * folding here keeps that decision off a stale document.
+ * folding here keeps that decision off a stale document. A PRN that holds the
+ * number but is not issued is not found, because the number is not yet its
+ * public one.
  *
  * @param {Object} params
  * @param {PackagingRecyclingNotesRepository} params.packagingRecyclingNotesRepository
@@ -81,6 +86,9 @@ export const getProjectedPrnByNumber = async ({
   ledgerRepository,
   prnNumber
 }) => {
-  const prn = await packagingRecyclingNotesRepository.findByPrnNumber(prnNumber)
-  return catchUpFetchedPrn(prn, ledgerRepository)
+  const prn = await catchUpFetchedPrn(
+    await packagingRecyclingNotesRepository.findByPrnNumber(prnNumber),
+    ledgerRepository
+  )
+  return prn && issuedPrnNumber(prn) ? prn : null
 }

@@ -1,3 +1,5 @@
+import { issuedPrnNumber } from '#packaging-recycling-notes/domain/model.js'
+
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
  * @typedef {import('#packaging-recycling-notes/domain/model.js').Actor} Actor
@@ -97,8 +99,9 @@ export function mapToExternalPrn(prn) {
     tonnageValue: prn.tonnage
   }
 
-  if (prn.prnNumber) {
-    mapped.prnNumber = prn.prnNumber
+  const prnNumber = issuedPrnNumber(prn)
+  if (prnNumber) {
+    mapped.prnNumber = prnNumber
   }
 
   if (prn.notes) {

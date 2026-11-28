@@ -4,7 +4,9 @@ import { createInMemoryLedgerRepository } from '../repository/ledger-inmemory.js
 import {
   buildLedgerEvent,
   buildLedgerId,
-  buildPrnAcceptedEvent
+  buildPrnAcceptedEvent,
+  buildPrnCreatedEvent,
+  buildPrnIssuedEvent
 } from '../repository/ledger-test-data.js'
 import { readLedger } from './read-ledger.js'
 
@@ -131,6 +133,60 @@ describe('reading a waste balance ledger', () => {
         prn: { id: 'prn-9', prnNumber: null, tonnage: 40 }
       })
     ])
+  })
+
+  it('gives a PRN event no number while the ledger has not issued the note, though the note holds one', async () => {
+    await ledgerRepository.appendEvents([
+      buildPrnCreatedEvent({ payload: { prnId: 'prn-9', amount: 40 } })
+    ])
+    noteReader = noteReaderHolding([{ id: 'prn-9', prnNumber: 'EX123456789' }])
+
+    const result = await readLedger(
+      ledgerRepository,
+      noteReader,
+      buildLedgerId()
+    )
+
+    expect(result.events).toEqual([
+      expect.objectContaining({
+        prn: { id: 'prn-9', prnNumber: null, tonnage: 40 }
+      })
+    ])
+  })
+
+  it('gives every event of a note its number once the ledger has issued it', async () => {
+    await ledgerRepository.appendEvents([
+      buildPrnCreatedEvent({
+        number: 1,
+        payload: { prnId: 'prn-9', amount: 40 }
+      }),
+      buildPrnIssuedEvent({
+        number: 2,
+        payload: { prnId: 'prn-9', amount: 40 }
+      })
+    ])
+    noteReader = noteReaderHolding([{ id: 'prn-9', prnNumber: 'EX123456789' }])
+
+    const result = await readLedger(
+      ledgerRepository,
+      noteReader,
+      buildLedgerId()
+    )
+
+    expect(result.events.map((event) => event.prn?.prnNumber)).toEqual([
+      'EX123456789',
+      'EX123456789'
+    ])
+  })
+
+  it('reads no note for a ledger that has issued none', async () => {
+    await ledgerRepository.appendEvents([
+      buildPrnCreatedEvent({ payload: { prnId: 'prn-9', amount: 40 } })
+    ])
+
+    await readLedger(ledgerRepository, noteReader, buildLedgerId())
+
+    expect(noteReader.findByIds).not.toHaveBeenCalled()
   })
 
   it('reads no note for a ledger whose events name none', async () => {

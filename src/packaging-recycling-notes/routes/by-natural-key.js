@@ -11,7 +11,11 @@ import {
 } from '#packaging-recycling-notes/application/get-projected-prn.js'
 import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/closed-year.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import {
+  ISSUED_PRN_STATUSES,
+  PRN_STATUS,
+  issuedPrnNumber
+} from '#packaging-recycling-notes/domain/model.js'
 import { allowedObligationYears } from '#packaging-recycling-notes/domain/obligation-year.js'
 import {
   REGULATOR,
@@ -138,13 +142,7 @@ const isServedUnder = (
   prn.accreditation.accreditationNumber === accreditationNumber &&
   prn.status.currentStatus !== PRN_STATUS.DELETED
 
-const issuedStatuses = [
-  PRN_STATUS.AWAITING_ACCEPTANCE,
-  PRN_STATUS.ACCEPTED,
-  PRN_STATUS.AWAITING_CANCELLATION,
-  PRN_STATUS.CANCELLED
-]
-const onceIssued = Joi.valid(...issuedStatuses)
+const onceIssued = Joi.valid(...ISSUED_PRN_STATUSES)
 
 const isoDateTime = isoDateTimeString().required()
 
@@ -289,9 +287,10 @@ const toPrnResource = (
   now
 ) => {
   const { id, name, tradingName, registrationType } = prn.issuedToOrganisation
+  const prnNumber = issuedPrnNumber(prn)
   return {
     id: prn.id,
-    ...(prn.prnNumber && { prnNumber: prn.prnNumber }),
+    ...(prnNumber && { prnNumber }),
     status: {
       current: prn.status.currentStatus,
       timeline: prn.status.history.map((change) => ({
@@ -388,7 +387,7 @@ const prnsList = {
         (prn) =>
           prn.status.currentStatus !== PRN_STATUS.DELETED &&
           (!statuses || statuses.includes(prn.status.currentStatus)) &&
-          (!prnNumber || prn.prnNumber === prnNumber)
+          (!prnNumber || issuedPrnNumber(prn) === prnNumber)
       )
       .sort(newestFirst)
       .map((prn) => toPrnResource(prn, request.params, now))
