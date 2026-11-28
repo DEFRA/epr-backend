@@ -17,7 +17,7 @@ import {
   AccreditationStatusError
 } from '#packaging-recycling-notes/domain/model.js'
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { readRepositoryHolding } from './issuing-accreditation-test-helpers.js'
 import { toSummaryLogFileId } from '#domain/summary-logs/ids.js'

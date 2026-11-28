@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 
-import { config } from '#root/config.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 import { isWithinDecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
@@ -8,6 +7,7 @@ import { decemberWasteControlModeFor } from '#packaging-recycling-notes/domain/d
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { PrnKeys, PrnRecords } from './at-prn-keys.js' */
+/** @import { DecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js' */
 
 /**
  * Which December Waste declaration control an accreditation should be shown,
@@ -16,8 +16,12 @@ import { decemberWasteControlModeFor } from '#packaging-recycling-notes/domain/d
  * (see december-waste-control-mode.js) - while `windowOpen` is time-varying.
  * The frontend composes the two; this endpoint states them separately so it never has to
  * restate the rule.
+ *
+ * @param {{ decemberWaste: DecemberWasteWindow }} options
  */
-export const packagingRecyclingNotesDecemberEligibility = {
+export const packagingRecyclingNotesDecemberEligibility = ({
+  decemberWaste
+}) => ({
   method: 'GET',
   options: {
     auth: getAuthConfig([SCOPES.organisationRead]),
@@ -34,8 +38,8 @@ export const packagingRecyclingNotesDecemberEligibility = {
         windowOpen: isWithinDecemberWasteWindow(
           request.params.year,
           new Date(),
-          config.get('decemberWaste')
+          decemberWaste
         )
       })
       .code(StatusCodes.OK)
-}
+})

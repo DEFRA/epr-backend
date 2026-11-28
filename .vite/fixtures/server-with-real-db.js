@@ -5,7 +5,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { createMongoPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/test-support.js'
 import { createOrganisationReadRepository } from '#organisation-read-model/test-support.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
 import { createRegistrationAccreditationAdminRepository } from '#registration-accreditation-admin/test-support.js'
@@ -53,7 +53,7 @@ export const it = /** @type {TestAPI<{ server: TestServerWithRealDb }>} */ (
             await createOrganisationsRepository(mongoDb)
           )()
           const packagingRecyclingNotesRepository =
-            await createPackagingRecyclingNotesRepository(mongoDb, [])
+            await createMongoPackagingRecyclingNotesRepository(mongoDb, [])
           const organisationReadRepository = createOrganisationReadRepository(
             mongoDb
           )({

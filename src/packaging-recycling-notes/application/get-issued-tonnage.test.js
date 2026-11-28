@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PRN_STATUS } from '../domain/model.js'
 import { getIssuedTonnage } from './get-issued-tonnage.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '../repository/inmemory.js'
 import {
   buildAccreditationKeys,
   buildPrn,

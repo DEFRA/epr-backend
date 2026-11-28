@@ -1,7 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -40,6 +39,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  * @import { RegistrationNumber } from '#domain/organisations/numbers.js'
  * @import { Organisation as ReadModelOrganisation } from '#organisation-read-model/index.js'
  * @import { PrnKeys, PrnRecords } from './at-prn-keys.js'
+ * @import { DecemberWasteWindow } from '#packaging-recycling-notes/domain/december-waste-window.js'
  */
 
 /**
@@ -249,13 +249,15 @@ const assertRelevantYearOpen = (accreditation, now) => {
  * @param {WasteBalanceLedgerId} params.ledgerId
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
  * @param {Date} params.now
+ * @param {DecemberWasteWindow} params.decemberWaste
  */
 const assertCreatable = async ({
   accreditation,
   ledgerRepository,
   ledgerId,
   payload,
-  now
+  now,
+  decemberWaste
 }) => {
   if (accreditation.status === ACCREDITATION_STATUS.CANCELLED) {
     throw Boom.forbidden('Cannot create a PRN on a cancelled accreditation')
@@ -267,7 +269,7 @@ const assertCreatable = async ({
     accreditation,
     isDecemberWaste: payload.isDecemberWaste,
     now,
-    config: config.get('decemberWaste')
+    decemberWaste
   })
 
   await assertSufficientAvailableBalance({
@@ -303,12 +305,14 @@ const snapshotOrganisation = ({ organisationNumber, name, tradingName }) => ({
 })
 
 /**
- * Creates a draft PRN and responds with the body that `respond` builds from it.
+ * Creates a draft PRN and responds with the body that `respond` builds from
+ * it. A draft may be marked December Waste only inside `decemberWaste`.
  *
+ * @param {DecemberWasteWindow} decemberWaste
  * @param {(prn: PackagingRecyclingNote) => object} respond
  */
 export const createPrn =
-  (respond) =>
+  (decemberWaste, respond) =>
   /**
    * @param {HapiRequest<PackagingRecyclingNotesCreatePayload> & {
    *   packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository,
@@ -349,7 +353,8 @@ export const createPrn =
           year: accreditation.accreditationYear
         },
         payload,
-        now
+        now,
+        decemberWaste
       })
 
       const prn = await packagingRecyclingNotesRepository.create(

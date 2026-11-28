@@ -36,7 +36,7 @@ import {
   buildPrnIssuedEvent,
   buildPrnRejectedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.js'
 import { SCOPES } from '#common/helpers/auth/constants.js'
 
 const mockCdpAuditing = vi.fn()

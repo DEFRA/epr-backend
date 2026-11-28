@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { getPrnTonnage, prnTonnagePath } from './get.js'
+import { getPrnTonnage, prnTonnagePath } from './prn-tonnage.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { aggregatePrnTonnage } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { aggregatePrnTonnage } from '#packaging-recycling-notes/application/aggregate-prn-tonnage.js'
 import { createMockPackagingRecyclingNotesRepository } from '#test/mock-repositories.js'
 import { createMockLogger } from '#test/mock-logger.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
-/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js' */
+/** @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/index.js' */
 
 vi.mock(
-  '#application/prn-tonnage/aggregate-prn-tonnage.js',
+  '#packaging-recycling-notes/application/aggregate-prn-tonnage.js',
   async (importActual) => ({
     ...(await importActual()),
     aggregatePrnTonnage: vi.fn()

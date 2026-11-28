@@ -9,7 +9,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
+import { PRN_STATUS } from '#packaging-recycling-notes/index.js'
 import {
   createPrn as decideCreatePrn,
   issuePrn as decideIssuePrn,

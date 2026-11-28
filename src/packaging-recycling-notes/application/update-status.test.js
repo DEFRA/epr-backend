@@ -13,7 +13,7 @@ import {
   LEDGER_EVENT_KIND,
   POOL
 } from '#waste-balances/repository/ledger-schema.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.js'
 import {
   PRN_YEAR,
   TEST_ORGANISATION_NUMBER,

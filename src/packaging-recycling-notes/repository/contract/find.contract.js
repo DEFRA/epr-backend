@@ -108,9 +108,11 @@ export const testFindBehaviour = (it) => {
           })
         )
 
-        const found = await repository.findByPrnNumber(prnNumber1)
+        const first = await repository.findByPrnNumber(prnNumber1)
+        const second = await repository.findByPrnNumber(prnNumber2)
 
-        expect(found.tonnage).toBe(100)
+        expect(first.tonnage).toBe(100)
+        expect(second.tonnage).toBe(200)
       })
 
       it('does not leak _id in returned PRN', async () => {

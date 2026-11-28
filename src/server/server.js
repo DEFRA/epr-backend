@@ -5,6 +5,7 @@ import { s3PublicRegisterRepositoryPlugin } from '#public-register/index.js'
 import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
 import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-command-executor.plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
+import { TEST_ORGANISATION_NUMBERS } from '#common/helpers/parse-test-organisations.js'
 import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { mongoExternalAccreditationsRepositoryPlugin } from '#external-accreditations/repository/mongodb.plugin.js'
@@ -13,8 +14,11 @@ import {
   orsImportsRepositoryPlugin,
   overseasSitesRepositoryPlugin
 } from '#overseas-sites/index.js'
-import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
-import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
+import {
+  packagingRecyclingNotesRepositoryPlugin,
+  prnEventsPlugin,
+  reconcileStalePrnProjectionsPlugin
+} from '#packaging-recycling-notes/plugin.js'
 import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
@@ -29,7 +33,6 @@ import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
-import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
 /** @import { Lifecycle } from '@hapi/hapi' */
@@ -109,7 +112,12 @@ function getProductionPlugins(config) {
       options: { regAccredApi: regAccredApiOf(config) }
     },
     orsImportsRepositoryPlugin,
-    mongoSummaryLogRowStatesRepositoryPlugin
+    mongoSummaryLogRowStatesRepositoryPlugin,
+    {
+      plugin: packagingRecyclingNotesRepositoryPlugin,
+      options: { excludeOrganisationNumbers: TEST_ORGANISATION_NUMBERS }
+    },
+    reconcileStalePrnProjectionsPlugin
   ]
 
   plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
@@ -122,7 +130,7 @@ function getProductionPlugins(config) {
     )
   }
 
-  plugins.push(packagingRecyclingNotesRepositoryPlugin, {
+  plugins.push({
     plugin: commandQueueConsumerPlugin,
     options: { config }
   })
@@ -153,7 +161,6 @@ async function createServer(options = {}) {
       /** @type {unknown} */ (server)
     )
     void runFormsDataMigration(startedServer)
-    void runReconcileStalePrnProjections(startedServer)
   })
 
   return server

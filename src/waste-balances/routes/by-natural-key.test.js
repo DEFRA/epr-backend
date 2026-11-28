@@ -39,9 +39,11 @@ import {
   buildLedgerEvent,
   buildPrnCreatedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
-import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
-import { createMockIssuedPrn } from '#packaging-recycling-notes/routes/test-helpers.js'
+import {
+  buildAccreditationSnapshot,
+  createInMemoryPackagingRecyclingNotesRepository,
+  createMockIssuedPrn
+} from '#packaging-recycling-notes/test-support.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 

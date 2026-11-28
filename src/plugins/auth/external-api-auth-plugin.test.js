@@ -2,7 +2,7 @@ import { invalidArg } from '#test/type-helpers.js'
 import {
   generateExternalApiToken,
   generateExternalApiTokenWithoutClientId
-} from '#packaging-recycling-notes/routes/test-helpers.js'
+} from '#packaging-recycling-notes/test-support.js'
 import { getConfig } from '#root/config.js'
 import {
   cognitoJwksUrl,

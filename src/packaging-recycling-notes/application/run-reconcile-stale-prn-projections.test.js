@@ -1,35 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-import { logger } from '#common/helpers/logging/logger.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
-import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
-
+import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 import { runReconcileStalePrnProjections } from './run-reconcile-stale-prn-projections.js'
 
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
-}))
-vi.mock('#packaging-recycling-notes/repository/mongodb.js', () => ({
-  createPackagingRecyclingNotesRepository: vi.fn(),
-  COLLECTION_NAME: 'packaging-recycling-notes'
-}))
 vi.mock('#packaging-recycling-notes/repository/drift-query.mongodb.js', () => ({
   createDriftQuery: vi.fn()
 }))
-vi.mock('#waste-balances/repository/ledger-mongodb.js', () => ({
-  createMongoLedgerRepository: vi.fn()
+vi.mock('./reconcile-stale-prn-projections.js', () => ({
+  reconcileStalePrnProjections: vi.fn()
 }))
-vi.mock('#waste-balances/application/waste-balance-service.js', () => ({
-  createWasteBalanceService: vi.fn()
-}))
-vi.mock(
-  '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js',
-  () => ({
-    reconcileStalePrnProjections: vi.fn()
-  })
-)
 
 const cleanResult = {
   total: 2,
@@ -54,32 +33,32 @@ describe('runReconcileStalePrnProjections', () => {
 
     mockLock = { free: vi.fn().mockResolvedValue(undefined) }
     mockServer = {
-      db: { collection: vi.fn().mockReturnValue({}) },
+      app: {
+        packagingRecyclingNotesRepository: {},
+        wasteBalanceService: {}
+      },
+      db: {},
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
       locker: { lock: vi.fn().mockResolvedValue(mockLock) }
     }
 
-    vi.mocked(createPackagingRecyclingNotesRepository).mockResolvedValue(
-      () => /** @type {*} */ ({ persistProjection: vi.fn() })
-    )
-    vi.mocked(createMongoLedgerRepository).mockResolvedValue(
-      () => /** @type {*} */ ({})
-    )
-    vi.mocked(createWasteBalanceService).mockReturnValue(/** @type {*} */ ({}))
     vi.mocked(reconcileStalePrnProjections).mockResolvedValue(cleanResult)
   })
 
   it('sweeps under the lock and reports the summary', async () => {
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(mockServer.db.collection).toHaveBeenCalledWith(
-      'packaging-recycling-notes'
+    expect(reconcileStalePrnProjections).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prnRepository: mockServer.app.packagingRecyclingNotesRepository,
+        service: mockServer.app.wasteBalanceService
+      })
     )
-    expect(reconcileStalePrnProjections).toHaveBeenCalled()
     expect(mockServer.locker.lock).toHaveBeenCalledWith(
       'reconcile-stale-prn-projections'
     )
     expect(mockLock.free).toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message:
         'Reconcile stale PRN projections: total=2 drifting=0 repaired=0 folded=0 stamped=0 stillDrifting=0 failed=0'
     })
@@ -110,14 +89,14 @@ describe('runReconcileStalePrnProjections', () => {
 
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message:
         'Stale PRN projection: prnId=prn-1 prnNumber=TT2600001 currentStatus=awaiting_acceptance lastAppliedEventNumber=2 unapplied=1 minUnappliedNumber=3 wouldBecomeStatus=awaiting_cancellation'
     })
-    expect(logger.error).toHaveBeenCalledWith({
+    expect(mockServer.logger.error).toHaveBeenCalledWith({
       message: 'Reconcile failed for PRN prn-2: Error: connection reset'
     })
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message:
         'Reconcile stale PRN projections: total=2 drifting=1 repaired=1 folded=1 stamped=0 stillDrifting=0 failed=1'
     })
@@ -129,7 +108,7 @@ describe('runReconcileStalePrnProjections', () => {
     await runReconcileStalePrnProjections(mockServer)
 
     expect(reconcileStalePrnProjections).not.toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith({
+    expect(mockServer.logger.info).toHaveBeenCalledWith({
       message: 'Unable to obtain lock, skipping reconcile stale PRN projections'
     })
   })
@@ -140,7 +119,7 @@ describe('runReconcileStalePrnProjections', () => {
 
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(logger.error).toHaveBeenCalledWith({
+    expect(mockServer.logger.error).toHaveBeenCalledWith({
       err: error,
       message: 'Failed to run reconcile stale PRN projections'
     })
@@ -153,7 +132,7 @@ describe('runReconcileStalePrnProjections', () => {
 
     await runReconcileStalePrnProjections(mockServer)
 
-    expect(logger.error).toHaveBeenCalledWith({
+    expect(mockServer.logger.error).toHaveBeenCalledWith({
       err: error,
       message: 'Failed to run reconcile stale PRN projections'
     })

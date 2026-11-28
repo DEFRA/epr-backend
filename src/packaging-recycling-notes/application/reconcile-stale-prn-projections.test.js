@@ -5,7 +5,7 @@ import Boom from '@hapi/boom'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
 import {
-  createPackagingRecyclingNotesRepository,
+  createMongoPackagingRecyclingNotesRepository,
   COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
 } from '#packaging-recycling-notes/repository/mongodb.js'
 import { PRN_VERSION_CONFLICT } from '#packaging-recycling-notes/repository/port.js'
@@ -66,12 +66,15 @@ const it = mongoIt.extend({
 
   prnCollection: async (/** @type {*} */ { database }, use) => {
     // Constructing the repository ensures the collection and its indexes.
-    await createPackagingRecyclingNotesRepository(database, [])
+    await createMongoPackagingRecyclingNotesRepository(database, [])
     await use(database.collection(PACKAGING_RECYCLING_NOTES_COLLECTION_NAME))
   },
 
   prnRepository: async (/** @type {*} */ { database }, use) => {
-    const factory = await createPackagingRecyclingNotesRepository(database, [])
+    const factory = await createMongoPackagingRecyclingNotesRepository(
+      database,
+      []
+    )
     await use(factory(stubLogger()))
   },
 
@@ -164,11 +167,9 @@ describe('reconcileStalePrnProjections', () => {
     // stubbed here because a delete landing in that window cannot be produced
     // reliably against real Mongo.
     const findDrifting = async () => ({ total: 1, driftingIds: [missingId] })
-    const prnCollection = /** @type {*} */ ({ findOne: async () => null })
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository,
       service
     })
@@ -184,7 +185,6 @@ describe('reconcileStalePrnProjections', () => {
   })
 
   it('skips a PRN flagged as drifting but level by the time it is read', async (/** @type {*} */ {
-    prnCollection,
     ledgerCollection,
     prnRepository,
     service
@@ -215,7 +215,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository,
       service
     })
@@ -263,7 +262,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository,
       service
     })
@@ -302,7 +300,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository,
       service
     })
@@ -330,7 +327,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository,
       service
     })
@@ -374,7 +370,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository,
       service
     })
@@ -448,7 +443,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository: guardedRepository,
       service
     })
@@ -471,7 +465,6 @@ describe('reconcileStalePrnProjections', () => {
   })
 
   it('surfaces an unexpected repair error as a failure, not still-drifting', async (/** @type {*} */ {
-    prnCollection,
     ledgerCollection,
     prnRepository,
     service,
@@ -489,7 +482,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository: erroringRepository,
       service
     })
@@ -528,7 +520,6 @@ describe('reconcileStalePrnProjections', () => {
 
     const result = await reconcileStalePrnProjections({
       findDrifting,
-      prnCollection,
       prnRepository,
       service
     })

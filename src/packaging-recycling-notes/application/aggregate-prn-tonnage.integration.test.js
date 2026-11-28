@@ -27,7 +27,7 @@ import {
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { config } from '#root/config.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import { createMongoPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
 import { createMockLogger } from '#test/mock-logger.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
@@ -205,9 +205,9 @@ describe('aggregatePrnTonnage - Integration', () => {
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         logger: { warn: () => {} }
       })
-      prnRepository = (await createPackagingRecyclingNotesRepository(db, []))(
-        createMockLogger()
-      )
+      prnRepository = (
+        await createMongoPackagingRecyclingNotesRepository(db, [])
+      )(createMockLogger())
       await db.collection(PRNS_COLLECTION).deleteMany({})
       await db.collection(ORGANISATIONS_COLLECTION).deleteMany({})
       await db

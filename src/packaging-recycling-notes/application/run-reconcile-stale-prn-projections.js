@@ -1,15 +1,8 @@
-import { logger } from '#common/helpers/logging/logger.js'
-import { reconcileStalePrnProjections } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js'
 import { createDriftQuery } from '#packaging-recycling-notes/repository/drift-query.mongodb.js'
-import {
-  createPackagingRecyclingNotesRepository,
-  COLLECTION_NAME as PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
-} from '#packaging-recycling-notes/repository/mongodb.js'
-import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
-import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
+import { reconcileStalePrnProjections } from './reconcile-stale-prn-projections.js'
 
 /** @import { StartedServer } from '#common/hapi-types.js' */
-/** @import { DriftReport } from '#packaging-recycling-notes/application/reconcile-stale-prn-projections.js' */
+/** @import { DriftReport } from './reconcile-stale-prn-projections.js' */
 
 const LOCK_NAME = 'reconcile-stale-prn-projections'
 
@@ -27,33 +20,22 @@ const formatReport = (report) =>
   ].join(' ')
 
 /**
- * `findDrifting` detects the ids behind their ledger in one indexed query; each
- * is then re-read point-wise off the raw collection and written back
+ * `findDrifting` detects the ids behind their ledger in one indexed query; the
+ * sweep then re-reads each through the PRN repository and writes it back
  * through the repository's version CAS. Catch-up events come from the
- * waste-balance service over the shared ledger.
+ * server's waste balance service.
  *
  * @param {StartedServer} server
  */
-const buildDependencies = async (server) => {
-  const prnFactory = await createPackagingRecyclingNotesRepository(
-    server.db,
-    []
-  )
-  const ledgerFactory = await createMongoLedgerRepository(server.db)
-
-  return {
-    findDrifting: createDriftQuery(server.db),
-    prnCollection: server.db.collection(
-      PACKAGING_RECYCLING_NOTES_COLLECTION_NAME
-    ),
-    prnRepository: prnFactory(logger),
-    service: createWasteBalanceService(ledgerFactory())
-  }
-}
+const buildDependencies = (server) => ({
+  findDrifting: createDriftQuery(server.db),
+  prnRepository: server.app.packagingRecyclingNotesRepository,
+  service: server.app.wasteBalanceService
+})
 
 /** @param {StartedServer} server */
 const runReconcile = async (server) => {
-  const deps = await buildDependencies(server)
+  const deps = buildDependencies(server)
 
   const {
     total,
@@ -68,16 +50,16 @@ const runReconcile = async (server) => {
   } = await reconcileStalePrnProjections(deps)
 
   for (const report of reports) {
-    logger.info({ message: formatReport(report) })
+    server.logger.info({ message: formatReport(report) })
   }
 
   for (const failure of failures) {
-    logger.error({
+    server.logger.error({
       message: `Reconcile failed for PRN ${failure.prnId}: ${failure.error}`
     })
   }
 
-  logger.info({
+  server.logger.info({
     message: `Reconcile stale PRN projections: total=${total} drifting=${drifting} repaired=${repaired} folded=${folded} stamped=${stamped} stillDrifting=${stillDrifting} failed=${failed}`
   })
 }
@@ -97,7 +79,7 @@ export const runReconcileStalePrnProjections = async (server) => {
   try {
     const lock = await server.locker.lock(LOCK_NAME)
     if (!lock) {
-      logger.info({
+      server.logger.info({
         message:
           'Unable to obtain lock, skipping reconcile stale PRN projections'
       })
@@ -109,7 +91,7 @@ export const runReconcileStalePrnProjections = async (server) => {
       await lock.free()
     }
   } catch (error) {
-    logger.error({
+    server.logger.error({
       err: error,
       message: 'Failed to run reconcile stale PRN projections'
     })

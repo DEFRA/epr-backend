@@ -4,7 +4,7 @@ import {
   PRN_STATUS,
   PRN_ACTOR
 } from '#packaging-recycling-notes/domain/model.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import {
   toAccreditationNumber,

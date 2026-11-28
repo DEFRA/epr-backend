@@ -12,8 +12,10 @@ import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-mode
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
 import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
-import { buildDraftPrn } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { createPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/mongodb.js'
+import {
+  buildDraftPrn,
+  createMongoPackagingRecyclingNotesRepository
+} from '#packaging-recycling-notes/test-support.js'
 import {
   buildCreateReportParams,
   uniqueRegistrationNumber
@@ -116,7 +118,7 @@ const it = /** @type {import('vitest').TestAPI<ResetTestFixtures>} */ (
     repositories: async ({ database }, use) => {
       const organisationsFactory = await createOrganisationsRepository(database)
       const organisations = organisationsFactory()
-      const prnsFactory = await createPackagingRecyclingNotesRepository(
+      const prnsFactory = await createMongoPackagingRecyclingNotesRepository(
         database,
         []
       )

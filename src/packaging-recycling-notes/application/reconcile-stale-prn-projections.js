@@ -1,6 +1,5 @@
 import { applyCatchupEventsToPrn } from '#packaging-recycling-notes/domain/apply-catchup-events-to-prn.js'
 import { prnLedgerId } from '#packaging-recycling-notes/domain/ledger-id.js'
-import { validatePrnRead } from '#packaging-recycling-notes/repository/validation.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository
@@ -22,20 +21,9 @@ import { validatePrnRead } from '#packaging-recycling-notes/repository/validatio
 /**
  * @typedef {Object} Deps
  * @property {() => Promise<{ total: number, driftingIds: import('mongodb').ObjectId[] }>} findDrifting
- * @property {import('mongodb').Collection} prnCollection
  * @property {PackagingRecyclingNotesRepository} prnRepository
  * @property {WasteBalanceService} service
  */
-
-/**
- * A stored document carries `_id`; readers name it by `id`. Mirror the
- * repository's read mapping so the fold and the CAS persist see the same shape.
- *
- * @param {*} doc
- * @returns {PackagingRecyclingNote}
- */
-const toPrnRead = (doc) =>
-  validatePrnRead({ ...doc, id: doc._id.toHexString() })
 
 /**
  * @param {PackagingRecyclingNote} prn
@@ -136,17 +124,16 @@ const stampWatermark = (prnRepository, prn, projection) =>
  * watermark, and persists the correction. A PRN deleted since the id snapshot
  * reads as `vanished`; one with nothing unapplied as `current`.
  *
- * @param {import('mongodb').Document['_id']} id
+ * @param {import('mongodb').ObjectId} id
  * @param {Deps} deps
  * @returns {Promise<{ outcome: string, report?: DriftReport, repairKind?: 'fold' | 'watermark' }>}
  */
-const reconcileOne = async (id, { prnCollection, prnRepository, service }) => {
-  const doc = await prnCollection.findOne({ _id: id })
-  if (!doc) {
+const reconcileOne = async (id, { prnRepository, service }) => {
+  const prn = await prnRepository.findById(id.toHexString())
+  if (!prn) {
     return { outcome: 'vanished' }
   }
 
-  const prn = toPrnRead(doc)
   const catchupEvents = await unappliedEventsFor(prn, service)
   if (catchupEvents.length === 0) {
     return { outcome: 'current' }

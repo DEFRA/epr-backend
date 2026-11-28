@@ -15,7 +15,7 @@ import { accreditationForYear } from '#organisation-read-model/index.js'
  * @import { ReportsRepository } from '#reports/repository/port.js'
  * @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js'
  * @import { SummaryLogRowStatesRepository } from '#waste-records/repository/port.js'
- * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
+ * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/index.js'
  * @import { RegistrationParams } from '#routes/organisations/natural-keys.js'
  * @import { ReportRequest } from './shared.js'
  */

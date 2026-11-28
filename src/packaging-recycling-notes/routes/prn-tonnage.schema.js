@@ -2,7 +2,7 @@ import Joi from 'joi'
 import { isoDateTimeString } from '#common/validation/iso-date-time-schema.js'
 import { tonnageBandSchema } from '#common/validation/tonnage-band-schema.js'
 import { MATERIAL } from '#domain/organisations/model.js'
-import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { REGISTRATION_TYPE } from '#packaging-recycling-notes/application/aggregate-prn-tonnage.js'
 
 const prnTonnageRowSchema = Joi.object({
   organisationName: Joi.string().required(),

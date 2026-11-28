@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import Boom from '@hapi/boom'
 import { SCOPES } from '#common/helpers/auth/constants.js'
-import { aggregatePrnTonnage } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { aggregatePrnTonnage } from '#packaging-recycling-notes/application/aggregate-prn-tonnage.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -10,7 +10,7 @@ import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL
 } from '#domain/organisations/model.js'
-import { prnTonnageResponseSchema } from './response.schema.js'
+import { prnTonnageResponseSchema } from './prn-tonnage.schema.js'
 
 /** @import { HapiRequest, HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { Material } from '#domain/organisations/model.js' */

@@ -8,7 +8,7 @@ import {
   buildCancelledPrn,
   generateTestPrnNumber
 } from './contract/test-data.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from './inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from './inmemory.js'
 import { testPackagingRecyclingNotesRepositoryContract } from './port.contract.js'
 
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */

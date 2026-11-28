@@ -20,7 +20,7 @@ import {
   buildAccreditationSnapshot,
   PRN_YEAR
 } from '#packaging-recycling-notes/repository/contract/test-data.js'
-import { REGISTRATION_TYPE } from '#application/prn-tonnage/aggregate-prn-tonnage.js'
+import { REGISTRATION_TYPE } from '#packaging-recycling-notes/application/aggregate-prn-tonnage.js'
 import { createMongoLedgerRepository } from '#waste-balances/repository/ledger-mongodb.js'
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import {
@@ -28,7 +28,7 @@ import {
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
-import { prnTonnagePath } from './get.js'
+import { prnTonnagePath } from './prn-tonnage.js'
 
 /** @import { TestServerWithRealDb } from '#vite/fixtures/server-with-real-db.js' */
 

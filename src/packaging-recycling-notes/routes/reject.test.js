@@ -12,7 +12,7 @@ import { ObjectId } from 'mongodb'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PRN_STATUS } from '#packaging-recycling-notes/domain/model.js'
-import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.js'
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import {
   buildCreateReportParams,
