@@ -55,18 +55,7 @@ const userSchema = Joi.object({
   role: Joi.string().allow(null).required()
 })
 
-/**
- * Generic command handler interface. The consumer passes its full deps bag
- * through to execute/onFailure — each handler narrows to its own deps type
- * via inline type annotations on the deps parameter.
- *
- * @typedef {object} CommandHandler
- * @property {string} command - The command string (e.g. 'validate', 'submit')
- * @property {import('joi').ObjectSchema} payloadSchema - Validates everything except 'command'
- * @property {(payload: any, deps: any) => Promise<void>} execute - Runs the command
- * @property {(payload: any, deps: any) => Promise<void>} onFailure - Marks as failed on terminal error
- * @property {(payload: any) => string} describe - Returns logging context
- */
+/** @import { CommandHandler } from './consumer.js' */
 
 /** @type {CommandHandler} */
 export const validateSummaryLogCommand = {

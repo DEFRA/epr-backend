@@ -7,7 +7,7 @@ import {
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { config } from '#root/config.js'
-import { createOverseasSitesRepository } from '#overseas-sites/repository/mongodb.js'
+import { createMongoOverseasSitesRepository } from '#overseas-sites/test-support.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 import { setupMsw } from '#vite/setup-msw.js'
@@ -118,7 +118,9 @@ const repositoryWith = async (
     database,
     options
   )({
-    overseasSitesRepository: (await createOverseasSitesRepository(database))(),
+    overseasSitesRepository: (
+      await createMongoOverseasSitesRepository(database)
+    )(),
     logger
   })
 }

@@ -1,4 +1,7 @@
+import Hapi from '@hapi/hapi'
 import { describe, it, expect, beforeEach } from 'vitest'
+
+/** @import { ServerApp } from '#common/hapi-types.js' */
 
 import {
   createInMemoryOrsImportsRepository,
@@ -241,24 +244,15 @@ describe('In-memory ORS imports repository', () => {
   })
 
   describe('createInMemoryOrsImportsRepositoryPlugin', () => {
-    it('creates a plugin with the correct name', () => {
-      const plugin = createInMemoryOrsImportsRepositoryPlugin()
+    it('provides the repository on the server', async () => {
+      const server = Hapi.server()
+      await server.register(createInMemoryOrsImportsRepositoryPlugin())
 
-      expect(plugin.name).toBe('orsImportsRepository')
-      expect(plugin.register).toBeTypeOf('function')
-    })
+      await server.initialize()
 
-    it('registers repository on server', () => {
-      const plugin = createInMemoryOrsImportsRepositoryPlugin()
-
-      const mockServer = {
-        app: {},
-        ext: vi.fn()
-      }
-
-      plugin.register(mockServer)
-
-      expect(mockServer.app.orsImportsRepository).toBeDefined()
+      expect(
+        /** @type {ServerApp} */ (server.app).orsImportsRepository.findById
+      ).toBeTypeOf('function')
     })
   })
 })

@@ -4,21 +4,21 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { processOrsImport } from '../../application/process-import.js'
 import {
   ORS_IMPORT_COMMAND,
   ORS_IMPORT_STATUS
-} from '#overseas-sites/domain/import-status.js'
-import { processOrsImport } from '#overseas-sites/application/process-import.js'
-import { orsImportMetrics } from '#overseas-sites/metrics/ors-imports.js'
+} from '../../domain/import-status.js'
+import { orsImportMetrics } from '../../metrics/ors-imports.js'
 import { SYSTEM_USER } from '#root/auditing/helpers.js'
 
 /** @import {TypedLogger} from '#common/helpers/logging/logger.js' */
 /** @import {UploadsRepository} from '#domain/uploads/repository/port.js' */
-/** @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js' */
-/** @import {OverseasSitesRepository} from '#overseas-sites/repository/port.js' */
+/** @import {OrsImportsRepository} from '../repository/port.js' */
+/** @import {OverseasSitesRepository} from '../../repository/port.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
 /** @import {SystemLogsRepository, SystemLogHumanActor} from '#repositories/system-logs/port.js' */
-/** @import {CommandHandler} from './summary-log-commands.js' */
+/** @import {CommandHandler} from '#server/queue-consumer/consumer.js' */
 
 const userSchema = Joi.object({
   id: Joi.string().required(),

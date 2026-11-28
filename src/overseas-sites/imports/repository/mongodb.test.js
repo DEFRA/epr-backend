@@ -2,7 +2,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { assertPresent } from '#test/type-helpers.js'
 import { afterEach, describe, expect, vi } from 'vitest'
-import { createOrsImportsRepository } from './mongodb.js'
+import { createMongoOrsImportsRepository } from './mongodb.js'
 import { ORS_IMPORT_STATUS } from '../../domain/import-status.js'
 
 /**
@@ -26,7 +26,7 @@ const it = /** @type {TestAPI<MongoFixtures>} */ (
     repository: async ({ mongoClient }, use) => {
       const database = mongoClient.db(DATABASE_NAME)
       await database.collection(COLLECTION_NAME).deleteMany({})
-      const factory = await createOrsImportsRepository(database)
+      const factory = await createMongoOrsImportsRepository(database)
       await use(factory())
     }
   })
@@ -116,7 +116,7 @@ describe('MongoDB ORS imports repository', () => {
   it('creates a TTL index on expiresAt', async ({ mongoClient }) => {
     const database = mongoClient.db(DATABASE_NAME)
     await database.collection(COLLECTION_NAME).deleteMany({})
-    await createOrsImportsRepository(database)
+    await createMongoOrsImportsRepository(database)
 
     const indexes = await database
       .collection(COLLECTION_NAME)

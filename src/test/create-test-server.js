@@ -12,8 +12,10 @@ import { createMockExternalAccreditationsRepository } from '#test/mock-repositor
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#public-register/test-support.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
 import { createInMemoryNonProdDataResetPlugin } from '#non-prod-data-reset/inmemory.plugin.js'
-import { createInMemoryOverseasSitesRepositoryPlugin } from '#overseas-sites/index.js'
-import { createInMemoryOrsImportsRepositoryPlugin } from '#overseas-sites/imports/repository/inmemory.js'
+import {
+  createInMemoryOrsImportsRepositoryPlugin,
+  createInMemoryOverseasSitesRepositoryPlugin
+} from '#overseas-sites/test-support.js'
 import { createInMemoryOrganisationReadRepositoryPlugin } from '#organisation-read-model/test-support.js'
 import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
 import { createInMemoryReportsRepositoryPlugin } from '#reports/repository/inmemory.plugin.js'

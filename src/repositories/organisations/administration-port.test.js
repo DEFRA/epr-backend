@@ -30,8 +30,8 @@ const ADMINISTRATION_PORT_MODULES = [
   'src/registration-accreditation-admin/routes/registration-status-history.js',
   'src/overseas-sites/application/process-import-file.js',
   'src/overseas-sites/application/process-import.js',
+  'src/overseas-sites/imports/worker/ors-import-commands.js',
   'src/routes/v1/system-logs/get-search.js',
-  'src/server/queue-consumer/ors-import-commands.js',
 
   // Data loading, seeding, resets and diagnostics
   'src/forms-submission-data/migration/migration-delta-calculator.js',

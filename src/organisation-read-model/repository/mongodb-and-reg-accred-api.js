@@ -13,7 +13,7 @@ import { toReadModelOrganisations } from './to-read-model.js'
 /** @import { Year } from '#common/helpers/dates/year.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
-/** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OverseasSitesRepository } from '#overseas-sites/index.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
 /** @import { ExternalAccreditation } from './to-read-model.js' */
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */

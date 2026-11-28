@@ -11,7 +11,6 @@ import { generateLatestPublicRegister } from '#public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnTonnageRoutes from '#routes/v1/prn-tonnage/index.js'
 import * as wasteBalanceAvailabilityRoutes from '#routes/v1/waste-balance-availability/index.js'
-import * as overseasSitesRoutes from '#overseas-sites/routes/index.js'
 import * as marketInsightsRoutes from '#market-insights/routes/index.js'
 import { packagingRecyclingNotesAccept } from '#packaging-recycling-notes/routes/accept.js'
 import { adminPackagingRecyclingNotesCancel } from '#packaging-recycling-notes/routes/admin-cancel.js'
@@ -70,7 +69,6 @@ const router = {
         ...summaryLogUploadsReportRoutes,
         adminPackagingRecyclingNotesList,
         ...prnAdminCancellationRoutesBehindFeatureFlag,
-        ...Object.values(overseasSitesRoutes),
         ...Object.values(marketInsightsRoutes),
         ...Object.values(reportsRoutes),
         ...reportRoutesByNaturalKey,

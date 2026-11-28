@@ -12,7 +12,7 @@ import { nonProdDataResetPlugin } from '#non-prod-data-reset/mongodb.plugin.js'
 import {
   orsImportsRepositoryPlugin,
   overseasSitesRepositoryPlugin
-} from '#overseas-sites/index.js'
+} from '#overseas-sites/plugin.js'
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { serverPlugins } from '#plugins/server-plugins.js'

@@ -1,7 +1,7 @@
 /**
  * @typedef {Object} MockSqsCommandExecutorPluginOptions
  * @property {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} [summaryLogsWorker] - Mock executor to use
- * @property {import('#overseas-sites/imports/worker/port.js').OrsImportsCommandExecutor} [orsImportsWorker] - Mock executor to use
+ * @property {import('#overseas-sites/index.js').OrsImportsCommandExecutor} [orsImportsWorker] - Mock executor to use
  */
 
 /** @returns {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} */
@@ -10,7 +10,7 @@ const createNoOpSummaryLogsExecutor = () => ({
   submit: async () => {}
 })
 
-/** @returns {import('#overseas-sites/imports/worker/port.js').OrsImportsCommandExecutor} */
+/** @returns {import('#overseas-sites/index.js').OrsImportsCommandExecutor} */
 const createNoOpOrsImportsExecutor = () => ({
   importOverseasSites: async () => {}
 })

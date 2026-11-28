@@ -170,7 +170,7 @@ const performFindAll = async (db) => {
  * @param {Db} db
  * @returns {Promise<OverseasSitesRepositoryFactory>}
  */
-export const createOverseasSitesRepository = async (db) => {
+export const createMongoOverseasSitesRepository = async (db) => {
   await ensureCollection(db)
 
   return () => ({

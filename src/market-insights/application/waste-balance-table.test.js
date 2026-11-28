@@ -55,7 +55,7 @@ import {
 /** @import { OperatorCounts } from '#market-insights/application/operator-counts.js' */
 /** @import { PublishedWasteBalanceFigures } from '#market-insights/domain/waste-balance-figures.js' */
 /** @import { Organisation as ServedOrganisation, Registration, Status } from '#organisation-read-model/index.js' */
-/** @import { OverseasSite } from '#overseas-sites/repository/port.js' */
+/** @import { OverseasSite } from '#overseas-sites/index.js' */
 /** @import { CreateReportParams, ReportsRepository } from '#reports/repository/port.js' */
 /** @import { AggregateWasteBalanceTable, EveryRow, WasteBalanceTable } from './waste-balance-table.js' */
 /** @import { WasteBalanceRowType } from '#market-insights/domain/waste-balance-figures.js' */

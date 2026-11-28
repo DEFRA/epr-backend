@@ -1,5 +1,5 @@
 import { isNil } from '#common/helpers/is-nil.js'
-import { registerDependency } from '#plugins/register-dependency.js'
+import { portAdapter } from '#plugins/port-adapter.js'
 import { ObjectId } from 'mongodb'
 import { validateOverseasSiteInsert } from './validation.js'
 
@@ -140,14 +140,18 @@ export function createInMemoryOverseasSitesRepository(initialData = []) {
   })
 }
 
+/**
+ * The in-memory adapter for the overseas sites repository, which the test
+ * server registers.
+ *
+ * @param {OverseasSite[]} [initialSites]
+ */
 export function createInMemoryOverseasSitesRepositoryPlugin(initialSites) {
-  const factory = createInMemoryOverseasSitesRepository(initialSites)
-  const repository = factory()
+  const repository = createInMemoryOverseasSitesRepository(initialSites)()
 
-  return {
-    name: 'overseasSitesRepository',
-    register: (server) => {
-      registerDependency(server, 'overseasSitesRepository', () => repository)
-    }
-  }
+  return portAdapter({
+    provides: 'overseasSitesRepository',
+    needs: [],
+    build: () => () => repository
+  })
 }

@@ -123,6 +123,11 @@ export default [
               'the organisation read model',
               ['./index.js', './plugin.js', './test-support.js']
             ),
+            ...moduleFence('overseas-sites', 'overseas sites', [
+              './index.js',
+              './plugin.js',
+              './test-support.js'
+            ]),
             ...moduleFence('waste-records-export', 'the waste records export', [
               './index.js',
               './plugin.js',

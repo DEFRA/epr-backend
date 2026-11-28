@@ -25,7 +25,7 @@ import {
   createOrganisationReadRepository,
   buildExternalAccreditation
 } from '#organisation-read-model/test-support.js'
-import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
+import { createInMemoryOverseasSitesRepository } from '#overseas-sites/test-support.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 

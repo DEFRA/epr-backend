@@ -5,7 +5,7 @@ A module is a directory under `src/` that owns one responsibility. Code outside 
 ## Entry points
 
 - **`index.js`** is the public interface. It holds the module's types, including the type of each port it provides, and its pure rules. It loads no route, adapter or Hapi code.
-- **`plugin.js`** holds the module's production plugins. Only the server setup and the test servers import it.
+- **`plugin.js`** holds the module's production plugins, and any command handlers the queue consumer runs for it. Only code in `src/server`, `src/plugins` and `src/test` imports it.
 - **`test-support.js`** holds the module's in-memory adapters, their plugins and its test builders. Only tests import it.
 
 ## The index and the port
@@ -20,6 +20,7 @@ A module's index and its port are one interface, split by role.
 A module offers routes, ports, or both. A port is a capability other code uses, such as a repository or an application service.
 
 - **Routes go in a route plugin.**
+- **A route plugin takes its config as options.** The server setup reads the config and passes the plugin plain values, and `register` hands them to the route factories, so no route reads config itself.
 - **Each adapter of a port is its own plugin, made with `portAdapter`** from `src/plugins/port-adapter.js`. It is named after the port, which is the port's key in `ServerApp` in `src/common/hapi-types.js`, and it provides that key and nothing else. A port's adapters share the name, so Hapi refuses a server that registers two of them. The server setup registers the production adapter, and the test server registers the in-memory one.
 - **The server setup makes the decisions.** It picks the adapter, reads the config and feature flags, and passes the adapter plain values as its options. An adapter never sees config or a feature flag.
 - **An adapter declares the ports it needs,** and `mongodb` when it needs the database. When the server starts, the adapter is built from its options and those dependencies alone. It provides its port on `server.app` and on each request, so an adapter built per request logs with that request's logger.

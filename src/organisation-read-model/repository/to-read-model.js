@@ -33,7 +33,7 @@ import { toLinkedDefraOrganisation } from './stored-organisation.js'
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { RegistrationStatus, Status } from '#organisation-read-model/domain/model.js' */
 /** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
-/** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
+/** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/index.js' */
 
 /**
  * @typedef {(message: string) => void} OnDrop

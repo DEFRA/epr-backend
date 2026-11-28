@@ -17,6 +17,7 @@ import { uploadCallbackAuthPlugin } from '#plugins/auth/upload-callback-auth-plu
 import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
+import { overseasSitesRoutesPlugin } from '#overseas-sites/plugin.js'
 import { router } from '#plugins/router.js'
 import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
@@ -58,6 +59,13 @@ const moduleRoutePlugins = (config) => [
   {
     plugin: organisationsRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
+  },
+  {
+    plugin: overseasSitesRoutesPlugin,
+    options: {
+      orsBucket: config.get('cdpUploader.orsBucket'),
+      regAccredApi: config.get('regAccredApi')
+    }
   },
   registrationAccreditationAdminRoutesPlugin,
   wasteRecordsExport

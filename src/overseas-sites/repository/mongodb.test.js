@@ -1,7 +1,7 @@
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { describe, expect } from 'vitest'
-import { createOverseasSitesRepository } from './mongodb.js'
+import { createMongoOverseasSitesRepository } from './mongodb.js'
 import { testOverseasSitesRepositoryContract } from './port.contract.js'
 import { createMockDb } from '#test/mock-db.js'
 import { createMongoError } from '#test/mongo-error.js'
@@ -24,7 +24,7 @@ const it = /** @type {import('vitest').TestAPI<OverseasSitesFixtures>} */ (
     overseasSitesRepositoryFactory: async ({ mongoClient }, use) => {
       const database = mongoClient.db(DATABASE_NAME)
       await database.collection('overseas-sites').deleteMany({})
-      const factory = await createOverseasSitesRepository(database)
+      const factory = await createMongoOverseasSitesRepository(database)
       await use(factory)
     },
 
@@ -53,7 +53,7 @@ describe('MongoDB overseas sites repository', () => {
         }
       })
 
-      await createOverseasSitesRepository(mockDb)
+      await createMongoOverseasSitesRepository(mockDb)
 
       const nameCountryIndex = createdIndexes.find(
         (idx) => idx.options.name === 'name_country'
@@ -76,7 +76,7 @@ describe('MongoDB overseas sites repository', () => {
         }
       })
 
-      const factory = await createOverseasSitesRepository(mockDb)
+      const factory = await createMongoOverseasSitesRepository(mockDb)
       expect(factory).toBeTypeOf('function')
     })
 
@@ -91,7 +91,7 @@ describe('MongoDB overseas sites repository', () => {
         }
       })
 
-      await expect(createOverseasSitesRepository(mockDb)).rejects.toThrow(
+      await expect(createMongoOverseasSitesRepository(mockDb)).rejects.toThrow(
         'Connection refused'
       )
     })
