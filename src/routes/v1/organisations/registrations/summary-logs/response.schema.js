@@ -37,6 +37,7 @@ const validationConcernsSchema = Joi.object().pattern(
       .items(
         Joi.object({
           row: Joi.number().required(),
+          rowId: Joi.string().optional(),
           issues: Joi.array().items(validationIssueSchema).required()
         })
       )

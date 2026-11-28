@@ -376,6 +376,47 @@ describe('transformValidationResponse', () => {
       })
     })
 
+    it.for([
+      {
+        description: 'names the row ID its issue gives',
+        issueRowIds: ['1001'],
+        expected: { row: 8, rowId: '1001' }
+      },
+      {
+        description: 'names the row ID a later issue on the row gives',
+        issueRowIds: [undefined, '1001'],
+        expected: { row: 8, rowId: '1001' }
+      },
+      {
+        description: 'leaves out the row ID when no issue gives one',
+        issueRowIds: [undefined],
+        expected: { row: 8 }
+      }
+    ])('$description', ({ issueRowIds, expected }) => {
+      const result = transformValidationResponse({
+        issues: issueRowIds.map((rowId) => ({
+          severity: VALIDATION_SEVERITY.WARNING,
+          category: 'business',
+          message: 'Previous year link',
+          code: 'PREVIOUS_YEAR_LINK',
+          context: {
+            location: {
+              sheet: 'Received',
+              table: 'RECEIVED_LOADS_FOR_EXPORT',
+              row: 8,
+              ...(rowId && { rowId }),
+              column: 'J',
+              header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+            }
+          }
+        }))
+      })
+
+      const { issues: _, ...row } =
+        result.validation.concerns.RECEIVED_LOADS_FOR_EXPORT.rows[0]
+      expect(row).toStrictEqual(expected)
+    })
+
     it('includes expected field when present in context', () => {
       const validation = {
         issues: [

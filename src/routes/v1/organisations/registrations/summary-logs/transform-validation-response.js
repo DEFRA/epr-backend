@@ -113,7 +113,11 @@ const groupAndTransformRowIssues = (issues) => {
       })
     }
 
-    tableEntry.rows.get(location.row).issues.push(transformDataIssue(issue))
+    const rowEntry = tableEntry.rows.get(location.row)
+    if (rowEntry.rowId === undefined && location.rowId !== undefined) {
+      rowEntry.rowId = location.rowId
+    }
+    rowEntry.issues.push(transformDataIssue(issue))
   }
 
   const concerns = {}

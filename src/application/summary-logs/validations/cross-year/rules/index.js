@@ -1,4 +1,5 @@
 import { earlierYearDates } from './earlier-year-dates.js'
+import { prnsIssuedOnPreviousYearRow } from './prns-issued-on-previous-year-row.js'
 import { previousYearRowComplete } from './previous-year-row-complete.js'
 import { previousYearRowValueDiffers } from './previous-year-row-value-differs.js'
 
@@ -11,7 +12,8 @@ import { previousYearRowValueDiffers } from './previous-year-row-value-differs.j
  * The rules on a row linked to a previous year's row, in tiers. A tier runs
  * only when every earlier tier finds nothing: a link that cannot be used is
  * fixed first, so the values it gives are not checked. Every rule in a tier
- * runs; one that applies only on some dates checks them itself.
+ * runs; one that applies only on some dates checks them itself. A row no
+ * rule rejects is then warned about.
  *
  * @type {readonly (readonly LinkedRowCheck[])[]}
  */
@@ -28,5 +30,5 @@ export const linkedRowIssuesOf = (linkedRow) => {
       return issues
     }
   }
-  return []
+  return prnsIssuedOnPreviousYearRow(linkedRow)
 }

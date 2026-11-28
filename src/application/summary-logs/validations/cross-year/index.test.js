@@ -18,6 +18,7 @@ import {
 import { checkCrossYearRules } from './index.js'
 
 /** @import {FilledInRow} from '../../fill-in-linked-rows.js' */
+/** @import {CrossYearTableSchema} from './index.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
 /** @import {SummaryLogValidationOptions} from '#domain/summary-logs/table-schemas/validation-pipeline.js' */
 
@@ -29,7 +30,8 @@ const HEADERS = [
   'DATE_RECEIVED_BY_OSR',
   'DATE_REPATRIATED',
   'NET_WEIGHT',
-  'WAS_THE_WASTE_REFUSED'
+  'WAS_THE_WASTE_REFUSED',
+  'PRN_ISSUED'
 ]
 
 const tableSchemas = {
@@ -40,7 +42,8 @@ const tableSchemas = {
       suppliableOnLinkedRow: ['DATE_OF_EXPORT'],
       mayDifferBeforeCorrectionDeadline: ['NET_WEIGHT'],
       answeredLaterOnLinkedRow: ['WAS_THE_WASTE_REFUSED'],
-      prefilledOnLinkedRow: {},
+      prefilledOnLinkedRow: { PRN_ISSUED: 'No' },
+      prnsIssuedField: 'PRN_ISSUED',
       /**
        * @param {Record<string, unknown>} row
        * @param {Year} year
@@ -106,7 +109,8 @@ const rowOf = (cells) => HEADERS.map((header) => cells[header] ?? null)
  *   dateReceivedByOsr?: string,
  *   osrName?: string | null,
  *   netWeight?: number | null,
- *   wasteRefused?: string | null
+ *   wasteRefused?: string | null,
+ *   prnIssued?: string | null
  * }} row
  * @returns {FilledInRow}
  */
@@ -119,7 +123,8 @@ const filledInRow = ({
   dateReceivedByOsr,
   osrName = null,
   netWeight = null,
-  wasteRefused = null
+  wasteRefused = null,
+  prnIssued = null
 }) => {
   /** @type {Record<string, unknown>} */
   const previousYear = {
@@ -137,7 +142,8 @@ const filledInRow = ({
     OSR_NAME: osrName,
     DATE_RECEIVED_BY_OSR: dateReceivedByOsr,
     NET_WEIGHT: netWeight,
-    WAS_THE_WASTE_REFUSED: wasteRefused
+    WAS_THE_WASTE_REFUSED: wasteRefused,
+    PRN_ISSUED: prnIssued
   }
   const entered = rowOf(enteredCells)
   const values = rowOf(
@@ -187,14 +193,20 @@ const unmatchedRow = ({ rowNumber = 8, rowId = 1001, previousYearRowId }) => ({
 
 /**
  * @param {{ row: number, rowId: string, column: string, header: string }} cell
- * @param {{ errorCode: string, actual: unknown, previousYearRowId?: string, deadline?: string }} issue
+ * @param {{ errorCode: string, actual: unknown, previousYearRowId?: string, deadline?: string, severity?: string }} issue
  */
 const previousYearLinkIssue = (
   cell,
-  { errorCode, actual, previousYearRowId, deadline }
+  {
+    errorCode,
+    actual,
+    previousYearRowId,
+    deadline,
+    severity = VALIDATION_SEVERITY.FATAL
+  }
 ) => ({
   category: VALIDATION_CATEGORY.BUSINESS,
-  severity: VALIDATION_SEVERITY.FATAL,
+  severity,
   message: `Previous year link ${errorCode} in column '${cell.header}'`,
   code: VALIDATION_CODE.PREVIOUS_YEAR_LINK,
   context: {
@@ -210,7 +222,7 @@ const previousYearLinkIssue = (
 /**
  * @param {FilledInRow[]} rows
  * @param {SummaryLogValidationOptions} [options]
- * @param {typeof tableSchemas} [schemas]
+ * @param {Record<string, CrossYearTableSchema>} [schemas]
  */
 const check = (
   rows,
@@ -858,5 +870,105 @@ describe('checkCrossYearRules', () => {
         options: BEFORE_2026_CORRECTION_DEADLINE
       }).getAllIssues()
     ).toStrictEqual([])
+  })
+
+  describe('a linked row whose previous year row had PRNs or PERNs issued', () => {
+    const PRN_ISSUED_CELL = {
+      row: 8,
+      rowId: '1001',
+      column: 'J',
+      header: 'PRN_ISSUED'
+    }
+
+    it.for([
+      { description: "on the template's No", prnIssued: 'No' },
+      { description: 'left blank', prnIssued: null },
+      { description: 'as Yes', prnIssued: 'Yes' }
+    ])(
+      'warns, without rejecting it, when the row gives the answer $description',
+      ({ prnIssued }) => {
+        expect(
+          check([
+            filledInRow({
+              dateOfExport: '2026-11-01',
+              prnIssued,
+              previousYearCompletion: { PRN_ISSUED: 'Yes' }
+            })
+          ])
+        ).toStrictEqual([
+          previousYearLinkIssue(PRN_ISSUED_CELL, {
+            errorCode: VALIDATION_CODE.LINKED_ROW_PRNS_ISSUED,
+            severity: VALIDATION_SEVERITY.WARNING,
+            actual: prnIssued,
+            previousYearRowId: '1500'
+          })
+        ])
+      }
+    )
+
+    it.for([
+      {
+        description: 'on the last correction day',
+        createdAt: '2027-02-27T23:59:59.000Z'
+      },
+      {
+        description: 'after the correction deadline',
+        createdAt: '2027-02-28T00:00:00.000Z'
+      }
+    ])('warns $description', ({ createdAt }) => {
+      expect(
+        check(
+          [
+            filledInRow({
+              dateOfExport: '2026-11-01',
+              previousYearCompletion: { PRN_ISSUED: 'Yes' }
+            })
+          ],
+          { ...BEFORE_2026_CORRECTION_DEADLINE, createdAt: new Date(createdAt) }
+        ).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([VALIDATION_CODE.LINKED_ROW_PRNS_ISSUED])
+    })
+
+    it('does not warn when the previous year row had none issued', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            prnIssued: 'No',
+            previousYearCompletion: { PRN_ISSUED: 'No' }
+          })
+        ])
+      ).toStrictEqual([])
+    })
+
+    it('does not warn on a row that also breaks a linked-row rule', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearCompletion: {
+              PRN_ISSUED: 'Yes',
+              DATE_RECEIVED_BY_OSR: '2026-12-14'
+            }
+          })
+        ]).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR])
+    })
+
+    it('does not warn on a table with no PRN column', () => {
+      const { prnsIssuedField: _, ...linking } = tableSchemas.LOADS.linking
+      expect(
+        check(
+          [
+            filledInRow({
+              dateOfExport: '2026-11-01',
+              previousYearCompletion: { PRN_ISSUED: 'Yes' }
+            })
+          ],
+          BEFORE_2026_CORRECTION_DEADLINE,
+          { LOADS: { ...tableSchemas.LOADS, linking } }
+        )
+      ).toStrictEqual([])
+    })
   })
 })
