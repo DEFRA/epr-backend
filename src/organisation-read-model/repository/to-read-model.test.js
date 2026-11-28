@@ -12,7 +12,7 @@ import {
 import { toReadModelOrganisations } from './to-read-model.js'
 import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { buildExternalAccreditationFor } from './contract/test-data.js'
+import { buildExternalAccreditationFor } from '#organisation-read-model/domain/test-data.js'
 
 /** @import { StatusHistoryEntryOf } from '#domain/organisations/accreditation.js' */
 

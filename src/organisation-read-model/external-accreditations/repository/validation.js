@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 
 import { externalAccreditationSchema } from './schema.js'
 
-/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 
 /**
  * @param {ExternalAccreditation} accreditation

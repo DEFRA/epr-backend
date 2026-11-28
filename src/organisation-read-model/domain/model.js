@@ -122,6 +122,19 @@ import { calendarDate } from '#common/helpers/date-formatter.js'
  */
 
 /**
+ * A registration's accreditation for a year, held outside the REEX database,
+ * in the read model's shape, with the registration and year it is for. It
+ * holds no overseas sites: an exporter's are lifted from its registration, as
+ * a stored accreditation's are.
+ *
+ * @typedef {AccreditationCommon & {
+ *   organisationNumber: OrganisationNumber
+ *   registrationNumber: RegistrationNumber
+ *   year: Year
+ * }} ExternalAccreditation
+ */
+
+/**
  * Every status change, oldest first, each `at` the ISO 8601 datetime it takes
  * effect. Nothing requires two changes to happen at different times, so
  * changes that share a time keep the order they were recorded in.
@@ -156,6 +169,9 @@ export const ORGANISATION_STATUSES = Object.freeze([
 
 /** @type {readonly RegistrationStatus[]} */
 export const REGISTRATION_STATUSES = Object.freeze(['approved', 'cancelled'])
+
+/** The only year Reg Accred holds accreditations for. */
+export const REG_ACCRED_ACCREDITATION_YEAR = /** @type {Year} */ (2027)
 
 /** @type {readonly AccreditationStatus[]} */
 export const ACCREDITATION_STATUSES = Object.freeze([

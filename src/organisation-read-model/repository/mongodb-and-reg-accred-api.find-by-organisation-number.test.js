@@ -3,7 +3,7 @@ import { it } from '#vite/fixtures/organisation-read-mongo.js'
 
 import { toYear } from '#common/helpers/dates/year.js'
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { buildExternalAccreditationFor } from '#organisation-read-model/repository/contract/test-data.js'
+import { buildExternalAccreditationFor } from '#organisation-read-model/domain/test-data.js'
 import { config } from '#root/config.js'
 import {
   buildLinkedDefraOrg,
@@ -35,7 +35,7 @@ const { buildOrganisation } = createOrganisationBuilders()
 /** @import { StoredRegistrationStatus } from '#domain/organisations/model.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { ExporterRegistration, Organisation } from '#organisation-read-model/domain/model.js' */
-/** @import { ExternalAccreditation } from './to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 /** @import { OrganisationReadRepositoryWith } from '#vite/fixtures/organisation-read-mongo.js' */
 
 describe('findByOrganisationNumber', () => {

@@ -1,6 +1,9 @@
 import { portAdapter } from '#plugins/port-adapter.js'
-import { createOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
+import { createMongoExternalAccreditationsRepository } from './external-accreditations/repository/mongodb.js'
+import { createMongoOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
+import { devExternalAccreditationPut } from './routes/dev-external-accreditation-put.js'
 
+/** @import { HapiServer } from '#common/hapi-types.js' */
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 /**
@@ -14,9 +17,39 @@ export const organisationReadRepositoryPlugin = portAdapter({
 
   /** @param {{ regAccredApi?: RegAccredApiConfig }} options */
   build: ({ regAccredApi }, { mongodb, overseasSitesRepository }) => {
-    const createRepository = createOrganisationReadRepository(mongodb, {
+    const createRepository = createMongoOrganisationReadRepository(mongodb, {
       regAccredApi
     })
     return ({ logger }) => createRepository({ overseasSitesRepository, logger })
   }
 })
+
+/**
+ * The MongoDB adapter for the external accreditations repository, which
+ * stores the accreditations the read model serves where Reg Accred is not
+ * called.
+ */
+export const externalAccreditationsRepositoryPlugin = portAdapter({
+  provides: 'externalAccreditationsRepository',
+  needs: ['mongodb'],
+
+  build: (_options, { mongodb }) =>
+    createMongoExternalAccreditationsRepository(mongodb)
+})
+
+/**
+ * The read model's dev routes, which store external accreditations. Only a
+ * server with dev endpoints registers it.
+ */
+export const organisationReadModelDevRoutesPlugin = {
+  name: 'organisation-read-model-dev-routes',
+  dependencies: [
+    'organisationReadRepository',
+    'externalAccreditationsRepository'
+  ],
+
+  /** @param {HapiServer} server */
+  register: (server) => {
+    server.route([devExternalAccreditationPut])
+  }
+}

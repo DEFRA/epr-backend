@@ -1,16 +1,15 @@
-import { toYear } from '#common/helpers/dates/year.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from './model.js'
 
-/** @import { ExternalAccreditation } from '../to-read-model.js' */
+/** @import { ExternalAccreditation } from './model.js' */
 /** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 const ORGANISATION_NUMBER = toOrganisationNumber('500056')
 const REGISTRATION_NUMBER = toRegistrationNumber('R26ER5000560000AL')
-const ACCREDITATION_YEAR = 2027
 
 /**
  * @param {Partial<ExternalAccreditation>} [overrides]
@@ -19,7 +18,7 @@ const ACCREDITATION_YEAR = 2027
 export const buildExternalAccreditation = (overrides = {}) => ({
   organisationNumber: ORGANISATION_NUMBER,
   registrationNumber: REGISTRATION_NUMBER,
-  year: toYear(ACCREDITATION_YEAR),
+  year: REG_ACCRED_ACCREDITATION_YEAR,
   accreditationNumber: toAccreditationNumber('A27ER5000560000AL'),
   prnIssuance: { tonnageBand: 'up_to_500' },
   status: {

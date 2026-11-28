@@ -1,10 +1,8 @@
 import { latestOpenYear } from '#common/helpers/dates/latest-open-year.js'
 import { storedOrgId } from '#repositories/organisations/helpers.js'
 import { findAll, findOne, findPage } from './mongodb-find.js'
-import {
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
-  REG_ACCRED_ACCREDITATION_YEAR
-} from './external-accreditation-sources.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../external-accreditations/collection.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from '../domain/model.js'
 import { createRegAccredAccreditationsLoader } from './reg-accred-accreditations.js'
 import { toReadModelOrganisations } from './to-read-model.js'
 
@@ -15,7 +13,7 @@ import { toReadModelOrganisations } from './to-read-model.js'
 /** @import { Organisation as StoredOrganisation } from '#domain/organisations/model.js' */
 /** @import { OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 /** @import { OrganisationReadRepository } from './port.js' */
-/** @import { ExternalAccreditation } from './to-read-model.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 /** @import { RegAccredApiConfig } from '#common/helpers/reg-accred-api.js' */
 
 /**
@@ -99,7 +97,7 @@ const createMongoExternalAccreditationsLoader =
  *   logger: Pick<TypedLogger, 'warn'>
  * }) => OrganisationReadRepository}
  */
-export const createOrganisationReadRepository =
+export const createMongoOrganisationReadRepository =
   (db, { regAccredApi } = {}) =>
   (dependencies) => {
     const loadExternalAccreditations = whileYearIsOpen(

@@ -1,5 +1,5 @@
 import { createInMemoryOrganisationReadRepository } from './inmemory.js'
-import { REG_ACCRED_ACCREDITATION_YEAR } from './external-accreditation-sources.js'
+import { REG_ACCRED_ACCREDITATION_YEAR } from '../domain/model.js'
 import {
   toAccreditationNumber,
   toOrganisationNumber

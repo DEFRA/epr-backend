@@ -7,7 +7,6 @@ import { sqsCommandExecutorPlugin } from '#adapters/sqs-command-executor/sqs-com
 import { failAction } from '#common/helpers/fail-action.js'
 import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
-import { mongoExternalAccreditationsRepositoryPlugin } from '#external-accreditations/repository/mongodb.plugin.js'
 import { nonProdDataResetPlugin } from '#non-prod-data-reset/mongodb.plugin.js'
 import {
   orsImportsRepositoryPlugin,
@@ -18,7 +17,10 @@ import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-no
 import { serverPlugins } from '#plugins/server-plugins.js'
 import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
-import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
+import {
+  externalAccreditationsRepositoryPlugin,
+  organisationReadRepositoryPlugin
+} from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/plugin.js'
 import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
 import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
@@ -114,20 +116,23 @@ function getProductionPlugins(config) {
 
   plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
 
-  /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
-  if (config.get('featureFlags.devEndpoints')) {
-    plugins.push(
-      nonProdDataResetPlugin,
-      mongoExternalAccreditationsRepositoryPlugin
-    )
-  }
+  return [
+    ...plugins,
+    ...devEndpointsPlugins(config),
+    packagingRecyclingNotesRepositoryPlugin,
+    { plugin: commandQueueConsumerPlugin, options: { config } }
+  ]
+}
 
-  plugins.push(packagingRecyclingNotesRepositoryPlugin, {
-    plugin: commandQueueConsumerPlugin,
-    options: { config }
-  })
-
-  return plugins
+/**
+ * The plugins only a server with dev endpoints on registers.
+ *
+ * @param {ReturnType<typeof getConfig>} config
+ */
+function devEndpointsPlugins(config) {
+  return config.get('featureFlags.devEndpoints')
+    ? [nonProdDataResetPlugin, externalAccreditationsRepositoryPlugin]
+    : []
 }
 
 async function createServer(options = {}) {

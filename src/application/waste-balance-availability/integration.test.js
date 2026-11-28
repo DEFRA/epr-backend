@@ -22,7 +22,8 @@ import {
 import { buildLedgerEvent } from '#waste-balances/repository/ledger-test-data.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import {
-  createOrganisationReadRepository,
+  createMongoExternalAccreditationsRepository,
+  createMongoOrganisationReadRepository,
   buildExternalAccreditation
 } from '#organisation-read-model/test-support.js'
 import { createInMemoryOverseasSitesRepository } from '#overseas-sites/repository/inmemory.plugin.js'
@@ -126,6 +127,8 @@ describe('aggregateAvailableBalance - Integration', () => {
   let ledgerRepository
   /** @type {import('#organisation-read-model/index.js').OrganisationReadRepository} */
   let organisationReadRepository
+  /** @type {import('#organisation-read-model/index.js').ExternalAccreditationsRepository} */
+  let externalAccreditationsRepository
 
   const aggregate = (year = toYear(2026)) =>
     aggregateAvailableBalance(
@@ -142,7 +145,10 @@ describe('aggregateAvailableBalance - Integration', () => {
     ) => {
       db = mongoClient.db(DATABASE_NAME)
       ledgerRepository = (await createMongoLedgerRepository(db))()
-      organisationReadRepository = createOrganisationReadRepository(db)({
+      externalAccreditationsRepository = (
+        await createMongoExternalAccreditationsRepository(db)
+      )()
+      organisationReadRepository = createMongoOrganisationReadRepository(db)({
         overseasSitesRepository: createInMemoryOverseasSitesRepository([])(),
         logger: { warn: () => {} }
       })
@@ -261,7 +267,7 @@ describe('aggregateAvailableBalance - Integration', () => {
           { id: '1', material: MATERIAL.PLASTIC }
         ])
       )
-    await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+    await externalAccreditationsRepository.upsert(
       buildExternalAccreditation({
         organisationNumber: toOrganisationNumber(String(orgId1)),
         registrationNumber: toRegistrationNumber('REG-1'),
@@ -308,7 +314,7 @@ describe('aggregateAvailableBalance - Integration', () => {
           }
         ])
       )
-      await db.collection(EXTERNAL_ACCREDITATIONS_COLLECTION_NAME).insertOne(
+      await externalAccreditationsRepository.upsert(
         buildExternalAccreditation({
           organisationNumber: toOrganisationNumber(String(orgId1)),
           registrationNumber: toRegistrationNumber('REG-1'),

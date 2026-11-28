@@ -13,7 +13,6 @@
     "#common/*": "./src/common/*",
     "#data/*": "./src/data/*",
     "#domain/*": "./src/domain/*",
-    "#external-accreditations/*": "./src/external-accreditations/*",
     "#feature-flags/*": "./src/feature-flags/*",
     "#formsubmission/*": "./src/forms-submission-data/*",
     "#market-insights/*": "./src/market-insights/*",

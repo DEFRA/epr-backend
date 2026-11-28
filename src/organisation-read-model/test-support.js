@@ -1,6 +1,9 @@
 export { createInMemoryOrganisationReadRepository } from './repository/inmemory.js'
 export { createInMemoryOrganisationReadRepositoryPlugin } from './repository/inmemory.plugin.js'
-export { createOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
+export { createInMemoryExternalAccreditationsRepository } from './external-accreditations/repository/inmemory.js'
+export { createInMemoryExternalAccreditationsRepositoryPlugin } from './external-accreditations/repository/inmemory.plugin.js'
+export { createMongoExternalAccreditationsRepository } from './external-accreditations/repository/mongodb.js'
+export { createMongoOrganisationReadRepository } from './repository/mongodb-and-reg-accred-api.js'
 export {
   accreditationsByYear,
   approvedStatusFrom,
@@ -32,4 +35,4 @@ export {
   pendingOverseasSite,
   reprocessor
 } from './repository/contract/organisation-read-test-helpers.js'
-export { buildExternalAccreditation } from './repository/contract/test-data.js'
+export { buildExternalAccreditation } from '#organisation-read-model/domain/test-data.js'

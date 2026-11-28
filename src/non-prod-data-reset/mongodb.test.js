@@ -6,8 +6,10 @@ import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
 
 import { toRegistrationNumber } from '#domain/organisations/numbers.js'
-import { createMongoExternalAccreditationsRepository } from '#external-accreditations/repository/mongodb.js'
-import { buildExternalAccreditation } from '#organisation-read-model/test-support.js'
+import {
+  buildExternalAccreditation,
+  createMongoExternalAccreditationsRepository
+} from '#organisation-read-model/test-support.js'
 import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '#organisation-read-model/index.js'
 import { MONTHLY_PERIODS } from '#reports/domain/period-labels.js'
 import { buildOverseasSite } from '#overseas-sites/repository/contract/test-data.js'
@@ -92,7 +94,7 @@ const mockLogger = {
  * @typedef {object} ResetTestFixtures
  * @property {import('mongodb').MongoClient} mongoClient
  * @property {import('mongodb').Db} database
- * @property {object & { organisations: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#external-accreditations/repository/port.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
+ * @property {object & { organisations: import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository, prns: { create: Function }, summaryLogs: { insert: Function }, systemLogs: { insert: Function }, externalAccreditations: import('#organisation-read-model/index.js').ExternalAccreditationsRepository, [k: string]: object | Function }} repositories
  * @property {import('./mongodb.js').NonProdDataReset} reset
  * @property {(value: string) => void} setCdpEnvironment
  */

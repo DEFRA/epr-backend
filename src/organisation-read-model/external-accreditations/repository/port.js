@@ -1,4 +1,4 @@
-/** @import { ExternalAccreditation } from '#organisation-read-model/index.js' */
+/** @import { ExternalAccreditation } from '#organisation-read-model/domain/model.js' */
 
 /**
  * @typedef {{

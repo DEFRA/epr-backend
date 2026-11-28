@@ -5,7 +5,7 @@
  * @import {LockManager} from 'mongo-locks'
  * @import {PublicRegisterRepository} from '#public-register/repository/port.js'
  * @import {UploadsRepository} from '#domain/uploads/repository/port.js'
- * @import {ExternalAccreditationsRepository} from '#external-accreditations/repository/port.js'
+ * @import {ExternalAccreditationsRepository} from '#organisation-read-model/index.js'
  * @import {NonProdDataReset} from '#non-prod-data-reset/mongodb.js'
  * @import {OrganisationReadRepository} from '#organisation-read-model/index.js'
  * @import {OrsImportsRepository} from '#overseas-sites/imports/repository/port.js'

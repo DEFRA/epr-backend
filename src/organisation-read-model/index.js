@@ -20,17 +20,15 @@ export { organisationYears } from './domain/organisation-years.js'
 export { standingByYear } from './domain/registration-standing.js'
 export { registrationStatusWindows } from './domain/registration-status-windows.js'
 export { approvedYears, firstApprovedAt } from './domain/status-timeline.js'
-export {
-  EXTERNAL_ACCREDITATIONS_COLLECTION_NAME,
-  REG_ACCRED_ACCREDITATION_YEAR
-} from './repository/external-accreditation-sources.js'
+export { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './external-accreditations/collection.js'
 export {
   servesOrganisationOn,
   toLinkedDefraOrganisation
 } from './repository/stored-organisation.js'
 
+/** @typedef {import('./external-accreditations/repository/port.js').ExternalAccreditationsRepository} ExternalAccreditationsRepository */
 /** @typedef {import('./repository/port.js').OrganisationReadRepository} OrganisationReadRepository */
-/** @typedef {import('./repository/to-read-model.js').ExternalAccreditation} ExternalAccreditation */
+/** @typedef {import('./domain/model.js').ExternalAccreditation} ExternalAccreditation */
 /** @typedef {import('./domain/model.js').AccreditationCommon} AccreditationCommon */
 /** @typedef {import('./domain/model.js').AccreditationStatus} AccreditationStatus */
 /** @typedef {import('./domain/model.js').ExporterAccreditation} ExporterAccreditation */

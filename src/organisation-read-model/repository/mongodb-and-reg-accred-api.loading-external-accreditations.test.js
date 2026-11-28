@@ -11,7 +11,7 @@ import { createOverseasSitesRepository } from '#overseas-sites/repository/mongod
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { it } from '#vite/fixtures/organisation-read-mongo.js'
 import { setupMsw } from '#vite/setup-msw.js'
-import { buildExternalAccreditationFor } from './contract/test-data.js'
+import { buildExternalAccreditationFor } from '#organisation-read-model/domain/test-data.js'
 import {
   EXPORTER_NUMBER,
   REPROCESSOR_NUMBER,
@@ -20,8 +20,8 @@ import {
   overseasSites,
   reprocessor
 } from './contract/organisation-read-test-helpers.js'
-import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from './external-accreditation-sources.js'
-import { createOrganisationReadRepository } from './mongodb-and-reg-accred-api.js'
+import { EXTERNAL_ACCREDITATIONS_COLLECTION_NAME } from '../external-accreditations/collection.js'
+import { createMongoOrganisationReadRepository } from './mongodb-and-reg-accred-api.js'
 
 /** @import { MongoClient } from 'mongodb' */
 /** @import { TypedLogger } from '#common/hapi-types.js' */
@@ -114,7 +114,7 @@ const repositoryWith = async (
   logger = { warn: () => {} }
 ) => {
   const database = mongoClient.db('epr-backend')
-  return createOrganisationReadRepository(
+  return createMongoOrganisationReadRepository(
     database,
     options
   )({

@@ -29,10 +29,10 @@ import { toLinkedDefraOrganisation } from './stored-organisation.js'
 /** @import { Address, Organisation as StoredOrganisation, User } from '#domain/organisations/model.js' */
 /** @import { CalendarDate } from '#common/helpers/date-formatter.js' */
 /** @import { Year } from '#common/helpers/dates/year.js' */
-/** @import { OrganisationNumber, RegistrationNumber } from '#domain/organisations/numbers.js' */
+/** @import { RegistrationNumber } from '#domain/organisations/numbers.js' */
 /** @import { Registration as StoredRegistration } from '#domain/organisations/registration.js' */
 /** @import { RegistrationStatus, Status } from '#organisation-read-model/domain/model.js' */
-/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
+/** @import { AccreditationCommon, AccreditedOverseasSite, Contact, ExporterAccreditation, ExternalAccreditation, ExporterRegistration, Organisation, OrganisationAddress, OverseasSite, Registration, RegistrationCommon, ReprocessorAccreditation, ReprocessorRegistration, UkAddress } from '#organisation-read-model/domain/model.js' */
 /** @import { OverseasSite as StoredOverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
 
 /**
@@ -45,19 +45,6 @@ import { toLinkedDefraOrganisation } from './stored-organisation.js'
  *   overseasSitesById: Map<string, StoredOverseasSite>
  *   today: CalendarDate
  * }} Context
- */
-
-/**
- * A registration's accreditation for a year, held outside the REEX database,
- * in the read model's shape, with the registration and year it is for. It
- * holds no overseas sites: an exporter's are lifted from its registration, as
- * a stored accreditation's are.
- *
- * @typedef {AccreditationCommon & {
- *   organisationNumber: OrganisationNumber
- *   registrationNumber: RegistrationNumber
- *   year: Year
- * }} ExternalAccreditation
  */
 
 /**

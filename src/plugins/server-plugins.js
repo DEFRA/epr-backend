@@ -18,6 +18,7 @@ import { boomErrorLogger } from '#plugins/boom-error-logger.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
+import { organisationReadModelDevRoutesPlugin } from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
@@ -59,6 +60,9 @@ const moduleRoutePlugins = (config) => [
     plugin: organisationsRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
   },
+  ...(config.get('featureFlags.devEndpoints')
+    ? [organisationReadModelDevRoutesPlugin]
+    : []),
   registrationAccreditationAdminRoutesPlugin,
   wasteRecordsExport
 ]
