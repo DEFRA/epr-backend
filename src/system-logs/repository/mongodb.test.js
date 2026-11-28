@@ -1,7 +1,7 @@
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createMockLogger } from '#test/mock-logger.js'
-import { createSystemLogsRepository } from './mongodb.js'
+import { createMongoSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
@@ -24,7 +24,7 @@ const it = /** @type {import('vitest').TestAPI<SystemLogsRepoFixtures>} */ (
     },
 
     systemLogsRepository: async ({ mongoClient }, use) => {
-      const factory = await createSystemLogsRepository(
+      const factory = await createMongoSystemLogsRepository(
         mongoClient.db('epr-backend')
       )
       await use(factory)
@@ -118,7 +118,7 @@ describe('Mongo DB system logs repository', () => {
     const mockDb = buildMockDb()
     const collectionSpy = vi.spyOn(mockDb, 'collection')
 
-    const repositoryFactory = await createSystemLogsRepository(mockDb)
+    const repositoryFactory = await createMongoSystemLogsRepository(mockDb)
     const repository = repositoryFactory(mockLogger)
 
     await repository.insert(buildSystemLog())
@@ -129,7 +129,8 @@ describe('Mongo DB system logs repository', () => {
 
   it('fails gracefully and logs an error when insertMany DB write fails', async () => {
     const mockLogger = createMockLogger()
-    const repositoryFactory = await createSystemLogsRepository(buildMockDb())
+    const repositoryFactory =
+      await createMongoSystemLogsRepository(buildMockDb())
     const repository = repositoryFactory(mockLogger)
 
     await repository.insertMany([buildSystemLog()])

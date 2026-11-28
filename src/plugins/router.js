@@ -4,7 +4,6 @@ import * as organisationViewRoutes from '#routes/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
 import * as devRoutes from '#routes/v1/dev/index.js'
 import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
-import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 import * as wasteBalanceRoutes from '#waste-balances/routes/index.js'
 import { wasteBalanceRoutesByNaturalKey } from '#waste-balances/routes/by-natural-key.js'
 import { generateLatestPublicRegister } from '#public-register/index.js'
@@ -55,7 +54,6 @@ const router = {
         ...devRoutesBehindFeatureFlag,
         ...Object.values(organisationViewRoutes),
         ...formSubmissionsRoutes,
-        ...Object.values(systemLogsRoutes),
         ...Object.values(wasteBalanceRoutes),
         ...wasteBalanceRoutesByNaturalKey,
         generateLatestPublicRegister,

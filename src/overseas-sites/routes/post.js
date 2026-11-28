@@ -12,7 +12,7 @@ import { overseasSiteCreatePayloadSchema } from './post.schema.js'
 
 /** @import { HapiResponseToolkit } from '#common/hapi-types.js' */
 /** @import { OverseasSite, OverseasSitesRepository } from '#overseas-sites/repository/port.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { SystemLogsRepository } from '#system-logs/index.js' */
 
 export const overseasSitesCreatePath = '/v1/overseas-sites'
 

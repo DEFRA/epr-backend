@@ -19,6 +19,7 @@ import { cacheControl } from '#plugins/cache-control.js'
 import { externalApiErrorFormatter } from '#plugins/external-api-error-formatter.js'
 import { router } from '#plugins/router.js'
 import { registrationAccreditationAdminRoutesPlugin } from '#registration-accreditation-admin/plugin.js'
+import { systemLogsRoutesPlugin } from '#system-logs/plugin.js'
 import { wasteRecordsExport } from '#waste-records-export/plugin.js'
 
 function getSwaggerPlugins() {
@@ -54,12 +55,13 @@ function getSwaggerPlugins() {
  *
  * @param {ReturnType<typeof import('#root/config.js').getConfig>} config
  */
-const moduleRoutePlugins = (config) => [
+export const moduleRoutePlugins = (config) => [
   {
     plugin: organisationsRoutesPlugin,
     options: { devEndpoints: config.get('featureFlags.devEndpoints') }
   },
   registrationAccreditationAdminRoutesPlugin,
+  systemLogsRoutesPlugin,
   wasteRecordsExport
 ]
 

@@ -1,7 +1,11 @@
+import {
+  SUMMARY_LOG_SUB_CATEGORY,
+  SUMMARY_LOG_SUBMIT_ACTION
+} from '#system-logs/index.js'
 import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
 
 /**
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/index.js'
  * @import {AccreditationNumber, OrganisationNumber, RegistrationNumber} from '#domain/organisations/numbers.js'
  *
  * @typedef {{
@@ -11,9 +15,6 @@ import { extractUserDetails, recordSystemLog, safeAudit } from './helpers.js'
  *   accreditationNumber: AccreditationNumber | null | undefined
  * }} SummaryLogAuditContext
  */
-
-export const SUMMARY_LOG_SUB_CATEGORY = 'summary-log'
-export const SUMMARY_LOG_SUBMIT_ACTION = 'submit'
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request

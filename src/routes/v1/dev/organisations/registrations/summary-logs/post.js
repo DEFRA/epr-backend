@@ -45,7 +45,7 @@ import {
 /** @import { SummaryLogVersion } from '#repositories/summary-logs/port.js' */
 /** @import { CommandHandler, SubmitCommandPayload, SummaryLogHandlerDeps, ValidateCommandPayload } from '#server/queue-consumer/summary-log-commands.js' */
 /** @import { SummaryLogHandlerSources } from '#server/queue-consumer/summary-log-handler-deps.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { SystemLogsRepository } from '#system-logs/index.js' */
 /** @import { SummaryLogContentPayload } from './post.schema.js' */
 
 const MAX_PAYLOAD_BYTES = 100 * 1024 * 1024

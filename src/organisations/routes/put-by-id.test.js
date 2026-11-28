@@ -6,7 +6,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -42,7 +42,7 @@ describe('PUT /v1/organisations/{id}', () => {
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
   })
@@ -517,7 +517,7 @@ describe('PUT /v1/organisations/{id}', () => {
       const testServer = await createTestServer({
         repositories: {
           organisationAdministrationRepository: instance,
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createInMemorySystemLogsRepository()
         }
       })
 
@@ -592,7 +592,7 @@ describe('PUT /v1/organisations/{id} overseas sites validation', () => {
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository(),
+        systemLogsRepository: createInMemorySystemLogsRepository(),
         overseasSitesRepository: overseasSitesRepoFactory
       }
     })
@@ -832,7 +832,7 @@ describe('PUT /v1/organisations/{id} status change guard', () => {
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
   })
@@ -1086,7 +1086,7 @@ describe('PUT /v1/organisations/{id} status history guard', () => {
       repositories: {
         organisationAdministrationRepository:
           createInMemoryOrganisationsRepository([fixture]),
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
 

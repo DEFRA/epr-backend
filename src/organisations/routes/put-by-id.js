@@ -24,7 +24,7 @@ import {
 
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} OrganisationAdministrationRepository */
 /** @typedef {import('#repositories/organisations/administration-port.js').OrganisationReplacement} OrganisationReplacement */
-/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
+/** @typedef {import('#system-logs/index.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#overseas-sites/repository/port.js').OverseasSitesRepository} OverseasSitesRepository */
 
 /**

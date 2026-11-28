@@ -4,7 +4,7 @@ import { config } from '#root/config.js'
 
 /**
  * @import {HumanCredentials, MachineCredentials} from '#common/hapi-types.js'
- * @import {SystemLog, SystemLogActor, SystemLogHumanActor, SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLog, SystemLogActor, SystemLogHumanActor, SystemLogsRepository} from '#system-logs/index.js'
  */
 
 /**

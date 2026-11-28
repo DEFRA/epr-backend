@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '../repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -17,13 +17,13 @@ const { buildOrganisation } = createOrganisationBuilders()
 describe('GET /v1/system-logs/search', () => {
   setupAuthContext()
   let server
-  /** @type {import('#repositories/system-logs/port.js').SystemLogsRepository} */
+  /** @type {import('../repository/port.js').SystemLogsRepository} */
   let systemLogsRepository
   /** @type {import('#repositories/organisations/administration-port.js').OrganisationAdministrationRepository} */
   let organisationAdministrationRepository
 
   beforeEach(async () => {
-    const systemLogsRepositoryFactory = createSystemLogsRepository()
+    const systemLogsRepositoryFactory = createInMemorySystemLogsRepository()
     systemLogsRepository = systemLogsRepositoryFactory(logger)
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])

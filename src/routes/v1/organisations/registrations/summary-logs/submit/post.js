@@ -21,7 +21,7 @@ import {
 /** @import { HapiRequest } from '#common/hapi-types.js' */
 /** @import { SummaryLogsCommandExecutor } from '#domain/summary-logs/worker/port.js' */
 /** @import { SummaryLogsRepository } from '#repositories/summary-logs/port.js' */
-/** @import { SystemLogsRepository } from '#repositories/system-logs/port.js' */
+/** @import { SystemLogsRepository } from '#system-logs/index.js' */
 /** @import { RegistrationParams } from '#routes/organisations/natural-keys.js' */
 /** @import { OrganisationReadRepository } from '#organisation-read-model/index.js' */
 /** @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js' */

@@ -30,7 +30,7 @@ import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recy
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createOnSummaryLogUploaded } from '#reports/application/summary-log-events.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { reportKeyOf } from '#reports/repository/contract/test-data.js'
 
 import { uploadCompletedPath } from './natural-key-paths.js'
@@ -1021,7 +1021,7 @@ export const setupWasteBalanceIntegrationEnvironment = async ({
         reportsService: createReportsService(reportsRepository),
         onSummaryLogUploaded: createOnSummaryLogUploaded({
           reportsRepository,
-          systemLogsRepository: createSystemLogsRepository()(mockLogger)
+          systemLogsRepository: createInMemorySystemLogsRepository()(mockLogger)
         }),
         validateSummaryLog
       })

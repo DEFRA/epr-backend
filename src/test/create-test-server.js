@@ -22,7 +22,7 @@ import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-even
 import { createInMemoryFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/inmemory.plugin.js'
 import { createInMemoryOrganisationsRepositoryPlugin } from '#repositories/organisations/inmemory.plugin.js'
 import { createInMemorySummaryLogsRepositoryPlugin } from '#repositories/summary-logs/inmemory.plugin.js'
-import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
+import { createInMemorySystemLogsRepositoryPlugin } from '#system-logs/test-support.js'
 import { createInMemoryWasteBalanceServicePlugin } from '#waste-balances/repository/inmemory.plugin.js'
 import { createInMemoryLedgerRepositoryPlugin } from '#waste-balances/repository/ledger-inmemory.plugin.js'
 import { createInMemorySummaryLogRowStatesRepositoryPlugin } from '#waste-records/repository/inmemory.plugin.js'

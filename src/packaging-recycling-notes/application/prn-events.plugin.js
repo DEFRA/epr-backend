@@ -3,7 +3,7 @@ import { registerDependency } from '#plugins/register-dependency.js'
 
 /**
  * @import { ReportsRepository } from '#reports/repository/port.js'
- * @import { SystemLogsRepository } from '#repositories/system-logs/port.js'
+ * @import { SystemLogsRepository } from '#system-logs/index.js'
  * @import { PrnCancelledParams } from '#reports/application/prn-cancellation-events.js'
  */
 

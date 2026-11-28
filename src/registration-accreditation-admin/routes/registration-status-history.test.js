@@ -4,7 +4,7 @@ import {
   createOrganisationBuilders
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { asServiceMaintainerWrite } from '#test/inject-auth.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -104,7 +104,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
 
@@ -297,7 +297,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         repositories: {
           organisationAdministrationRepository:
             createInMemoryOrganisationsRepository([fixture]),
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createInMemorySystemLogsRepository()
         }
       })
 
@@ -504,7 +504,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       server = await createTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory,
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createInMemorySystemLogsRepository()
         }
       })
       const getResponse = await server.inject({
@@ -624,7 +624,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
         repositories: {
           organisationAdministrationRepository:
             createInMemoryOrganisationsRepository([fixture]),
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createInMemorySystemLogsRepository()
         }
       })
 
@@ -768,7 +768,7 @@ describe('POST /v1/organisations/{organisationId}/registrations/{registrationId}
       const integrationServer = await createTestServer({
         repositories: {
           organisationAdministrationRepository: organisationsRepositoryFactory,
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createInMemorySystemLogsRepository()
         }
       })
 

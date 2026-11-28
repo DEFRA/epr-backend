@@ -6,7 +6,7 @@ import { safeAudit } from '#root/auditing/helpers.js'
  * payload internally if it exceeds the safe-audit size limit.
  *
  * @param {Object} params
- * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.systemLogsRepository]
+ * @param {import('#system-logs/index.js').SystemLogsRepository} [params.systemLogsRepository]
  * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} params.ledgerId
  * @param {number} params.amount
  * @param {number} params.availableAmount

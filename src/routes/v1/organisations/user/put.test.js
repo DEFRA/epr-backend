@@ -1,6 +1,6 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createOrganisationBuilders } from '#repositories/organisations/contract/test-data.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createActiveOrgBuilder } from '#vite/helpers/build-active-org.js'
 import {
@@ -42,7 +42,7 @@ describe('PUT /organisations/{organisationNumber}/user', () => {
     server = await createTestServer({
       repositories: {
         organisationAdministrationRepository: organisationsRepositoryFactory,
-        systemLogsRepository: createSystemLogsRepository()
+        systemLogsRepository: createInMemorySystemLogsRepository()
       }
     })
   })

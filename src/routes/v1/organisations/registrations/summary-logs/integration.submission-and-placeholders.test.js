@@ -14,7 +14,7 @@ import {
 import { createInMemoryReportsRepository } from '#reports/repository/inmemory.js'
 import { createReportsService } from '#reports/application/report-service.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { createInMemorySummaryLogRowStatesRepository } from '#waste-records/repository/inmemory.js'
 import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledger-inmemory.js'
 import { createWasteBalanceService } from '#waste-balances/application/waste-balance-service.js'
@@ -354,7 +354,7 @@ describe('Submission and placeholder tests', () => {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
           organisationReadRepository: () => organisationReadRepository,
-          systemLogsRepository: createSystemLogsRepository()
+          systemLogsRepository: createInMemorySystemLogsRepository()
         },
         workers: {
           summaryLogsWorker: submitterWorker

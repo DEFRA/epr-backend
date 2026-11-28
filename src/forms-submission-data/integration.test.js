@@ -5,7 +5,7 @@ import { MATERIAL } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
+import { createInMemorySystemLogsRepository } from '#system-logs/test-support.js'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { describe, expect, it, vi } from 'vitest'
@@ -71,7 +71,7 @@ describe('Migration Integration Tests with Fixtures', () => {
 
   beforeAll(() => {
     sharedOrganisationsRepo = createInMemoryOrganisationsRepository()()
-    sharedSystemLogsRepo = createSystemLogsRepository()(logger)
+    sharedSystemLogsRepo = createInMemorySystemLogsRepository()(logger)
   })
 
   function createFormsRepo(includeAllAccreditations) {

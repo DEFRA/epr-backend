@@ -3,7 +3,7 @@
 import {
   SUMMARY_LOG_SUB_CATEGORY,
   SUMMARY_LOG_SUBMIT_ACTION
-} from '#root/auditing/summary-logs.js'
+} from '../domain/summary-log-submission.js'
 import { buildPage } from './pagination.js'
 
 /** Encode a numeric ID as a 24-char hex string (matching ObjectId format) */
@@ -114,7 +114,7 @@ const performFindSummaryLogSubmitActors =
 /**
  * @returns {SystemLogsRepositoryFactory}
  */
-export function createSystemLogsRepository() {
+export function createInMemorySystemLogsRepository() {
   /** @type {Array<SystemLog & { _internalId: number }>} */
   const storage = []
   const state = { nextId: 1 }

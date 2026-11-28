@@ -5,7 +5,7 @@ import {
 } from '#root/auditing/helpers.js'
 
 /**
- * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ * @import {SystemLogsRepository} from '#system-logs/index.js'
  */
 
 /**

@@ -10,7 +10,7 @@ import { config } from '../../../../../config.js'
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
 /** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
-/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
+/** @import {SystemLogsRepository} from '#system-logs/index.js' */
 
 /**
  * @typedef {HapiRequest & {
