@@ -55,6 +55,8 @@ export const LOADS_EXPORTED_FIELDS = Object.freeze({
   CONTAINER_NUMBER: 'CONTAINER_NUMBER'
 })
 
+/** @typedef {typeof LOADS_EXPORTED_FIELDS[keyof typeof LOADS_EXPORTED_FIELDS]} LoadsExportedField */
+
 export const SENT_ON_LOADS_FIELDS = Object.freeze({
   ROW_ID: 'ROW_ID',
   DATE_LOAD_LEFT_SITE: 'DATE_LOAD_LEFT_SITE',

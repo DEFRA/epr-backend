@@ -1,11 +1,12 @@
 import { earlierYearDates } from './earlier-year-dates.js'
 import { previousYearRowComplete } from './previous-year-row-complete.js'
+import { previousYearRowMissingData } from './previous-year-row-missing-data.js'
 import { previousYearRowValueDiffers } from './previous-year-row-value-differs.js'
 
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {FoundLinkedRow} from '../index.js' */
 
-/** @typedef {(linkedRow: FoundLinkedRow) => ValidationIssue[]} LinkedRowCheck */
+/** @typedef {(linkedRow: FoundLinkedRow) => readonly ValidationIssue[]} LinkedRowCheck */
 
 /**
  * The rules on a row linked to a previous year's row, in tiers. A tier runs
@@ -16,7 +17,7 @@ import { previousYearRowValueDiffers } from './previous-year-row-value-differs.j
  * @type {readonly (readonly LinkedRowCheck[])[]}
  */
 const LINKED_ROW_RULE_TIERS = Object.freeze([
-  Object.freeze([previousYearRowComplete]),
+  Object.freeze([previousYearRowComplete, previousYearRowMissingData]),
   Object.freeze([earlierYearDates, previousYearRowValueDiffers])
 ])
 

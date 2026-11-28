@@ -15,6 +15,7 @@ import {
   DROPDOWN_PLACEHOLDER,
   MESSAGES,
   BASEL_CODES,
+  isAnswered,
   isDateNoLaterThan,
   isNo,
   isYes,
@@ -84,6 +85,7 @@ export const LOADS_EXPORTED = {
 
 /** @import {PreviousYearRowCompletionAt} from '#domain/summary-logs/linked-row.js' */
 /** @import {Year} from '#common/helpers/dates/year.js' */
+/** @import {LoadsExportedField} from './fields.js' */
 
 /**
  * Neither refused nor stopped, so received; or refused or stopped and
@@ -92,7 +94,7 @@ export const LOADS_EXPORTED = {
  *
  * @param {Record<string, unknown>} row
  * @param {Year} year
- * @returns {PreviousYearRowCompletionAt[]}
+ * @returns {readonly PreviousYearRowCompletionAt[]}
  */
 const loadExportedCompletionsOf = (row, year) => {
   const refused = row[FIELDS.WAS_THE_WASTE_REFUSED]
@@ -119,6 +121,25 @@ const loadExportedCompletionsOf = (row, year) => {
     : []
 }
 
+/**
+ * The columns an exported load must have filled in that it leaves blank: the
+ * date of export once tonnage exported is given, and tonnage exported and the
+ * overseas reprocessor once the date of export is.
+ *
+ * @param {Record<string, unknown>} row
+ * @returns {readonly LoadsExportedField[]}
+ */
+const loadExportedMissingFieldsOf = (row) => {
+  const exportedOn = isAnswered(row[FIELDS.DATE_OF_EXPORT])
+  return [
+    ...(exportedOn ? [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED] : []),
+    ...(isAnswered(row[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED])
+      ? [FIELDS.DATE_OF_EXPORT]
+      : []),
+    ...(exportedOn ? [FIELDS.OSR_ID] : [])
+  ].filter((field) => !isAnswered(row[field]))
+}
+
 export const LOADS_EXPORTED_2027 = {
   ...LOADS_EXPORTED,
   linking: {
@@ -131,7 +152,8 @@ export const LOADS_EXPORTED_2027 = {
     mayDifferBeforeCorrectionDeadline: [],
     answeredLaterOnLinkedRow: ANSWERED_LATER_ON_LINKED_ROW,
     prefilledOnLinkedRow: {},
-    completionsOf: loadExportedCompletionsOf
+    completionsOf: loadExportedCompletionsOf,
+    missingFieldsOf: loadExportedMissingFieldsOf
   },
   requiredHeaders: [
     ...LOADS_EXPORTED.requiredHeaders,

@@ -215,9 +215,9 @@ const mayDifferOf = (linking, header, previousYear) =>
  *
  * @param {{
  *   table: ComparedTable,
- *   headers: Array<string | null>,
- *   columnSchemas: Map<string, Schema>,
- *   enteredRow: unknown[],
+ *   headers: readonly (string | null)[],
+ *   columnSchemas: ReadonlyMap<string, Schema>,
+ *   enteredRow: readonly unknown[],
  *   previousYearRow: Record<string, unknown>
  * }} params
  * @returns {ReadonlyMap<string, ColumnComparison>}

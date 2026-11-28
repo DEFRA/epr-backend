@@ -52,6 +52,7 @@ import { isOrsApprovedAtDate } from '#overseas-sites/index.js'
 
 /** @import {AccreditationValidity} from '#domain/organisations/accreditation.js' */
 /** @import {ClassificationContext} from '../validation-pipeline.js' */
+/** @import {ReceivedLoadsField} from './fields.js' */
 
 /**
  * @param {Date | string} date
@@ -366,7 +367,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
 /**
  * @param {Record<string, unknown>} row
  * @param {Year} year
- * @returns {PreviousYearRowCompletionAt[]}
+ * @returns {readonly PreviousYearRowCompletionAt[]}
  */
 const receivedLoadCompletionsOf = (row, year) => [
   ...(isDateNoLaterThan(row[FIELDS.DATE_RECEIVED_BY_OSR], year)
@@ -391,6 +392,32 @@ const receivedLoadCompletionsOf = (row, year) => [
       ]
     : [])
 ]
+
+/**
+ * The columns a received load must have filled in that it leaves blank: the
+ * date of export once tonnage exported is given, and the overseas reprocessor
+ * once the date of export is.
+ *
+ * @param {Record<string, unknown>} row
+ * @returns {readonly ReceivedLoadsField[]}
+ */
+const receivedLoadMissingFieldsOf = (row) =>
+  [
+    FIELDS.DATE_RECEIVED_FOR_EXPORT,
+    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
+    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
+    FIELDS.TONNAGE_RECEIVED_FOR_EXPORT,
+    ...(isAnswered(row[FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED])
+      ? [FIELDS.DATE_OF_EXPORT]
+      : []),
+    ...(isAnswered(row[FIELDS.DATE_OF_EXPORT]) ? [FIELDS.OSR_ID] : []),
+    FIELDS.SUPPLIER_NAME,
+    FIELDS.SUPPLIER_ADDRESS,
+    FIELDS.SUPPLIER_POSTCODE,
+    FIELDS.SUPPLIER_EMAIL,
+    FIELDS.SUPPLIER_PHONE_NUMBER,
+    FIELDS.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER
+  ].filter((field) => !isAnswered(row[field]))
 
 const CALCULATED_COLUMNS = Object.freeze([
   FIELDS.NET_WEIGHT,
@@ -431,7 +458,8 @@ export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
     prefilledOnLinkedRow: {
       [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: YES_NO_VALUES.NO
     },
-    completionsOf: receivedLoadCompletionsOf
+    completionsOf: receivedLoadCompletionsOf,
+    missingFieldsOf: receivedLoadMissingFieldsOf
   },
   requiredHeaders: [
     ...RECEIVED_LOADS_FOR_EXPORT.requiredHeaders,

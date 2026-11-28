@@ -14,6 +14,7 @@ import {
   createDateFieldSchema,
   isDateNoLaterThan
 } from '#domain/summary-logs/table-schemas/shared/field-schemas.js'
+import { isAnswered } from '#domain/summary-logs/table-schemas/shared/answers.js'
 
 import { checkCrossYearRules } from './index.js'
 
@@ -70,7 +71,10 @@ const tableSchemas = {
               }
             ]
           : [])
-      ]
+      ],
+      /** @param {Record<string, unknown>} row */
+      missingFieldsOf: (row) =>
+        isAnswered(row.NET_WEIGHT) ? [] : ['NET_WEIGHT']
     },
     validationSchema: Joi.object({
       ROW_ID: Joi.number(),
@@ -814,6 +818,97 @@ describe('checkCrossYearRules', () => {
           }
         )
       ).toStrictEqual([])
+    })
+  })
+
+  describe('a previous year row missing data', () => {
+    const missingNetWeight = () =>
+      filledInRow({
+        dateOfExport: '2026-11-01',
+        previousYearCompletion: { NET_WEIGHT: null }
+      })
+
+    it('rejects the row on its previous year Row ID, with the last day it can be added', () => {
+      expect(check([missingNetWeight()])).toStrictEqual([
+        previousYearLinkIssue(
+          {
+            row: 8,
+            rowId: '1001',
+            column: 'C',
+            header: 'PREVIOUS_YEAR_ROW_ID'
+          },
+          {
+            errorCode: VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA,
+            actual: 1500,
+            previousYearRowId: '1500',
+            deadline: '2027-02-27'
+          }
+        )
+      ])
+    })
+
+    /**
+     * @type {Array<Pick<SummaryLogValidationOptions, 'registeredOnly'> & {
+     *   description: string,
+     *   createdAt: string,
+     *   deadlines: string[]
+     * }>}
+     */
+    const deadlineCases = [
+      {
+        description: 'accredited, on the last correction day',
+        registeredOnly: false,
+        createdAt: '2027-02-27T23:59:59.000Z',
+        deadlines: ['2027-02-27']
+      },
+      {
+        description: 'accredited, after the last correction day',
+        registeredOnly: false,
+        createdAt: '2027-02-28T00:00:00.000Z',
+        deadlines: []
+      },
+      {
+        description: 'registered-only, on the last correction day',
+        registeredOnly: true,
+        createdAt: '2027-03-20T23:59:59.000Z',
+        deadlines: ['2027-03-20']
+      },
+      {
+        description: 'registered-only, after the last correction day',
+        registeredOnly: true,
+        createdAt: '2027-03-21T00:00:00.000Z',
+        deadlines: []
+      }
+    ]
+
+    it.for(deadlineCases)(
+      'applies until the correction deadline: $description',
+      ({ registeredOnly, createdAt, deadlines }) => {
+        expect(
+          check([missingNetWeight()], {
+            ...BEFORE_2026_CORRECTION_DEADLINE,
+            registeredOnly,
+            createdAt: new Date(createdAt)
+          }).map(({ context }) => context?.deadline)
+        ).toStrictEqual(deadlines)
+      }
+    )
+
+    it('reports both when the previous year row is complete and missing data', () => {
+      expect(
+        check([
+          filledInRow({
+            dateOfExport: '2026-11-01',
+            previousYearCompletion: {
+              NET_WEIGHT: null,
+              DATE_RECEIVED_BY_OSR: '2026-12-14'
+            }
+          })
+        ]).map(({ context }) => context?.errorCode)
+      ).toStrictEqual([
+        VALIDATION_CODE.PREVIOUS_YEAR_ROW_RECEIVED_BY_OSR,
+        VALIDATION_CODE.PREVIOUS_YEAR_ROW_MISSING_DATA
+      ])
     })
   })
 
