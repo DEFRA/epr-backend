@@ -1,6 +1,7 @@
 import { earlierYearDates } from './earlier-year-dates.js'
 import { previousYearRowComplete } from './previous-year-row-complete.js'
 import { previousYearRowValueDiffers } from './previous-year-row-value-differs.js'
+import { receivedButStoppedOrRefused } from './received-but-stopped-or-refused.js'
 
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {FoundLinkedRow} from '../index.js' */
@@ -17,7 +18,11 @@ import { previousYearRowValueDiffers } from './previous-year-row-value-differs.j
  */
 const LINKED_ROW_RULE_TIERS = Object.freeze([
   Object.freeze([previousYearRowComplete]),
-  Object.freeze([earlierYearDates, previousYearRowValueDiffers])
+  Object.freeze([
+    earlierYearDates,
+    previousYearRowValueDiffers,
+    receivedButStoppedOrRefused
+  ])
 ])
 
 /** @type {LinkedRowCheck} */
