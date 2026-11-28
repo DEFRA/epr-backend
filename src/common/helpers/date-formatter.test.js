@@ -9,6 +9,7 @@ import {
   startOfDay,
   toCalendarDate,
   toISOString,
+  ukCalendarDate,
   utcCalendarDate,
   getMonthNames,
   getMonthsOfYear
@@ -88,6 +89,17 @@ describe('utcCalendarDate', () => {
     expect(utcCalendarDate(new Date('2025-07-01T00:30:00+01:00'))).toBe(
       '2025-06-30'
     )
+  })
+})
+
+describe('ukCalendarDate', () => {
+  it.each([
+    { instant: '2026-05-31T23:30:00.000Z', expected: '2026-06-01' },
+    { instant: '2026-06-01T09:00:00.000Z', expected: '2026-06-01' },
+    { instant: '2026-12-31T23:30:00.000Z', expected: '2026-12-31' },
+    { instant: '2026-03-29T00:30:00.000Z', expected: '2026-03-29' }
+  ])('gives $expected for $instant', ({ instant, expected }) => {
+    expect(ukCalendarDate(new Date(instant))).toBe(expected)
   })
 })
 

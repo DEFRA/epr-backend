@@ -183,6 +183,10 @@ const submitted = async (env, year, summaryLogId, parsed) => {
   )
 }
 
+const beforeThe2026CorrectionDeadline = () => {
+  uploadOn('2027-01-10T09:00:00.000Z')
+}
+
 /** Until then, a 2027 row may not carry a 2026 date it was not linked to. */
 const afterThe2026CorrectionDeadline = () => {
   vi.useFakeTimers({
@@ -668,9 +672,10 @@ describe('2027 rows linked to a 2026 row', () => {
       expect(row?.link?.suppliedFields).not.toContain('CONTAINER_NUMBER')
     })
 
-    it('ignores a value typed in a receipt column on the 2027 row and uses the 2026 value', async () => {
+    it('ignores a value typed in a receipt column on the 2027 row once 2026 has closed, and uses the 2026 value', async () => {
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
+      afterThe2026CorrectionDeadline()
 
       await submitted(
         env,
@@ -701,8 +706,122 @@ describe('2027 rows linked to a 2026 row', () => {
       )
     })
 
+    it('rejects a receipt value the 2027 row gives differently from the 2026 row, on its cell, while 2026 can still be corrected', async () => {
+      beforeThe2026CorrectionDeadline()
+      const env = await setup()
+      await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow({ dateReceived: '2027-01-02', grossWeight: 600 })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual(
+        ['DATE_RECEIVED_FOR_EXPORT', 'GROSS_WEIGHT'].map((header) =>
+          expect.objectContaining({
+            errorCode: 'PREVIOUS_YEAR_ROW_VALUE_DIFFERS',
+            previousYearRowId: '1500',
+            deadline: '2027-02-27',
+            location: expect.objectContaining({ header, rowId: '1001' })
+          })
+        )
+      )
+    })
+
+    it('accepts a linked row whose export tonnage repeats the 2026 value to two decimal places', async () => {
+      beforeThe2026CorrectionDeadline()
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log({
+          ...EXPORTED_IN_DECEMBER_2026,
+          exportTonnage: 25.004
+        })
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow({ ...EXPORTED_IN_DECEMBER_2026, exportTonnage: 25 })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+    })
+
+    it('accepts a linked row that records a 2026 load as refused in 2027', async () => {
+      beforeThe2026CorrectionDeadline()
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log(EXPORTED_IN_DECEMBER_2026)
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow({
+            ...EXPORTED_IN_DECEMBER_2026,
+            wasteRefused: 'Yes',
+            dateRepatriated: '2027-01-15'
+          })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+    })
+
+    it('rejects a 2026 refused load given as not refused on the linked row, on that cell, while 2026 can still be corrected', async () => {
+      beforeThe2026CorrectionDeadline()
+      const env = await setup()
+      await submitted(
+        env,
+        PREVIOUS_YEAR,
+        'log-2026',
+        accredited2026Log({ ...EXPORTED_IN_DECEMBER_2026, wasteRefused: 'Yes' })
+      )
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([
+          linkedRow({
+            ...EXPORTED_IN_DECEMBER_2026,
+            wasteRefused: 'No',
+            dateReceivedByOsr: '2027-01-25'
+          })
+        ])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        expect.objectContaining({
+          errorCode: 'PREVIOUS_YEAR_ROW_VALUE_DIFFERS',
+          actual: 'No',
+          location: expect.objectContaining({
+            header: 'WAS_THE_WASTE_REFUSED',
+            rowId: '1001'
+          })
+        })
+      ])
+    })
+
     it('rejects a 2026 export date supplied on a linked row while 2026 can still be corrected', async () => {
-      uploadOn('2027-01-10T09:00:00.000Z')
+      beforeThe2026CorrectionDeadline()
       const env = await setup()
       await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
 
@@ -732,7 +851,7 @@ describe('2027 rows linked to a 2026 row', () => {
     ])(
       'accepts a 2026 export date supplied on a linked row that repeats the 2026 row, stored %s',
       async (_, exportDate) => {
-        uploadOn('2027-01-10T09:00:00.000Z')
+        beforeThe2026CorrectionDeadline()
         const env = await setup()
         await submitted(
           env,
@@ -1119,8 +1238,8 @@ describe('2027 rows linked to a 2026 row', () => {
           LOADS_EXPORTED: tableOf('Exported', [
             {
               ...exportedRow,
-              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: 1,
-              DATE_OF_EXPORT: '2027-01-05T00:00:00.000Z',
+              TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED: null,
+              DATE_OF_EXPORT: null,
               OSR_ID: null,
               WAS_THE_WASTE_REFUSED: 'Yes',
               PREVIOUS_YEAR_ROW_ID: 2001,
@@ -1193,6 +1312,33 @@ describe('2027 rows linked to a 2026 row', () => {
       })
       return env
     }
+
+    it('rejects an export value the 2027 row gives differently from the 2026 row, while 2026 can still be corrected', async () => {
+      beforeThe2026CorrectionDeadline()
+      const env = await setupWith2026Row()
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        registeredOnly2027Log({ CONTAINER_NUMBER: 'CONT-2027' })
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(validated.validation.failures).toStrictEqual([
+        expect.objectContaining({
+          errorCode: 'PREVIOUS_YEAR_ROW_VALUE_DIFFERS',
+          actual: 'CONT-2027',
+          previousYearRowId: '2001',
+          deadline: '2027-03-20',
+          location: expect.objectContaining({
+            table: 'LOADS_EXPORTED',
+            rowId: '2002',
+            header: 'CONTAINER_NUMBER'
+          })
+        })
+      ])
+    })
 
     it('rejects a row whose previous-year row ID names no 2026 row', async () => {
       const env = await setupWith2026Row()
