@@ -14,18 +14,25 @@ import { toPreviousYearLinkIssue } from '../previous-year-link-issue.js'
  *
  * @type {LinkedRowCheck}
  */
-export const prnsIssuedOnPreviousYearRow = (linkedRow) => {
-  const field = linkedRow.linking.prnsIssuedField
-  return field && isYes(linkedRow.previousYearLink.previousYear[field])
-    ? [
-        toPreviousYearLinkIssue({
-          errorCode: VALIDATION_CODE.LINKED_ROW_PRNS_ISSUED,
-          severity: VALIDATION_SEVERITY.WARNING,
-          field,
-          linkedRow,
-          enteredValue: linkedRow.rowObject[field],
-          previousYearRowId: linkedRow.previousYearLink.link.rowId
-        })
-      ]
-    : []
-}
+export const prnsIssuedOnPreviousYearRow = ({
+  linking,
+  previousYearLink,
+  issueLocation,
+  ...linkedRow
+}) =>
+  [...issueLocation.headerToIndexMap]
+    .filter(
+      ([column]) =>
+        column === linking.prnsIssuedField &&
+        isYes(previousYearLink.previousYear[column])
+    )
+    .map(([field, index]) =>
+      toPreviousYearLinkIssue({
+        errorCode: VALIDATION_CODE.LINKED_ROW_PRNS_ISSUED,
+        severity: VALIDATION_SEVERITY.WARNING,
+        field,
+        linkedRow: { ...linkedRow, issueLocation },
+        enteredValue: previousYearLink.entered[index],
+        previousYearRowId: previousYearLink.link.rowId
+      })
+    )

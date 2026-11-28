@@ -378,31 +378,38 @@ describe('transformValidationResponse', () => {
 
     it.for([
       {
-        description: 'names',
-        rowId: '1001',
+        description: 'names the row ID its issue gives',
+        issueRowIds: ['1001'],
         expected: { row: 8, rowId: '1001' }
       },
-      { description: 'leaves out', rowId: undefined, expected: { row: 8 } }
-    ])('gives the row ID a row issue $description', ({ rowId, expected }) => {
+      {
+        description: 'names the row ID a later issue on the row gives',
+        issueRowIds: [undefined, '1001'],
+        expected: { row: 8, rowId: '1001' }
+      },
+      {
+        description: 'leaves out the row ID when no issue gives one',
+        issueRowIds: [undefined],
+        expected: { row: 8 }
+      }
+    ])('$description', ({ issueRowIds, expected }) => {
       const result = transformValidationResponse({
-        issues: [
-          {
-            severity: VALIDATION_SEVERITY.WARNING,
-            category: 'business',
-            message: 'Previous year link',
-            code: 'PREVIOUS_YEAR_LINK',
-            context: {
-              location: {
-                sheet: 'Received',
-                table: 'RECEIVED_LOADS_FOR_EXPORT',
-                row: 8,
-                ...(rowId && { rowId }),
-                column: 'J',
-                header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-              }
+        issues: issueRowIds.map((rowId) => ({
+          severity: VALIDATION_SEVERITY.WARNING,
+          category: 'business',
+          message: 'Previous year link',
+          code: 'PREVIOUS_YEAR_LINK',
+          context: {
+            location: {
+              sheet: 'Received',
+              table: 'RECEIVED_LOADS_FOR_EXPORT',
+              row: 8,
+              ...(rowId && { rowId }),
+              column: 'J',
+              header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
             }
           }
-        ]
+        }))
       })
 
       const { issues: _, ...row } =

@@ -899,7 +899,7 @@ describe('checkCrossYearRules', () => {
           previousYearLinkIssue(PRN_ISSUED_CELL, {
             errorCode: VALIDATION_CODE.LINKED_ROW_PRNS_ISSUED,
             severity: VALIDATION_SEVERITY.WARNING,
-            actual: 'Yes',
+            actual: prnIssued,
             previousYearRowId: '1500'
           })
         ])
