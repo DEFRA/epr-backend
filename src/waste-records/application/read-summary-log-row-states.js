@@ -45,6 +45,30 @@ export const wasteRecordStatesForHead = async (
       )
 
 /**
+ * As `wasteRecordStatesForHead`, narrowed to the rows `filter` places in its
+ * period.
+ *
+ * @param {import('#waste-records/repository/port.js').SummaryLogRowStatesRepository} summaryLogRowStatesRepository
+ * @param {import('#waste-balances/repository/ledger-schema.js').WasteBalanceLedgerId} ledgerId
+ * @param {SummaryLogFileId | null} head
+ * @param {import('#waste-records/repository/period-filter.js').PeriodFilter} filter
+ * @returns {Promise<WasteRecordState[]>}
+ */
+export const wasteRecordStatesInPeriodForHead = async (
+  summaryLogRowStatesRepository,
+  ledgerId,
+  head,
+  filter
+) =>
+  head === null
+    ? []
+    : summaryLogRowStatesRepository.findWasteRecordStatesInPeriod(
+        ledgerId,
+        head,
+        filter
+      )
+
+/**
  * A ledger's latest submitted summary log together with the row states that
  * belong to it — the baseline a subsequent upload in the same year is judged
  * against.
