@@ -3,7 +3,7 @@ import exporter from '#data/fixtures/ea/accreditation/exporter.json' with { type
 import reprocessorPaper from '#data/fixtures/ea/accreditation/reprocessor-paper.json' with { type: 'json' }
 import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json' with { type: 'json' }
 import exporterWithoutRegistration from '#data/fixtures/ea/accreditation/exporter-without-registration.json' with { type: 'json' }
-import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
+import { parseAccreditationSubmission } from '#forms-submission-data/accreditation/transform-accreditation.js'
 import { validateAccreditation } from '#repositories/organisations/schema/validation.js'
 import {
   GLASS_RECYCLING_PROCESS,

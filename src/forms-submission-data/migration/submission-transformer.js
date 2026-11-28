@@ -3,12 +3,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
-import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
-import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
+import { parseAccreditationSubmission } from '#forms-submission-data/accreditation/transform-accreditation.js'
+import { parseOrgSubmission } from '#forms-submission-data/organisation/transform-organisation.js'
+import { parseRegistrationSubmission } from '#forms-submission-data/registration/transform-registration.js'
 
 /**
- * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {FormSubmissionsRepository} from '#forms-submission-data/repository/port.js'
  */
 
 const TRANSFORMATION_CONFIG = {
@@ -76,8 +76,8 @@ async function fetchAndTransform(
 
 /**
  * @param {FormSubmissionsRepository} formsSubmissionRepository
- * @param {import('#repositories/form-submissions/port.js').FormSubmissionIds} submissionsToMigrate
- * @returns {Promise<import('#formsubmission/types.js').TransformedSubmissions>}
+ * @param {import('#forms-submission-data/repository/port.js').FormSubmissionIds} submissionsToMigrate
+ * @returns {Promise<import('#forms-submission-data/types.js').TransformedSubmissions>}
  */
 export async function transformAll(
   formsSubmissionRepository,

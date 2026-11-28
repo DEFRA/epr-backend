@@ -1,120 +1,114 @@
+import soleTrader from '#data/fixtures/ea/organisation/non-registered-uk-sole-trader.json' with { type: 'json' }
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runFormsDataMigration } from './run-forms-data-migration.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { partialMock } from '#test/type-helpers.js'
-
-/** @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js' */
-/** @import { OrganisationsRepository } from '#repositories/organisations/port.js' */
-/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
+import { toOrganisationNumber } from '#domain/organisations/numbers.js'
+import {
+  createInMemoryFormsFileUploadsRepository,
+  createInMemoryFormSubmissionsRepository
+} from '#forms-submission-data/test-support.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: vi.fn(),
-    error: vi.fn()
+    error: vi.fn(),
+    warn: vi.fn()
   }
 }))
-vi.mock('#formsubmission/migration/migration-orchestrator.js', () => ({
-  createFormDataMigrator: vi.fn()
-}))
-vi.mock('#repositories/form-submissions/mongodb.js', () => ({
-  createFormSubmissionsRepository: vi.fn()
-}))
-vi.mock('#repositories/organisations/mongodb.js', () => ({
-  createOrganisationsRepository: vi.fn()
-}))
 
-vi.mock('#repositories/system-logs/mongodb.js', () => ({
-  createSystemLogsRepository: vi.fn()
-}))
+const soleTraderNumber = toOrganisationNumber(String(soleTrader.orgId))
+
+const soleTraderSubmission = {
+  id: soleTrader._id.$oid,
+  orgId: soleTrader.orgId,
+  rawSubmissionData: soleTrader.rawSubmissionData
+}
 
 describe('runFormsDataMigration', () => {
-  let mockServer
-  /** @type {FormSubmissionsRepository} */
-  let mockFormSubmissionsRepository
-  /** @type {OrganisationsRepository} */
-  let mockOrganisationsRepository
-  let mockLock
-  let mockFormsDataMigration
-  /** @type {SystemLogsRepository} */
-  const mockSystemLogsRepository = partialMock({})
+  let server
+  let lock
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockFormSubmissionsRepository = partialMock({
-      findAllOrganisations: vi.fn()
-    })
-    mockOrganisationsRepository = partialMock({ insert: vi.fn() })
+    lock = { free: vi.fn().mockResolvedValue(undefined) }
 
-    mockFormsDataMigration = {
-      migrate: vi.fn().mockResolvedValue(undefined)
+    server = {
+      app: {
+        formSubmissionsRepository: createInMemoryFormSubmissionsRepository(
+          [],
+          [],
+          [soleTraderSubmission]
+        )(),
+        formsFileUploadsRepository: createInMemoryFormsFileUploadsRepository(),
+        organisationAdministrationRepository:
+          createInMemoryOrganisationsRepository()(),
+        systemLogsRepository: createSystemLogsRepository()(logger)
+      },
+      locker: { lock: vi.fn().mockResolvedValue(lock) }
     }
-
-    mockLock = {
-      free: vi.fn().mockResolvedValue(undefined)
-    }
-
-    mockServer = {
-      db: {},
-      locker: {
-        lock: vi.fn().mockResolvedValue(mockLock)
-      }
-    }
-
-    vi.mocked(createFormSubmissionsRepository).mockResolvedValue(
-      () => mockFormSubmissionsRepository
-    )
-    vi.mocked(createOrganisationsRepository).mockResolvedValue(
-      () => mockOrganisationsRepository
-    )
-    vi.mocked(createSystemLogsRepository).mockResolvedValue(
-      () => mockSystemLogsRepository
-    )
-    vi.mocked(createFormDataMigrator).mockReturnValue(mockFormsDataMigration)
-
-    logger.info = vi.fn()
-    logger.error = vi.fn()
   })
 
-  it('should run migration', async () => {
-    await runFormsDataMigration(mockServer)
+  it("migrates the forms' organisations into the server's organisations repository", async () => {
+    await runFormsDataMigration(server)
 
-    expect(logger.info).toHaveBeenCalledWith({
-      message: 'Starting form data migration'
-    })
-    expect(mockServer.locker.lock).toHaveBeenCalledWith('forms-data-migration')
-    expect(mockFormsDataMigration.migrate).toHaveBeenCalled()
+    const migrated =
+      await server.app.organisationAdministrationRepository.findByOrganisationNumbers(
+        [soleTraderNumber]
+      )
+    expect(migrated).toHaveLength(1)
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Form data migration completed successfully'
     })
-    expect(mockLock.free).toHaveBeenCalled()
+    expect(lock.free).toHaveBeenCalled()
   })
 
-  it('should handle errors gracefully', async () => {
+  it('logs a failed migration and frees the lock', async () => {
     const error = new Error('Migration failed')
-    mockFormsDataMigration.migrate.mockRejectedValue(error)
+    server.app.organisationAdministrationRepository = {
+      ...server.app.organisationAdministrationRepository,
+      findAllIds: () => Promise.reject(error)
+    }
 
-    await runFormsDataMigration(mockServer)
+    await runFormsDataMigration(server)
 
     expect(logger.error).toHaveBeenCalledWith({
       message: 'Failed to run form data migration',
       err: error
     })
-    expect(mockLock.free).toHaveBeenCalled()
+    expect(lock.free).toHaveBeenCalled()
   })
 
-  it('should skip migration when unable to obtain lock', async () => {
-    mockServer.locker.lock.mockResolvedValue(null)
+  it('migrates nothing when the server lacks a repository it needs', async () => {
+    server.app = {
+      formSubmissionsRepository: server.app.formSubmissionsRepository
+    }
 
-    await runFormsDataMigration(mockServer)
+    await runFormsDataMigration(server)
+
+    expect(logger.error).toHaveBeenCalledWith({
+      message: 'Failed to run form data migration',
+      err: new Error(
+        'The server has not registered formsFileUploadsRepository, organisationAdministrationRepository, systemLogsRepository'
+      )
+    })
+    expect(server.locker.lock).not.toHaveBeenCalled()
+  })
+
+  it('migrates nothing when another instance holds the lock', async () => {
+    server.locker.lock.mockResolvedValue(null)
+
+    await runFormsDataMigration(server)
 
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Unable to obtain lock, skipping running form data migration'
     })
-    expect(createFormDataMigrator).not.toHaveBeenCalled()
+    const migrated =
+      await server.app.organisationAdministrationRepository.findByOrganisationNumbers(
+        [soleTraderNumber]
+      )
+    expect(migrated).toHaveLength(0)
   })
 })

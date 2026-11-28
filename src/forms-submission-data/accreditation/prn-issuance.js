@@ -1,9 +1,9 @@
 import {
   convertToNumber,
   mapTonnageBand
-} from '#formsubmission/parsing-common/form-data-mapper.js'
+} from '#forms-submission-data/parsing-common/form-data-mapper.js'
 import { ACCREDITATION } from './form-field-constants.js'
-import { extractRepeaters } from '#formsubmission/parsing-common/parse-forms-data.js'
+import { extractRepeaters } from '#forms-submission-data/parsing-common/parse-forms-data.js'
 
 const INCOME_BUSINESS_PLAN_CONFIG = [
   {

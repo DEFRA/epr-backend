@@ -3,20 +3,19 @@ import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/repro
 import { logger } from '#common/helpers/logging/logger.js'
 import { MATERIAL } from '#domain/organisations/model.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
+import { createInMemoryFormsFileUploadsRepository } from '#forms-submission-data/file-uploads/inmemory.js'
+import { createInMemoryFormSubmissionsRepository } from '#forms-submission-data/repository/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createFormDataMigrator } from './migration/migration-orchestrator.js'
 
 describe('Migration Integration Tests with Fixtures', () => {
   let sharedOrganisationsRepo
   let sharedSystemLogsRepo
-  const formsFileUploadsRepo = {
-    copyFormFileToS3: vi.fn().mockResolvedValue(undefined)
-  }
+  const formsFileUploadsRepo = createInMemoryFormsFileUploadsRepository()
 
   async function readFixtureOrganisations() {
     const organisationNumbers = loadFixtures('organisation').map((fixture) =>
@@ -99,7 +98,7 @@ describe('Migration Integration Tests with Fixtures', () => {
       rawSubmissionData: fixture.rawSubmissionData
     }))
 
-    return createFormSubmissionsRepository(
+    return createInMemoryFormSubmissionsRepository(
       accFormSubmissions,
       regFormSubmissions,
       orgFormSubmissions

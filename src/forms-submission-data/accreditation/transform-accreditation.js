@@ -5,18 +5,18 @@ import {
   extractWasteProcessingType,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
-} from '#formsubmission/parsing-common/parse-forms-data.js'
+} from '#forms-submission-data/parsing-common/parse-forms-data.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   convertToNumber,
   mapGlassRecyclingProcess,
   mapMaterial,
   normalizeObjectId
-} from '#formsubmission/parsing-common/form-data-mapper.js'
+} from '#forms-submission-data/parsing-common/form-data-mapper.js'
 import { ACCREDITATION } from './form-field-constants.js'
-import { getPrnIssuance } from '#formsubmission/accreditation/prn-issuance.js'
-import { applyAccreditationOverrides } from '#formsubmission/overrides/override.js'
-import { splitGlassSubmissions } from '#formsubmission/parsing-common/split-glass-submissions.js'
+import { getPrnIssuance } from '#forms-submission-data/accreditation/prn-issuance.js'
+import { applyAccreditationOverrides } from '#forms-submission-data/overrides/override.js'
+import { splitGlassSubmissions } from '#forms-submission-data/parsing-common/split-glass-submissions.js'
 
 function getSubmitterDetails(answersByShortDescription) {
   return {

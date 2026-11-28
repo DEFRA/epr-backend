@@ -4,19 +4,19 @@ import { logger } from '#common/helpers/logging/logger.js'
 import {
   linkItemsToOrganisations,
   linkRegistrationToAccreditations
-} from '#formsubmission/link-form-submissions.js'
-import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migration-config.js'
+} from '#forms-submission-data/link-form-submissions.js'
+import { systemReferencesRequiringOrgIdMatch } from '#forms-submission-data/data-migration-config.js'
 import { transformAll } from './submission-transformer.js'
 import { getSubmissionsToMigrate } from './migration-delta-calculator.js'
 import { upsertOrganisations } from './organisation-persistence.js'
 import { copyOperatorUploadedFiles } from './copy-operator-uploaded-files.js'
 
 /**
- * @import {createFormsFileUploadsRepository} from '#adapters/repositories/forms-submissions/forms-file-uploads.js'
- * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {FormsFileUploadsRepository} from '#forms-submission-data/file-uploads/port.js'
+ * @import {FormSubmissionsRepository} from '#forms-submission-data/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
- * @import {FormDataMigrator, Organisation, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
+ * @import {FormDataMigrator, Organisation, OrganisationMigrationItem, OrganisationWithRegistrations} from '#forms-submission-data/types.js'
  */
 
 export class MigrationOrchestrator {
@@ -24,7 +24,7 @@ export class MigrationOrchestrator {
    * @param {FormSubmissionsRepository} formsSubmissionRepository
    * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
    * @param {SystemLogsRepository} systemLogsRepository
-   * @param {ReturnType<typeof createFormsFileUploadsRepository>} formsFileUploadsRepository
+   * @param {FormsFileUploadsRepository} formsFileUploadsRepository
    */
   constructor(
     formsSubmissionRepository,
@@ -252,7 +252,7 @@ export class MigrationOrchestrator {
  * @param {FormSubmissionsRepository} formsSubmissionRepository
  * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SystemLogsRepository} systemLogsRepository
- * @param {object} formsFileUploadsRepository
+ * @param {FormsFileUploadsRepository} formsFileUploadsRepository
  * @returns {FormDataMigrator}
  */
 export function createFormDataMigrator(

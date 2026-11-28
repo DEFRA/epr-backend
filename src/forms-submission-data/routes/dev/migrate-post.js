@@ -1,0 +1,76 @@
+import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
+import Joi from 'joi'
+
+import { MigrationOrchestrator } from '#forms-submission-data/migration/migration-orchestrator.js'
+
+/** @import {HapiRequest} from '#common/hapi-types.js' */
+/** @import {FormsFileUploadsRepository} from '#forms-submission-data/file-uploads/port.js' */
+/** @import {FormSubmissionsRepository} from '#forms-submission-data/repository/port.js' */
+/** @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js' */
+/** @import {SystemLogsRepository} from '#repositories/system-logs/port.js' */
+
+/**
+ * @typedef {HapiRequest & {
+ *   formSubmissionsRepository: FormSubmissionsRepository
+ *   formsFileUploadsRepository: FormsFileUploadsRepository
+ *   organisationAdministrationRepository: OrganisationAdministrationRepository
+ *   systemLogsRepository: SystemLogsRepository
+ *   params: { id: string }
+ * }} MigrateRequest
+ */
+
+export const devFormSubmissionsMigratePath =
+  '/v1/dev/form-submissions/{id}/migrate'
+
+const params = Joi.object({
+  id: Joi.string().trim().min(1).required()
+}).messages({
+  'any.required': '{#label} is required',
+  'string.empty': '{#label} cannot be empty',
+  'string.min': '{#label} cannot be empty'
+})
+
+/**
+ * Migrate a single organisation by ID.
+ *
+ * @param {MigrateRequest} request
+ * @param {Object} h - Hapi response toolkit
+ */
+async function handler(request, h) {
+  const {
+    formSubmissionsRepository,
+    formsFileUploadsRepository,
+    organisationAdministrationRepository,
+    systemLogsRepository
+  } = request
+  const { id } = request.params
+
+  const orchestrator = new MigrationOrchestrator(
+    formSubmissionsRepository,
+    organisationAdministrationRepository,
+    systemLogsRepository,
+    formsFileUploadsRepository
+  )
+
+  const result = await orchestrator.migrateById(id)
+
+  if (!result) {
+    throw Boom.notFound(`Organisation form submission not found: ${id}`)
+  }
+
+  return h.response({ migrated: result }).code(StatusCodes.OK)
+}
+
+export const devFormSubmissionsMigratePost = {
+  method: 'POST',
+  path: devFormSubmissionsMigratePath,
+  options: {
+    auth: false,
+    tags: ['api'],
+    validate: {
+      params
+    }
+  },
+  handler
+}

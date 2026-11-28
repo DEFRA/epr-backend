@@ -5,7 +5,7 @@ import {
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
+import { siteInfoToLog } from '#forms-submission-data/parsing-common/site.js'
 import { ObjectId } from 'mongodb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {

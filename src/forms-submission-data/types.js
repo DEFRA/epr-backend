@@ -171,7 +171,7 @@
 /**
  * Submission IDs with total count
  *
- * @typedef {import('#repositories/form-submissions/port.js').FormSubmissionIds & {
+ * @typedef {import('#forms-submission-data/repository/port.js').FormSubmissionIds & {
  *   totalCount: number
  * }} SubmissionIdsWithCount
  */

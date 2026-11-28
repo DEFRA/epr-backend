@@ -1,5 +1,5 @@
 /**
- * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {FormSubmissionsRepository} from '#forms-submission-data/repository/port.js'
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  */
 import { config } from '#root/config.js'
@@ -9,7 +9,7 @@ const SKIP_ACCREDITATION_IDS = config.get('skipMigratingAccreditations')
 /**
  * @param {FormSubmissionsRepository} formsSubmissionRepository
  * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
- * @returns {Promise<import('#formsubmission/types.js').MigrationDelta>}
+ * @returns {Promise<import('#forms-submission-data/types.js').MigrationDelta>}
  */
 export async function getSubmissionsToMigrate(
   formsSubmissionRepository,

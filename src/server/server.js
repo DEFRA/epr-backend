@@ -16,7 +16,12 @@ import {
 import { prnEventsPlugin } from '#packaging-recycling-notes/application/prn-events.plugin.js'
 import { packagingRecyclingNotesRepositoryPlugin } from '#packaging-recycling-notes/repository/mongodb.plugin.js'
 import { serverPlugins } from '#plugins/server-plugins.js'
-import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
+import {
+  createFormCollections,
+  formsFileUploadsRepositoryPlugin,
+  formSubmissionsRepositoryPlugin
+} from '#forms-submission-data/plugin.js'
+import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
 import { organisationReadRepositoryPlugin } from '#organisation-read-model/plugin.js'
 import { registrationAccreditationAdminRepositoryPlugin } from '#registration-accreditation-admin/plugin.js'
@@ -28,7 +33,6 @@ import { mongoSummaryLogRowStatesRepositoryPlugin } from '#waste-records/reposit
 import { mongoReportsRepositoryPlugin } from '#reports/repository/mongodb.plugin.js'
 import { getConfig } from '#root/config.js'
 import { commandQueueConsumerPlugin } from '#server/queue-consumer/queue-consumer.plugin.js'
-import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 import { runReconcileStalePrnProjections } from '#server/run-reconcile-stale-prn-projections.js'
 import { seedDatabase } from '#server/seed/seed-database.js'
 
@@ -84,10 +88,14 @@ function regAccredApiOf(config) {
 function getProductionPlugins(config) {
   const eventualConsistency = config.get('mongo.eventualConsistency')
 
-  const plugins = [
+  return [
     {
       plugin: mongoDbPlugin,
-      options: { ...config.get('mongo'), seedDatabase }
+      options: {
+        ...config.get('mongo'),
+        createCollections: createFormCollections,
+        seedDatabase
+      }
     },
     {
       plugin: mongoOrganisationsRepositoryPlugin,
@@ -95,7 +103,19 @@ function getProductionPlugins(config) {
     },
     registrationAccreditationAdminRepositoryPlugin,
     mongoSummaryLogsRepositoryPlugin,
-    mongoFormSubmissionsRepositoryPlugin,
+    formSubmissionsRepositoryPlugin,
+    {
+      plugin: formsFileUploadsRepositoryPlugin,
+      options: {
+        s3: {
+          region: config.get('awsRegion'),
+          endpoint: config.get('s3Endpoint'),
+          forcePathStyle: config.get('isDevelopment')
+        },
+        formsSubmissionApi: config.get('formsSubmissionApi'),
+        regulators: config.get('regulator')
+      }
+    },
     mongoLedgerRepositoryPlugin,
     mongoWasteBalanceServicePlugin,
     mongoSystemLogsRepositoryPlugin,
@@ -109,25 +129,16 @@ function getProductionPlugins(config) {
       options: { regAccredApi: regAccredApiOf(config) }
     },
     orsImportsRepositoryPlugin,
-    mongoSummaryLogRowStatesRepositoryPlugin
+    mongoSummaryLogRowStatesRepositoryPlugin,
+    mongoReportsRepositoryPlugin,
+    prnEventsPlugin,
+    /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
+    ...(config.get('featureFlags.devEndpoints')
+      ? [nonProdDataResetPlugin, mongoExternalAccreditationsRepositoryPlugin]
+      : []),
+    packagingRecyclingNotesRepositoryPlugin,
+    { plugin: commandQueueConsumerPlugin, options: { config } }
   ]
-
-  plugins.push(mongoReportsRepositoryPlugin, prnEventsPlugin)
-
-  /* istanbul ignore next -- gated by feature flag, only loaded in non-prod envs */
-  if (config.get('featureFlags.devEndpoints')) {
-    plugins.push(
-      nonProdDataResetPlugin,
-      mongoExternalAccreditationsRepositoryPlugin
-    )
-  }
-
-  plugins.push(packagingRecyclingNotesRepositoryPlugin, {
-    plugin: commandQueueConsumerPlugin,
-    options: { config }
-  })
-
-  return plugins
 }
 
 async function createServer(options = {}) {
@@ -140,7 +151,7 @@ async function createServer(options = {}) {
   // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
   // These routes reach their collections directly and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
-  // See: src/routes/v1/apply/*.js
+  // See: src/forms-submission-data/apply/routes/*.js
   const legacyApplyRoutes = Boolean(options._testOnlyLegacyApplyRoutes)
   const infrastructure = legacyApplyRoutes ? [] : getProductionPlugins(config)
 

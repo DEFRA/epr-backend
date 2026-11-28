@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb'
 import { upsertOrganisations } from './organisation-persistence.js'
 import { partialMock } from '#test/type-helpers.js'
 
-/** @import { OrganisationMigrationItem } from '#formsubmission/types.js' */
+/** @import { OrganisationMigrationItem } from '#forms-submission-data/types.js' */
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -17,16 +17,19 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-vi.mock('#formsubmission/parsing-common/transform-utils.js', () => ({
+vi.mock('#forms-submission-data/parsing-common/transform-utils.js', () => ({
   removeUndefinedValues: vi.fn((obj) => obj)
 }))
 
 const mockAuditIncrementalFormMigration = vi.fn()
 
-vi.mock('#auditing/incremental-form-migration.js', () => ({
-  auditIncrementalFormMigration: (...args) =>
-    mockAuditIncrementalFormMigration(...args)
-}))
+vi.mock(
+  '#forms-submission-data/auditing/incremental-form-migration.js',
+  () => ({
+    auditIncrementalFormMigration: (...args) =>
+      mockAuditIncrementalFormMigration(...args)
+  })
+)
 
 describe('upsertOrganisations', () => {
   let organisationAdministrationRepository

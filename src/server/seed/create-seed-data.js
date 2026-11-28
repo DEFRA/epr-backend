@@ -1,14 +1,12 @@
 import { ORG_ID_START_NUMBER } from '#common/enums/index.js'
 import {
+  accreditationFactory,
   extractAnswers,
   extractEmail,
-  extractOrgName
-} from '#common/helpers/apply/extract-answers.js'
-import {
-  accreditationFactory,
+  extractOrgName,
   organisationFactory,
   registrationFactory
-} from '#common/helpers/collections/factories/index.js'
+} from '#forms-submission-data/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { toOrganisationNumber } from '#domain/organisations/numbers.js'
 import { createEprOrganisationScenarios } from './seed-scenarios.js'

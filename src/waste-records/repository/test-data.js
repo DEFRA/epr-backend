@@ -3,14 +3,12 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   toAccreditationNumber,
-  toOrganisationNumber,
   toRegistrationNumber
 } from '#domain/organisations/numbers.js'
 import { utcYearOf } from '#common/helpers/dates/year.js'
-import { generateOrgId } from '#repositories/form-submissions/contract/test-data.js'
+import { uniqueOrganisationNumber } from '#reports/repository/contract/test-data.js'
 
 /** @import { WasteBalanceLedgerId } from '#waste-balances/repository/ledger-schema.js' */
-/** @import { OrganisationNumber } from '#domain/organisations/numbers.js' */
 
 /**
  * Build a summary-log row state document (insert shape — no `id`).
@@ -67,14 +65,8 @@ export const buildRowStateLink = (overrides = {}) => ({
 
 export const DEFAULT_YEAR = utcYearOf('2026-01-01')
 
-/**
- * A random organisation number, so test files sharing a database don't
- * collide.
- *
- * @returns {OrganisationNumber}
- */
-export const anotherOrganisationNumber = () =>
-  toOrganisationNumber(String(generateOrgId()))
+/** A random organisation number, so test files sharing a database don't collide. */
+export const anotherOrganisationNumber = uniqueOrganisationNumber
 
 /** @type {Readonly<WasteBalanceLedgerId>} */
 export const DEFAULT_LEDGER_ID = Object.freeze({

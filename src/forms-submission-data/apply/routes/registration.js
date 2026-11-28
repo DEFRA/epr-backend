@@ -1,0 +1,28 @@
+import { registrationAndAccreditationHandler } from '#forms-submission-data/apply/handler.js'
+import { registrationAndAccreditationPayload } from '#forms-submission-data/apply/payload.js'
+import { registrationFactory } from '#forms-submission-data/apply/collections/factories/index.js'
+
+const registrationPath = '/v1/apply/registration'
+
+/**
+ * Apply: Registration
+ * Stores registration data an activity/site/material combinations against an orgId and referenceNumber.
+ */
+const registration = {
+  method: 'POST',
+  path: registrationPath,
+  options: {
+    auth: false,
+    tags: ['api'],
+    validate: {
+      payload: registrationAndAccreditationPayload
+    }
+  },
+  handler: registrationAndAccreditationHandler(
+    'registration',
+    registrationPath,
+    registrationFactory
+  )
+}
+
+export { registration, registrationPath }

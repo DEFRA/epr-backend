@@ -3,14 +3,14 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
-import { auditIncrementalFormMigration } from '#auditing/incremental-form-migration.js'
+import { removeUndefinedValues } from '#forms-submission-data/parsing-common/transform-utils.js'
+import { auditIncrementalFormMigration } from '#forms-submission-data/auditing/incremental-form-migration.js'
 import { toRepositoryOrganisation } from './organisation-number.js'
 
 /**
  * @import { OrganisationAdministrationRepository } from '#repositories/organisations/administration-port.js'
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
- * @import {OrganisationMigrationItem} from '#formsubmission/types.js'
+ * @import {OrganisationMigrationItem} from '#forms-submission-data/types.js'
  */
 
 function isSuccessResult(result) {
@@ -40,7 +40,7 @@ function insertOrganisation(organisationAdministrationRepository, item) {
     )
     .then(
       () =>
-        /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
+        /** @type {import('#forms-submission-data/types.js').SuccessResult} */ ({
           success: true,
           id: item.value.id,
           action: 'inserted'
@@ -56,7 +56,7 @@ function insertOrganisation(organisationAdministrationRepository, item) {
           reference: item.value.id
         }
       })
-      return /** @type {import('#formsubmission/types.js').FailureResult} */ ({
+      return /** @type {import('#forms-submission-data/types.js').FailureResult} */ ({
         success: false,
         id: item.value.id,
         phase: 'insert'
@@ -91,7 +91,7 @@ async function updateOrganisation(
       previous,
       next
     )
-    return /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
+    return /** @type {import('#forms-submission-data/types.js').SuccessResult} */ ({
       success: true,
       id,
       action: 'updated'
@@ -106,7 +106,7 @@ async function updateOrganisation(
         reference: id
       }
     })
-    return /** @type {import('#formsubmission/types.js').FailureResult} */ ({
+    return /** @type {import('#forms-submission-data/types.js').FailureResult} */ ({
       success: false,
       id,
       phase: 'update'
@@ -118,7 +118,7 @@ async function updateOrganisation(
  * @param {OrganisationAdministrationRepository} organisationAdministrationRepository
  * @param {SystemLogsRepository} systemLogsRepository
  * @param {OrganisationMigrationItem[]} organisations
- * @returns {Promise<{successful: import('#formsubmission/types.js').SuccessResult[], failed: import('#formsubmission/types.js').FailureResult[]}>}
+ * @returns {Promise<{successful: import('#forms-submission-data/types.js').SuccessResult[], failed: import('#forms-submission-data/types.js').FailureResult[]}>}
  */
 export async function upsertOrganisations(
   organisationAdministrationRepository,

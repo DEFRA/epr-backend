@@ -128,6 +128,11 @@ export default [
               './plugin.js',
               './test-support.js'
             ]),
+            ...moduleFence('forms-submission-data', 'forms submission data', [
+              './index.js',
+              './plugin.js',
+              './test-support.js'
+            ]),
             ...moduleFence('organisations', 'the organisations module', [
               './plugin.js'
             ]),
