@@ -351,7 +351,11 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     expect(Object.keys(payload)).toEqual(['code', 'message'])
   })
 
-  it.each([PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION])(
+  it.each([
+    PRN_STATUS.DRAFT,
+    PRN_STATUS.AWAITING_AUTHORISATION,
+    PRN_STATUS.DELETED
+  ])(
     'returns 404 when the PRN holding the number is %s and so not issued',
     async (currentStatus) => {
       await startServer(buildPrn(currentStatus))

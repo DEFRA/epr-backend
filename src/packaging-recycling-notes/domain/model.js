@@ -44,8 +44,9 @@ export const ISSUED_PRN_STATUSES = new Set([
 /**
  * The number a PRN states. A PRN holds its number from just before its issue
  * is recorded, and keeps it if that issue is refused, but the number is not
- * the PRN's to state until it is issued. Pass the PRN as caught up from the
- * ledger, because a stored PRN can lag its own issue.
+ * the PRN's to state until it is issued. The answer is only as current as the
+ * status passed in, and a stored PRN can lag its own issue, so a reader that
+ * catches up from the ledger passes the caught-up PRN.
  *
  * @param {{ prnNumber?: string | null, status: { currentStatus: PrnStatus } }} prn
  * @returns {string | undefined}

@@ -525,6 +525,22 @@ describe('PRN routes by natural key', () => {
       expect(idsOf(response)).toStrictEqual([])
     })
 
+    it('is deleted and served with no number', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `${prns}/${reservedId}/status`,
+        payload: { status: PRN_STATUS.DELETED },
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(body(response)).toMatchObject({
+        id: reservedId,
+        status: { current: PRN_STATUS.DELETED }
+      })
+      expect(body(response)).not.toHaveProperty('prnNumber')
+    })
+
     it('is served with its number once the ledger has issued it', async () => {
       const AFTER_CREATION = { amount: 500, availableAmount: 400 }
       await ledgerRepository.appendEvents([
