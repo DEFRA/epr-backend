@@ -1140,6 +1140,62 @@ describe('2027 rows linked to a 2026 row', () => {
       )
       expect((await getWasteBalance(env)).amount).toBe(0)
     })
+
+    it.for([
+      { description: 'before', uploadDay: beforeThe2026CorrectionDeadline },
+      { description: 'after', uploadDay: afterThe2026CorrectionDeadline }
+    ])(
+      'accepts a linked row whose 2026 row had PERNs issued with a warning naming the row, $description the 2026 correction deadline',
+      async ({ uploadDay }) => {
+        const env = await setup()
+        await submitted(
+          env,
+          PREVIOUS_YEAR,
+          'log-2026',
+          accredited2026Log({ prnIssued: 'Yes' })
+        )
+        uploadDay()
+
+        const validated = await upload(
+          env,
+          YEAR,
+          'log-2027',
+          accredited2027Log([linkedRow()])
+        )
+
+        expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        expect(
+          validated.validation.concerns.RECEIVED_LOADS_FOR_EXPORT.rows
+        ).toStrictEqual([
+          expect.objectContaining({
+            rowId: '1001',
+            issues: [
+              expect.objectContaining({
+                type: 'warning',
+                errorCode: 'LINKED_ROW_PRNS_ISSUED',
+                header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+                previousYearRowId: '1500'
+              })
+            ]
+          })
+        ])
+      }
+    )
+
+    it('does not warn on a linked row whose 2026 row had no PERNs issued', async () => {
+      const env = await setup()
+      await submitted(env, PREVIOUS_YEAR, 'log-2026', accredited2026Log())
+
+      const validated = await upload(
+        env,
+        YEAR,
+        'log-2027',
+        accredited2027Log([linkedRow()])
+      )
+
+      expect(validated.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(validated.validation.concerns).toStrictEqual({})
+    })
   })
 
   describe('an accredited exporter also accredited in 2025, on the 2026 template', () => {

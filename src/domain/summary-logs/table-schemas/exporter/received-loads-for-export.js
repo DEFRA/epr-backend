@@ -431,6 +431,7 @@ export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
     prefilledOnLinkedRow: {
       [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: YES_NO_VALUES.NO
     },
+    prnsIssuedField: FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
     completionsOf: receivedLoadCompletionsOf
   },
   requiredHeaders: [

@@ -7,6 +7,7 @@ import { previousYear } from '#common/helpers/dates/year.js'
 
 import { buildCellLocation } from '../data-syntax.js'
 
+/** @import {ValidationSeverity} from '#common/enums/validation.js' */
 /** @import {CalendarDate} from '#common/helpers/date-formatter.js' */
 /** @import {ValidationIssue} from '#common/validation/validation-issues.js' */
 /** @import {LinkedRow} from './index.js' */
@@ -15,6 +16,7 @@ import { buildCellLocation } from '../data-syntax.js'
 /**
  * @param {{
  *   errorCode: string,
+ *   severity?: ValidationSeverity,
  *   field: string,
  *   linkedRow: Pick<LinkedRow<PreviousYearLink>, 'rowId' | 'options' | 'issueLocation'>,
  *   enteredValue: unknown,
@@ -25,6 +27,7 @@ import { buildCellLocation } from '../data-syntax.js'
  */
 export const toPreviousYearLinkIssue = ({
   errorCode,
+  severity = VALIDATION_SEVERITY.FATAL,
   field,
   linkedRow,
   enteredValue,
@@ -35,7 +38,7 @@ export const toPreviousYearLinkIssue = ({
     linkedRow.issueLocation
   return {
     category: VALIDATION_CATEGORY.BUSINESS,
-    severity: VALIDATION_SEVERITY.FATAL,
+    severity,
     message: `Previous year link ${errorCode} in column '${field}'`,
     code: VALIDATION_CODE.PREVIOUS_YEAR_LINK,
     context: {

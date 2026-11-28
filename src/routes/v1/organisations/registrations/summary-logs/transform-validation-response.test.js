@@ -376,6 +376,40 @@ describe('transformValidationResponse', () => {
       })
     })
 
+    it.for([
+      {
+        description: 'names',
+        rowId: '1001',
+        expected: { row: 8, rowId: '1001' }
+      },
+      { description: 'leaves out', rowId: undefined, expected: { row: 8 } }
+    ])('gives the row ID a row issue $description', ({ rowId, expected }) => {
+      const result = transformValidationResponse({
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.WARNING,
+            category: 'business',
+            message: 'Previous year link',
+            code: 'PREVIOUS_YEAR_LINK',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_EXPORT',
+                row: 8,
+                ...(rowId && { rowId }),
+                column: 'J',
+                header: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+              }
+            }
+          }
+        ]
+      })
+
+      const { issues: _, ...row } =
+        result.validation.concerns.RECEIVED_LOADS_FOR_EXPORT.rows[0]
+      expect(row).toStrictEqual(expected)
+    })
+
     it('includes expected field when present in context', () => {
       const validation = {
         issues: [
