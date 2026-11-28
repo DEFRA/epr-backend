@@ -19,7 +19,8 @@ import {
   isYes,
   isAnswered,
   isDateNoLaterThan,
-  YES_NO_VALUES
+  YES_NO_VALUES,
+  ANSWERED_LATER_ON_LINKED_ROW
 } from '../shared/index.js'
 import {
   RECEIVED_LOADS_FIELDS as FIELDS,
@@ -28,6 +29,7 @@ import {
 } from './fields.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { createRowTransformer } from '#domain/waste-records/row-transformers/create-row-transformer.js'
+import { isFutureOverseasReceipt } from '#domain/summary-logs/future-dates.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { PREVIOUS_YEAR_ROW_COMPLETION } from '#domain/summary-logs/linked-row.js'
 import {
@@ -248,7 +250,9 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     ),
     [FIELDS.CUSTOMS_CODES]: createFreeTextFieldSchema(),
     [FIELDS.CONTAINER_NUMBER]: createFreeTextFieldSchema(),
-    [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema(),
+    [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema(
+      isFutureOverseasReceipt
+    ),
     [FIELDS.DATE_THE_REFUSED_STOPPED_WASTE_REPATRIATED]:
       createDateFieldSchema(),
     [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
@@ -388,6 +392,11 @@ const receivedLoadCompletionsOf = (row, year) => [
     : [])
 ]
 
+const CALCULATED_COLUMNS = Object.freeze([
+  FIELDS.NET_WEIGHT,
+  FIELDS.TONNAGE_RECEIVED_FOR_EXPORT
+])
+
 export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
   ...RECEIVED_LOADS_FOR_EXPORT,
   linking: {
@@ -417,6 +426,11 @@ export const RECEIVED_LOADS_FOR_EXPORT_2027 = {
       FIELDS.BILL_OF_LANDING_REFERENCE_NUMBER,
       FIELDS.CUSTOMS_DECLARATION_NUMBER
     ],
+    mayDifferBeforeCorrectionDeadline: CALCULATED_COLUMNS,
+    answeredLaterOnLinkedRow: ANSWERED_LATER_ON_LINKED_ROW,
+    prefilledOnLinkedRow: {
+      [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: YES_NO_VALUES.NO
+    },
     completionsOf: receivedLoadCompletionsOf
   },
   requiredHeaders: [
