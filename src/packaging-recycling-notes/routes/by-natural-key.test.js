@@ -48,6 +48,7 @@ import { body } from '#routes/organisations/organisation-view-test-helpers.js'
 /**
  * @import { PackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/port.js'
  * @import { WasteBalanceLedgerRepository } from '#waste-balances/repository/ledger-port.js'
+ * @import { LedgerEvent } from '#waste-balances/repository/ledger-schema.js'
  */
 
 vi.mock('@defra/cdp-auditing', () => ({ audit: vi.fn() }))
@@ -71,6 +72,17 @@ const ownNumbers = {
   registrationNumber: registration.registrationNumber,
   accreditationNumber: ACCREDITATION_NUMBER
 }
+/**
+ * A ledger event under the accreditation for 100 tonnes of the note.
+ *
+ * @param {string} prnId
+ * @param {Pick<LedgerEvent, 'number' | 'openingBalance' | 'closingBalance'>} overrides
+ */
+const ownNoteEvent = (prnId, overrides) => ({
+  ...ownNumbers,
+  payload: { prnId, amount: 100 },
+  ...overrides
+})
 const otherNumbers = {
   ...ownNumbers,
   accreditationNumber: toAccreditationNumber('A26ER9999999999PA')
@@ -371,12 +383,8 @@ describe('PRN routes by natural key', () => {
     describe('when the ledger is ahead of a stored PRN', () => {
       const AFTER_CREATION = { amount: 500, availableAmount: 400 }
 
-      /** @param {object} overrides */
-      const draftEvent = (overrides) => ({
-        ...ownNumbers,
-        payload: { prnId: draft.id, amount: 100 },
-        ...overrides
-      })
+      /** @param {Parameters<typeof ownNoteEvent>[1]} overrides */
+      const draftEvent = (overrides) => ownNoteEvent(draft.id, overrides)
 
       beforeEach(async () => {
         await ledgerRepository.appendEvents([
@@ -519,22 +527,16 @@ describe('PRN routes by natural key', () => {
 
     it('is served with its number once the ledger has issued it', async () => {
       const AFTER_CREATION = { amount: 500, availableAmount: 400 }
-      /** @param {object} overrides */
-      const reservedEvent = (overrides) => ({
-        ...ownNumbers,
-        payload: { prnId: reservedId, amount: 100 },
-        ...overrides
-      })
       await ledgerRepository.appendEvents([
         buildPrnCreatedEvent(
-          reservedEvent({
+          ownNoteEvent(reservedId, {
             number: 2,
             openingBalance: { amount: 500, availableAmount: 500 },
             closingBalance: AFTER_CREATION
           })
         ),
         buildPrnIssuedEvent(
-          reservedEvent({
+          ownNoteEvent(reservedId, {
             number: 3,
             openingBalance: AFTER_CREATION,
             closingBalance: { amount: 400, availableAmount: 400 }
