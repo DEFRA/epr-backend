@@ -259,4 +259,48 @@ describe('getProjectedPrnByNumber', () => {
 
     expect(result).toBeNull()
   })
+
+  const numberedButUnissued = () =>
+    buildPrn({
+      status: {
+        currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+        currentStatusAt: baseAt,
+        history: []
+      }
+    })
+
+  it('returns null for a PRN that holds the number but is not issued', async () => {
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
+      buildRepositories({ prn: numberedButUnissued() })
+
+    const result = await getProjectedPrnByNumber({
+      packagingRecyclingNotesRepository,
+      ledgerRepository,
+      prnNumber: PRN_NUMBER
+    })
+
+    expect(result).toBeNull()
+  })
+
+  it('finds a PRN the ledger has issued before its document says so', async () => {
+    const { packagingRecyclingNotesRepository, ledgerRepository } =
+      buildRepositories({
+        prn: numberedButUnissued(),
+        events: [
+          buildEvent(
+            LEDGER_EVENT_KIND.PRN_ISSUED,
+            1,
+            '2026-02-02T12:00:00.000Z'
+          )
+        ]
+      })
+
+    const result = await getProjectedPrnByNumber({
+      packagingRecyclingNotesRepository,
+      ledgerRepository,
+      prnNumber: PRN_NUMBER
+    })
+
+    expect(result?.status.currentStatus).toBe(PRN_STATUS.AWAITING_ACCEPTANCE)
+  })
 })

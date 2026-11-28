@@ -334,8 +334,7 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
   it.each([
     PRN_STATUS.ACCEPTED,
     PRN_STATUS.AWAITING_CANCELLATION,
-    PRN_STATUS.CANCELLED,
-    PRN_STATUS.DRAFT
+    PRN_STATUS.CANCELLED
   ])('returns 409 when the PRN is %s', async (currentStatus) => {
     await startServer(buildPrn(currentStatus))
 
@@ -351,6 +350,25 @@ describe(`POST /v1/packaging-recycling-notes/{prnNumber}/reject`, () => {
     expect(payload.message).toEqual(expect.any(String))
     expect(Object.keys(payload)).toEqual(['code', 'message'])
   })
+
+  it.each([PRN_STATUS.DRAFT, PRN_STATUS.AWAITING_AUTHORISATION])(
+    'returns 404 when the PRN holding the number is %s and so not issued',
+    async (currentStatus) => {
+      await startServer(buildPrn(currentStatus))
+
+      const response = await server.inject({
+        method: 'POST',
+        url: rejectUrl,
+        headers: authHeaders
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(JSON.parse(response.payload)).toEqual({
+        code: 'NOT_FOUND',
+        message: `Packaging recycling note not found: ${prnNumber}`
+      })
+    }
+  )
 
   it('returns 404 with spec error format when the PRN does not exist', async () => {
     await startServer(null)

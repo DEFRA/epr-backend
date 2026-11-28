@@ -30,6 +30,32 @@ export const CANCELLED_PRN_STATUSES = new Set([
 ])
 
 /**
+ * The statuses of a PRN that has been issued, whatever has happened to it
+ * since.
+ * @type {Set<PrnStatus>}
+ */
+export const ISSUED_PRN_STATUSES = new Set([
+  PRN_STATUS.AWAITING_ACCEPTANCE,
+  PRN_STATUS.ACCEPTED,
+  PRN_STATUS.AWAITING_CANCELLATION,
+  PRN_STATUS.CANCELLED
+])
+
+/**
+ * The number a PRN states. A PRN holds its number from just before its issue
+ * is recorded, and keeps it if that issue is refused, but the number is not
+ * the PRN's to state until it is issued. Pass the PRN as caught up from the
+ * ledger, because a stored PRN can lag its own issue.
+ *
+ * @param {{ prnNumber?: string | null, status: { currentStatus: PrnStatus } }} prn
+ * @returns {string | undefined}
+ */
+export const issuedPrnNumber = ({ prnNumber, status }) =>
+  ISSUED_PRN_STATUSES.has(status.currentStatus) && prnNumber
+    ? prnNumber
+    : undefined
+
+/**
  * Actor types that can trigger PRN status transitions
  * @typedef {typeof PRN_ACTOR[keyof typeof PRN_ACTOR]} PrnActor
  */

@@ -1,6 +1,7 @@
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getProcessCode } from '#packaging-recycling-notes/domain/get-process-code.js'
 import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/closed-year.js'
+import { issuedPrnNumber } from '#packaging-recycling-notes/domain/model.js'
 
 /**
  * @typedef {import('#packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} PackagingRecyclingNote
@@ -11,7 +12,7 @@ import { isRegulatorCancellable } from '#packaging-recycling-notes/domain/closed
  */
 export const mapToAdminPrn = (prn) => ({
   id: prn.id,
-  prnNumber: prn.prnNumber ?? null,
+  prnNumber: issuedPrnNumber(prn) ?? null,
   status: prn.status.currentStatus,
   issuedToOrganisation: prn.issuedToOrganisation,
   tonnage: prn.tonnage,

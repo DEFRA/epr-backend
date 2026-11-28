@@ -7,6 +7,7 @@ import {
   isValidTransition,
   transitionRefusal,
   issuanceRefusal,
+  issuedPrnNumber,
   AccreditationStatusError,
   StatusConflictError,
   UnauthorisedTransitionError
@@ -230,4 +231,42 @@ describe('issuanceRefusal', () => {
         ?.message
     ).toBe('Cannot issue a PRN on a suspended accreditation')
   })
+})
+
+describe('issuedPrnNumber', () => {
+  const prnNumber = 'ER26000001'
+
+  it.each([
+    PRN_STATUS.AWAITING_ACCEPTANCE,
+    PRN_STATUS.ACCEPTED,
+    PRN_STATUS.AWAITING_CANCELLATION,
+    PRN_STATUS.CANCELLED
+  ])('states the number of a PRN that is %s', (currentStatus) => {
+    expect(issuedPrnNumber({ prnNumber, status: { currentStatus } })).toBe(
+      prnNumber
+    )
+  })
+
+  it.each([
+    PRN_STATUS.DRAFT,
+    PRN_STATUS.AWAITING_AUTHORISATION,
+    PRN_STATUS.DELETED,
+    PRN_STATUS.DISCARDED
+  ])('withholds the number of a PRN that is %s', (currentStatus) => {
+    expect(
+      issuedPrnNumber({ prnNumber, status: { currentStatus } })
+    ).toBeUndefined()
+  })
+
+  it.each([null, undefined])(
+    'states no number for an issued PRN whose number is %s',
+    (missing) => {
+      expect(
+        issuedPrnNumber({
+          prnNumber: missing,
+          status: { currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+      ).toBeUndefined()
+    }
+  )
 })

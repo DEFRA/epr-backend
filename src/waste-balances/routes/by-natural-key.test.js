@@ -37,7 +37,8 @@ import { createInMemoryLedgerRepository } from '#waste-balances/repository/ledge
 import { LEDGER_EVENT_KIND } from '#waste-balances/repository/ledger-schema.js'
 import {
   buildLedgerEvent,
-  buildPrnCreatedEvent
+  buildPrnCreatedEvent,
+  buildPrnIssuedEvent
 } from '#waste-balances/repository/ledger-test-data.js'
 import { buildAccreditationSnapshot } from '#packaging-recycling-notes/repository/contract/test-data.js'
 import { createInMemoryPackagingRecyclingNotesRepository } from '#packaging-recycling-notes/repository/inmemory.plugin.js'
@@ -314,6 +315,12 @@ describe('ledger and waste balance routes by natural key', () => {
           number: 2,
           createdAt: new Date('2027-01-10T10:00:00.000Z'),
           payload: { prnId: 'prn-numbered', amount: 50 }
+        }),
+        buildPrnIssuedEvent({
+          ...accreditedLedgerId,
+          number: 3,
+          createdAt: new Date('2027-01-11T10:00:00.000Z'),
+          payload: { prnId: 'prn-numbered', amount: 50 }
         })
       ])
 
@@ -341,6 +348,17 @@ describe('ledger and waste balance routes by natural key', () => {
             balance: {
               opening: { total: 100, available: 100 },
               closing: { total: 100, available: 50 }
+            },
+            prn: { id: 'prn-numbered', prnNumber: 'ER26000123', tonnage: 50 }
+          },
+          {
+            number: 3,
+            kind: 'prn-issued',
+            createdAt: '2027-01-11T10:00:00.000Z',
+            createdBy: { id: 'user-1', name: 'Test User' },
+            balance: {
+              opening: { total: 100, available: 50 },
+              closing: { total: 50, available: 50 }
             },
             prn: { id: 'prn-numbered', prnNumber: 'ER26000123', tonnage: 50 }
           }

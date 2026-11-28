@@ -472,6 +472,87 @@ describe('PRN routes by natural key', () => {
     })
   })
 
+  describe('a PRN numbered but not yet issued', () => {
+    const reservedNumber = 'ER26000001'
+
+    /** @type {string} */
+    let reservedId
+
+    beforeEach(async () => {
+      await startServer()
+      ;({ id: reservedId } = await packagingRecyclingNotesRepository.create(
+        buildAwaitingAuthorisationPrn({
+          ...underAccreditation(ownNumbers),
+          prnNumber: reservedNumber
+        })
+      ))
+    })
+
+    it('is served in the collection with no number', async () => {
+      const response = await server.inject({ url: prns, ...asOperator() })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const reserved = body(response).items.find(
+        (/** @type {{ id: string }} */ { id }) => id === reservedId
+      )
+      expect(reserved).not.toHaveProperty('prnNumber')
+    })
+
+    it('is served on its own with no number', async () => {
+      const response = await server.inject({
+        url: `${prns}/${reservedId}`,
+        ...asOperator()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      expect(body(response)).not.toHaveProperty('prnNumber')
+    })
+
+    it('is not found by its number', async () => {
+      const response = await server.inject({
+        url: `${prns}?prnNumber=${reservedNumber}`,
+        ...asOperator()
+      })
+
+      expect(idsOf(response)).toStrictEqual([])
+    })
+
+    it('is served with its number once the ledger has issued it', async () => {
+      const AFTER_CREATION = { amount: 500, availableAmount: 400 }
+      /** @param {object} overrides */
+      const reservedEvent = (overrides) => ({
+        ...ownNumbers,
+        payload: { prnId: reservedId, amount: 100 },
+        ...overrides
+      })
+      await ledgerRepository.appendEvents([
+        buildPrnCreatedEvent(
+          reservedEvent({
+            number: 2,
+            openingBalance: { amount: 500, availableAmount: 500 },
+            closingBalance: AFTER_CREATION
+          })
+        ),
+        buildPrnIssuedEvent(
+          reservedEvent({
+            number: 3,
+            openingBalance: AFTER_CREATION,
+            closingBalance: { amount: 400, availableAmount: 400 }
+          })
+        )
+      ])
+
+      const response = await server.inject({
+        url: `${prns}?prnNumber=${reservedNumber}`,
+        ...asOperator()
+      })
+
+      expect(body(response).items).toMatchObject([
+        { id: reservedId, prnNumber: reservedNumber }
+      ])
+    })
+  })
+
   describe('one PRN', () => {
     beforeEach(() => startServer())
 

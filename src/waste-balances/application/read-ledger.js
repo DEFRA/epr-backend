@@ -1,3 +1,6 @@
+import { ISSUED_PRN_STATUSES } from '#packaging-recycling-notes/domain/model.js'
+import { LEDGER_EVENT_KIND_TO_PRN_STATUS } from '#packaging-recycling-notes/domain/prn-transition.js'
+
 /**
  * @import { LedgerEvent, LedgerBalanceSnapshot, LedgerEventKind, LedgerUserSummary, PrnPayload, SummaryLogSubmittedPayload, WasteBalanceLedgerId } from '../repository/ledger-schema.js'
  * @import { WasteBalanceLedgerRepository } from '../repository/ledger-port.js'
@@ -130,6 +133,27 @@ const toActor = ({ id, name, email }) => ({ id, name, email })
 const creditsASummaryLog = (payload) => 'summaryLogId' in payload
 
 /**
+ * The notes this ledger has issued. A note's last event on the ledger gives
+ * its status, because every event of a note is on its accreditation's ledger
+ * and the events come in order.
+ *
+ * @param {LedgerEvent[]} events
+ * @returns {string[]}
+ */
+const issuedNoteIds = (events) => {
+  const noteStatuses = new Map(
+    events.flatMap((event) =>
+      creditsASummaryLog(event.payload)
+        ? []
+        : [[event.payload.prnId, LEDGER_EVENT_KIND_TO_PRN_STATUS[event.kind]]]
+    )
+  )
+  return [...noteStatuses]
+    .filter(([, status]) => ISSUED_PRN_STATUSES.has(status))
+    .map(([noteId]) => noteId)
+}
+
+/**
  * @param {LedgerNoteReader} noteReader
  * @param {WasteBalanceLedgerId} ledgerId
  * @param {LedgerEvent[]} events
@@ -143,9 +167,7 @@ const noteNumbersById = async (noteReader, ledgerId, events) => {
     return new Map()
   }
 
-  const noteIds = events.flatMap((event) =>
-    creditsASummaryLog(event.payload) ? [] : [event.payload.prnId]
-  )
+  const noteIds = issuedNoteIds(events)
 
   if (noteIds.length === 0) {
     return new Map()

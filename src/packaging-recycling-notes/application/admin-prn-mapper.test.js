@@ -21,6 +21,19 @@ describe('mapToAdminPrn', () => {
     expect(mapped.organisationName).toBe(prn.organisation.name)
   })
 
+  it('states no number for a PRN that holds one but is not issued', () => {
+    const issued = createMockIssuedPrn()
+    const prn = {
+      ...issued,
+      status: {
+        ...issued.status,
+        currentStatus: PRN_STATUS.AWAITING_AUTHORISATION
+      }
+    }
+
+    expect(mapToAdminPrn(prn).prnNumber).toBeNull()
+  })
+
   const futureYear = toYear(new Date().getUTCFullYear() + 5)
 
   it.for([
